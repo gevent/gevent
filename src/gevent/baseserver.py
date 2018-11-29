@@ -291,7 +291,6 @@ class BaseServer(object):
 
         It is not supposed to be called by the user, it is called by :meth:`start` before starting
         the accept loop."""
-        pass
 
     @property
     def started(self):

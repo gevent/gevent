@@ -163,7 +163,7 @@ del sys
 # outdated on each major release.
 
 def __dependencies_for_freezing(): # pragma: no cover
-    # pylint:disable=unused-variable
+    # pylint:disable=unused-import
     from gevent import core
     from gevent import resolver_thread
     from gevent import resolver_ares

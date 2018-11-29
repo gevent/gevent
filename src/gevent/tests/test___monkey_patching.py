@@ -92,7 +92,7 @@ def TESTRUNNER(tests=None):
     if tests and not sys.platform.startswith("win"):
         atexit.register(os.system, 'rm -f */@test*')
 
-    basic_args = [sys.executable, '-u', '-W', 'ignore', '-m' 'gevent.testing.monkey_test']
+    basic_args = [sys.executable, '-u', '-W', 'ignore', '-m', 'gevent.testing.monkey_test']
     for filename in tests:
         if filename in version_tests:
             util.log("Overriding %s from %s with file from %s", filename, test_dir, version_test_dir)

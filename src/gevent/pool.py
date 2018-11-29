@@ -488,7 +488,6 @@ class Group(GroupMappingMixin):
         In this implementation, because there are no limits on the number
         of tracked greenlets, this will always return immediately.
         """
-        pass
 
     # MappingMixin methods
 

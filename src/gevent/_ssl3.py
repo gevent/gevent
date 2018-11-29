@@ -99,7 +99,7 @@ class SSLContext(orig_SSLContext):
             super(orig_SSLContext, orig_SSLContext).maximum_version.__set__(self, value)
 
 
-class _contextawaresock(socket._gevent_sock_class): # Python 2: pylint:disable=slots-on-old-class
+class _contextawaresock(socket._gevent_sock_class):
     # We have to pass the raw stdlib socket to SSLContext.wrap_socket.
     # That method in turn can pass that object on to things like SNI callbacks.
     # It wouldn't have access to any of the attributes on the SSLSocket, like

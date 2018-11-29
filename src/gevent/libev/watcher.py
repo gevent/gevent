@@ -100,7 +100,7 @@ class watcher(_base.watcher):
             self._flags |= 2 # now we've told libev
 
     def _get_ref(self):
-        return False if self._flags & 4 else True
+        return not self._flags & 4
 
     def _set_ref(self, value):
         if value:
@@ -144,7 +144,7 @@ class watcher(_base.watcher):
 
     @property
     def pending(self):
-        return True if self._watcher and libev.ev_is_pending(self._watcher) else False
+        return bool(self._watcher and libev.ev_is_pending(self._watcher))
 
 
 class io(_base.IoMixin, watcher):
@@ -218,7 +218,7 @@ class async_(_base.AsyncMixin, watcher):
 
     @property
     def pending(self):
-        return True if libev.ev_async_pending(self._watcher) else False
+        return bool(libev.ev_async_pending(self._watcher))
 
 # Provide BWC for those that have async
 locals()['async'] = async_

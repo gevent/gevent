@@ -21,9 +21,7 @@ class ValuedWeakRef(ref):
     """
     A weak ref with an associated value.
     """
-    # This seems entirely spurious; even on Python 2.7
-    # weakref.ref descends from object
-    # pylint: disable=slots-on-old-class
+
     __slots__ = ('value',)
 
 
