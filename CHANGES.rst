@@ -67,6 +67,10 @@
   `UserWarning` when using the libuv backend. Reported in
   :issue:`1321` by ZeroNet.
 
+- Fix ``FileObjectPosix.seek`` raising `OSError` when it should have
+  been `IOError` on Python 2. Reported by, and PR by, Ricardo Kirkner.
+  See :issue:`1323`.
+
 1.3.7 (2018-10-12)
 ==================
 
