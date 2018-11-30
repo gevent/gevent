@@ -102,7 +102,7 @@ class TestFileObjectBlock(greentest.TestCase):
 
         with open(path, 'rb') as f_raw:
             try:
-                f = self._makeOne(f_raw, 'rb')
+                f = self._makeOne(f_raw, 'rb', close=False)
             except ValueError:
                 # libuv on Travis can raise EPERM
                 # from FileObjectPosix. I can't produce it on mac os locally,
@@ -111,12 +111,17 @@ class TestFileObjectBlock(greentest.TestCase):
                 # That shouldn't have any effect on io watchers, though, which were
                 # already being explicitly closed.
                 reraiseFlakyTestRaceConditionLibuv()
+
             if PY3 or hasattr(f, 'seekable'):
                 # On Python 3, all objects should have seekable.
                 # On Python 2, only our custom objects do.
                 self.assertTrue(f.seekable())
             f.seek(15)
             self.assertEqual(15, f.tell())
+
+            # Note that a duplicate close() of the underlying
+            # file descriptor can look like an OSError from this line
+            # as we exit the with block
             fileobj_data = f.read(1024)
 
         self.assertEqual(native_data, s)
@@ -183,24 +188,7 @@ class TestFileObjectThread(ConcurrentFileObjectMixin,
     def _getTargetClass(self):
         return fileobject.FileObjectThread
 
-    def tearDown(self):
-        # Make sure outstanding tasks have completed.
-        # On Travis with Python 3.7 and libuv, test_bufsize_0
-        # fails in os.fdopen(), claiming the file descriptor is bad.
-        # This would happen if we closed (garbage collected?) a FD,
-        # opened a pipe and got the same int FD, and then some background
-        # task closed that same int FD again. FileObjectThread.close()
-        # goes through threadpool.apply(), which is supposed to be synchronous;
-        # make sure it is.
-        gevent.get_hub().threadpool.join()
-
-        # And collect any outstanding garbage, in case some resource is "leaking"
-        # (We have no indication that it is, but we're flailing wildly here to try
-        # to understand what could be happening)
-        gc.collect()
-        super(TestFileObjectThread, self).tearDown()
-
-   # FileObjectThread uses os.fdopen() when passed a file-descriptor,
+    # FileObjectThread uses os.fdopen() when passed a file-descriptor,
     # which returns an object with a destructor that can't be
     # bypassed, so we can't even create one that way
     def test_del_noclose(self):
