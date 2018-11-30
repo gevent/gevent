@@ -227,12 +227,18 @@ class FileObjectThread(FileObjectBase):
                 # the existing race condition any worse.
                 # We wrap the close in an exception handler and re-raise directly
                 # to avoid the (common, expected) IOError from being logged by the pool
-                def close():
+                def close(_fobj=fobj):
                     try:
-                        fobj.close()
+                        _fobj.close()
                     except: # pylint:disable=bare-except
                         return sys.exc_info()
+                    finally:
+                        _fobj = None
+                del fobj
+
                 exc_info = self.threadpool.apply(close)
+                del close
+
                 if exc_info:
                     reraise(*exc_info)
 
