@@ -23,8 +23,6 @@ import sys
 import functools
 import unittest
 
-from gevent.util import dump_stacks
-
 from . import sysinfo
 from . import six
 
@@ -69,18 +67,21 @@ reraiseFlakyTestTimeoutLibuv = reraiseFlakyTestRaceCondition
 if sysinfo.RUNNING_ON_CI or (sysinfo.PYPY and sysinfo.WIN):
     # pylint: disable=function-redefined
     def reraiseFlakyTestRaceCondition():
-        if sysinfo.PYPY and sysinfo.WIN:
-            # Getting stack traces is incredibly expensive
-            # in pypy on win, at least in test virtual machines.
-            # It can take minutes. The traceback consistently looks like
-            # the following when interrupted:
+        # Getting stack traces is incredibly expensive
+        # in pypy on win, at least in test virtual machines.
+        # It can take minutes. The traceback consistently looks like
+        # the following when interrupted:
 
-            # dump_stacks -> traceback.format_stack
-            #    -> traceback.extract_stack -> linecache.checkcache
-            #    -> os.stat -> _structseq.structseq_new
-            msg = str(sys.exc_info()[1])
-        else:
-            msg = '\n'.join(dump_stacks())
+        # dump_stacks -> traceback.format_stack
+        #    -> traceback.extract_stack -> linecache.checkcache
+        #    -> os.stat -> _structseq.structseq_new
+
+        # Moreover, without overriding __repr__ or __str__,
+        # the msg doesn't get printed like we would want (its basically
+        # unreadable, all printed on one line). So skip that.
+
+        #msg = '\n'.join(dump_stacks())
+        msg = str(sys.exc_info()[1])
         six.reraise(FlakyTestRaceCondition,
                     FlakyTestRaceCondition(msg),
                     sys.exc_info()[2])

@@ -102,7 +102,7 @@ class TestFileObjectBlock(greentest.TestCase):
 
         with open(path, 'rb') as f_raw:
             try:
-                f = self._makeOne(f_raw, 'rb')
+                f = self._makeOne(f_raw, 'rb', close=False)
             except ValueError:
                 # libuv on Travis can raise EPERM
                 # from FileObjectPosix. I can't produce it on mac os locally,
@@ -111,12 +111,17 @@ class TestFileObjectBlock(greentest.TestCase):
                 # That shouldn't have any effect on io watchers, though, which were
                 # already being explicitly closed.
                 reraiseFlakyTestRaceConditionLibuv()
+
             if PY3 or hasattr(f, 'seekable'):
                 # On Python 3, all objects should have seekable.
                 # On Python 2, only our custom objects do.
                 self.assertTrue(f.seekable())
             f.seek(15)
             self.assertEqual(15, f.tell())
+
+            # Note that a duplicate close() of the underlying
+            # file descriptor can look like an OSError from this line
+            # as we exit the with block
             fileobj_data = f.read(1024)
 
         self.assertEqual(native_data, s)
@@ -183,7 +188,7 @@ class TestFileObjectThread(ConcurrentFileObjectMixin,
     def _getTargetClass(self):
         return fileobject.FileObjectThread
 
-   # FileObjectThread uses os.fdopen() when passed a file-descriptor,
+    # FileObjectThread uses os.fdopen() when passed a file-descriptor,
     # which returns an object with a destructor that can't be
     # bypassed, so we can't even create one that way
     def test_del_noclose(self):
@@ -269,4 +274,5 @@ class TestTextMode(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    sys.argv.append('-v')
     greentest.main()
