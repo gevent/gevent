@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 import os
+import sys
 import io
 from io import BufferedReader
 from io import BufferedWriter
@@ -8,6 +9,7 @@ from io import DEFAULT_BUFFER_SIZE
 from io import RawIOBase
 from io import UnsupportedOperation
 
+from gevent._compat import reraise
 from gevent._fileobjectcommon import cancel_wait_ex
 from gevent._fileobjectcommon import FileObjectBase
 from gevent.hub import get_hub
@@ -140,7 +142,17 @@ class GreenFileDescriptorIO(RawIOBase):
             self.hub.wait(self._write_event)
 
     def seek(self, offset, whence=0):
-        return os.lseek(self._fileno, offset, whence)
+        try:
+            return os.lseek(self._fileno, offset, whence)
+        except IOError: # pylint:disable=try-except-raise
+            raise
+        except OSError as ex: # pylint:disable=duplicate-except
+            # Python 2.x
+            # make sure on Python 2.x we raise an IOError
+            # as documented for RawIOBase.
+            # See https://github.com/gevent/gevent/issues/1323
+            reraise(IOError, IOError(*ex.args), sys.exc_info()[2])
+
 
 class FlushingBufferedWriter(BufferedWriter):
 
@@ -148,6 +160,7 @@ class FlushingBufferedWriter(BufferedWriter):
         ret = BufferedWriter.write(self, b)
         self.flush()
         return ret
+
 
 class FileObjectPosix(FileObjectBase):
     """

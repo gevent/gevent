@@ -6,13 +6,13 @@ import gc
 import unittest
 
 import gevent
-from gevent.fileobject import FileObject, FileObjectThread
+from gevent import fileobject
 
 import gevent.testing as greentest
 from gevent.testing.sysinfo import PY3
 from gevent.testing.flaky import reraiseFlakyTestRaceConditionLibuv
 from gevent.testing.skipping import skipOnLibuvOnCIOnPyPy
-from gevent.testing.skipping import skipOnWindows
+
 
 try:
     ResourceWarning
@@ -21,22 +21,37 @@ except NameError:
         "Python 2 fallback"
 
 
-class Test(greentest.TestCase):
+def writer(fobj, line):
+    for character in line:
+        fobj.write(character)
+        fobj.flush()
+    fobj.close()
+
+
+def close_fd_quietly(fd):
+    try:
+        os.close(fd)
+    except (IOError, OSError):
+        pass
+
+class TestFileObjectBlock(greentest.TestCase):
+
+    def _getTargetClass(self):
+        return fileobject.FileObjectBlock
+
+    def _makeOne(self, *args, **kwargs):
+        return self._getTargetClass()(*args, **kwargs)
 
     def _test_del(self, **kwargs):
-        pipe = os.pipe()
-        try:
-            self._do_test_del(pipe, **kwargs)
-        finally:
-            for f in pipe:
-                try:
-                    os.close(f)
-                except (IOError, OSError):
-                    pass
+        r, w = os.pipe()
+        self.addCleanup(close_fd_quietly, r)
+        self.addCleanup(close_fd_quietly, w)
+
+        self._do_test_del((r, w), **kwargs)
 
     def _do_test_del(self, pipe, **kwargs):
         r, w = pipe
-        s = FileObject(w, 'wb', **kwargs)
+        s = self._makeOne(w, 'wb', **kwargs)
         s.write(b'x')
         try:
             s.flush()
@@ -60,54 +75,15 @@ class Test(greentest.TestCase):
         else:
             os.close(w)
 
-        with FileObject(r, 'rb') as fobj:
+        with self._makeOne(r, 'rb') as fobj:
             self.assertEqual(fobj.read(), b'x')
 
-    # We only use FileObjectThread on Win32. Sometimes the
-    # visibility of the 'close' operation, which happens in a
-    # background thread, doesn't make it to the foreground
-    # thread in a timely fashion, leading to 'os.close(4) must
-    # not succeed' in test_del_close. We have the same thing
-    # with flushing and closing in test_newlines. Both of
-    # these are most commonly (only?) observed on Py27/64-bit.
-    # They also appear on 64-bit 3.6 with libuv
-    @skipOnWindows("Thread race conditions")
     def test_del(self):
         # Close should be true by default
         self._test_del()
 
-    @skipOnWindows("Thread race conditions")
     def test_del_close(self):
         self._test_del(close=True)
-
-    if FileObject is not FileObjectThread:
-        # FileObjectThread uses os.fdopen() when passed a file-descriptor, which returns
-        # an object with a destructor that can't be bypassed, so we can't even
-        # create one that way
-        def test_del_noclose(self):
-            self._test_del(close=False)
-    else:
-        def test_del_noclose(self):
-            with self.assertRaisesRegex(TypeError,
-                                        'FileObjectThread does not support close=False on an fd.'):
-                self._test_del(close=False)
-
-    def test_newlines(self):
-        import warnings
-        r, w = os.pipe()
-        lines = [b'line1\n', b'line2\r', b'line3\r\n', b'line4\r\nline5', b'\nline6']
-        g = gevent.spawn(writer, FileObject(w, 'wb'), lines)
-
-        try:
-            with warnings.catch_warnings():
-                warnings.simplefilter('ignore', DeprecationWarning)
-                # U is deprecated in Python 3, shows up on FileObjectThread
-                fobj = FileObject(r, 'rU')
-            result = fobj.read()
-            fobj.close()
-            self.assertEqual('line1\nline2\nline3\nline4\nline5\nline6', result)
-        finally:
-            g.kill()
 
     @skipOnLibuvOnCIOnPyPy("This appears to crash on libuv/pypy/travis.")
     # No idea why, can't duplicate locally.
@@ -126,7 +102,7 @@ class Test(greentest.TestCase):
 
         with open(path, 'rb') as f_raw:
             try:
-                f = FileObject(f_raw, 'rb')
+                f = self._makeOne(f_raw, 'rb')
             except ValueError:
                 # libuv on Travis can raise EPERM
                 # from FileObjectPosix. I can't produce it on mac os locally,
@@ -135,7 +111,9 @@ class Test(greentest.TestCase):
                 # That shouldn't have any effect on io watchers, though, which were
                 # already being explicitly closed.
                 reraiseFlakyTestRaceConditionLibuv()
-            if PY3 or FileObject is not FileObjectThread:
+            if PY3 or hasattr(f, 'seekable'):
+                # On Python 3, all objects should have seekable.
+                # On Python 2, only our custom objects do.
                 self.assertTrue(f.seekable())
             f.seek(15)
             self.assertEqual(15, f.tell())
@@ -147,26 +125,30 @@ class Test(greentest.TestCase):
     def test_close_pipe(self):
         # Issue #190, 203
         r, w = os.pipe()
-        x = FileObject(r)
-        y = FileObject(w, 'w')
+        x = self._makeOne(r)
+        y = self._makeOne(w, 'w')
         x.close()
         y.close()
+
+
+class ConcurrentFileObjectMixin(object):
+    # Additional tests for fileobjects that cooperate
+    # and we have full control of the implementation
 
     def test_read1(self):
         # Issue #840
         r, w = os.pipe()
-        x = FileObject(r)
-        y = FileObject(w, 'w')
+        x = self._makeOne(r)
+        y = self._makeOne(w, 'w')
         self._close_on_teardown(x)
         self._close_on_teardown(y)
         self.assertTrue(hasattr(x, 'read1'))
 
-    #if FileObject is not FileObjectThread:
     def test_bufsize_0(self):
         # Issue #840
         r, w = os.pipe()
-        x = FileObject(r, 'rb', bufsize=0)
-        y = FileObject(w, 'wb', bufsize=0)
+        x = self._makeOne(r, 'rb', bufsize=0)
+        y = self._makeOne(w, 'wb', bufsize=0)
         self._close_on_teardown(x)
         self._close_on_teardown(y)
         y.write(b'a')
@@ -177,11 +159,89 @@ class Test(greentest.TestCase):
         b = x.read(1)
         self.assertEqual(b, b'2')
 
-def writer(fobj, line):
-    for character in line:
-        fobj.write(character)
-        fobj.flush()
-    fobj.close()
+    def test_newlines(self):
+        import warnings
+        r, w = os.pipe()
+        lines = [b'line1\n', b'line2\r', b'line3\r\n', b'line4\r\nline5', b'\nline6']
+        g = gevent.spawn(writer, self._makeOne(w, 'wb'), lines)
+
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore', DeprecationWarning)
+                # U is deprecated in Python 3, shows up on FileObjectThread
+                fobj = self._makeOne(r, 'rU')
+            result = fobj.read()
+            fobj.close()
+            self.assertEqual('line1\nline2\nline3\nline4\nline5\nline6', result)
+        finally:
+            g.kill()
+
+
+class TestFileObjectThread(ConcurrentFileObjectMixin,
+                           TestFileObjectBlock):
+
+    def _getTargetClass(self):
+        return fileobject.FileObjectThread
+
+   # FileObjectThread uses os.fdopen() when passed a file-descriptor,
+    # which returns an object with a destructor that can't be
+    # bypassed, so we can't even create one that way
+    def test_del_noclose(self):
+        with self.assertRaisesRegex(TypeError,
+                                    'FileObjectThread does not support close=False on an fd.'):
+            self._test_del(close=False)
+
+    # We don't test this with FileObjectThread. Sometimes the
+    # visibility of the 'close' operation, which happens in a
+    # background thread, doesn't make it to the foreground
+    # thread in a timely fashion, leading to 'os.close(4) must
+    # not succeed' in test_del_close. We have the same thing
+    # with flushing and closing in test_newlines. Both of
+    # these are most commonly (only?) observed on Py27/64-bit.
+    # They also appear on 64-bit 3.6 with libuv
+
+    def test_del(self):
+        raise unittest.SkipTest("Race conditions")
+
+    def test_del_close(self):
+        raise unittest.SkipTest("Race conditions")
+
+
+@unittest.skipUnless(
+    hasattr(fileobject, 'FileObjectPosix'),
+    "Needs FileObjectPosix"
+)
+class TestFileObjectPosix(ConcurrentFileObjectMixin,
+                          TestFileObjectBlock):
+
+    def _getTargetClass(self):
+        return fileobject.FileObjectPosix
+
+    def test_seek_raises_ioerror(self):
+        # https://github.com/gevent/gevent/issues/1323
+
+        # Get a non-seekable file descriptor
+        r, w = os.pipe()
+
+        self.addCleanup(close_fd_quietly, r)
+        self.addCleanup(close_fd_quietly, w)
+
+        with self.assertRaises(OSError) as ctx:
+            os.lseek(r, 0, os.SEEK_SET)
+        os_ex = ctx.exception
+
+        with self.assertRaises(IOError) as ctx:
+            f = self._makeOne(r, 'r', close=False)
+            # Seek directly using the underlying GreenFileDescriptorIO;
+            # the buffer may do different things, depending
+            # on the version of Python (especially 3.7+)
+            f.fileio.seek(0)
+        io_ex = ctx.exception
+
+        self.assertEqual(io_ex.errno, os_ex.errno)
+        self.assertEqual(io_ex.strerror, os_ex.strerror)
+        self.assertEqual(io_ex.args, os_ex.args)
+        self.assertEqual(str(io_ex), str(os_ex))
 
 
 class TestTextMode(unittest.TestCase):
