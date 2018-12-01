@@ -71,6 +71,8 @@
   been `IOError` on Python 2. Reported by, and PR by, Ricardo Kirkner.
   See :issue:`1323`.
 
+- Upgrade libuv from 1.23.2 to 1.24.0.
+
 1.3.7 (2018-10-12)
 ==================
 
