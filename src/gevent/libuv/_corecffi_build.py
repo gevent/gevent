@@ -82,6 +82,7 @@ LIBUV_SOURCES = [
     _libuv_source('version.c'),
     _libuv_source('uv-data-getter-setters.c'),
     _libuv_source('timer.c'),
+    _libuv_source('idna.c'),
 ]
 
 if WIN:
@@ -169,6 +170,7 @@ elif sys.platform.startswith(('freebsd', 'dragonfly')):
         _libuv_source('unix/freebsd.c'),
         _libuv_source('unix/kqueue.c'),
         _libuv_source('unix/posix-hrtime.c'),
+        _libuv_source('unix/bsd-proctitle.c'),
     ]
 elif sys.platform.startswith('openbsd'):
     LIBUV_SOURCES += [
@@ -176,6 +178,7 @@ elif sys.platform.startswith('openbsd'):
         _libuv_source('unix/kqueue.c'),
         _libuv_source('unix/openbsd.c'),
         _libuv_source('unix/posix-hrtime.c'),
+        _libuv_source('unix/bsd-proctitle.c'),
     ]
 elif sys.platform.startswith('netbsd'):
     LIBUV_SOURCES += [
@@ -183,6 +186,7 @@ elif sys.platform.startswith('netbsd'):
         _libuv_source('unix/kqueue.c'),
         _libuv_source('unix/netbsd.c'),
         _libuv_source('unix/posix-hrtime.c'),
+        _libuv_source('unix/bsd-proctitle.c'),
     ]
 
 elif sys.platform.startswith('sunos'):
