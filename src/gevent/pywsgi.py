@@ -871,7 +871,7 @@ class WSGIHandler(object):
                 self.provided_content_length = value
 
         if self.request_version == 'HTTP/1.0' and provided_connection is None:
-            connType = b'Close' self.close_connection else b'Keep-Alive'
+            connType = b'Close' if self.close_connection else b'Keep-Alive'
             response_headers.append((b'Connection', connType))
         elif provided_connection == 'close':
             self.close_connection = True
