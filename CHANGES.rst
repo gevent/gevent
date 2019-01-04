@@ -4,7 +4,7 @@
 
 .. currentmodule:: gevent
 
-1.4.0 (unreleased)
+1.4.0 (2019-01-04)
 ==================
 
 - Build with Cython 0.29 in '3str' mode.
