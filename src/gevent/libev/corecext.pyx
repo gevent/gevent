@@ -446,7 +446,6 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
 
     cdef _run_callbacks(self):
         cdef callback cb
-        cdef object callbacks
         cdef int count = CALLBACK_CHECK_COUNT
         self.starting_timer_may_update_loop_time = True
         cdef libev.ev_tstamp now = libev.ev_now(self._ptr)
