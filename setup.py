@@ -405,7 +405,9 @@ def run_setup(ext_modules, run_make):
             "Intended Audience :: Developers",
             "Development Status :: 4 - Beta"
         ],
-        python_requires=">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*",
+        # 3.4.0 -- 3.4.2 do not have socket.SocketKind, even though it
+        # is documented. See https://github.com/gevent/gevent/pull/1311#issuecomment-452691569
+        python_requires=">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.0,!=3.4.1,!=3.4.2",
         entry_points={
             'gevent.plugins.monkey.will_patch_all': [
                 "signal_os_incompat = gevent.monkey:_subscribe_signal_os",

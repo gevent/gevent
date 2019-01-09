@@ -10,6 +10,7 @@ Introduction and Basics
 
    install
    intro
+   whatsnew_1_4
    whatsnew_1_3
    api/gevent
    api/gevent.greenlet

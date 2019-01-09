@@ -11,14 +11,15 @@
 Supported Platforms
 ===================
 
-`gevent 1.3`_ runs on Python 2.7 and Python 3. Releases 3.4, 3.5 and
-3.6 of Python 3 are supported. (Users of older versions of Python 2
+`gevent 1.4`_ runs on Python 2.7 and Python 3. Releases 3.4.3+, 3.5, 3.6 and
+3.7 of Python 3 are supported. (Users of older versions of Python 2
 need to install gevent 1.0.x (2.5), 1.1.x (2.6) or 1.2.x (<=2.7.8);
-gevent 1.2 can be installed on Python 3.3.) gevent requires the
+gevent 1.2 can be installed on Python 3.3. and gevent 1.3 can be
+installed on Python 3.4.0 - 3.4.2) gevent requires the
 `greenlet <https://greenlet.readthedocs.io>`_ library and will install
 the `cffi`_ library by default on Windows.
 
-gevent 1.3 also runs on PyPy 5.5 and above, although 5.9 or above is
+gevent 1.4 also runs on PyPy 5.5 and above, although 6.0 or above is
 strongly recommended. On PyPy, there are no external dependencies.
 
 gevent is tested on Windows, OS X, and Linux, and should run on most
@@ -223,7 +224,7 @@ monitor test coverage.
 .. _coveralls.io: https://coveralls.io/github/gevent/gevent
 .. _`pip`: https://pip.pypa.io/en/stable/installing/
 .. _`wheels`: http://pythonwheels.com
-.. _`gevent 1.3`: whatsnew_1_3.html
+.. _`gevent 1.4`: whatsnew_1_4.html
 
 .. _`cffi`: https://cffi.readthedocs.io
 .. _`limitations in libev`: http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#WIN32_PLATFORM_LIMITATIONS_AND_WORKA

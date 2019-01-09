@@ -51,5 +51,5 @@ Check out the detailed changelog_ for this version.
 .. _inspired by eventlet: http://blog.gevent.org/2010/02/27/why-gevent/
 .. _use gevent: http://groups.google.com/group/gevent/browse_thread/thread/4de9703e5dca8271
 .. _open source projects based on gevent: https://github.com/gevent/gevent/wiki/Projects
-.. _what's new: http://www.gevent.org/whatsnew_1_3.html
+.. _what's new: http://www.gevent.org/whatsnew_1_4.html
 .. _changelog: http://www.gevent.org/changelog.html
