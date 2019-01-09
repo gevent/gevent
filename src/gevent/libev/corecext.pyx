@@ -407,7 +407,6 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
                             0.0, 0.0)
 
         cdef unsigned int c_flags
-        cdef object old_handler = None
         if ptr:
             self._ptr = <libev.ev_loop*>ptr
             self._default = libev.ev_is_default_loop(self._ptr)
@@ -697,10 +696,6 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         cdef str msg = ''
         cdef object fileno = self.fileno()
         cdef object activecnt = None
-        try:
-            sigfd = self.sigfd
-        except AttributeError:
-            sigfd = None
         try:
             activecnt = self.activecnt
         except AttributeError:
@@ -1315,7 +1310,6 @@ cdef public void gevent_handle_error(loop loop, object context):
     cdef object type
     cdef object value = None
     cdef object traceback = None
-    cdef object result
 
     # If it was set, this will clear it, and we will own
     # the references.
