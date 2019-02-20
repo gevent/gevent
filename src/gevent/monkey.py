@@ -485,11 +485,10 @@ def _patch_existing_locks(threading):
     gc = __import__('gc')
     for o in gc.get_objects():
         if isinstance(o, rlock_type):
-            if hasattr(o, '_owner'): # Py3
-                if o._owner is not None:
+            if o._is_owned():
+                if hasattr(o, '_owner'): # Py3
                     o._owner = tid
-            else:
-                if o._RLock__owner is not None:
+                else:
                     o._RLock__owner = tid
         elif isinstance(o, _ModuleLock):
             if o.owner is not None:
