@@ -218,6 +218,11 @@ if sys.version_info[:2] >= (3, 3):
     _CRLock = None
     __implements__.append('_CRLock')
 
+elif hasattr(__threading__, '_CRLock'):
+    # Version 7 of PyPy2 backports _CRLock
+    _CRLock = None
+    __implements__.append('_CRLock')
+
 def _gevent_will_monkey_patch(native_module, items, warn): # pylint:disable=unused-argument
     # Make sure the MainThread can be found by our current greenlet ID,
     # otherwise we get a new DummyThread, which cannot be joined.
