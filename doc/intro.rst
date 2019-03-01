@@ -132,7 +132,7 @@ blocking I/O functions that bypass the event loop.
 
 Synchronizing access to objects shared across the greenlets is
 unnecessary in most cases (because yielding control is usually
-explict), thus traditional synchronization devices like the
+explicit), thus traditional synchronization devices like the
 :class:`gevent.lock.BoundedSemaphore`, :class:`gevent.lock.RLock` and
 :class:`gevent.lock.Semaphore` classes, although present, aren't used very
 often. Other abstractions from threading and multiprocessing remain
