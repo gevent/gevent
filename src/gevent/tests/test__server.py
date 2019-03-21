@@ -1,4 +1,5 @@
 from __future__ import print_function, division
+from contextlib import contextmanager
 import unittest
 import errno
 import os
@@ -47,8 +48,8 @@ class Settings(object):
 
     @staticmethod
     def assertAcceptedConnectionError(inst):
-        conn = inst.makefile()
-        result = conn.read()
+        with inst.makefile() as conn:
+            result = conn.read()
         inst.assertFalse(result)
 
     assert500 = assertAcceptedConnectionError
@@ -107,6 +108,7 @@ class TestCase(greentest.TestCase):
 
         return server_host, self.server.server_port, family
 
+    @contextmanager
     def makefile(self, timeout=_DEFAULT_SOCKET_TIMEOUT, bufsize=1):
         server_host, server_port, family = self.get_server_host_port_family()
         bufarg = 'buffering' if PY3 else 'bufsize'
@@ -116,41 +118,35 @@ class TestCase(greentest.TestCase):
             # makefile() opened in r, and r+ is not allowed
             makefile_kwargs['mode'] = 'rwb'
 
-        sock = socket.socket(family=family)
-        self._close_on_teardown(sock)
-        rconn = None
-        try:
-            #print("Connecting to", self.server, self.server.started, server_host, server_port)
+        with socket.socket(family=family) as sock:
+            rconn = None
             sock.connect((server_host, server_port))
-
-            rconn = sock.makefile(**makefile_kwargs)
-            self._close_on_teardown(rconn)
-            if PY3: # XXX: Why do we do this?
-                self._close_on_teardown(rconn._sock)
-                rconn._sock = sock
-            rconn._sock.settimeout(timeout)
-        except Exception:
-            #print("Failed to connect to", self.server)
-            # avoid ResourceWarning under Py3/PyPy
-            sock.close()
-            if rconn is not None:
-                rconn.close()
-                del rconn
-            del sock
-            raise
-        sock.close()
-        return rconn
+            sock.settimeout(timeout)
+            with sock.makefile(**makefile_kwargs) as rconn:
+                # We want the socket to be accessible from the fileobject
+                # we return. On Python 2, natively this is available as
+                # _sock, but Python 3 doesn't have that.
+                # We emulate it by assigning to a new attribute; note that this
+                # (probably) introduces a cycle on Python 3, so we are careful
+                # to clear it.
+                rconn.gevent_sock = sock
+                try:
+                    yield rconn
+                finally:
+                    del rconn.gevent_sock
 
     def send_request(self, url='/', timeout=_DEFAULT_SOCKET_TIMEOUT, bufsize=1):
-        conn = self.makefile(timeout=timeout, bufsize=bufsize)
-        conn.write(('GET %s HTTP/1.0\r\n\r\n' % url).encode('latin-1'))
-        conn.flush()
-        return conn
+        with self.makefile(timeout=timeout, bufsize=bufsize) as conn:
+            self.send_request_to_fd(conn, url)
+
+    def send_request_to_fd(self, fd, url='/'):
+        fd.write(('GET %s HTTP/1.0\r\n\r\n' % url).encode('latin-1'))
+        fd.flush()
 
     def assertConnectionRefused(self):
         with self.assertRaises(socket.error) as exc:
-            conn = self.makefile()
-            conn.close()
+            with self.makefile() as conn:
+                conn.close()
 
         ex = exc.exception
         self.assertIn(ex.args[0], (errno.ECONNREFUSED, errno.EADDRNOTAVAIL), ex)
@@ -168,31 +164,28 @@ class TestCase(greentest.TestCase):
         self.Settings.assertPoolFull(self)
 
     def assertNotAccepted(self):
-        conn = self.makefile()
-        conn.write(b'GET / HTTP/1.0\r\n\r\n')
-        conn.flush()
-        result = b''
-        try:
-            while True:
-                data = conn._sock.recv(1)
-                if not data:
-                    break
-                result += data
-        except socket.timeout:
-            self.assertFalse(result)
-            return
-        finally:
-            conn.close()
+        with self.makefile() as conn:
+            conn.write(b'GET / HTTP/1.0\r\n\r\n')
+            conn.flush()
+            result = b''
+            try:
+                while True:
+                    data = conn.gevent_sock.recv(1)
+                    if not data:
+                        break
+                    result += data
+            except socket.timeout:
+                self.assertFalse(result)
+                return
+
         self.assertTrue(result.startswith(b'HTTP/1.0 500 Internal Server Error'), repr(result))
 
 
     def assertRequestSucceeded(self, timeout=_DEFAULT_SOCKET_TIMEOUT):
-        conn = self.makefile(timeout=timeout)
-        try:
+        with self.makefile(timeout=timeout) as conn:
             conn.write(b'GET /ping HTTP/1.0\r\n\r\n')
             result = conn.read()
-        finally:
-            conn.close()
+
         self.assertTrue(result.endswith(b'\r\n\r\nPONG'), repr(result))
 
     def start_server(self):
@@ -330,22 +323,21 @@ class TestDefaultSpawn(TestCase):
     def test_server_closes_client_sockets(self):
         self.server = self.ServerClass((greentest.DEFAULT_BIND_ADDR, 0), lambda *args: [])
         self.server.start()
-        conn = self.send_request()
-        # use assert500 below?
-        with gevent.Timeout._start_new_or_dummy(1):
-            try:
-                result = conn.read()
-                if result:
-                    assert result.startswith('HTTP/1.0 500 Internal Server Error'), repr(result)
-            except socket.error as ex:
-                if ex.args[0] == 10053:
-                    pass  # "established connection was aborted by the software in your host machine"
-                elif ex.args[0] == errno.ECONNRESET:
-                    pass
-                else:
-                    raise
-            finally:
-                conn.close()
+        with self.makefile() as conn:
+            self.send_request_to_fd(conn)
+            # use assert500 below?
+            with gevent.Timeout._start_new_or_dummy(1):
+                try:
+                    result = conn.read()
+                    if result:
+                        assert result.startswith('HTTP/1.0 500 Internal Server Error'), repr(result)
+                except socket.error as ex:
+                    if ex.args[0] == 10053:
+                        pass  # "established connection was aborted by the software in your host machine"
+                    elif ex.args[0] == errno.ECONNRESET:
+                        pass
+                    else:
+                        raise
 
         self.stop_server()
 
@@ -403,21 +395,20 @@ class TestPoolSpawn(TestDefaultSpawn):
                       "requests in the pool be full.")
     def test_pool_full(self):
         self.init_server()
-        short_request = self.send_request('/short')
-        long_request = self.send_request('/long')
-        # keep long_request in scope, otherwise the connection will be closed
-        gevent.get_hub().loop.update_now()
-        gevent.sleep(_DEFAULT_SOCKET_TIMEOUT / 10.0)
-        self.assertPoolFull()
-        self.assertPoolFull()
-        # XXX Not entirely clear why this fails (timeout) on appveyor;
-        # underlying socket timeout causing the long_request to close?
-        self.assertPoolFull()
-        short_request._sock.close()
-        if PY3:
-            # We use two makefiles to simulate reading/writing
-            # under py3
-            short_request.close()
+        with self.makefile() as long_request:
+            with self.makefile() as short_request:
+                self.send_request_to_fd(short_request, '/short')
+                self.send_request_to_fd(long_request, '/long')
+
+                # keep long_request in scope, otherwise the connection will be closed
+                gevent.get_hub().loop.update_now()
+                gevent.sleep(_DEFAULT_SOCKET_TIMEOUT / 10.0)
+                self.assertPoolFull()
+                self.assertPoolFull()
+                # XXX Not entirely clear why this fails (timeout) on appveyor;
+                # underlying socket timeout causing the long_request to close?
+                self.assertPoolFull()
+
         # gevent.http and gevent.wsgi cannot detect socket close, so sleep a little
         # to let /short request finish
         gevent.sleep(_DEFAULT_SOCKET_TIMEOUT)
@@ -428,8 +419,6 @@ class TestPoolSpawn(TestDefaultSpawn):
             self.assertRequestSucceeded()
         except socket.timeout:
             greentest.reraiseFlakyTestTimeout()
-
-        del long_request
 
     test_pool_full.error_fatal = False
 

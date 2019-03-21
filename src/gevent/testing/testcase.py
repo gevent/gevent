@@ -203,7 +203,6 @@ class TestCase(TestCaseMetaClass("NewBase",
             self.close_on_teardown = []
 
             for x in to_close:
-                print("Closing", x)
                 close = getattr(x, 'close', x)
                 try:
                     close()

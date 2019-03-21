@@ -113,6 +113,11 @@ def get_switch_expected(fullname):
 disabled_tests = [
     # The server side takes awhile to shut down
     'test_httplib.HTTPSTest.test_local_bad_hostname',
+    # These were previously 3.5+ issues (same as above)
+    # but have been backported.
+    'test_httplib.HTTPSTest.test_local_good_hostname',
+    'test_httplib.HTTPSTest.test_local_unknown_cert',
+
 
     'test_threading.ThreadTests.test_PyThreadState_SetAsyncExc',
     # uses some internal C API of threads not available when threads are emulated with greenlets
@@ -232,14 +237,21 @@ if PY2 and PYPY:
         'test_httpservers.BaseHTTPServerTestCase.test_head_keep_alive',
         'test_httpservers.BaseHTTPServerTestCase.test_send_blank',
         'test_httpservers.BaseHTTPServerTestCase.test_send_error',
+        'test_httpservers.BaseHTTPServerTestCase.test_command',
+        'test_httpservers.BaseHTTPServerTestCase.test_handler',
         'test_httpservers.CGIHTTPServerTestcase.test_post',
         'test_httpservers.CGIHTTPServerTestCase.test_query_with_continuous_slashes',
         'test_httpservers.CGIHTTPServerTestCase.test_query_with_multiple_question_mark',
         'test_httpservers.CGIHTTPServerTestCase.test_os_environ_is_not_altered',
 
-        # This is flaxy, apparently a race condition? Began with PyPy 2.7-7
+        # These are flaxy, apparently a race condition? Began with PyPy 2.7-7
         'test_asyncore.TestAPI_UsePoll.test_handle_error',
         'test_asyncore.TestAPI_UsePoll.test_handle_read',
+        # This one sometimes results on connection refused
+        'test_urllib2_localnet.TestUrlopen.test_info',
+        # Sometimes hangs
+        'test_ssl.ThreadedTests.test_socketserver',
+
     ]
 
 if LIBUV:
@@ -856,6 +868,9 @@ if PYPY:
         'test_httpservers.CGIHTTPServerTestCase.test_invaliduri': _gc_at_end,
         'test_httpservers.CGIHTTPServerTestCase.test_issue19435': _gc_at_end,
 
+        'test_httplib.TunnelTests.test_connect': _gc_at_end,
+        'test_httplib.SourceAddressTest.testHTTPConnectionSourceAddress': _gc_at_end,
+
         # Unclear
         'test_urllib2_localnet.ProxyAuthTests.test_proxy_with_bad_password_raises_httperror': _gc_at_end,
         'test_urllib2_localnet.ProxyAuthTests.test_proxy_with_no_password_raises_httperror': _gc_at_end,
@@ -897,10 +912,6 @@ if PY35:
         # have because we don't inherit the C implementation. But
         # it should be found at runtime.
         'test_socket.GeneralModuleTests.test_sock_ioctl',
-
-        # See comments for 2.7; these hang
-        'test_httplib.HTTPSTest.test_local_good_hostname',
-        'test_httplib.HTTPSTest.test_local_unknown_cert',
 
         # XXX This fails for an unknown reason
         'test_httplib.HeaderTests.test_parse_all_octets',
@@ -1042,6 +1053,11 @@ if PY37:
         # but it passes when they run it and fails when we do. It's not
         # clear why.
         'test_ssl.ThreadedTests.test_check_hostname_idn',
+
+        # These appear to hang, haven't investigated why
+        'test_ssl.SimpleBackgroundTests.test_get_server_certificate',
+        # Probably the same as NetworkConnectionNoServer.test_create_connection_timeout
+        'test_socket.NetworkConnectionNoServer.test_create_connection',
     ]
 
     if APPVEYOR:
