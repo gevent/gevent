@@ -43,7 +43,7 @@ if PYPY and LIBUV:
     # slow and flaky timeouts
     LOCAL_TIMEOUT = CI_TIMEOUT
 else:
-    LOCAL_TIMEOUT = 1
+    LOCAL_TIMEOUT = 2
 
 LARGE_TIMEOUT = max(LOCAL_TIMEOUT, CI_TIMEOUT)
 
@@ -51,12 +51,14 @@ DEFAULT_LOCAL_HOST_ADDR = 'localhost'
 DEFAULT_LOCAL_HOST_ADDR6 = DEFAULT_LOCAL_HOST_ADDR
 DEFAULT_BIND_ADDR = ''
 
-if RUNNING_ON_TRAVIS:
+if RUNNING_ON_TRAVIS or OSX:
     # As of November 2017 (probably Sept or Oct), after a
     # Travis upgrade, using "localhost" no longer works,
     # producing 'OSError: [Errno 99] Cannot assign
     # requested address'. This is apparently something to do with
     # docker containers. Sigh.
+
+    # OSX 10.14.3 is also happier using explicit addresses
     DEFAULT_LOCAL_HOST_ADDR = '127.0.0.1'
     DEFAULT_LOCAL_HOST_ADDR6 = '::1'
     # Likewise, binding to '' appears to work, but it cannot be

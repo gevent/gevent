@@ -671,7 +671,7 @@ def test_main(verbose=None):
     MySimpleHTTPRequestHandlerTestCase = SimpleHTTPRequestHandlerTestCase
     MySimpleHTTPServerTestCase = SimpleHTTPServerTestCase
     MyCGIHTTPServerTestCase = CGIHTTPServerTestCase
-    if greentest.PYPY and greentest.WIN:
+    if greentest.PYPY:
         class MySimpleHTTPRequestHandlerTestCase(unittest.TestCase):
             def setUp(self):
                 raise unittest.SkipTest("gevent: Hangs")

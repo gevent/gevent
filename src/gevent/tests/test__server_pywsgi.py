@@ -52,19 +52,25 @@ class Settings(test__server.Settings):
     @staticmethod
     def assert500(inst):
         conn = inst.makefile()
-        conn.write(b'GET / HTTP/1.0\r\n\r\n')
-        result = conn.read()
-        inst.assertTrue(result.startswith(internal_error_start),
-                        (result, internal_error_start))
-        inst.assertTrue(result.endswith(internal_error_end),
-                        (result, internal_error_end))
+        try:
+            conn.write(b'GET / HTTP/1.0\r\n\r\n')
+            result = conn.read()
+            inst.assertTrue(result.startswith(internal_error_start),
+                            (result, internal_error_start))
+            inst.assertTrue(result.endswith(internal_error_end),
+                            (result, internal_error_end))
+        finally:
+            conn.close()
 
     @staticmethod
     def assert503(inst):
         conn = inst.makefile()
-        conn.write(b'GET / HTTP/1.0\r\n\r\n')
-        result = conn.read()
-        inst.assertEqual(result, internal_error503)
+        try:
+            conn.write(b'GET / HTTP/1.0\r\n\r\n')
+            result = conn.read()
+            inst.assertEqual(result, internal_error503)
+        finally:
+            conn.close()
 
     @staticmethod
     def assertPoolFull(inst):
@@ -74,8 +80,11 @@ class Settings(test__server.Settings):
     @staticmethod
     def assertAcceptedConnectionError(inst):
         conn = inst.makefile()
-        result = conn.read()
-        inst.assertFalse(result)
+        try:
+            result = conn.read()
+            inst.assertFalse(result)
+        finally:
+            conn.close()
 
     @staticmethod
     def fill_default_server_args(inst, kwargs):

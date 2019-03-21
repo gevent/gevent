@@ -36,8 +36,9 @@ except AttributeError:
                       'gettimeout', 'shutdown')
 else:
     # Python 2 doesn't natively support with statements on _fileobject;
-    # but it eases our test cases if we can do the same with on both Py3
-    # and Py2. Implementation copied from Python 3
+    # but it substantially eases our test cases if we can do the same with on both Py3
+    # and Py2. (For this same reason we make the socket itself a context manager.)
+    # Implementation copied from Python 3
     assert not hasattr(_fileobject, '__enter__')
     # we could either patch in place:
     #_fileobject.__enter__ = lambda self: self
@@ -48,7 +49,7 @@ else:
     # socket._fileobject (sigh), so we have to work around that.
 
     # We also make it call our custom socket closing method that disposes
-    # if IO watchers but not the actual socket itself.
+    # of IO watchers but not the actual socket itself.
 
     # Python 2 relies on reference counting to close sockets, so this is all
     # very ugly and fragile.
@@ -114,6 +115,9 @@ class socket(object):
     This object should have the same API as the standard library socket linked to above. Not all
     methods are specifically documented here; when they are they may point out a difference
     to be aware of or may document a method the standard library does not.
+
+    .. versionchanged:: 1.5.0
+        This object is a context manager, returning itself, like in Python 3.
     """
 
     # pylint:disable=too-many-public-methods
@@ -141,6 +145,12 @@ class socket(object):
         io = self.hub.loop.io
         self._read_event = io(fileno, 1)
         self._write_event = io(fileno, 2)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, v, tb):
+        self.close()
 
     def __repr__(self):
         return '<%s at %s %s>' % (type(self).__name__, hex(id(self)), self._formatinfo())

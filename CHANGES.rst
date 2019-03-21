@@ -22,6 +22,9 @@
 - subprocess: ``WIFSTOPPED`` and ``SIGCHLD`` are now handled for
   determining ``Popen.returncode``. See https://bugs.python.org/issue29335
 
+- The result of ``gevent.ssl.SSLSocket.makefile()`` can be used as a
+  context manager on Python 2.
+
 1.4.0 (2019-01-04)
 ==================
 

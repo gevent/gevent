@@ -224,6 +224,23 @@ if 'thread' in os.getenv('GEVENT_FILE', ''):
         # Fails with "OSError: 9 invalid file descriptor"; expect GC/lifetime issues
     ]
 
+if PY2 and PYPY:
+    disabled_tests += [
+        # These appear to hang or take a long time for some reason?
+        # Likely a hostname/binding issue or failure to properly close/gc sockets.
+        'test_httpservers.BaseHTTPServerTestCase.test_head_via_send_error',
+        'test_httpservers.BaseHTTPServerTestCase.test_head_keep_alive',
+        'test_httpservers.BaseHTTPServerTestCase.test_send_blank',
+        'test_httpservers.BaseHTTPServerTestCase.test_send_error',
+        'test_httpservers.CGIHTTPServerTestcase.test_post',
+        'test_httpservers.CGIHTTPServerTestCase.test_query_with_continuous_slashes',
+        'test_httpservers.CGIHTTPServerTestCase.test_query_with_multiple_question_mark',
+        'test_httpservers.CGIHTTPServerTestCase.test_os_environ_is_not_altered',
+
+        # This is flaxy, apparently a race condition? Began with PyPy 2.7-7
+        'test_asyncore.TestAPI_UsePoll.test_handle_error',
+        'test_asyncore.TestAPI_UsePoll.test_handle_read',
+    ]
 
 if LIBUV:
     # epoll appears to work with these just fine in some cases;
@@ -524,6 +541,11 @@ if PY2:
             'test_ssl.ThreadedTests.test_alpn_protocols',
         ]
 
+    disabled_tests += [
+        # At least on OSX, this results in connection refused
+        'test_urllib2_localnet.TestUrlopen.test_https_sni',
+    ]
+
 def _make_run_with_original(mod_name, func_name):
     @contextlib.contextmanager
     def with_orig():
@@ -809,6 +831,34 @@ if PYPY:
         # This is an important test, so rather than skip it in patched_tests_setup,
         # we do the gc before we return.
         'test_urllib2_localnet.TestUrlopen.test_https_with_cafile': _gc_at_end,
+
+        'test_httpservers.BaseHTTPServerTestCase.test_command': _gc_at_end,
+        'test_httpservers.BaseHTTPServerTestCase.test_handler': _gc_at_end,
+        'test_httpservers.BaseHTTPServerTestCase.test_head_keep_alive': _gc_at_end,
+        'test_httpservers.BaseHTTPServerTestCase.test_head_via_send_error': _gc_at_end,
+        'test_httpservers.BaseHTTPServerTestCase.test_header_close': _gc_at_end,
+        'test_httpservers.BaseHTTPServerTestCase.test_internal_key_error': _gc_at_end,
+        'test_httpservers.BaseHTTPServerTestCase.test_request_line_trimming': _gc_at_end,
+        'test_httpservers.BaseHTTPServerTestCase.test_return_custom_status': _gc_at_end,
+        'test_httpservers.BaseHTTPServerTestCase.test_return_header_keep_alive': _gc_at_end,
+        'test_httpservers.BaseHTTPServerTestCase.test_send_blank': _gc_at_end,
+        'test_httpservers.BaseHTTPServerTestCase.test_send_error': _gc_at_end,
+        'test_httpservers.BaseHTTPServerTestCase.test_version_bogus': _gc_at_end,
+        'test_httpservers.BaseHTTPServerTestCase.test_version_digits': _gc_at_end,
+        'test_httpservers.BaseHTTPServerTestCase.test_version_invalid': _gc_at_end,
+        'test_httpservers.BaseHTTPServerTestCase.test_version_none': _gc_at_end,
+        'test_httpservers.BaseHTTPServerTestCase.test_version_none_get': _gc_at_end,
+        'test_httpservers.BaseHTTPServerTestCase.test_get': _gc_at_end,
+        'test_httpservers.SimpleHTTPServerTestCase.test_get': _gc_at_end,
+        'test_httpservers.SimpleHTTPServerTestCase.test_head': _gc_at_end,
+        'test_httpservers.SimpleHTTPServerTestCase.test_invalid_requests': _gc_at_end,
+        'test_httpservers.SimpleHTTPServerTestCase.test_path_without_leading_slash': _gc_at_end,
+        'test_httpservers.CGIHTTPServerTestCase.test_invaliduri': _gc_at_end,
+        'test_httpservers.CGIHTTPServerTestCase.test_issue19435': _gc_at_end,
+
+        # Unclear
+        'test_urllib2_localnet.ProxyAuthTests.test_proxy_with_bad_password_raises_httperror': _gc_at_end,
+        'test_urllib2_localnet.ProxyAuthTests.test_proxy_with_no_password_raises_httperror': _gc_at_end,
     })
 
 

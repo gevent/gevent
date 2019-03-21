@@ -109,26 +109,35 @@ class TestCase(greentest.TestCase):
 
     def makefile(self, timeout=_DEFAULT_SOCKET_TIMEOUT, bufsize=1):
         server_host, server_port, family = self.get_server_host_port_family()
-
-        sock = socket.socket(family=family)
-        try:
-            sock.connect((server_host, server_port))
-        except Exception:
-            # avoid ResourceWarning under Py3
-            sock.close()
-            raise
-
+        bufarg = 'buffering' if PY3 else 'bufsize'
+        makefile_kwargs = {bufarg: bufsize}
         if PY3:
             # Under Python3, you can't read and write to the same
             # makefile() opened in r, and r+ is not allowed
-            kwargs = {'buffering': bufsize, 'mode': 'rwb'}
-        else:
-            kwargs = {'bufsize': bufsize}
+            makefile_kwargs['mode'] = 'rwb'
 
-        rconn = sock.makefile(**kwargs)
-        if PY3:
-            rconn._sock = sock
-        rconn._sock.settimeout(timeout)
+        sock = socket.socket(family=family)
+        self._close_on_teardown(sock)
+        rconn = None
+        try:
+            #print("Connecting to", self.server, self.server.started, server_host, server_port)
+            sock.connect((server_host, server_port))
+
+            rconn = sock.makefile(**makefile_kwargs)
+            self._close_on_teardown(rconn)
+            if PY3: # XXX: Why do we do this?
+                self._close_on_teardown(rconn._sock)
+                rconn._sock = sock
+            rconn._sock.settimeout(timeout)
+        except Exception:
+            #print("Failed to connect to", self.server)
+            # avoid ResourceWarning under Py3/PyPy
+            sock.close()
+            if rconn is not None:
+                rconn.close()
+                del rconn
+            del sock
+            raise
         sock.close()
         return rconn
 
@@ -172,15 +181,19 @@ class TestCase(greentest.TestCase):
         except socket.timeout:
             self.assertFalse(result)
             return
+        finally:
+            conn.close()
         self.assertTrue(result.startswith(b'HTTP/1.0 500 Internal Server Error'), repr(result))
-        conn.close()
+
 
     def assertRequestSucceeded(self, timeout=_DEFAULT_SOCKET_TIMEOUT):
         conn = self.makefile(timeout=timeout)
-        conn.write(b'GET /ping HTTP/1.0\r\n\r\n')
-        result = conn.read()
-        conn.close()
-        assert result.endswith(b'\r\n\r\nPONG'), repr(result)
+        try:
+            conn.write(b'GET /ping HTTP/1.0\r\n\r\n')
+            result = conn.read()
+        finally:
+            conn.close()
+        self.assertTrue(result.endswith(b'\r\n\r\nPONG'), repr(result))
 
     def start_server(self):
         self.server.start()
@@ -293,24 +306,25 @@ class TestDefaultSpawn(TestCase):
             gevent.sleep(0.01)
             self.assertRequestSucceeded()
             self.server.stop()
-            assert not self.server.started
+            self.assertFalse(self.server.started)
             self.assertConnectionRefused()
         finally:
             g.kill()
             g.get()
+            self.server.stop()
 
     def test_serve_forever(self):
         self.server = self.ServerSubClass(('127.0.0.1', 0))
-        assert not self.server.started
+        self.assertFalse(self.server.started)
         self.assertConnectionRefused()
         self._test_serve_forever()
 
     def test_serve_forever_after_start(self):
         self.server = self.ServerSubClass((greentest.DEFAULT_BIND_ADDR, 0))
         self.assertConnectionRefused()
-        assert not self.server.started
+        self.assertFalse(self.server.started)
         self.server.start()
-        assert self.server.started
+        self.assertTrue(self.server.started)
         self._test_serve_forever()
 
     def test_server_closes_client_sockets(self):

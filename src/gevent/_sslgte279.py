@@ -35,6 +35,7 @@ __implements__ = [
     '_create_unverified_context',
     '_create_default_https_context',
     '_create_stdlib_context',
+    '_fileobject',
 ]
 
 # Import all symbols from Python's ssl.py, except those that we are implementing
@@ -53,8 +54,21 @@ __all__ = __implements__ + __imports__
 if 'namedtuple' in __all__:
     __all__.remove('namedtuple')
 
-orig_SSLContext = __ssl__.SSLContext # pylint: disable=no-member
+# See notes in _socket2.py. Python 3 returns much nicer
+# `io` object wrapped around a SocketIO class.
+assert not hasattr(__ssl__._fileobject, '__enter__') # pylint:disable=used-before-assignment
 
+class _fileobject(__ssl__._fileobject): # pylint:no-member
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        if not self.closed:
+            self.close()
+
+
+orig_SSLContext = __ssl__.SSLContext # pylint: disable=no-member
 
 class SSLContext(orig_SSLContext):
     def wrap_socket(self, sock, server_side=False,

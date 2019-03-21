@@ -198,13 +198,17 @@ class TestCase(TestCaseMetaClass("NewBase",
         super(TestCase, self).tearDown()
 
     def _tearDownCloseOnTearDown(self):
-        # XXX: Should probably reverse this
-        for x in self.close_on_teardown:
-            close = getattr(x, 'close', x)
-            try:
-                close()
-            except Exception: # pylint:disable=broad-except
-                pass
+        while self.close_on_teardown:
+            to_close = reversed(self.close_on_teardown)
+            self.close_on_teardown = []
+
+            for x in to_close:
+                print("Closing", x)
+                close = getattr(x, 'close', x)
+                try:
+                    close()
+                except Exception: # pylint:disable=broad-except
+                    pass
 
     @classmethod
     def setUpClass(cls):
