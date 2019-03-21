@@ -75,8 +75,7 @@ def handle_request(s, raise_on_timeout):
     except socket.timeout:
         if raise_on_timeout:
             raise
-        else:
-            return
+        return
     #print('handle_request - accepted')
     res = conn.recv(100)
     assert res == b'hello', repr(res)

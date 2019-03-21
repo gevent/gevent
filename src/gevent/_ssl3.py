@@ -450,10 +450,9 @@ class SSLSocket(socket):
         if self._sslobj:
             raise ValueError("sendto not allowed on instances of %s" %
                              self.__class__)
-        elif addr is None:
+        if addr is None:
             return socket.sendto(self, data, flags_or_addr)
-        else:
-            return socket.sendto(self, data, flags_or_addr, addr)
+        return socket.sendto(self, data, flags_or_addr, addr)
 
     def sendmsg(self, *args, **kwargs):
         # Ensure programs don't send data unencrypted if they try to
@@ -508,16 +507,14 @@ class SSLSocket(socket):
         if self._sslobj:
             raise ValueError("recvfrom not allowed on instances of %s" %
                              self.__class__)
-        else:
-            return socket.recvfrom(self, buflen, flags)
+        return socket.recvfrom(self, buflen, flags)
 
     def recvfrom_into(self, buffer, nbytes=None, flags=0):
         self._checkClosed()
         if self._sslobj:
             raise ValueError("recvfrom_into not allowed on instances of %s" %
                              self.__class__)
-        else:
-            return socket.recvfrom_into(self, buffer, nbytes, flags)
+        return socket.recvfrom_into(self, buffer, nbytes, flags)
 
     def recvmsg(self, *args, **kwargs):
         raise NotImplementedError("recvmsg not allowed on instances of %s" %

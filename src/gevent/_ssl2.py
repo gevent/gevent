@@ -200,8 +200,7 @@ class SSLSocket(socket):
         if self._sslobj:
             raise ValueError("sendto not allowed on instances of %s" %
                              self.__class__)
-        else:
-            return socket.sendto(self, *args)
+        return socket.sendto(self, *args)
 
     def recv(self, buflen=1024, flags=0):
         if self._sslobj:
@@ -245,15 +244,13 @@ class SSLSocket(socket):
         if self._sslobj:
             raise ValueError("recvfrom not allowed on instances of %s" %
                              self.__class__)
-        else:
-            return socket.recvfrom(self, *args)
+        return socket.recvfrom(self, *args)
 
     def recvfrom_into(self, *args):
         if self._sslobj:
             raise ValueError("recvfrom_into not allowed on instances of %s" %
                              self.__class__)
-        else:
-            return socket.recvfrom_into(self, *args)
+        return socket.recvfrom_into(self, *args)
 
     def pending(self):
         if self._sslobj:

@@ -50,8 +50,7 @@ def _lookup_port(port, socktype):
             except error as ex:
                 if 'not found' in str(ex):
                     raise gaierror(EAI_SERVICE, 'Servname not supported for ai_socktype')
-                else:
-                    raise gaierror(str(ex))
+                raise gaierror(str(ex))
             except UnicodeEncodeError:
                 raise error('Int or String expected', port)
     elif port is None:

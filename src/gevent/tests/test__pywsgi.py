@@ -1464,7 +1464,7 @@ class Handler(pywsgi.WSGIHandler):
 
     def read_requestline(self):
         data = self.rfile.read(7)
-        if data[0] == b'<'[0]:
+        if data[0] == b'<'[0]: # py3: indexing bytes returns ints. sigh.
             # Returning nothing stops handle_one_request()
             # Note that closing or even deleting self.socket() here
             # can lead to the read side throwing Connection Reset By Peer,
@@ -1475,8 +1475,7 @@ class Handler(pywsgi.WSGIHandler):
             else:
                 self.log_error('Invalid request: %r', data)
             return None
-        else:
-            return data + self.rfile.readline()
+        return data + self.rfile.readline()
 
 
 class TestHandlerSubclass(TestCase):
