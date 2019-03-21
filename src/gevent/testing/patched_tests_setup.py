@@ -572,6 +572,9 @@ if PY2:
             'test_thread.BarrierTest.test_barrier',
             # Broken SSL
             'test_urllib2_localnet.TestUrlopen.test_https',
+            'test_ssl.ContextTests.test__create_stdlib_context',
+            'test_ssl.ContextTests.test_create_default_context',
+            'test_ssl.ContextTests.test_options',
         ]
 
 def _make_run_with_original(mod_name, func_name):
