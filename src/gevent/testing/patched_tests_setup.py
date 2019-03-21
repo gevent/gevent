@@ -244,9 +244,6 @@ if PY2 and PYPY:
         'test_httpservers.CGIHTTPServerTestCase.test_query_with_multiple_question_mark',
         'test_httpservers.CGIHTTPServerTestCase.test_os_environ_is_not_altered',
 
-        # These are flaxy, apparently a race condition? Began with PyPy 2.7-7
-        'test_asyncore.TestAPI_UsePoll.test_handle_error',
-        'test_asyncore.TestAPI_UsePoll.test_handle_read',
         # This one sometimes results on connection refused
         'test_urllib2_localnet.TestUrlopen.test_info',
         # Sometimes hangs
@@ -667,7 +664,41 @@ if PYPY:
         # On some platforms, this returns "zlib_compression", but the test is looking for
         # "ZLIB"
         'test_ssl.ThreadedTests.test_compression',
+
+        # These are flaxy, apparently a race condition? Began with PyPy 2.7-7 and 3.6-7
+        'test_asyncore.TestAPI_UsePoll.test_handle_error',
+        'test_asyncore.TestAPI_UsePoll.test_handle_read',
+
+
     ]
+
+    if PY36:
+        disabled_tests += [
+            # These are flaky, begining in 3.6-alpha 7.0, not finding some flag
+            # set, apparently a race condition
+            'test_asyncore.TestAPI_UveIPv6Poll.test_handle_accept',
+            'test_asyncore.TestAPI_UveIPv6Poll.test_handle_accepted',
+            'test_asyncore.TestAPI_UveIPv6Poll.test_handle_close',
+            'test_asyncore.TestAPI_UveIPv6Poll.test_handle_write',
+
+            'test_asyncore.TestAPI_UseIPV6Select.test_handle_read',
+
+            # These are reporting 'ssl has no attribute ...'
+            # This could just be an OSX thing
+            'test_ssl.ContextTests.test__create_stdlib_context',
+            'test_ssl.ContextTests.test_create_default_context',
+            'test_ssl.ContextTests.test_get_ciphers',
+            'test_ssl.ContextTests.test_options',
+            'test_ssl.ContextTests.test_constants',
+
+            # These tend to hang for some reason, probably not properly
+            # closed sockets.
+            'test_socketserver.SocketServerTest.test_write',
+
+            # This uses ctypes to do funky things including using ptrace,
+            # it hangs
+            'test_subprocess.ProcessTestcase.test_child_terminated_in_stopped_state',
+        ]
 
 # Generic Python 3
 
