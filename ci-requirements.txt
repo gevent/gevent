@@ -13,8 +13,8 @@ greenlet>=0.4.14 ; platform_python_implementation == "CPython"
 pylint>=1.8.0 ; python_version < "3.4"
 # pylint 2 needs astroid 2; unfortunately, it uses `typed_ast`
 # which has a C extension that doesn't build on PyPy
-pylint >= 2.1.1 ; python_version >= "3.4"  and platform_python_implementation == "CPython"
-astroid >= 2.0.2 ; python_version >= "3.4" and platform_python_implementation == "CPython"
+pylint >= 2.3.1 ; python_version >= "3.4"  and platform_python_implementation == "CPython"
+astroid >= 2.2.5 ; python_version >= "3.4" and platform_python_implementation == "CPython"
 # See version requirements in setup.py
 cffi >= 1.12.2 ; platform_python_implementation == "CPython"
 

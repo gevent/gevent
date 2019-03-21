@@ -958,6 +958,10 @@ class Popen(object):
             # Process startup details
             if startupinfo is None:
                 startupinfo = STARTUPINFO()
+            elif hasattr(startupinfo, '_copy'):
+                # bpo-34044: Copy STARTUPINFO since it is modified below,
+                # so the caller can reuse it multiple times.
+                startupinfo = startupinfo._copy()
             use_std_handles = -1 not in (p2cread, c2pwrite, errwrite)
             if use_std_handles:
                 startupinfo.dwFlags |= STARTF_USESTDHANDLES

@@ -16,6 +16,9 @@
 
 - gevent is now compiled with Cython 0.29.6 and cffi 1.12.2
 
+- Python 3.7 subprocess: Copy a ``STARTUPINFO`` passed as a parameter.
+  Contributed by AndCycle in :pr:`1352`.
+
 1.4.0 (2019-01-04)
 ==================
 
