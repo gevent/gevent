@@ -1,13 +1,14 @@
-"""Regresssion tests for urllib"""
+"""Regression tests for urllib"""
 
+import collections
 import urllib
 import httplib
+import io
 import unittest
 import os
 import sys
 import mimetools
 import tempfile
-import StringIO
 
 from test import test_support
 from base64 import b64encode
@@ -21,37 +22,43 @@ def hexescape(char):
     return "%" + hex_repr
 
 
+def fakehttp(fakedata):
+    class FakeSocket(io.BytesIO):
+
+        def sendall(self, data):
+            FakeHTTPConnection.buf = data
+
+        def makefile(self, *args, **kwds):
+            return self
+
+        def read(self, amt=None):
+            if self.closed:
+                return b""
+            return io.BytesIO.read(self, amt)
+
+        def readline(self, length=None):
+            if self.closed:
+                return b""
+            return io.BytesIO.readline(self, length)
+
+    class FakeHTTPConnection(httplib.HTTPConnection):
+
+        # buffer to store data for verification in urlopen tests.
+        buf = ""
+
+        def connect(self):
+            self.sock = FakeSocket(self.fakedata)
+            self.__class__.fakesock = self.sock
+    FakeHTTPConnection.fakedata = fakedata
+
+    return FakeHTTPConnection
+
+
 class FakeHTTPMixin(object):
     def fakehttp(self, fakedata):
-        class FakeSocket(StringIO.StringIO):
-
-            def sendall(self, data):
-                FakeHTTPConnection.buf = data
-
-            def makefile(self, *args, **kwds):
-                return self
-
-            def read(self, amt=None):
-                if self.closed:
-                    return ""
-                return StringIO.StringIO.read(self, amt)
-
-            def readline(self, length=None):
-                if self.closed:
-                    return ""
-                return StringIO.StringIO.readline(self, length)
-
-        class FakeHTTPConnection(httplib.HTTPConnection):
-
-            # buffer to store data for verification in urlopen tests.
-            buf = ""
-
-            def connect(self):
-                self.sock = FakeSocket(fakedata)
-
         assert httplib.HTTP._connection_class == httplib.HTTPConnection
 
-        httplib.HTTP._connection_class = FakeHTTPConnection
+        httplib.HTTP._connection_class = fakehttp(fakedata)
 
     def unfakehttp(self):
         httplib.HTTP._connection_class = httplib.HTTPConnection
@@ -158,8 +165,72 @@ class ProxyTests(unittest.TestCase):
         # getproxies_environment use lowered case truncated (no '_proxy') keys
         self.assertEqual('localhost', proxies['no'])
         # List of no_proxies with space.
-        self.env.set('NO_PROXY', 'localhost, anotherdomain.com, newdomain.com')
+        self.env.set('NO_PROXY', 'localhost, anotherdomain.com, newdomain.com:1234')
         self.assertTrue(urllib.proxy_bypass_environment('anotherdomain.com'))
+        self.assertTrue(urllib.proxy_bypass_environment('anotherdomain.com:8888'))
+        self.assertTrue(urllib.proxy_bypass_environment('newdomain.com:1234'))
+
+    def test_proxy_cgi_ignore(self):
+        try:
+            self.env.set('HTTP_PROXY', 'http://somewhere:3128')
+            proxies = urllib.getproxies_environment()
+            self.assertEqual('http://somewhere:3128', proxies['http'])
+            self.env.set('REQUEST_METHOD', 'GET')
+            proxies = urllib.getproxies_environment()
+            self.assertNotIn('http', proxies)
+        finally:
+            self.env.unset('REQUEST_METHOD')
+            self.env.unset('HTTP_PROXY')
+
+    def test_proxy_bypass_environment_host_match(self):
+        bypass = urllib.proxy_bypass_environment
+        self.env.set('NO_PROXY',
+                     'localhost, anotherdomain.com, newdomain.com:1234, .d.o.t')
+        self.assertTrue(bypass('localhost'))
+        self.assertTrue(bypass('LocalHost'))                 # MixedCase
+        self.assertTrue(bypass('LOCALHOST'))                 # UPPERCASE
+        self.assertTrue(bypass('newdomain.com:1234'))
+        self.assertTrue(bypass('foo.d.o.t'))                 # issue 29142
+        self.assertTrue(bypass('anotherdomain.com:8888'))
+        self.assertTrue(bypass('www.newdomain.com:1234'))
+        self.assertFalse(bypass('prelocalhost'))
+        self.assertFalse(bypass('newdomain.com'))            # no port
+        self.assertFalse(bypass('newdomain.com:1235'))       # wrong port
+
+class ProxyTests_withOrderedEnv(unittest.TestCase):
+
+    def setUp(self):
+        # We need to test conditions, where variable order _is_ significant
+        self._saved_env = os.environ
+        # Monkey patch os.environ, start with empty fake environment
+        os.environ = collections.OrderedDict()
+
+    def tearDown(self):
+        os.environ = self._saved_env
+
+    def test_getproxies_environment_prefer_lowercase(self):
+        # Test lowercase preference with removal
+        os.environ['no_proxy'] = ''
+        os.environ['No_Proxy'] = 'localhost'
+        self.assertFalse(urllib.proxy_bypass_environment('localhost'))
+        self.assertFalse(urllib.proxy_bypass_environment('arbitrary'))
+        os.environ['http_proxy'] = ''
+        os.environ['HTTP_PROXY'] = 'http://somewhere:3128'
+        proxies = urllib.getproxies_environment()
+        self.assertEqual({}, proxies)
+        # Test lowercase preference of proxy bypass and correct matching including ports
+        os.environ['no_proxy'] = 'localhost, noproxy.com, my.proxy:1234'
+        os.environ['No_Proxy'] = 'xyz.com'
+        self.assertTrue(urllib.proxy_bypass_environment('localhost'))
+        self.assertTrue(urllib.proxy_bypass_environment('noproxy.com:5678'))
+        self.assertTrue(urllib.proxy_bypass_environment('my.proxy:1234'))
+        self.assertFalse(urllib.proxy_bypass_environment('my.proxy'))
+        self.assertFalse(urllib.proxy_bypass_environment('arbitrary'))
+        # Test lowercase preference with replacement
+        os.environ['http_proxy'] = 'http://somewhere:3128'
+        os.environ['Http_Proxy'] = 'http://somewhereelse:3128'
+        proxies = urllib.getproxies_environment()
+        self.assertEqual('http://somewhere:3128', proxies['http'])
 
 
 class urlopen_HttpTests(unittest.TestCase, FakeHTTPMixin):
@@ -209,9 +280,25 @@ Connection: close
 Content-Type: text/html; charset=iso-8859-1
 """)
         try:
-            self.assertRaises(IOError, urllib.urlopen, "http://python.org/")
+            msg = "Redirection to url 'file:"
+            with self.assertRaisesRegexp(IOError, msg):
+                urllib.urlopen("http://python.org/")
         finally:
             self.unfakehttp()
+
+    def test_redirect_limit_independent(self):
+        # Ticket #12923: make sure independent requests each use their
+        # own retry limit.
+        for i in range(urllib.FancyURLopener().maxtries):
+            self.fakehttp(b'''HTTP/1.1 302 Found
+Location: file://guidocomputer.athome.com:/python/license
+Connection: close
+''')
+            try:
+                self.assertRaises(IOError, urllib.urlopen,
+                    "http://something")
+            finally:
+                self.unfakehttp()
 
     def test_empty_socket(self):
         # urlopen() raises IOError if the underlying socket does not send any
@@ -792,6 +879,26 @@ class Utility_Tests(unittest.TestCase):
         self.assertEqual(splithost('/foo/bar/baz.html'),
                          (None, '/foo/bar/baz.html'))
 
+        # bpo-30500: # starts a fragment.
+        self.assertEqual(splithost('//127.0.0.1#@host.com'),
+                         ('127.0.0.1', '/#@host.com'))
+        self.assertEqual(splithost('//127.0.0.1#@host.com:80'),
+                         ('127.0.0.1', '/#@host.com:80'))
+        self.assertEqual(splithost('//127.0.0.1:80#@host.com'),
+                         ('127.0.0.1:80', '/#@host.com'))
+
+        # Empty host is returned as empty string.
+        self.assertEqual(splithost("///file"),
+                         ('', '/file'))
+
+        # Trailing semicolon, question mark and hash symbol are kept.
+        self.assertEqual(splithost("//example.net/file;"),
+                         ('example.net', '/file;'))
+        self.assertEqual(splithost("//example.net/file?"),
+                         ('example.net', '/file?'))
+        self.assertEqual(splithost("//example.net/file#"),
+                         ('example.net', '/file#'))
+
     def test_splituser(self):
         splituser = urllib.splituser
         self.assertEqual(splituser('User:Pass@www.python.org:080'),
@@ -1014,6 +1121,8 @@ def test_main():
             Pathname_Tests,
             Utility_Tests,
             URLopener_Tests,
+            ProxyTests,
+            ProxyTests_withOrderedEnv,
             #FTPWrapperTests,
         )
 

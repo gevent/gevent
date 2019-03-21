@@ -183,6 +183,10 @@ disabled_tests = [
     # since November of 2016 on Python 3, but now also seen on Python 2/Pypy.
     'test_subprocess.ProcessTestCase.test_leaking_fds_on_error',
 
+    # Added between 3.6.0 and 3.6.3, uses _testcapi and internals
+    # of the subprocess module. Backported to Python 2.7.16.
+    'test_subprocess.POSIXProcessTestCase.test_stopped',
+
     'test_ssl.ThreadedTests.test_default_ciphers',
     'test_ssl.ThreadedTests.test_empty_cert',
     'test_ssl.ThreadedTests.test_malformed_cert',
@@ -859,28 +863,6 @@ if PY35:
             'test_socket.RecvmsgSCMRightsStreamTest.testFDPassEmpty',
         ]
 
-    if sys.version_info[:2] == (3, 4):
-        disabled_tests += [
-            # These are all expecting that a signal (sigalarm) that
-            # arrives during a blocking call should raise
-            # InterruptedError with errno=EINTR. gevent does not do
-            # this, instead its loop keeps going and raises a timeout
-            # (which fails the test). HOWEVER: Python 3.5 fixed this
-            # problem and started raising a timeout,
-            # (https://docs.python.org/3/whatsnew/3.5.html#pep-475-retry-system-calls-failing-with-eintr)
-            # and removed these tests (InterruptedError is no longer
-            # raised). So basically, gevent was ahead of its time.
-            'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvIntoTimeout',
-            'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvTimeout',
-            'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvfromIntoTimeout',
-            'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvfromTimeout',
-            'test_socket.InterruptedRecvTimeoutTest.testInterruptedSendTimeout',
-            'test_socket.InterruptedRecvTimeoutTest.testInterruptedSendtoTimeout',
-            'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvmsgTimeout',
-            'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvmsgIntoTimeout',
-            'test_socket.InterruptedSendTimeoutTest.testInterruptedSendmsgTimeout',
-        ]
-
         if TRAVIS:
             # This has been seen to produce "Inconsistency detected by
             # ld.so: dl-open.c: 231: dl_open_worker: Assertion
@@ -913,9 +895,6 @@ if PY35:
         # 'lock_tests.LockTests.lest_locked_repr',
         # 'lock_tests.LockTests.lest_repr',
 
-        # Added between 3.6.0 and 3.6.3, uses _testcapi and internals
-        # of the subprocess module.
-        'test_subprocess.POSIXProcessTestCase.test_stopped',
 
         # This test opens a socket, creates a new socket with the same fileno,
         # closes the original socket (and hence fileno) and then

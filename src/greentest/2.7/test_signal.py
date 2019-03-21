@@ -138,6 +138,8 @@ class InterProcessSignalTests(unittest.TestCase):
         else:
             self.fail("pause returned of its own accord, and the signal"
                       " didn't arrive after another second.")
+        finally:
+            signal.alarm(0)
 
     # Issue 3864. Unknown if this affects earlier versions of freebsd also.
     @unittest.skipIf(sys.platform=='freebsd6',
@@ -184,6 +186,9 @@ class InterProcessSignalTests(unittest.TestCase):
                 os.kill(child, signal.SIGKILL)
                 self.fail('Test deadlocked after %d seconds.' %
                           self.MAX_DURATION)
+
+            # read the exit status to not leak a zombie process
+            os.waitpid(child, 0)
 
 
 @unittest.skipIf(sys.platform == "win32", "Not valid on Windows")
@@ -243,11 +248,15 @@ class WakeupSignalTests(unittest.TestCase):
         import select
 
         signal.alarm(1)
-        before_time = time.time()
-        # We attempt to get a signal during the sleep,
-        # before select is called
-        time.sleep(self.TIMEOUT_FULL)
-        mid_time = time.time()
+        try:
+            before_time = time.time()
+            # We attempt to get a signal during the sleep,
+            # before select is called
+            time.sleep(self.TIMEOUT_FULL)
+            mid_time = time.time()
+        finally:
+            signal.alarm(0)
+
         self.assertTrue(mid_time - before_time < self.TIMEOUT_HALF)
         select.select([self.read], [], [], self.TIMEOUT_FULL)
         after_time = time.time()
@@ -257,11 +266,15 @@ class WakeupSignalTests(unittest.TestCase):
         import select
 
         signal.alarm(1)
-        before_time = time.time()
-        # We attempt to get a signal during the select call
-        self.assertRaises(select.error, select.select,
-            [self.read], [], [], self.TIMEOUT_FULL)
-        after_time = time.time()
+        try:
+            before_time = time.time()
+            # We attempt to get a signal during the select call
+            self.assertRaises(select.error, select.select,
+                [self.read], [], [], self.TIMEOUT_FULL)
+            after_time = time.time()
+        finally:
+            signal.alarm(0)
+
         self.assertTrue(after_time - before_time < self.TIMEOUT_HALF)
 
     def setUp(self):
@@ -489,6 +502,16 @@ class ItimerTest(unittest.TestCase):
         self.assertEqual(signal.getitimer(self.itimer), (0.0, 0.0))
         # and the handler should have been called
         self.assertEqual(self.hndl_called, True)
+
+    def test_setitimer_tiny(self):
+        # bpo-30807: C setitimer() takes a microsecond-resolution interval.
+        # Check that float -> timeval conversion doesn't round
+        # the interval down to zero, which would disable the timer.
+        self.itimer = signal.ITIMER_REAL
+        signal.setitimer(self.itimer, 1e-6)
+        time.sleep(1)
+        self.assertEqual(self.hndl_called, True)
+
 
 def test_main():
     test_support.run_unittest(BasicSignalTests, InterProcessSignalTests,

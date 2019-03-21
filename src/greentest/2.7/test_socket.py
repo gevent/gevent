@@ -21,6 +21,9 @@ except ImportError:
     _socket = None
 
 
+MAIN_TIMEOUT = 60.0
+
+
 def try_address(host, port=0, family=socket.AF_INET):
     """Try to bind a socket on the given host:port and return True
     if that has been possible."""
@@ -35,7 +38,7 @@ def try_address(host, port=0, family=socket.AF_INET):
 
 HOST = test_support.HOST
 MSG = b'Michael Gilfix was here\n'
-SUPPORTS_IPV6 = socket.has_ipv6 and try_address('::1', family=socket.AF_INET6)
+SUPPORTS_IPV6 = test_support.IPV6_ENABLED
 
 try:
     import thread
@@ -86,7 +89,7 @@ class ThreadableTest:
         clientTearDown ()
 
     Any new test functions within the class must then define
-    tests in pairs, where the test name is preceeded with a
+    tests in pairs, where the test name is preceded with a
     '_' to indicate the client portion of the test. Ex:
 
         def testFoo(self):
@@ -299,7 +302,7 @@ class GeneralModuleTests(unittest.TestCase):
                               "Error raising socket exception.")
 
     def testSendtoErrors(self):
-        # Testing that sendto doens't masks failures. See #10169.
+        # Testing that sendto doesn't mask failures. See #10169.
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.addCleanup(s.close)
         s.bind(('', 0))
@@ -708,7 +711,7 @@ class GeneralModuleTests(unittest.TestCase):
                 pass
 
     def check_sendall_interrupted(self, with_timeout):
-        # socketpair() is not stricly required, but it makes things easier.
+        # socketpair() is not strictly required, but it makes things easier.
         if not hasattr(signal, 'alarm') or not hasattr(socket, 'socketpair'):
             self.skipTest("signal.alarm and socket.socketpair required for this test")
         # Our signal handlers clobber the C errno by calling a math function
@@ -733,6 +736,7 @@ class GeneralModuleTests(unittest.TestCase):
                 self.assertRaises(socket.timeout, c.sendall,
                                   b"x" * test_support.SOCK_MAX_SIZE)
         finally:
+            signal.alarm(0)
             signal.signal(signal.SIGALRM, old_alarm)
             c.close()
             s.close()
@@ -827,7 +831,7 @@ class BasicTCPTest(SocketConnectedTest):
         self.serv_conn.sendall(big_chunk)
 
     @unittest.skipUnless(hasattr(socket, 'fromfd'),
-                         'socket.fromfd not availble')
+                         'socket.fromfd not available')
     def testFromFd(self):
         # Testing fromfd()
         fd = self.cli_conn.fileno()
@@ -946,6 +950,7 @@ class BasicSocketPairTest(SocketPairTest):
 class NonBlockingTCPTests(ThreadedTCPSocketTest):
 
     def __init__(self, methodName='runTest'):
+        self.event = threading.Event()
         ThreadedTCPSocketTest.__init__(self, methodName=methodName)
 
     def testSetBlocking(self):
@@ -981,21 +986,27 @@ class NonBlockingTCPTests(ThreadedTCPSocketTest):
     def testAccept(self):
         # Testing non-blocking accept
         self.serv.setblocking(0)
-        try:
+
+        # connect() didn't start: non-blocking accept() fails
+        with self.assertRaises(socket.error):
             conn, addr = self.serv.accept()
-        except socket.error:
-            pass
-        else:
-            self.fail("Error trying to do non-blocking accept.")
-        read, write, err = select.select([self.serv], [], [])
-        if self.serv in read:
-            conn, addr = self.serv.accept()
-            conn.close()
-        else:
+
+        self.event.set()
+
+        read, write, err = select.select([self.serv], [], [], MAIN_TIMEOUT)
+        if self.serv not in read:
             self.fail("Error trying to do accept after select.")
 
+        # connect() completed: non-blocking accept() doesn't block
+        conn, addr = self.serv.accept()
+        self.addCleanup(conn.close)
+        self.assertIsNone(conn.gettimeout())
+
     def _testAccept(self):
-        time.sleep(0.1)
+        # don't connect before event is set to check
+        # that non-blocking accept() raises socket.error
+        self.event.wait()
+
         self.cli.connect((HOST, self.port))
 
     def testConnect(self):
@@ -1010,25 +1021,32 @@ class NonBlockingTCPTests(ThreadedTCPSocketTest):
     def testRecv(self):
         # Testing non-blocking recv
         conn, addr = self.serv.accept()
+        self.addCleanup(conn.close)
         conn.setblocking(0)
-        try:
+
+        # the server didn't send data yet: non-blocking recv() fails
+        with self.assertRaises(socket.error):
             msg = conn.recv(len(MSG))
-        except socket.error:
-            pass
-        else:
-            self.fail("Error trying to do non-blocking recv.")
-        read, write, err = select.select([conn], [], [])
-        if conn in read:
-            msg = conn.recv(len(MSG))
-            conn.close()
-            self.assertEqual(msg, MSG)
-        else:
+
+        self.event.set()
+
+        read, write, err = select.select([conn], [], [], MAIN_TIMEOUT)
+        if conn not in read:
             self.fail("Error during select call to non-blocking socket.")
+
+        # the server sent data yet: non-blocking recv() doesn't block
+        msg = conn.recv(len(MSG))
+        self.assertEqual(msg, MSG)
 
     def _testRecv(self):
         self.cli.connect((HOST, self.port))
-        time.sleep(0.1)
-        self.cli.send(MSG)
+
+        # don't send anything before event is set to check
+        # that non-blocking recv() raises socket.error
+        self.event.wait()
+
+        # send data: recv() will no longer block
+        self.cli.sendall(MSG)
 
 @unittest.skipUnless(thread, 'Threading required for this test.')
 class FileObjectClassTestCase(SocketConnectedTest):
@@ -1319,15 +1337,11 @@ class NetworkConnectionNoServer(unittest.TestCase):
     def mocked_socket_module(self):
         """Return a socket which times out on connect"""
         old_socket = socket.socket
-        import gevent.socket
-        old_g_socket = gevent.socket.socket
         socket.socket = self.MockSocket
-        gevent.socket.socket = self.MockSocket
         try:
             yield
         finally:
             socket.socket = old_socket
-            gevent.socket.socket = old_g_socket
 
     def test_connect(self):
         port = test_support.find_unused_port()
@@ -1361,6 +1375,10 @@ class NetworkConnectionNoServer(unittest.TestCase):
         expected_errnos = [ errno.ECONNREFUSED, ]
         if hasattr(errno, 'ENETUNREACH'):
             expected_errnos.append(errno.ENETUNREACH)
+        if hasattr(errno, 'EADDRNOTAVAIL'):
+            # bpo-31910: socket.create_connection() fails randomly
+            # with EADDRNOTAVAIL on Travis CI
+            expected_errnos.append(errno.EADDRNOTAVAIL)
 
         self.assertIn(cm.exception.errno, expected_errnos)
 
@@ -1533,8 +1551,8 @@ class TCPTimeoutTest(SocketTCPTest):
             raise Alarm
         old_alarm = signal.signal(signal.SIGALRM, alarm_handler)
         try:
-            signal.alarm(2)    # POSIX allows alarm to be up to 1 second early
             try:
+                signal.alarm(2)    # POSIX allows alarm to be up to 1 second early
                 foo = self.serv.accept()
             except socket.timeout:
                 self.fail("caught timeout instead of Alarm")
@@ -1711,9 +1729,17 @@ def isTipcAvailable():
     """
     if not hasattr(socket, "AF_TIPC"):
         return False
-    if not os.path.isfile("/proc/modules"):
-        return False
-    with open("/proc/modules") as f:
+    try:
+        f = open("/proc/modules")
+    except IOError as e:
+        # It's ok if the file does not exist, is a directory or if we
+        # have not the permission to read it. In any other case it's a
+        # real error, so raise it again.
+        if e.errno in (errno.ENOENT, errno.EISDIR, errno.EACCES):
+            return False
+        else:
+            raise
+    with f:
         for line in f:
             if line.startswith("tipc "):
                 return True
@@ -1759,7 +1785,7 @@ class TIPCThreadableTest(unittest.TestCase, ThreadableTest):
         self.conn, self.connaddr = self.srv.accept()
 
     def clientSetUp(self):
-        # The is a hittable race between serverExplicitReady() and the
+        # There is a hittable race between serverExplicitReady() and the
         # accept() call; sleep a little while to avoid it, otherwise
         # we could get an exception
         time.sleep(0.1)

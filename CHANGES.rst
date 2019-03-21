@@ -19,6 +19,9 @@
 - Python 3.7 subprocess: Copy a ``STARTUPINFO`` passed as a parameter.
   Contributed by AndCycle in :pr:`1352`.
 
+- subprocess: ``WIFSTOPPED`` and ``SIGCHLD`` are now handled for
+  determining ``Popen.returncode``. See https://bugs.python.org/issue29335
+
 1.4.0 (2019-01-04)
 ==================
 
