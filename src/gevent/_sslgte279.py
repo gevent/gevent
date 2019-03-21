@@ -56,9 +56,9 @@ if 'namedtuple' in __all__:
 
 # See notes in _socket2.py. Python 3 returns much nicer
 # `io` object wrapped around a SocketIO class.
-assert not hasattr(__ssl__._fileobject, '__enter__') # pylint:disable=used-before-assignment
+assert not hasattr(__ssl__._fileobject, '__enter__') # pylint:disable=no-member
 
-class _fileobject(__ssl__._fileobject): # pylint:no-member
+class _fileobject(__ssl__._fileobject): # pylint:disable=no-member
 
     def __enter__(self):
         return self

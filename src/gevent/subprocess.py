@@ -1376,8 +1376,10 @@ class Popen(object):
                             # is possible that it is overwritten (#12607).
                             if c2pwrite == 0:
                                 c2pwrite = os.dup(c2pwrite)
+                                _set_inheritable(c2pwrite, False)
                             while errwrite in (0, 1):
                                 errwrite = os.dup(errwrite)
+                                _set_inheritable(errwrite, False)
 
                             # Dup fds for child
                             def _dup2(existing, desired):
@@ -1401,11 +1403,18 @@ class Popen(object):
 
                             # Close pipe fds.  Make sure we don't close the
                             # same fd more than once, or standard fds.
-                            closed = set([None])
-                            for fd in [p2cread, c2pwrite, errwrite]:
-                                if fd not in closed and fd > 2:
-                                    os.close(fd)
-                                    closed.add(fd)
+                            if not PY3:
+                                closed = set([None])
+                                for fd in [p2cread, c2pwrite, errwrite]:
+                                    if fd not in closed and fd > 2:
+                                        os.close(fd)
+                                        closed.add(fd)
+
+                            # Python 3 (with a working set_inheritable):
+                            # We no longer manually close p2cread,
+	                        # c2pwrite, and errwrite here as
+	                        # _close_open_fds takes care when it is
+	                        # not already non-inheritable.
 
                             if cwd is not None:
                                 try:

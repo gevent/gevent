@@ -25,6 +25,11 @@
 - The result of ``gevent.ssl.SSLSocket.makefile()`` can be used as a
   context manager on Python 2.
 
+- subprocess: No longer close redirected FDs if they are in
+  ``pass_fds``. This is `a bugfix from Python 3.7
+  <https://bugs.python.org/issue32270>`_ applied to all versions
+  gevent runs on.
+
 1.4.0 (2019-01-04)
 ==================
 
