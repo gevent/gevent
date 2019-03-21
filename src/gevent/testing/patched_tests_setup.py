@@ -23,7 +23,6 @@ from .sysinfo import PYPY
 from .sysinfo import PYPY3
 from .sysinfo import PY3
 from .sysinfo import PY2
-from .sysinfo import PY34
 from .sysinfo import PY35
 from .sysinfo import PY36
 from .sysinfo import PY37
@@ -809,16 +808,7 @@ if PYPY:
     })
 
 
-if PY34 and sys.version_info[:3] < (3, 4, 4):
-    # Older versions have some issues with the SSL tests. Seen on Appveyor
-    disabled_tests += [
-        'test_ssl.ContextTests.test_options',
-        'test_ssl.ThreadedTests.test_protocol_sslv23',
-        'test_ssl.ThreadedTests.test_protocol_sslv3',
-        'test_httplib.HTTPSTest.test_networked',
-    ]
-
-if PY34:
+if PY35:
     disabled_tests += [
         'test_subprocess.ProcessTestCase.test_threadsafe_wait',
         # XXX: It seems that threading.Timer is not being greened properly, possibly

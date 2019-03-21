@@ -25,7 +25,6 @@ env:
       - TASK=test-py27-noembed
       - TASK=test-pypy3
       - TASK=test-py35
-      - TASK=test-py34
 
 matrix:
   fast_finish: true

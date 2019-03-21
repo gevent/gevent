@@ -9,15 +9,15 @@ from test.support.script_helper import assert_python_ok, assert_python_failure
 
 import random
 import sys
-import _thread
-import threading
+_thread = import_module('_thread')
+threading = import_module('threading')
 import time
 import unittest
 import weakref
 import os
 import subprocess
 
-from gevent.tests import lock_tests # gevent: use our local copy
+from test import lock_tests
 from test import support
 
 
@@ -25,7 +25,8 @@ from test import support
 # #12316 and #11870), and fork() from a worker thread is known to trigger
 # problems with some operating systems (issue #3863): skip problematic tests
 # on platforms known to behave badly.
-platforms_to_skip = ('netbsd5', 'hp-ux11')
+platforms_to_skip = ('freebsd4', 'freebsd5', 'freebsd6', 'netbsd5',
+                     'hp-ux11')
 
 
 # A trivial mutable counter.
@@ -124,17 +125,16 @@ class ThreadTests(BaseTestCase):
             done.set()
         done = threading.Event()
         ident = []
-        with support.wait_threads_exit():
-            tid = _thread.start_new_thread(f, ())
-            done.wait()
-            self.assertEqual(ident[0], tid)
+        _thread.start_new_thread(f, ())
+        done.wait()
+        self.assertIsNotNone(ident[0])
         # Kill the "immortal" _DummyThread
         del threading._active[ident[0]]
 
-    # run with a small(ish) thread stack size (256 KiB)
+    # run with a small(ish) thread stack size (256kB)
     def test_various_ops_small_stack(self):
         if verbose:
-            print('with 256 KiB thread stack size...')
+            print('with 256kB thread stack size...')
         try:
             threading.stack_size(262144)
         except _thread.error:
@@ -143,10 +143,10 @@ class ThreadTests(BaseTestCase):
         self.test_various_ops()
         threading.stack_size(0)
 
-    # run with a large thread stack size (1 MiB)
+    # run with a large thread stack size (1MB)
     def test_various_ops_large_stack(self):
         if verbose:
-            print('with 1 MiB thread stack size...')
+            print('with 1MB thread stack size...')
         try:
             threading.stack_size(0x100000)
         except _thread.error:
@@ -165,10 +165,9 @@ class ThreadTests(BaseTestCase):
 
         mutex = threading.Lock()
         mutex.acquire()
-        with support.wait_threads_exit():
-            tid = _thread.start_new_thread(f, (mutex,))
-            # Wait for the thread to finish.
-            mutex.acquire()
+        tid = _thread.start_new_thread(f, (mutex,))
+        # Wait for the thread to finish.
+        mutex.acquire()
         self.assertIn(tid, threading._active)
         self.assertIsInstance(threading._active[tid], threading._DummyThread)
         #Issue 29376
@@ -178,11 +177,11 @@ class ThreadTests(BaseTestCase):
 
     # PyThreadState_SetAsyncExc() is a CPython-only gimmick, not (currently)
     # exposed at the Python level.  This test relies on ctypes to get at it.
+    @test.support.cpython_only
     def test_PyThreadState_SetAsyncExc(self):
         ctypes = import_module("ctypes")
 
         set_async_exc = ctypes.pythonapi.PyThreadState_SetAsyncExc
-        set_async_exc.argtypes = (ctypes.c_ulong, ctypes.py_object)
 
         class AsyncExc(Exception):
             pass
@@ -191,11 +190,9 @@ class ThreadTests(BaseTestCase):
 
         # First check it works when setting the exception from the same thread.
         tid = threading.get_ident()
-        self.assertIsInstance(tid, int)
-        self.assertGreater(tid, 0)
 
         try:
-            result = set_async_exc(tid, exception)
+            result = set_async_exc(ctypes.c_long(tid), exception)
             # The exception is async, so we might have to keep the VM busy until
             # it notices.
             while True:
@@ -241,7 +238,7 @@ class ThreadTests(BaseTestCase):
         # Try a thread id that doesn't make sense.
         if verbose:
             print("    trying nonsensical thread id")
-        result = set_async_exc(-1, exception)
+        result = set_async_exc(ctypes.c_long(-1), exception)
         self.assertEqual(result, 0)  # no thread states modified
 
         # Now raise an exception in the worker thread.
@@ -254,7 +251,7 @@ class ThreadTests(BaseTestCase):
         self.assertFalse(t.finished)
         if verbose:
             print("    attempting to raise asynch exception in worker")
-        result = set_async_exc(t.id, exception)
+        result = set_async_exc(ctypes.c_long(t.id), exception)
         self.assertEqual(result, 1) # one thread state modified
         if verbose:
             print("    waiting for worker to say it caught the exception")
@@ -281,6 +278,7 @@ class ThreadTests(BaseTestCase):
         finally:
             threading._start_new_thread = _start_new_thread
 
+    @test.support.cpython_only
     def test_finalize_runnning_thread(self):
         # Issue 1402: the PyGILState_Ensure / _Release functions may be called
         # very late on python exit: on deallocation of a running thread for
@@ -363,10 +361,15 @@ class ThreadTests(BaseTestCase):
         # Try hard to trigger #1703448: a thread is still returned in
         # threading.enumerate() after it has been join()ed.
         enum = threading.enumerate
-        old_interval = sys.getswitchinterval()
+        newgil = hasattr(sys, 'getswitchinterval')
+        if newgil:
+            geti, seti = sys.getswitchinterval, sys.setswitchinterval
+        else:
+            geti, seti = sys.getcheckinterval, sys.setcheckinterval
+        old_interval = geti()
         try:
             for i in range(1, 100):
-                sys.setswitchinterval(i * 0.0002)
+                seti(i * 0.0002 if newgil else i // 5)
                 t = threading.Thread(target=lambda: None)
                 t.start()
                 t.join()
@@ -374,8 +377,9 @@ class ThreadTests(BaseTestCase):
                 self.assertNotIn(t, l,
                     "#1703448 triggered after %d trials: %s" % (i, l))
         finally:
-            sys.setswitchinterval(old_interval)
+            seti(old_interval)
 
+    @test.support.cpython_only
     def test_no_refcycle_through_target(self):
         class RunSelfFunction(object):
             def __init__(self, should_raise):
@@ -426,7 +430,7 @@ class ThreadTests(BaseTestCase):
         t.daemon = True
         self.assertIn('daemon', repr(t))
 
-    def test_daemon_param(self):
+    def test_deamon_param(self):
         t = threading.Thread()
         self.assertFalse(t.daemon)
         t = threading.Thread(daemon=False)
@@ -465,24 +469,27 @@ class ThreadTests(BaseTestCase):
     def test_is_alive_after_fork(self):
         # Try hard to trigger #18418: is_alive() could sometimes be True on
         # threads that vanished after a fork.
-        old_interval = sys.getswitchinterval()
-        self.addCleanup(sys.setswitchinterval, old_interval)
+        newgil = hasattr(sys, 'getswitchinterval')
+        if newgil:
+            geti, seti = sys.getswitchinterval, sys.setswitchinterval
+        else:
+            geti, seti = sys.getcheckinterval, sys.setcheckinterval
+        old_interval = geti()
+        self.addCleanup(seti, old_interval)
 
         # Make the bug more likely to manifest.
-        test.support.setswitchinterval(1e-6)
+        seti(1e-6 if newgil else 1)
 
         for i in range(20):
             t = threading.Thread(target=lambda: None)
             t.start()
+            self.addCleanup(t.join)
             pid = os.fork()
             if pid == 0:
-                os._exit(11 if t.is_alive() else 10)
+                os._exit(1 if t.is_alive() else 0)
             else:
-                t.join()
-
                 pid, status = os.waitpid(pid, 0)
-                self.assertTrue(os.WIFEXITED(status))
-                self.assertEqual(10, os.WEXITSTATUS(status))
+                self.assertEqual(0, status)
 
     def test_main_thread(self):
         main = threading.main_thread()
@@ -546,36 +553,6 @@ class ThreadTests(BaseTestCase):
         self.assertEqual(err, b"")
         self.assertEqual(data, "Thread-1\nTrue\nTrue\n")
 
-    @requires_type_collecting
-    def test_main_thread_during_shutdown(self):
-        # bpo-31516: current_thread() should still point to the main thread
-        # at shutdown
-        code = """if 1:
-            import gc, threading
-
-            main_thread = threading.current_thread()
-            assert main_thread is threading.main_thread()  # sanity check
-
-            class RefCycle:
-                def __init__(self):
-                    self.cycle = self
-
-                def __del__(self):
-                    print("GC:",
-                          threading.current_thread() is main_thread,
-                          threading.main_thread() is main_thread,
-                          threading.enumerate() == [main_thread])
-
-            RefCycle()
-            gc.collect()  # sanity check
-            x = RefCycle()
-        """
-        _, out, err = assert_python_ok("-c", code)
-        data = out.decode()
-        self.assertEqual(err, b"")
-        self.assertEqual(data.splitlines(),
-                         ["GC: True True True"] * 2)
-
     def test_tstate_lock(self):
         # Test an implementation detail of Thread objects.
         started = _thread.allocate_lock()
@@ -609,7 +586,6 @@ class ThreadTests(BaseTestCase):
         self.assertFalse(t.is_alive())
         # And verify the thread disposed of _tstate_lock.
         self.assertIsNone(t._tstate_lock)
-        t.join()
 
     def test_repr_stopped(self):
         # Verify that "stopped" shows up in repr(Thread) appropriately.
@@ -636,7 +612,6 @@ class ThreadTests(BaseTestCase):
                 break
             time.sleep(0.01)
         self.assertIn(LOOKING_FOR, repr(t)) # we waited at least 5 seconds
-        t.join()
 
     def test_BoundedSemaphore_limit(self):
         # BoundedSemaphore should raise ValueError if released too often.
@@ -865,6 +840,7 @@ class ThreadJoinOnShutdown(BaseTestCase):
 
 class SubinterpThreadingTests(BaseTestCase):
 
+    @cpython_only
     def test_threads_join(self):
         # Non-daemon threads should be joined at subinterpreter shutdown
         # (issue #18808)
@@ -888,6 +864,7 @@ class SubinterpThreadingTests(BaseTestCase):
         # The thread was joined properly.
         self.assertEqual(os.read(r, 1), b"x")
 
+    @cpython_only
     def test_threads_join_2(self):
         # Same as above, but a delay gets introduced after the thread's
         # Python code returned but before the thread state is deleted.
@@ -951,7 +928,6 @@ class ThreadingExceptionTests(BaseTestCase):
         thread = threading.Thread()
         thread.start()
         self.assertRaises(RuntimeError, thread.start)
-        thread.join()
 
     def test_joining_current_thread(self):
         current_thread = threading.current_thread()
@@ -965,7 +941,6 @@ class ThreadingExceptionTests(BaseTestCase):
         thread = threading.Thread()
         thread.start()
         self.assertRaises(RuntimeError, setattr, thread, "daemon", True)
-        thread.join()
 
     def test_releasing_unacquired_lock(self):
         lock = threading.Lock()
@@ -1104,8 +1079,6 @@ class ThreadingExceptionTests(BaseTestCase):
         thread.join()
         self.assertIsNotNone(thread.exc)
         self.assertIsInstance(thread.exc, RuntimeError)
-        # explicitly break the reference cycle to not leak a dangling thread
-        thread.exc = None
 
 class TimerTests(BaseTestCase):
 
@@ -1128,8 +1101,6 @@ class TimerTests(BaseTestCase):
         self.callback_event.wait()
         self.assertEqual(len(self.callback_args), 2)
         self.assertEqual(self.callback_args, [((), {}), ((), {})])
-        timer1.join()
-        timer2.join()
 
     def _callback_spy(self, *args, **kwargs):
         self.callback_args.append((args[:], kwargs.copy()))
@@ -1137,6 +1108,14 @@ class TimerTests(BaseTestCase):
 
 class LockTests(lock_tests.LockTests):
     locktype = staticmethod(threading.Lock)
+
+    @unittest.skip("not on gevent")
+    def test_locked_repr(self):
+        pass
+
+    @unittest.skip("not on gevent")
+    def test_repr(self):
+        pass
 
 class PyRLockTests(lock_tests.RLockTests):
     locktype = staticmethod(threading._PyRLock)
@@ -1147,6 +1126,10 @@ class CRLockTests(lock_tests.RLockTests):
 
 class EventTests(lock_tests.EventTests):
     eventtype = staticmethod(threading.Event)
+
+    @unittest.skip("not on gevent")
+    def test_reset_internal_locks(self):
+        pass
 
 class ConditionAsRLockTests(lock_tests.RLockTests):
     # Condition uses an RLock by default and exports its API.

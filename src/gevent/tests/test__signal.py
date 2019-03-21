@@ -89,10 +89,8 @@ if hasattr(signal, 'SIGALRM'):
             import gevent.signal # make sure it's in sys.modules pylint:disable=redefined-outer-name
             assert gevent.signal
             import site
-            if greentest.PY34:
+            if greentest.PY3:
                 from importlib import reload as reload_module
-            elif greentest.PY3:
-                from imp import reload as reload_module
             else:
                 # builtin on py2
                 reload_module = reload # pylint:disable=undefined-variable

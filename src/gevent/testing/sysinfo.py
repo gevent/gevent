@@ -55,7 +55,6 @@ if WIN:
 
 PY2 = None
 PY3 = None
-PY34 = None
 PY35 = None
 PY36 = None
 PY37 = None
@@ -66,8 +65,6 @@ if sys.version_info[0] == 3:
     NON_APPLICABLE_SUFFIXES += ('2', '279')
     PY2 = False
     PY3 = True
-    if sys.version_info[1] >= 4:
-        PY34 = True
     if sys.version_info[1] >= 5:
         PY35 = True
     if sys.version_info[1] >= 6:

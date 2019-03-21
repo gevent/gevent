@@ -4,10 +4,15 @@
 
 .. currentmodule:: gevent
 
-1.4.1 (unreleased)
+1.5.0 (unreleased)
 ==================
 
-- Nothing changed yet.
+- Python version updates: gevent is now tested with CPython 2.7.15,
+  3.5.6, 3.6.8, and 3.7.2. It is also tested with PyPy2 7.0 and PyPy
+  3.6 7.0.
+
+- Support for Python 3.4 has been removed, as that version is no
+  longer supported uptstream.
 
 
 1.4.0 (2019-01-04)

@@ -36,7 +36,6 @@ from .sysinfo import RUN_COVERAGE
 
 from .sysinfo import PY2
 from .sysinfo import PY3
-from .sysinfo import PY34
 from .sysinfo import PY36
 from .sysinfo import PY37
 

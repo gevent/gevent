@@ -46,15 +46,9 @@ trap "rm -rf $LOCKFILE" EXIT
 
 PYENV=$BASE/pyenv
 
-
-# The file for 3.7b1 shipped with pyenv on Feb 6 2018
-# won't compile on Travis. So we use a forked version that
-# compiles openssl for us. We also beat them to the punch for 3.7b2, b3, b4, .0, .1
-# https://github.com/travis-ci/travis-ci/issues/9069
-
 if [ ! -d "$PYENV/.git" ]; then
   rm -rf $PYENV
-  git clone https://github.com/gevent/pyenv.git $BASE/pyenv
+  git clone https://github.com/pyenv/pyenv.git $BASE/pyenv
 else
   back=$PWD
   cd $PYENV
@@ -72,12 +66,11 @@ install () {
   ALIAS="$2"
   mkdir -p $BASE/versions
   SOURCE=$BASE/versions/$ALIAS
-  OPENSSL_PATH=$SOURCE/openssl/lib
 
   if [ ! -e "$SOURCE" ]; then
     mkdir -p $SNAKEPIT
     mkdir -p $BASE/versions
-    LD_LIBRARY_PATH="$OPENSSL_PATH" $BASE/pyenv/plugins/python-build/bin/python-build $VERSION $SOURCE
+    $BASE/pyenv/plugins/python-build/bin/python-build $VERSION $SOURCE
   fi
  rm -f $SNAKEPIT/$ALIAS
  mkdir -p $SNAKEPIT
@@ -86,35 +79,29 @@ install () {
  ls -l $SOURCE/
  ls -l $SOURCE/bin
  ln -s $SOURCE/bin/python $SNAKEPIT/$ALIAS
- LD_LIBRARY_PATH="$OPENSSL_PATH" $SOURCE/bin/python -m pip.__main__ install --upgrade pip wheel virtualenv
+ $SOURCE/bin/python -m pip.__main__ install --upgrade pip wheel virtualenv
 }
 
 
 for var in "$@"; do
   case "${var}" in
-    2.7.8)
-      install 2.7.8 python2.7.8
-      ;;
     2.7)
-      install 2.7.15 python2.7.15
-      ;;
-    3.4)
-      install 3.4.8 python3.4.8
+      install 2.7.16 python2.7.16
       ;;
     3.5)
-      install 3.5.5 python3.5.5
+      install 3.5.6 python3.5.6
       ;;
     3.6)
-      install 3.6.7 python3.6.7
+      install 3.6.8 python3.6.8
       ;;
     3.7)
-      install 3.7.1 python3.7.1
+      install 3.7.2 python3.7.2
       ;;
     pypy)
-      install pypy2.7-6.0.0 pypy600
+      install pypy2.7-7.0.0 pypy700
       ;;
     pypy3)
-      install pypy3.5-6.0.0 pypy3.5_600
+      install pypy3.6-7.0.0 pypy3.6_700
       ;;
   esac
 done

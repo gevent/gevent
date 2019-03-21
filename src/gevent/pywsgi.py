@@ -710,7 +710,6 @@ class WSGIHandler(object):
         self.response_length += len(data)
 
     def _write(self, data,
-               _PY34_EXACTLY=(sys.version_info[:2] == (3, 4)),
                _bytearray=bytearray):
         if not data:
             # The application/middleware are allowed to yield
@@ -718,20 +717,9 @@ class WSGIHandler(object):
             return
 
         if self.response_use_chunked:
-            ## Write the chunked encoding
-            # header
-            if _PY34_EXACTLY:
-                # This is the only version we support that doesn't
-                # allow % to be used with bytes. Passing a bytestring
-                # directly in to bytearray() is faster than passing a
-                # (unicode) str with encoding, which naturally is faster still
-                # than encoding first. Interestingly, byte formatting on Python 3
-                # is faster than str formatting.
-                header_str = '%x\r\n' % len(data)
-                towrite = _bytearray(header_str, 'ascii')
-            else:
-                header_str = b'%x\r\n' % len(data)
-                towrite = _bytearray(header_str)
+            # Write the chunked encoding header
+            header_str = b'%x\r\n' % len(data)
+            towrite = _bytearray(header_str)
 
             # data
             towrite += data
