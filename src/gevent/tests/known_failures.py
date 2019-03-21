@@ -259,6 +259,12 @@ if PYPY:
             # This fails to get the correct results, sometimes. I can't reproduce locally
             'FLAKY test__example_udp_server.py',
             'FLAKY test__example_udp_client.py',
+
+            # PyPy 7.0 on Travis with Ubunto Xenial 16.04
+            # can't allocate SSL Context objects, either in Python 2.7
+            # or 3.6. There must be some library incompatibility.
+            'test_ssl.py',
+
         ]
 
         if LIBUV:
