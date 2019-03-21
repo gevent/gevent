@@ -442,6 +442,9 @@ if LIBUV:
             'test_smtplib.TooLongLineTests.testLineTooLong',
             'test_smtplib.GeneralTests.testTimeoutValue',
 
+            # This sometimes crashes, which can't be our fault?
+            'test_ssl.BasicSocketTests.test_parse_cert_CVE_2019_5010',
+
         ]
 
         if PYPY:
@@ -557,6 +560,19 @@ if PY2:
         # At least on OSX, this results in connection refused
         'test_urllib2_localnet.TestUrlopen.test_https_sni',
     ]
+
+    if sys.version_info[:3] < (2, 7, 16):
+        # We have 2.7.16 tests; older versions can fail
+        # to validate some SSL things or are missing important support functions
+        disabled_tests += [
+            # Support functions
+            'test_thread.ThreadRunningTests.test_nt_and_posix_stack_size',
+            'test_thread.ThreadRunningTests.test_save_exception_state_on_error',
+            'test_thread.ThreadRunningTests.test_starting_threads',
+            'test_thread.BarrierTest.test_barrier',
+            # Broken SSL
+            'test_urllib2_localnet.TestUrlopen.test_https',
+        ]
 
 def _make_run_with_original(mod_name, func_name):
     @contextlib.contextmanager
