@@ -367,14 +367,14 @@ def run_setup(ext_modules, run_make):
 
                 # Makes tests faster
                 # Fails to build on PyPy on Windows.
-                'psutil ; platform_python_implementation == "CPython" or sys_platform != "win32"',
+                'psutil >= 5.6.1 ; platform_python_implementation == "CPython" or sys_platform != "win32"',
                 # examples, called from tests, use this
                 'requests',
 
                 # We don't run coverage on Windows, and pypy can't build it there
                 # anyway (coveralls -> cryptopgraphy -> openssl)
-                'coverage>=5.0a3 ; sys_platform != "win32"',
-                'coveralls>=1.0 ; sys_platform != "win32"',
+                'coverage>=5.0a4 ; sys_platform != "win32"',
+                'coveralls>=1.7.0 ; sys_platform != "win32"',
 
                 'futures ; python_version == "2.7"',
                 'mock ; python_version == "2.7"',
@@ -405,9 +405,7 @@ def run_setup(ext_modules, run_make):
             "Intended Audience :: Developers",
             "Development Status :: 4 - Beta"
         ],
-        # 3.4.0 -- 3.4.2 do not have socket.SocketKind, even though it
-        # is documented. See https://github.com/gevent/gevent/pull/1311#issuecomment-452691569
-        python_requires=">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.0,!=3.4.1,!=3.4.2",
+        python_requires=">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*",
         entry_points={
             'gevent.plugins.monkey.will_patch_all': [
                 "signal_os_incompat = gevent.monkey:_subscribe_signal_os",

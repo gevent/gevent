@@ -6,7 +6,7 @@ wheel
 # name to be created so that we can have both foo.py and _foo.so
 # at the same time. 0.29 fixes some issues with Python 3.7,
 # and adds the 3str mode for transition to Python 3.
-Cython >= 0.29
+Cython >= 0.29.6
 
 # Python 3.7 requires at least 0.4.14, which is ABI incompatible with earlier
 greenlet>=0.4.14 ; platform_python_implementation == "CPython"
@@ -16,7 +16,7 @@ pylint>=1.8.0 ; python_version < "3.4"
 pylint >= 2.1.1 ; python_version >= "3.4"  and platform_python_implementation == "CPython"
 astroid >= 2.0.2 ; python_version >= "3.4" and platform_python_implementation == "CPython"
 # See version requirements in setup.py
-cffi >= 1.11.5 ; platform_python_implementation == "CPython"
+cffi >= 1.12.2 ; platform_python_implementation == "CPython"
 
 # benchmarks use this
-perf
+perf >= 1.6.0

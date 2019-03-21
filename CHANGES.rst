@@ -14,6 +14,7 @@
 - Support for Python 3.4 has been removed, as that version is no
   longer supported uptstream.
 
+- gevent is now compiled with Cython 0.29.6 and cffi 1.12.2
 
 1.4.0 (2019-01-04)
 ==================

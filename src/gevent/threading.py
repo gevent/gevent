@@ -153,8 +153,8 @@ else:
         return main_threads[0]
 
 import sys
-if sys.version_info[:2] >= (3, 4):
-    # XXX: Issue 18808 breaks us on Python 3.4.
+if sys.version_info[0] >= 3:
+    # XXX: Issue 18808 breaks us on Python 3.4+.
     # Thread objects now expect a callback from the interpreter itself
     # (threadmodule.c:release_sentinel). Because this never happens
     # when a greenlet exits, join() and friends will block forever.
@@ -202,19 +202,22 @@ if sys.version_info[:2] >= (3, 4):
     # The main thread is patched up with more care
     # in _gevent_will_monkey_patch
 
-if sys.version_info[:2] >= (3, 3):
+if sys.version_info[0] >= 3:
     __implements__.remove('_get_ident')
     __implements__.append('get_ident')
     get_ident = _get_ident
     __implements__.remove('_sleep')
 
+if hasattr(__threading__, '_CRLock'):
     # Python 3 changed the implementation of threading.RLock
     # Previously it was a factory function around threading._RLock
     # which in turn used _allocate_lock. Now, it wants to use
     # threading._CRLock, which is imported from _thread.RLock and as such
     # is implemented in C. So it bypasses our _allocate_lock function.
-    # Fortunately they left the Python fallback in place
-    assert hasattr(__threading__, '_CRLock'), "Unsupported Python version"
+    # Fortunately they left the Python fallback in place.
+
+    # This was also backported to PyPy 2.7-7.0
+    assert sys.version_info[0] >= 3 or hasattr(sys, 'pypy_version_info'), "Unsupported Python version"
     _CRLock = None
     __implements__.append('_CRLock')
 

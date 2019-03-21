@@ -478,6 +478,10 @@ def _patch_existing_locks(threading):
     # Since we're supposed to be done very early in the process, there shouldn't be
     # too many.
 
+    # Note that the C implementation of locks, at least on some
+    # versions of CPython, cannot be found and cannot be fixed (they simply
+    # don't show up to GC; see https://github.com/gevent/gevent/issues/1354)
+
     # By definition there's only one thread running, so the various
     # owner attributes were the old (native) thread id. Make it our
     # current greenlet id so that when it wants to unlock and compare
@@ -485,12 +489,20 @@ def _patch_existing_locks(threading):
     gc = __import__('gc')
     for o in gc.get_objects():
         if isinstance(o, rlock_type):
-            if hasattr(o, '_owner'): # Py3
-                if o._owner is not None:
-                    o._owner = tid
-            else:
-                if o._RLock__owner is not None:
-                    o._RLock__owner = tid
+            for owner_name in (
+                    '_owner', # Python 3 or backported PyPy2
+                    '_RLock__owner', # Python 2
+            ):
+                if hasattr(o, owner_name):
+                    if getattr(o, owner_name) is not None:
+                        setattr(o, owner_name, tid)
+                    break
+            else: # pragma: no cover
+                raise AssertionError(
+                    "Unsupported Python implementation; "
+                    "Found unknown lock implementation.",
+                    vars(o)
+                )
         elif isinstance(o, _ModuleLock):
             if o.owner is not None:
                 o.owner = tid
@@ -514,7 +526,9 @@ def patch_thread(threading=True, _threading_local=True, Event=True, logging=True
     :keyword bool existing_locks: When True (the default), and the
         process is still single threaded, make sure that any
         :class:`threading.RLock` (and, under Python 3, :class:`importlib._bootstrap._ModuleLock`)
-        instances that are currently locked can be properly unlocked.
+        instances that are currently locked can be properly unlocked. **Important**: This is a
+        best-effort attempt and, on certain implementations, may not detect all
+        locks. It is important to monkey-patch extremely early in the startup process.
 
     .. caution::
         Monkey-patching :mod:`thread` and using
@@ -634,7 +648,7 @@ def patch_thread(threading=True, _threading_local=True, Event=True, logging=True
                 continue
             thread.join = make_join_func(thread, None)
 
-    if sys.version_info[:2] >= (3, 4):
+    if sys.version_info[0] >= 3:
 
         # Issue 18808 changes the nature of Thread.join() to use
         # locks. This means that a greenlet spawned in the main thread

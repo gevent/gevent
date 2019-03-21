@@ -25,12 +25,19 @@ if sys.version_info[0] <= 2:
 else:
     import _thread as __thread__ # pylint:disable=import-error
     __target__ = '_thread'
-    __imports__ += ['RLock',
-                    'TIMEOUT_MAX',
-                    'allocate',
-                    'exit_thread',
-                    'interrupt_main',
-                    'start_new']
+    __imports__ += [
+        'TIMEOUT_MAX',
+        'allocate',
+        'exit_thread',
+        'interrupt_main',
+        'start_new'
+    ]
+
+if hasattr(__thread__, 'RLock'):
+    assert sys.version_info[0] >= 3 or hasattr(sys, 'pypy_version_info')
+    # Added in Python 3.4, backported to PyPy 2.7-7.0
+    __imports__.append("RLock")
+
 error = __thread__.error
 from gevent._compat import PY3
 from gevent._compat import PYPY
