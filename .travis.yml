@@ -3,7 +3,7 @@ language: python
 dist: xenial
 group: travis_latest
 python:
-  - 3.7-dev
+  - 3.7
 
 env:
     global:
