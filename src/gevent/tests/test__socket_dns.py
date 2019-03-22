@@ -234,7 +234,10 @@ class TestCase(greentest.TestCase):
 
     def tearDown(self):
         if not self.verbose_dns:
-            del gevent.get_hub().exception_stream
+            try:
+                del gevent.get_hub().exception_stream
+            except AttributeError:
+                pass # Happens under leak tests
         super(TestCase, self).tearDown()
 
     def should_log_results(self, result1, result2):
