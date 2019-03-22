@@ -85,8 +85,13 @@ def get_reachable_greenlets():
 # Cache the global memoryview so cython can optimize.
 _memoryview = memoryview
 try:
-    _buffer = __builtins__.buffer
-except AttributeError:
+    if isinstance(__builtins__, dict):
+        # Pure-python mode on CPython
+        _buffer = __builtins__['buffer']
+    else:
+        # Cythonized mode, or PyPy
+        _buffer = __builtins__.buffer
+except (AttributeError, KeyError):
     # Python 3.
     _buffer = memoryview
 
