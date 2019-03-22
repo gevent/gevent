@@ -678,9 +678,8 @@ if hasattr(_socket, "socketpair"):
 else: # pragma: no cover
     # Origin: https://gist.github.com/4325783, by Geert Jansen.  Public domain.
 
-    # gevent: taken from 3.6 release. Expected to be used only on Win. Added to Win/3.5
-    # gevent: for < 3.5, pass the default value of 128 to lsock.listen()
-    # (3.5+ uses this as a default and the original code passed no value)
+    # gevent: taken from 3.6 release, confirmed unchanged in 3.7 and
+    # 3.8a1. Expected to be used only on Win. Added to Win/3.5
 
     _LOCALHOST = '127.0.0.1'
     _LOCALHOST_V6 = '::1'
@@ -703,7 +702,7 @@ else: # pragma: no cover
         lsock = socket(family, type, proto)
         try:
             lsock.bind((host, 0))
-            lsock.listen(128)
+            lsock.listen()
             # On IPv6, ignore flow_info and scope_id
             addr, port = lsock.getsockname()[:2]
             csock = socket(family, type, proto)

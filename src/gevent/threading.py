@@ -157,7 +157,6 @@ else:
 
         return main_threads[0]
 
-import sys
 if PY3:
     # XXX: Issue 18808 breaks us on Python 3.4+.
     # Thread objects now expect a callback from the interpreter itself
