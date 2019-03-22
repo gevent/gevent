@@ -45,3 +45,8 @@ cdef class SwitchOutGreenletWithLoop(TrackedRawGreenlet):
 
 
 cpdef list get_reachable_greenlets()
+
+cdef type _memoryview
+cdef type _buffer
+
+cpdef get_memory(data)

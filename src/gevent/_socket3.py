@@ -40,14 +40,7 @@ __dns__ = _socketcommon.__dns__
 
 SocketIO = __socket__.SocketIO # pylint:disable=no-member
 
-
-def _get_memory(data):
-    mv = memoryview(data)
-    if mv.shape:
-        return mv
-    # No shape, probably working with a ctypes object,
-    # or something else exotic that supports the buffer interface
-    return mv.tobytes()
+from gevent._greenlet_primitives import get_memory as _get_memory
 
 timeout_default = object()
 
