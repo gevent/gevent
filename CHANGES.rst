@@ -30,6 +30,14 @@
   <https://bugs.python.org/issue32270>`_ applied to all versions
   gevent runs on.
 
+- Python 2: If the backport of the ``_thread_`` module from
+  ``futures`` has already been imported at monkey-patch time, also
+  patch this module to be consistent. The ``pkg_resources`` package
+  imports this, and ``pkg_resources`` is often imported early on
+  Python 2 for namespace packages, so if ``futures`` is installed this
+  will likely be the case.
+
+
 1.4.0 (2019-01-04)
 ==================
 

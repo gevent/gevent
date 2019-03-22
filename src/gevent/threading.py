@@ -39,8 +39,13 @@ __implements__ = [
 import threading as __threading__
 _DummyThread_ = __threading__._DummyThread
 from gevent.local import local
-from gevent.thread import start_new_thread as _start_new_thread, allocate_lock as _allocate_lock, get_ident as _get_ident
+from gevent.thread import start_new_thread as _start_new_thread
+from gevent.thread import allocate_lock as _allocate_lock
+from gevent.thread import get_ident as _get_ident
 from gevent.hub import sleep as _sleep, getcurrent
+
+from gevent._compat import PY3
+from gevent._compat import PYPY
 
 # Exports, prevent unused import warnings
 local = local
@@ -152,8 +157,7 @@ else:
 
         return main_threads[0]
 
-import sys
-if sys.version_info[0] >= 3:
+if PY3:
     # XXX: Issue 18808 breaks us on Python 3.4+.
     # Thread objects now expect a callback from the interpreter itself
     # (threadmodule.c:release_sentinel). Because this never happens
@@ -202,7 +206,7 @@ if sys.version_info[0] >= 3:
     # The main thread is patched up with more care
     # in _gevent_will_monkey_patch
 
-if sys.version_info[0] >= 3:
+if PY3:
     __implements__.remove('_get_ident')
     __implements__.append('get_ident')
     get_ident = _get_ident
@@ -217,7 +221,7 @@ if hasattr(__threading__, '_CRLock'):
     # Fortunately they left the Python fallback in place.
 
     # This was also backported to PyPy 2.7-7.0
-    assert sys.version_info[0] >= 3 or hasattr(sys, 'pypy_version_info'), "Unsupported Python version"
+    assert PY3 or PYPY, "Unsupported Python version"
     _CRLock = None
     __implements__.append('_CRLock')
 

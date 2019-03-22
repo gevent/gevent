@@ -44,6 +44,9 @@ from gevent.hub import sleep
 from gevent.hub import getcurrent
 from gevent._compat import integer_types, string_types, xrange
 from gevent._compat import PY3
+from gevent._compat import PY35
+from gevent._compat import PY36
+from gevent._compat import PY37
 from gevent._compat import reraise
 from gevent._compat import fspath
 from gevent._compat import fsencode
@@ -118,7 +121,7 @@ __extra__ = [
     'CompletedProcess',
 ]
 
-if sys.version_info[:2] >= (3, 3):
+if PY3:
     __imports__ += [
         'DEVNULL',
         'getstatusoutput',
@@ -130,7 +133,7 @@ else:
     __extra__.append("TimeoutExpired")
 
 
-if sys.version_info[:2] >= (3, 5):
+if PY35:
     __extra__.remove('run')
     __extra__.remove('CompletedProcess')
     __implements__.append('run')
@@ -144,12 +147,12 @@ if sys.version_info[:2] >= (3, 5):
     except:
         MAXFD = 256
 
-if sys.version_info[:2] >= (3, 6):
+if PY36:
     # This was added to __all__ for windows in 3.6
     __extra__.remove('STARTUPINFO')
     __imports__.append('STARTUPINFO')
 
-if sys.version_info[:2] >= (3, 7):
+if PY37:
     __imports__.extend([
         'ABOVE_NORMAL_PRIORITY_CLASS', 'BELOW_NORMAL_PRIORITY_CLASS',
         'HIGH_PRIORITY_CLASS', 'IDLE_PRIORITY_CLASS',
@@ -479,7 +482,7 @@ class Popen(object):
             if preexec_fn is not None:
                 raise ValueError("preexec_fn is not supported on Windows "
                                  "platforms")
-            if sys.version_info[:2] >= (3, 7):
+            if PY37:
                 if close_fds is _PLATFORM_DEFAULT_CLOSE_FDS:
                     close_fds = True
             else:
