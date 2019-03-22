@@ -44,7 +44,7 @@ class Test(greentest.TestCase):
 
 
         # We generated some warnings
-        if sys.version_info >= (3, 4):
+        if greentest.PY3:
             self.assertEqual(all_warnings,
                              ['Monkey-patching outside the main native thread. Some APIs will not be '
                               'available. Expect a KeyError to be printed at shutdown.',

@@ -8,7 +8,7 @@ except ImportError:
 from gevent.monkey import patch_all
 patch_all()
 
-if sys.platform != 'win32' and sys.version_info[:2] >= (3, 4):
+if sys.platform != 'win32' and greentest.PY3:
 
     class TestSelectors(greentest.TestCase):
 

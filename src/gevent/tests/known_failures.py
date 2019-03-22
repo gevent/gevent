@@ -314,7 +314,7 @@ if PY3:
 
 
 
-if sys.version_info[:2] >= (3, 4) and APPVEYOR:
+if PY3 and APPVEYOR:
     FAILING_TESTS += [
         # Timing issues on appveyor
         'FLAKY test_selectors.py'

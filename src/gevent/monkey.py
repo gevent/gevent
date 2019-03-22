@@ -827,7 +827,7 @@ def patch_select(aggressive=True):
         remove_item(select, 'kevent')
         remove_item(select, 'devpoll')
 
-    if sys.version_info[:2] >= (3, 4):
+    if PY3:
         # Python 3 wants to use `select.select` as a member function,
         # leading to this error in selectors.py (because gevent.select.select is
         # not a builtin and doesn't get the magic auto-static that they do)
