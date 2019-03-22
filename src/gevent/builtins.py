@@ -2,10 +2,10 @@
 """gevent friendly implementations of builtin functions."""
 from __future__ import absolute_import
 
-import sys
 import weakref
 
 from gevent.lock import RLock
+from gevent._compat import PY3
 from gevent._compat import imp_acquire_lock
 from gevent._compat import imp_release_lock
 
@@ -121,7 +121,7 @@ def _lock_imports():
     global __lock_imports
     __lock_imports = True
 
-if sys.version_info[:2] >= (3, 3):
+if PY3:
     __implements__ = []
     __import__ = _import
 else:

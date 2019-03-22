@@ -5,12 +5,19 @@ internal gevent python 2/python 3 bridges. Not for external use.
 
 from __future__ import print_function, absolute_import, division
 
+## Important: This module should generally not have any other gevent
+## imports (the exception is _util_py2)
+
 import sys
 import os
 
 
 PY2 = sys.version_info[0] == 2
 PY3 = sys.version_info[0] >= 3
+PY35 = sys.version_info[:2] >= (3, 5)
+PY36 = sys.version_info[:2] >= (3, 6)
+PY37 = sys.version_info[:2] >= (3, 7)
+PY38 = sys.version_info[:2] >= (3, 8)
 PYPY = hasattr(sys, 'pypy_version_info')
 WIN = sys.platform.startswith("win")
 LINUX = sys.platform.startswith('linux')

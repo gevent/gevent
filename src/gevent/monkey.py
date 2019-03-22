@@ -1,5 +1,5 @@
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
-# pylint: disable=redefined-outer-name
+# pylint: disable=redefined-outer-name,too-many-lines
 """
 Make the standard library cooperative.
 
@@ -146,12 +146,15 @@ __all__ = [
 if sys.version_info[0] >= 3:
     string_types = (str,)
     PY3 = True
+    PY2 = False
 else:
     import __builtin__ # pylint:disable=import-error
     string_types = (__builtin__.basestring,)
     PY3 = False
+    PY2 = True
 
 WIN = sys.platform.startswith("win")
+PY36 = sys.version_info[:2] >= (3, 6)
 
 class MonkeyPatchWarning(RuntimeWarning):
     """
@@ -283,7 +286,9 @@ def __call_module_hook(gevent_module, name, module, items, _warnings):
 
 def patch_module(target_module, source_module, items=None,
                  _warnings=None,
-                 _notify_did_subscribers=True):
+                 _notify_will_subscribers=True,
+                 _notify_did_subscribers=True,
+                 _call_hooks=True):
     """
     patch_module(target_module, source_module, items=None)
 
@@ -318,18 +323,21 @@ def patch_module(target_module, source_module, items=None,
             raise AttributeError('%r does not have __implements__' % source_module)
 
     try:
-        __call_module_hook(source_module, 'will', target_module, items, _warnings)
-        _notify_patch(
-            events.GeventWillPatchModuleEvent(target_module.__name__, source_module,
-                                              target_module, items),
-            _warnings)
+        if _call_hooks:
+            __call_module_hook(source_module, 'will', target_module, items, _warnings)
+        if _notify_will_subscribers:
+            _notify_patch(
+                events.GeventWillPatchModuleEvent(target_module.__name__, source_module,
+                                                  target_module, items),
+                _warnings)
     except events.DoNotPatch:
         return False
 
     for attr in items:
         patch_item(target_module, attr, getattr(source_module, attr))
 
-    __call_module_hook(source_module, 'did', target_module, items, _warnings)
+    if _call_hooks:
+        __call_module_hook(source_module, 'did', target_module, items, _warnings)
 
     if _notify_did_subscribers:
         # We allow turning off the broadcast of the 'did' event for the benefit
@@ -342,7 +350,12 @@ def patch_module(target_module, source_module, items=None,
 
     return True
 
-def _patch_module(name, items=None, _warnings=None, _notify_did_subscribers=True):
+def _patch_module(name,
+                  items=None,
+                  _warnings=None,
+                  _notify_will_subscribers=True,
+                  _notify_did_subscribers=True,
+                  _call_hooks=True):
 
     gevent_module = getattr(__import__('gevent.' + name), name)
     module_name = getattr(gevent_module, '__target__', name)
@@ -350,7 +363,29 @@ def _patch_module(name, items=None, _warnings=None, _notify_did_subscribers=True
 
     patch_module(target_module, gevent_module, items=items,
                  _warnings=_warnings,
-                 _notify_did_subscribers=_notify_did_subscribers)
+                 _notify_will_subscribers=_notify_will_subscribers,
+                 _notify_did_subscribers=_notify_did_subscribers,
+                 _call_hooks=_call_hooks)
+
+    # On Python 2, the `futures` package will install
+    # a bunch of modules with the same name as those from Python 3,
+    # such as `_thread`; primarily these just do `from thread import *`,
+    # meaning we have alternate references. If that's already been imported,
+    # we need to attempt to patch that too.
+
+    # Be sure to keep the original states matching also.
+
+    alternate_names = getattr(gevent_module, '__alternate_targets__', ())
+    for alternate_name in alternate_names:
+        alternate_module = sys.modules.get(alternate_name)
+        if alternate_module is not None and alternate_module is not target_module:
+            saved.pop(alternate_name, None)
+            patch_module(alternate_module, gevent_module, items=items,
+                         _warnings=_warnings,
+                         _notify_will_subscribers=False,
+                         _notify_did_subscribers=False,
+                         _call_hooks=False)
+            saved[alternate_name] = saved[module_name]
 
     return gevent_module, target_module
 
@@ -583,11 +618,14 @@ def patch_thread(threading=True, _threading_local=True, Event=True, logging=True
         orig_current_thread = None
 
     gevent_thread_mod, thread_mod = _patch_module('thread',
-                                                  _warnings=_warnings, _notify_did_subscribers=False)
+                                                  _warnings=_warnings,
+                                                  _notify_did_subscribers=False)
+
 
     if threading:
         gevent_threading_mod, _ = _patch_module('threading',
-                                                _warnings=_warnings, _notify_did_subscribers=False)
+                                                _warnings=_warnings,
+                                                _notify_did_subscribers=False)
 
         if Event:
             from gevent.event import Event
@@ -648,7 +686,7 @@ def patch_thread(threading=True, _threading_local=True, Event=True, logging=True
                 continue
             thread.join = make_join_func(thread, None)
 
-    if sys.version_info[0] >= 3:
+    if PY3:
 
         # Issue 18808 changes the nature of Thread.join() to use
         # locks. This means that a greenlet spawned in the main thread
@@ -757,7 +795,7 @@ def patch_ssl(_warnings=None, _first_time=True):
     """
     may_need_warning = (
         _first_time
-        and sys.version_info[:2] >= (3, 6)
+        and PY36
         and 'ssl' in sys.modules
         and hasattr(sys.modules['ssl'], 'SSLContext'))
     # Previously, we didn't warn on Python 2 if pkg_resources has been imported
@@ -892,7 +930,7 @@ def patch_builtins():
     .. _greenlet safe: https://github.com/gevent/gevent/issues/108
 
     """
-    if sys.version_info[:2] < (3, 3):
+    if PY2:
         _patch_module('builtins')
 
 @_ignores_DoNotPatch

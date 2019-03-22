@@ -607,25 +607,23 @@ class socket(object):
         """
         return self._sendfile_use_send(file, offset, count)
 
-    # get/set_inheritable new in 3.4
-    if hasattr(os, 'get_inheritable') or hasattr(os, 'get_handle_inheritable'):
-        # pylint:disable=no-member
-        if os.name == 'nt':
-            def get_inheritable(self):
-                return os.get_handle_inheritable(self.fileno())
 
-            def set_inheritable(self, inheritable):
-                os.set_handle_inheritable(self.fileno(), inheritable)
-        else:
-            def get_inheritable(self):
-                return os.get_inheritable(self.fileno())
+    if os.name == 'nt':
+        def get_inheritable(self):
+            return os.get_handle_inheritable(self.fileno())
 
-            def set_inheritable(self, inheritable):
-                os.set_inheritable(self.fileno(), inheritable)
-        _added = "\n\n.. versionadded:: 1.1rc4 Added in Python 3.4"
-        get_inheritable.__doc__ = "Get the inheritable flag of the socket" + _added
-        set_inheritable.__doc__ = "Set the inheritable flag of the socket" + _added
-        del _added
+        def set_inheritable(self, inheritable):
+            os.set_handle_inheritable(self.fileno(), inheritable)
+    else:
+        def get_inheritable(self):
+            return os.get_inheritable(self.fileno())
+
+        def set_inheritable(self, inheritable):
+            os.set_inheritable(self.fileno(), inheritable)
+
+    get_inheritable.__doc__ = "Get the inheritable flag of the socket"
+    set_inheritable.__doc__ = "Set the inheritable flag of the socket"
+
 
 
 SocketType = socket
@@ -651,6 +649,7 @@ if hasattr(_socket.socket, "share"):
         return socket(0, 0, 0, info)
 
     __implements__.append('fromshare')
+
 
 if hasattr(_socket, "socketpair"):
 
@@ -722,14 +721,6 @@ else: # pragma: no cover
         finally:
             lsock.close()
         return (ssock, csock)
-
-    if sys.version_info[:2] < (3, 5):
-        # Not provided natively
-        if 'socketpair' in __implements__:
-            # Multiple imports can cause this to be missing if _socketcommon
-            # was successfully imported, leading to subsequent imports to cause
-            # ValueError
-            __implements__.remove('socketpair')
 
 
 if hasattr(__socket__, 'close'): # Python 3.7b1+

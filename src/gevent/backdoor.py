@@ -17,6 +17,7 @@ from gevent.greenlet import Greenlet
 from gevent.hub import getcurrent
 from gevent.server import StreamServer
 from gevent.pool import Pool
+from gevent._compat import PY36
 
 __all__ = ['BackdoorServer']
 
@@ -145,7 +146,7 @@ class BackdoorServer(StreamServer):
         getcurrent().switch_in()
         try:
             console = InteractiveConsole(self._create_interactive_locals())
-            if sys.version_info[:3] >= (3, 6, 0):
+            if PY36:
                 # Beginning in 3.6, the console likes to print "now exiting <class>"
                 # but probably our socket is already closed, so this just causes problems.
                 console.interact(banner=self.banner, exitmsg='') # pylint:disable=unexpected-keyword-arg
