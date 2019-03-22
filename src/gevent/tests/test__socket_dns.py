@@ -15,6 +15,7 @@ import gevent.socket as gevent_socket
 from gevent.testing.util import log
 from gevent.testing import six
 from gevent.testing.six import xrange
+from gevent.testing import flaky
 
 
 resolver = gevent.get_hub().resolver
@@ -223,6 +224,18 @@ class TestCase(greentest.TestCase):
     __timeout__ = 30
     switch_expected = None
     verbose_dns = False
+
+    def setUp(self):
+        super(TestCase, self).setUp()
+        if not self.verbose_dns:
+            # Silence the default reporting of errors from the ThreadPool,
+            # we handle those here.
+            gevent.get_hub().exception_stream = None
+
+    def tearDown(self):
+        if not self.verbose_dns:
+            del gevent.get_hub().exception_stream
+        super(TestCase, self).tearDown()
 
     def should_log_results(self, result1, result2):
         if not self.verbose_dns:
@@ -697,7 +710,14 @@ class Test_getnameinfo_fail(TestCase):
 
 class TestInvalidPort(TestCase):
 
+    @flaky.reraises_flaky_race_condition()
     def test1(self):
+        # An Appveyor beginning 2019-03-21, the system resolver
+        # sometimes returns ('23.100.69.251', '65535') instead of
+        # raising an error. That IP address belongs to
+        # readthedocs[.io?] which is where www.gevent.org is a CNAME
+        # to...but it doesn't actually *reverse* to readthedocs.io.
+        # Can't reproduce locally, not sure what's happening
         self._test('getnameinfo', ('www.gevent.org', -1), 0)
 
     def test2(self):
