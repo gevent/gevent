@@ -26,6 +26,7 @@ locals()['getcurrent'] = __import__('greenlet').getcurrent
 locals()['greenlet_init'] = lambda: None
 locals()['_greenlet_switch'] = greenlet.switch
 
+
 __all__ = [
     'TrackedRawGreenlet',
     'SwitchOutGreenletWithLoop',
@@ -80,6 +81,47 @@ def get_reachable_greenlets():
         x for x in get_objects()
         if isinstance(x, greenlet) and not getattr(x, 'greenlet_tree_is_ignored', False)
     ]
+
+# Cache the global memoryview so cython can optimize.
+_memoryview = memoryview
+try:
+    if isinstance(__builtins__, dict):
+        # Pure-python mode on CPython
+        _buffer = __builtins__['buffer']
+    else:
+        # Cythonized mode, or PyPy
+        _buffer = __builtins__.buffer
+except (AttributeError, KeyError):
+    # Python 3.
+    _buffer = memoryview
+
+def get_memory(data):
+    # On Python 2, memoryview(memoryview()) can leak in some cases,
+    # notably when an io.BufferedWriter object produced the memoryview.
+    # So we need to check to see if we already have one before we convert.
+    # We do this in Cython to mitigate the performance cost (which turns out to be a
+    # net win.)
+
+    # We don't specifically test for this leak.
+
+    # https://github.com/gevent/gevent/issues/1318
+    try:
+        mv = _memoryview(data) if not isinstance(data, _memoryview) else data
+        if mv.shape:
+            return mv
+        # No shape, probably working with a ctypes object,
+        # or something else exotic that supports the buffer interface
+        return mv.tobytes()
+    except TypeError:
+        # fixes "python2.7 array.array doesn't support memoryview used in
+        # gevent.socket.send" issue
+        # (http://code.google.com/p/gevent/issues/detail?id=94)
+        if _buffer is _memoryview:
+            # Py3
+            raise
+        return _buffer(data)
+
+
 
 def _init():
     greenlet_init() # pylint:disable=undefined-variable

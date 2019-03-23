@@ -37,6 +37,8 @@
   Python 2 for namespace packages, so if ``futures`` is installed this
   will likely be the case.
 
+- Python 2: Avoid a memory leak when an `io.BufferedWriter` is wrapped
+  around a socket. Reported by Damien Tournoud in :issue:`1318`.
 
 1.4.0 (2019-01-04)
 ==================
