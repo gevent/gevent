@@ -755,6 +755,31 @@ class TestBasic(greentest.TestCase):
         finally:
             greenlet.sys_getframe = ogf
 
+    def test_spawn_length_nested_doesnt_grow(self):
+        # https://github.com/gevent/gevent/pull/1374
+        def doit1():
+            getcurrent()._spawning_stack_frames.append('not copied')
+            return gevent.spawn(doit2)
+
+        def doit2():
+            return gevent.spawn(doit3)
+
+        def doit3():
+            current = gevent.getcurrent()
+
+            return current
+
+
+        g1 = gevent.spawn(doit1)
+        g1.join()
+        g2 = g1.value
+        g2.join()
+
+        g3 = g2.value
+        self.assertNotIn('not copied', g3._spawning_stack_frames)
+
+
+
 
 class TestStart(greentest.TestCase):
 
