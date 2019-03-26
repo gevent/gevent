@@ -98,7 +98,7 @@ class AbstractCallbacks(object):
         This function should never return 0, as that's the default value that
         Python exceptions will produce.
         """
-        #print("Running callback", handle)
+        #_dbg("Running callback", handle)
         orig_ffi_watcher = None
         try:
             # Even dereferencing the handle needs to be inside the try/except;
@@ -116,6 +116,7 @@ class AbstractCallbacks(object):
             the_watcher = self.from_handle(handle)
             orig_ffi_watcher = the_watcher._watcher
             args = the_watcher.args
+            #_dbg("Running callback", the_watcher, orig_ffi_watcher, args)
             if args is None:
                 # Legacy behaviour from corecext: convert None into ()
                 # See test__core_watcher.py
@@ -204,7 +205,7 @@ class AbstractCallbacks(object):
         # at least for signals under libuv, which are delivered at very odd times.
         # Hopefully the event still shows up when we poll the next time.
         watcher = None
-        handle = tb.tb_frame.f_locals['handle'] if tb is not None else None
+        handle = tb.tb_frame.f_locals.get('handle') if tb is not None else None
         if handle: # handle could be NULL
             watcher = self.from_handle(handle)
         if watcher is not None:
