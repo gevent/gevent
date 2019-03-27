@@ -353,7 +353,10 @@ def print_list(lst):
         log(' - %s', name)
 
 def _setup_environ(debug=False):
-    if 'PYTHONWARNINGS' not in os.environ and not sys.warnoptions:
+    if ('PYTHONWARNINGS' not in os.environ
+            and (not sys.warnoptions
+                 # Python 3.7 goes from [] to ['default'] for nothing
+                 or sys.warnoptions == ['default'])):
 
         # action:message:category:module:line
         os.environ['PYTHONWARNINGS'] = ','.join([
@@ -373,6 +376,10 @@ def _setup_environ(debug=False):
             'ignore:::importlib._bootstrap_external:',
             # importing ABCs from collections, not collections.abc
             'ignore:::pkg_resources._vendor.pyparsing:',
+            'ignore:::dns.namedict:',
+            # dns.hash itself is being deprecated, importing it raises the warning;
+            # we don't import it, but dnspython still does
+            'ignore:::dns.hash:',
         ])
 
     if 'PYTHONFAULTHANDLER' not in os.environ:
