@@ -98,10 +98,10 @@ for var in "$@"; do
       install 3.7.2 python3.7.2
       ;;
     pypy)
-      install pypy2.7-7.0.0 pypy700
+      install pypy2.7-7.1.0 pypy710
       ;;
     pypy3)
-      install pypy3.6-7.0.0 pypy3.6_700
+      install pypy3.6-7.1.0 pypy3.6_710
       ;;
   esac
 done
