@@ -187,6 +187,7 @@ if not WIN:
     # Python API functions, and you're not supposed to do that from
     # CFFI code. Plus I could never get the libraries= line to ffi.compile()
     # correct to make linking work.
+    # Also, we use the type `nlink_t`, which is not defined on Windows.
     cffi_modules.append(
         LIBEV_CFFI_MODULE
     )

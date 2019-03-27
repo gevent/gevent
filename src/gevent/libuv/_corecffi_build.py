@@ -1,6 +1,6 @@
 # pylint: disable=no-member
 
-# This module is only used to create and compile the gevent._corecffi module;
+# This module is only used to create and compile the gevent.libuv._corecffi module;
 # nothing should be directly imported from it except `ffi`, which should only be
 # used for `ffi.compile()`; programs should import gevent._corecfffi.
 # However, because we are using "out-of-line" mode, it is necessary to examine
@@ -10,22 +10,11 @@ from __future__ import absolute_import, print_function
 import sys
 import os
 import os.path # pylint:disable=no-name-in-module
-import struct
+
 
 __all__ = []
 
 WIN = sys.platform.startswith('win32')
-
-def system_bits():
-    return struct.calcsize('P') * 8
-
-
-def st_nlink_type():
-    if sys.platform == "darwin" or sys.platform.startswith("freebsd"):
-        return "short"
-    if system_bits() == 32:
-        return "unsigned long"
-    return "long long"
 
 
 from cffi import FFI
@@ -39,12 +28,18 @@ def read_source(name):
 _cdef = read_source('_corecffi_cdef.c')
 _source = read_source('_corecffi_source.c')
 
-_cdef = _cdef.replace('#define GEVENT_ST_NLINK_T int', '')
+# These defines and uses help keep the C file readable and lintable by
+# C tools.
 _cdef = _cdef.replace('#define GEVENT_STRUCT_DONE int', '')
-_cdef = _cdef.replace('#define GEVENT_UV_OS_SOCK_T int', '')
-
-_cdef = _cdef.replace('GEVENT_ST_NLINK_T', st_nlink_type())
 _cdef = _cdef.replace("GEVENT_STRUCT_DONE _;", '...;')
+
+# nlink_t is not used in libuv.
+_cdef = _cdef.replace('#define GEVENT_ST_NLINK_T int',
+                      '')
+_cdef = _cdef.replace('GEVENT_ST_NLINK_T', 'nlink_t')
+
+
+_cdef = _cdef.replace('#define GEVENT_UV_OS_SOCK_T int', '')
 # uv_os_sock_t is int on POSIX and SOCKET on Win32, but socket is
 # just another name for handle, which is just another name for 'void*'
 # which we will treat as an 'unsigned long' or 'unsigned long long'

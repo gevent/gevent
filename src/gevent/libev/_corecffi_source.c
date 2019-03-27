@@ -19,8 +19,8 @@ static void python_handle_error(void* handle, int revents);
 static void python_stop(void* handle);
 
 static void _gevent_generic_callback(struct ev_loop* loop,
-									 struct ev_watcher* watcher,
-									 int revents)
+				     struct ev_watcher* watcher,
+				     int revents)
 {
     void* handle = watcher->data;
     int cb_result = python_callback(handle, revents);
@@ -45,7 +45,7 @@ static void _gevent_generic_callback(struct ev_loop* loop,
         default:
             fprintf(stderr,
                     "WARNING: gevent: Unexpected return value %d from Python callback "
-                    "for watcher %p and handle %d\n",
+                    "for watcher %p and handle %p\n",
                     cb_result,
                     watcher, handle);
             // XXX: Possible leaking of resources here? Should we be
