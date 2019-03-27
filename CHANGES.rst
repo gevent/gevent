@@ -40,6 +40,9 @@
 - Python 2: Avoid a memory leak when an `io.BufferedWriter` is wrapped
   around a socket. Reported by Damien Tournoud in :issue:`1318`.
 
+- Avoid unbounded memory usage when creating very deep spawn trees.
+  Reported in :issue:`1371` by dmrlawson.
+
 1.4.0 (2019-01-04)
 ==================
 

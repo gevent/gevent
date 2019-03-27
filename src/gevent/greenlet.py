@@ -256,7 +256,12 @@ class Greenlet(greenlet):
                     spawner.spawn_tree_locals = self.spawn_tree_locals
 
             self._spawning_stack_frames = _extract_stack(self.spawning_stack_limit)
-            self._spawning_stack_frames.extend(getattr(spawner, '_spawning_stack_frames', []))
+            # Don't copy the spawning greenlet's
+            # '_spawning_stack_frames' into ours. That's somewhat
+            # confusing, and, if we're not careful, a deep spawn tree
+            # can lead to excessive memory usage (an infinite spawning
+            # tree could lead to unbounded memory usage without care
+            # --- see https://github.com/gevent/gevent/issues/1371)
         else:
             # None is the default for all of these in Cython, but we
             # need to declare them for pure-Python mode.
