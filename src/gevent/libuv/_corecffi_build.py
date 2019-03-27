@@ -33,8 +33,9 @@ _source = read_source('_corecffi_source.c')
 _cdef = _cdef.replace('#define GEVENT_STRUCT_DONE int', '')
 _cdef = _cdef.replace("GEVENT_STRUCT_DONE _;", '...;')
 
+# nlink_t is not used in libuv.
 _cdef = _cdef.replace('#define GEVENT_ST_NLINK_T int',
-                      'typedef int... nlink_t;')
+                      '')
 _cdef = _cdef.replace('GEVENT_ST_NLINK_T', 'nlink_t')
 
 
