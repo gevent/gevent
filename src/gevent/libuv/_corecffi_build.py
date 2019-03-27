@@ -10,7 +10,7 @@ from __future__ import absolute_import, print_function
 import sys
 import os
 import os.path # pylint:disable=no-name-in-module
-import struct
+
 
 __all__ = []
 
