@@ -8,7 +8,7 @@ CYTHON?=cython
 
 
 
-export PATH:=$(BUILD_RUNTIMES)/snakepit:$(TOOLS):$(PATH)
+export PATH:=$(BUILD_RUNTIMES)/snakepit:$(PATH)
 export LC_ALL=C.UTF-8
 export GEVENT_RESOLVER_NAMESERVERS=8.8.8.8
 
@@ -126,18 +126,8 @@ PY27=$(BUILD_RUNTIMES)/snakepit/python2.7.16
 PY35=$(BUILD_RUNTIMES)/snakepit/python3.5.6
 PY36=$(BUILD_RUNTIMES)/snakepit/python3.6.8
 PY37=$(BUILD_RUNTIMES)/snakepit/python3.7.2
-PYPY=$(BUILD_RUNTIMES)/snakepit/pypy700
+PYPY=$(BUILD_RUNTIMES)/snakepit/pypy710
 PYPY3=$(BUILD_RUNTIMES)/snakepit/pypy3.6_700
-
-TOOLS=$(BUILD_RUNTIMES)/tools
-
-TOX=$(TOOLS)/tox
-
-TOOL_VIRTUALENV=$(BUILD_RUNTIMES)/virtualenvs/tools
-ISORT_VIRTUALENV=$(BUILD_RUNTIMES)/virtualenvs/isort
-TOOL_PYTHON=$(TOOL_VIRTUALENV)/bin/python
-TOOL_PIP=$(TOOL_VIRTUALENV)/bin/pip
-TOOL_INSTALL=$(TOOL_PIP) install --upgrade
 
 
 $(PY27):
@@ -188,7 +178,7 @@ test-py37: $(PY37)
 	PYTHON=python3.7.2 PATH=$(BUILD_RUNTIMES)/versions/python3.7.2/bin:$(PATH) make develop leaktest cffibackendtest coverage_combine
 
 test-pypy: $(PYPY)
-	PYTHON=$(PYPY) PATH=$(BUILD_RUNTIMES)/versions/pypy700/bin:$(PATH) make develop cffibackendtest
+	PYTHON=$(PYPY) PATH=$(BUILD_RUNTIMES)/versions/pypy710/bin:$(PATH) make develop cffibackendtest
 
 test-pypy3: $(PYPY3)
 	PYTHON=$(PYPY3) PATH=$(BUILD_RUNTIMES)/versions/pypy3.6_700/bin:$(PATH) make develop basictest

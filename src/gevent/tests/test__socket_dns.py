@@ -714,7 +714,7 @@ class Test_getnameinfo_fail(TestCase):
 class TestInvalidPort(TestCase):
 
     @flaky.reraises_flaky_race_condition()
-    def test1(self):
+    def test_overflow_neg_one(self):
         # An Appveyor beginning 2019-03-21, the system resolver
         # sometimes returns ('23.100.69.251', '65535') instead of
         # raising an error. That IP address belongs to
@@ -723,17 +723,24 @@ class TestInvalidPort(TestCase):
         # Can't reproduce locally, not sure what's happening
         self._test('getnameinfo', ('www.gevent.org', -1), 0)
 
-    def test2(self):
+    # Beginning with PyPy 2.7 7.1 on Appveyor, we sometimes see this
+    # return an OverflowError instead of the TypeError about None
+    @greentest.skipOnLibuvOnPyPyOnWin("Errors dont match")
+    def test_typeerror_none(self):
         self._test('getnameinfo', ('www.gevent.org', None), 0)
 
-    def test3(self):
+    # Beginning with PyPy 2.7 7.1 on Appveyor, we sometimes see this
+    # return an TypeError instead of the OverflowError.
+    # XXX: But see Test_getnameinfo_fail.test_port_string where this does work.
+    @greentest.skipOnLibuvOnPyPyOnWin("Errors don't match")
+    def test_typeerror_str(self):
         self._test('getnameinfo', ('www.gevent.org', 'x'), 0)
 
     @unittest.skipIf(RESOLVER_DNSPYTHON,
                      "System resolvers do funny things with this: macOS raises gaierror, "
                      "Travis CI returns (readthedocs.org, '0'). It's hard to match that exactly. "
                      "dnspython raises OverflowError.")
-    def test4(self):
+    def test_overflow_port_too_large(self):
         self._test('getnameinfo', ('www.gevent.org', 65536), 0)
 
 

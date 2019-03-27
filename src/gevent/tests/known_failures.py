@@ -260,11 +260,10 @@ if PYPY:
             'FLAKY test__example_udp_server.py',
             'FLAKY test__example_udp_client.py',
 
-            # PyPy 7.0 on Travis with Ubunto Xenial 16.04
+            # PyPy 7.0 and 7.1 on Travis with Ubunto Xenial 16.04
             # can't allocate SSL Context objects, either in Python 2.7
             # or 3.6. There must be some library incompatibility.
             'test_ssl.py',
-
         ]
 
         if LIBUV:
@@ -296,8 +295,6 @@ if PYPY:
 
             ## Unknown; can't reproduce locally on OS X
             'FLAKY test_subprocess.py', # timeouts on one test.
-
-            'FLAKY test_ssl.py',
         ]
 
 

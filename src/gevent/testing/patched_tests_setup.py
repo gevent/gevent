@@ -494,13 +494,17 @@ if LIBUV:
             'test_ssl.ThreadedTests.test_handshake_timeout',
 
             # These sometimes raise LoopExit, for no apparent reason,
-            # mostly but not exclusively on Python 2.
+            # mostly but not exclusively on Python 2. Sometimes (often?)
+            # this happens in the setUp() method when we attempt to get a client
+            # connection
             'test_socket.BufferIOTest.testRecvFromIntoBytearray',
             'test_socket.BufferIOTest.testRecvFromIntoArray',
             'test_socket.BufferIOTest.testRecvIntoArray',
+            'test_socket.BufferIOTest.testRecvIntoMemoryview',
             'test_socket.BufferIOTest.testRecvFromIntoEmptyBuffer',
             'test_socket.BufferIOTest.testRecvFromIntoMemoryview',
             'test_socket.BufferIOTest.testRecvFromIntoSmallBuffer',
+            'test_socket.BufferIOTest.testRecvIntoBytearray',
         ]
 
         if PY3:

@@ -7,9 +7,10 @@
 1.5.0 (unreleased)
 ==================
 
-- Python version updates: gevent is now tested with CPython 2.7.15,
-  3.5.6, 3.6.8, and 3.7.2. It is also tested with PyPy2 7.0 and PyPy
-  3.6 7.0.
+- Python version updates: gevent is now tested with CPython 2.7.16,
+  3.5.6, 3.6.8, and 3.7.2. It is also tested with PyPy2 7.1 and PyPy 3.6
+  7.1 (PyPy 7.0 and 7.1 were not capable of running SSL tests on Travis
+  CI).
 
 - Support for Python 3.4 has been removed, as that version is no
   longer supported uptstream.
