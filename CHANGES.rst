@@ -48,6 +48,9 @@
   ``st_nlink`` in ``struct stat``, instead of trying to guess it
   ourself. Reported in :issue:`1372` by Andreas Schwab.
 
+- Win: Make ``examples/process.py`` do something useful. See
+  :pr:`1378` by Robert Iannucci.
+
 1.4.0 (2019-01-04)
 ==================
 
