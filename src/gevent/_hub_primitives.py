@@ -54,9 +54,15 @@ class WaitOperationsGreenlet(SwitchOutGreenletWithLoop): # pylint:disable=undefi
         try:
             result = waiter.get()
             if result is not waiter:
-                raise InvalidSwitchError('Invalid switch into %s: %r (expected %r)' % (
-                    getcurrent(), # pylint:disable=undefined-variable
-                    result, waiter))
+                raise InvalidSwitchError(
+                    'Invalid switch into %s: got %r (expected %r; waiting on %r with %r)' % (
+                        getcurrent(), # pylint:disable=undefined-variable
+                        result,
+                        waiter,
+                        self,
+                        watcher
+                    )
+                )
         finally:
             watcher.stop()
 

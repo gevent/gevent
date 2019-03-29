@@ -51,6 +51,19 @@
 - Win: Make ``examples/process.py`` do something useful. See
   :pr:`1378` by Robert Iannucci.
 
+- Fix certain operations on a Greenlet in an invalid state (with an
+  invalid parent) to raise a `TypeError` sooner rather than an
+  `AttributeError` later. This is also slightly faster on CPython with
+  Cython. Inspired by :issue:`1363` as reported by Carson Ip. This
+  means that some extreme corner cases that might have passed by
+  replacing a Greenlet's parent with something that's not a gevent hub
+  now no longer will.
+
+- Fix: The ``spawning_stack`` for Greenlets on CPython should now have
+  correct line numbers in more cases.
+
+- Spawning greenlets can be up to 10% faster.
+
 1.4.0 (2019-01-04)
 ==================
 

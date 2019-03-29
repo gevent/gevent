@@ -417,9 +417,11 @@ class GreenletTree(object):
     def __render_children(self, tree):
         children = sorted(self.child_trees,
                           key=lambda c: (
-                              # raw greenlets first
+                              # raw greenlets first. Note that we could be accessing
+                              # minimal_ident for a hub from a different thread, which isn't
+                              # technically thread safe.
                               getattr(c, 'minimal_ident', -1),
-                              # running greenlets first
+                              # running greenlets next
                               getattr(c, 'ready', _ready)(),
                               id(c.parent)))
         for n, child in enumerate(children):
