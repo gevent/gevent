@@ -531,22 +531,22 @@ class TestBasic(greentest.TestCase):
 
         g = gevent.Greenlet(func, 0.01, return_value=5)
         g.rawlink(link_test.append) # use rawlink to avoid timing issues on Appveyor/Travis (not always successful)
-        assert not g, bool(g)
-        assert not g.dead
-        assert not g.started
-        assert not g.ready()
-        assert not g.successful()
-        assert g.value is None
-        assert g.exception is None
+        self.assertFalse(g, g)
+        self.assertFalse(g.dead, g)
+        self.assertFalse(g.started, g)
+        self.assertFalse(g.ready(), g)
+        self.assertFalse(g.successful(), g)
+        self.assertIsNone(g.value, g)
+        self.assertIsNone(g.exception, g)
 
         g.start()
-        assert g  # changed
-        assert not g.dead
-        assert g.started  # changed
-        assert not g.ready()
-        assert not g.successful()
-        assert g.value is None
-        assert g.exception is None
+        self.assertTrue(g, g) # changed
+        self.assertFalse(g.dead, g)
+        self.assertTrue(g.started, g) # changed
+        self.assertFalse(g.ready(), g)
+        self.assertFalse(g.successful(), g)
+        self.assertIsNone(g.value, g)
+        self.assertIsNone(g.exception, g)
 
         gevent.sleep(0.001)
         self.assertTrue(g)
@@ -559,14 +559,15 @@ class TestBasic(greentest.TestCase):
         self.assertFalse(link_test)
 
         gevent.sleep(0.02)
-        assert not g
-        assert g.dead
-        assert not g.started
-        assert g.ready()
-        assert g.successful()
-        assert g.value == 5
-        assert g.exception is None  # not changed
-        assert link_test == [g] or greentest.RUNNING_ON_CI, link_test  # changed
+        self.assertFalse(g, g) # changed
+        self.assertTrue(g.dead, g) # changed
+        self.assertFalse(g.started, g) # changed
+        self.assertTrue(g.ready(), g) # changed
+        self.assertTrue(g.successful(), g) # changed
+        self.assertEqual(g.value, 5) # changed
+        self.assertIsNone(g.exception, g)
+
+        self.assertTrue(link_test == [g] or greentest.RUNNING_ON_CI, link_test)  # changed
 
     def test_error_exit(self):
         link_test = []
@@ -755,28 +756,24 @@ class TestBasic(greentest.TestCase):
         finally:
             greenlet.sys_getframe = ogf
 
-    def test_spawn_length_nested_doesnt_grow(self):
-        # https://github.com/gevent/gevent/pull/1374
-        def doit1():
-            getcurrent()._spawning_stack_frames.append('not copied')
-            return gevent.spawn(doit2)
+    def test_minimal_ident_parent_not_hub(self):
 
-        def doit2():
-            return gevent.spawn(doit3)
+        g = gevent.spawn(lambda: 1)
+        self.assertIs(g.parent, gevent.get_hub())
+        g.parent = getcurrent()
+        try:
+            self.assertIsNot(g.parent, gevent.get_hub())
 
-        def doit3():
-            current = gevent.getcurrent()
-
-            return current
-
-
-        g1 = gevent.spawn(doit1)
-        g1.join()
-        g2 = g1.value
-        g2.join()
-
-        g3 = g2.value
-        self.assertNotIn('not copied', g3._spawning_stack_frames)
+            with self.assertRaisesRegex((TypeError, # Cython
+                                         AttributeError), # PyPy
+                                        'Cannot convert|ident_registry'):
+                getattr(g, 'minimal_ident')
+        finally:
+            # Attempting to switch into this later, when we next cycle the
+            # loop, would raise an InvalidSwitchError if we don't put
+            # things back the way they were (or kill the greenlet)
+            g.parent = gevent.get_hub()
+            g.kill()
 
 
 

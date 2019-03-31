@@ -4,6 +4,7 @@ cimport cython
 from gevent.__ident cimport IdentRegistry
 from gevent.__hub_local cimport get_hub_noargs as get_hub
 from gevent.__waiter cimport Waiter
+from gevent.__greenlet_primitives cimport SwitchOutGreenletWithLoop
 
 cdef bint _PYPY
 cdef sys_getframe
@@ -15,7 +16,12 @@ cdef InvalidSwitchError
 cdef extern from "greenlet/greenlet.h":
 
     ctypedef class greenlet.greenlet [object PyGreenlet]:
-        pass
+        # Defining this as a void* means we can't access it as a python attribute
+        # in the Python code; but we can't define it as a greenlet because that doesn't
+        # properly handle the case that it can be NULL. So instead we inline a getparent
+        # function that does the same thing as the green_getparent accessor but without
+        # going through the overhead of generic attribute lookup.
+        cdef void* parent
 
     # These are actually macros and so much be included
     # (defined) in each .pxd, as are the two functions
@@ -26,6 +32,17 @@ cdef extern from "greenlet/greenlet.h":
 @cython.final
 cdef inline greenlet getcurrent():
     return PyGreenlet_GetCurrent()
+
+cdef inline object get_generic_parent(greenlet s):
+    # We don't use any typed functions on the return of this,
+    # so save the type check by making it just an object.
+    if s.parent != NULL:
+        return <object>s.parent
+
+cdef inline SwitchOutGreenletWithLoop get_my_hub(greenlet s):
+    # Must not be called with s = None
+    if s.parent != NULL:
+        return <object>s.parent
 
 cdef bint _greenlet_imported
 
@@ -44,12 +61,25 @@ cdef extern from "frameobject.h":
 
     ctypedef class types.FrameType [object PyFrameObject]:
         cdef CodeType f_code
-        cdef int f_lineno
-        # We can't declare this in the object, because it's
+        # Accessing the f_lineno directly doesn't work. There is an accessor
+        # function, PyFrame_GetLineNumber that is needed to turn the raw line number
+        # into the executing line number.
+        # cdef int f_lineno
+        # We can't declare this in the object as an object, because it's
         # allowed to be NULL, and Cython can't handle that.
         # We have to go through the python machinery to get a
-        # proper None instead.
-        # cdef FrameType f_back
+        # proper None instead, or use an inline function.
+        cdef void* f_back
+
+    int PyFrame_GetLineNumber(FrameType frame)
+
+@cython.nonecheck(False)
+cdef inline FrameType get_f_back(FrameType frame):
+    if frame.f_back != NULL:
+        return <FrameType>frame.f_back
+
+cdef inline int get_f_lineno(FrameType frame):
+    return PyFrame_GetLineNumber(frame)
 
 cdef void _init()
 
@@ -75,24 +105,19 @@ cdef class _Frame:
 
 
 @cython.final
-@cython.locals(frames=list,frame=FrameType)
-cdef inline list _extract_stack(int limit)
-
-@cython.final
-@cython.locals(previous=_Frame, frame=tuple, f=_Frame)
-cdef _Frame _Frame_from_list(list frames)
-
+@cython.locals(frame=FrameType,
+               newest_Frame=_Frame,
+               newer_Frame=_Frame,
+               older_Frame=_Frame)
+cdef inline _Frame _extract_stack(int limit)
 
 cdef class Greenlet(greenlet):
     cdef readonly object value
     cdef readonly tuple args
     cdef readonly dict kwargs
     cdef readonly object spawning_greenlet
+    cdef readonly _Frame spawning_stack
     cdef public dict spawn_tree_locals
-
-    # This is accessed with getattr() dynamically so it
-    # must be visible to Python
-    cdef readonly list _spawning_stack_frames
 
     cdef list _links
     cdef tuple _exc_info
@@ -108,9 +133,10 @@ cdef class Greenlet(greenlet):
     cpdef rawlink(self, object callback)
     cpdef str _formatinfo(self)
 
+    # This is a helper function for a @property getter;
+    # defining locals() for a @property doesn't seem to work.
     @cython.locals(reg=IdentRegistry)
     cdef _get_minimal_ident(self)
-
 
     cdef bint __started_but_aborted(self)
     cdef bint __start_cancelled_by_kill(self)
@@ -131,8 +157,6 @@ cdef class Greenlet(greenlet):
     # is also compiled.
     # TypeError: wrap() takes exactly one argument (0 given)
     # cpdef _raise_exception(self)
-
-
 
 # Declare a bunch of imports as cdefs so they can
 # be accessed directly as static vars without
@@ -165,6 +189,7 @@ cdef class _dummy_event:
 cdef _dummy_event _cancelled_start_event
 cdef _dummy_event _start_completed_event
 
+cpdef _kill(Greenlet glet, object exception, object waiter)
 
 @cython.locals(diehards=list)
 cdef _killall3(list greenlets, object exception, object waiter)

@@ -39,7 +39,7 @@ cdef inline void greenlet_init():
 
 
 cdef class WaitOperationsGreenlet(SwitchOutGreenletWithLoop):
-
+    # The Hub will extend this class.
     cpdef wait(self, watcher)
     cpdef cancel_wait(self, watcher, error, close_watcher=*)
     cpdef _cancel_wait(self, watcher, error, close_watcher)

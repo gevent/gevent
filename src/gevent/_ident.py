@@ -27,7 +27,7 @@ class ValuedWeakRef(ref):
 
 class IdentRegistry(object):
     """
-    Maintains a unique mapping of (small) positive integer identifiers
+    Maintains a unique mapping of (small) non-negative integer identifiers
     to objects that can be weakly referenced.
 
     It is guaranteed that no two objects will have the the same
