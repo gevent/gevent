@@ -26,6 +26,7 @@ import warnings
 import gevent
 
 from . import sysinfo
+from . import util
 
 
 OPTIONAL_MODULES = [
@@ -33,10 +34,28 @@ OPTIONAL_MODULES = [
     'gevent.resolver.ares',
     'gevent.libev',
     'gevent.libev.watcher',
+    'gevent.libuv.loop',
+    'gevent.libuv.watcher',
 ]
 
 
-def walk_modules(basedir=None, modpath=None, include_so=False, recursive=False):
+def walk_modules(
+        basedir=None,
+        modpath=None,
+        include_so=False,
+        recursive=False,
+        check_optional=True,
+):
+    """
+    Find gevent modules, yielding tuples of ``(path, importable_module_name)``.
+
+    :keyword bool check_optional: If true (the default), then if we discover a
+       module that is known to be optional on this system (such as a backend),
+       we will attempt to import it; if the import fails, it will not be returned.
+       If false, then we will not make such an attempt, the caller will need to be prepared
+       for an `ImportError`; the caller can examine *OPTIONAL_MODULES* against
+       the yielded *importable_module_name*.
+    """
     # pylint:disable=too-many-branches
     if sysinfo.PYPY:
         include_so = False
@@ -47,6 +66,7 @@ def walk_modules(basedir=None, modpath=None, include_so=False, recursive=False):
     else:
         if modpath is None:
             modpath = ''
+
     for fn in sorted(os.listdir(basedir)):
         path = os.path.join(basedir, fn)
         if os.path.isdir(path):
@@ -57,9 +77,11 @@ def walk_modules(basedir=None, modpath=None, include_so=False, recursive=False):
             pkg_init = os.path.join(path, '__init__.py')
             if os.path.exists(pkg_init):
                 yield pkg_init, modpath + fn
-                for p, m in walk_modules(path, modpath + fn + "."):
+                for p, m in walk_modules(path, modpath + fn + ".",
+                                         check_optional=check_optional):
                     yield p, m
             continue
+
         if fn.endswith('.py'):
             x = fn[:-3]
             if x.endswith('_d'):
@@ -68,12 +90,13 @@ def walk_modules(basedir=None, modpath=None, include_so=False, recursive=False):
                      'corecffi', '_corecffi', '_corecffi_build']:
                 continue
             modname = modpath + x
-            if modname in OPTIONAL_MODULES:
+            if check_optional and modname in OPTIONAL_MODULES:
                 try:
                     with warnings.catch_warnings():
                         warnings.simplefilter('ignore', DeprecationWarning)
                         importlib.import_module(modname)
                 except ImportError:
+                    util.debug("Unable to import optional module %s", modname)
                     continue
             yield path, modname
         elif include_so and fn.endswith(sysinfo.SHARED_OBJECT_EXTENSION):

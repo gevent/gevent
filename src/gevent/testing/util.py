@@ -2,19 +2,23 @@ from __future__ import print_function, absolute_import, division
 import re
 import sys
 import os
-from . import six
 import traceback
 import unittest
 import threading
 import subprocess
 import time
 
+from . import six
+from gevent._config import validate_bool
+
 # pylint: disable=broad-except,attribute-defined-outside-init
 
 runtimelog = []
 MIN_RUNTIME = 1.0
 BUFFER_OUTPUT = False
-QUIET = False
+# This is set by the testrunner, defaulting to true (be quiet)
+# But if we're run standalone, default to false
+QUIET = validate_bool(os.environ.get('GEVENTTEST_QUIET', '0'))
 
 
 class Popen(subprocess.Popen):
@@ -34,6 +38,7 @@ _colorscheme = {
     'normal': 'normal',
     'default': 'default',
     'info': 'normal',
+    'debug': 'cyan',
     'suboptimal-behaviour': 'magenta',
     'error': 'brightred',
     'number': 'green',
@@ -89,6 +94,11 @@ def _colorize(what, message, normal='normal'):
     return _color(what) + message + _color(normal)
 
 def log(message, *args, **kwargs):
+    """
+    Log a *message*
+
+    :keyword str color: One of the values from _colorscheme
+    """
     color = kwargs.pop('color', 'normal')
     try:
         if args:
@@ -110,6 +120,13 @@ def log(message, *args, **kwargs):
         string = _colorize(color, string)
         sys.stderr.write(string + '\n')
 
+def debug(message, *args, **kwargs):
+    """
+    Log the *message* only if we're not in quiet mode.
+    """
+    if not QUIET:
+        kwargs.setdefault('color', 'debug')
+        log(message, *args, **kwargs)
 
 def killpg(pid):
     if not hasattr(os, 'killpg'):
@@ -169,6 +186,18 @@ def kill(popen):
     except Exception:
         traceback.print_exc()
 
+# A set of environment keys we ignore for printing purposes
+IGNORED_GEVENT_ENV_KEYS = {
+    'GEVENTTEST_QUIET',
+    'GEVENT_DEBUG',
+}
+
+# A set of (name, value) pairs we ignore for printing purposes.
+# These should match the defaults.
+IGNORED_GEVENT_ENV_ITEMS = {
+    ('GEVENT_RESOLVER', 'thread'),
+    ('GEVENT_RESOLVER_NAMESERVERS', '8.8.8.8')
+}
 
 def getname(command, env=None, setenv=None):
     result = []
@@ -177,8 +206,13 @@ def getname(command, env=None, setenv=None):
     env.update(setenv or {})
 
     for key, value in sorted(env.items()):
-        if key.startswith('GEVENT'):
-            result.append('%s=%s' % (key, value))
+        if not key.startswith('GEVENT'):
+            continue
+        if key in IGNORED_GEVENT_ENV_KEYS:
+            continue
+        if (key, value) in IGNORED_GEVENT_ENV_ITEMS:
+            continue
+        result.append('%s=%s' % (key, value))
 
     if isinstance(command, six.string_types):
         result.append(command)
