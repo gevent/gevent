@@ -20,6 +20,7 @@ from gevent.events import implementer
 from gevent._tracer import GreenletTracer
 from gevent._compat import thread_mod_name
 from gevent._compat import perf_counter
+from gevent._compat import get_this_psutil_process
 
 
 
@@ -251,22 +252,7 @@ class PeriodicMonitoringThread(object):
         self._greenlet_tracer.monitor_current_greenlet_blocking()
 
     def _get_process(self): # pylint:disable=method-hidden
-        try:
-            # The standard library 'resource' module doesn't provide
-            # a standard way to get the RSS measure, only the maximum.
-            # You might be tempted to try to compute something by adding
-            # together text and data sizes, but on many systems those come back
-            # zero. So our only option is psutil.
-            from psutil import Process, AccessDenied
-            # Make sure it works (why would we be denied access to our own process?)
-            try:
-                proc = Process()
-                proc.memory_full_info()
-            except AccessDenied: # pragma: no cover
-                proc = None
-        except ImportError:
-            proc = None
-
+        proc = get_this_psutil_process()
         self._get_process = lambda: proc
         return proc
 

@@ -10,8 +10,9 @@ from greenlet import settrace
 from gevent.monkey import get_original
 from gevent._compat import thread_mod_name
 from gevent._compat import NativeStrIO
+from gevent._compat import get_this_psutil_process
 
-from gevent.testing.skipping import skipOnPyPyOnWindows
+from gevent.testing.skipping import skipWithoutPSUtil
 
 from gevent import _monitor as monitor
 from gevent import config as GEVENT_CONFIG
@@ -82,10 +83,11 @@ class TestPeriodicMonitoringThread(_AbstractTestPeriodicMonitoringThread,
         self.assertEqual(0xDEADBEEF, self.pmt.monitor_thread_ident)
         self.assertEqual(gettrace(), self.pmt._greenlet_tracer)
 
-    @skipOnPyPyOnWindows("psutil doesn't install on PyPy on Win")
+    @skipWithoutPSUtil("Verifies the process")
     def test_get_process(self):
         proc = self.pmt._get_process()
         self.assertIsNotNone(proc)
+        # Same object is returned each time.
         self.assertIs(proc, self.pmt._get_process())
 
     def test_hub_wref(self):
@@ -289,14 +291,14 @@ class MockProcess(object):
         return self
 
 
-@skipOnPyPyOnWindows("psutil doesn't install on PyPy on Win")
+@skipWithoutPSUtil("Accessess memory info")
 class TestPeriodicMonitorMemory(_AbstractTestPeriodicMonitoringThread,
                                 unittest.TestCase):
 
     rss = 0
 
     def setUp(self):
-        super(TestPeriodicMonitorMemory, self).setUp()
+        _AbstractTestPeriodicMonitoringThread.setUp(self)
         self._old_max = GEVENT_CONFIG.max_memory_usage
         GEVENT_CONFIG.max_memory_usage = None
 
@@ -304,10 +306,9 @@ class TestPeriodicMonitorMemory(_AbstractTestPeriodicMonitoringThread,
 
     def tearDown(self):
         GEVENT_CONFIG.max_memory_usage = self._old_max
-        super(TestPeriodicMonitorMemory, self).tearDown()
+        _AbstractTestPeriodicMonitoringThread.tearDown(self)
 
     def test_can_monitor_and_install(self):
-
         # We run tests with psutil installed, and we have access to our
         # process.
         self.assertTrue(self.pmt.can_monitor_memory_usage())

@@ -363,6 +363,10 @@ def run_setup(ext_modules, run_make):
                 'repoze.sphinx.autointerface',
             ],
             'test': [
+                # To the extent possible, we should work to make sure
+                # our tests run, at least a basic set, without any of
+                # these extra dependencies (i.e., skip things when they are
+                # missing). This helps serve as a smoketest for users.
                 'zope.interface',
                 'zope.event',
 
