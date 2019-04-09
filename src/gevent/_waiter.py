@@ -58,7 +58,7 @@ class Waiter(object):
 
     .. warning::
 
-        This a limited and dangerous way to communicate between
+        This is a limited and dangerous way to communicate between
         greenlets. It can easily leave a greenlet unscheduled forever
         if used incorrectly. Consider using safer classes such as
         :class:`gevent.event.Event`, :class:`gevent.event.AsyncResult`,
