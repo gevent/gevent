@@ -128,9 +128,35 @@ def gc_collect_if_needed():
     if PYPY: # pragma: no cover
         gc.collect()
 
+# Our usage of mock should be limited to '@mock.patch()'
+# and other things that are easily...mocked...here on Python 2
+# when mock is not installed.
 try:
     from unittest import mock
 except ImportError: # Python 2
-    import mock
+    try:
+        import mock
+    except ImportError: # pragma: no cover
+        # Backport not installed
+        class mock(object):
+
+            @staticmethod
+            def patch(reason):
+                return unittest.skip(reason)
 
 mock = mock
+
+
+# zope.interface
+try:
+    from zope.interface import verify
+except ImportError:
+    class verify(object):
+
+        @staticmethod
+        def verifyObject(*_):
+            import warnings
+            warnings.warn("zope.interface is not installed; not verifying")
+            return
+
+verify = verify

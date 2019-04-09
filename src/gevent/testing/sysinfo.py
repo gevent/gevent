@@ -33,6 +33,8 @@ OSX = gsysinfo.OSX
 
 PURE_PYTHON = gsysinfo.PURE_PYTHON
 
+get_this_psutil_process = gsysinfo.get_this_psutil_process
+
 # XXX: Formalize this better
 LIBUV = 'libuv' in gevent.core.loop.__module__ # pylint:disable=no-member
 CFFI_BACKEND = PYPY or LIBUV or 'cffi' in os.getenv('GEVENT_LOOP', '')

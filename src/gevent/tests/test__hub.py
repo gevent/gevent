@@ -30,6 +30,7 @@ import gevent
 from gevent import socket
 from gevent.hub import Waiter, get_hub
 from gevent._compat import NativeStrIO
+from gevent._compat import get_this_psutil_process
 
 DELAY = 0.1
 
@@ -204,9 +205,16 @@ class TestPeriodicMonitoringThread(greentest.TestCase):
         monitor = hub.start_periodic_monitoring_thread()
         self.assertIsNotNone(monitor)
 
-        self.assertEqual(2, len(monitor.monitoring_functions()))
+        basic_monitor_func_count = 1
+        if get_this_psutil_process() is not None:
+            # psutil is installed
+            basic_monitor_func_count += 1
+
+        self.assertEqual(basic_monitor_func_count,
+                         len(monitor.monitoring_functions()))
         monitor.add_monitoring_function(self._monitor, 0.1)
-        self.assertEqual(3, len(monitor.monitoring_functions()))
+        self.assertEqual(basic_monitor_func_count + 1,
+                         len(monitor.monitoring_functions()))
         self.assertEqual(self._monitor, monitor.monitoring_functions()[-1].function)
         self.assertEqual(0.1, monitor.monitoring_functions()[-1].period)
 
@@ -219,7 +227,8 @@ class TestPeriodicMonitoringThread(greentest.TestCase):
             self._run_monitoring_threads(monitor)
         finally:
             monitor.add_monitoring_function(self._monitor, None)
-            self.assertEqual(2, len(monitor._monitoring_functions))
+            self.assertEqual(basic_monitor_func_count,
+                             len(monitor._monitoring_functions))
             assert hub.exception_stream is stream
             monitor.kill()
             del hub.exception_stream
@@ -320,7 +329,7 @@ class TestPeriodicMonitoringThread(greentest.TestCase):
 class TestLoopInterface(unittest.TestCase):
 
     def test_implemensts_ILoop(self):
-        from zope.interface import verify
+        from gevent.testing import verify
         from gevent._interfaces import ILoop
 
         loop = get_hub().loop

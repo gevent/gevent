@@ -165,3 +165,22 @@ except ImportError:
         perf_counter = time.clock
     else:
         perf_counter = time.time
+
+
+## Monitoring
+def get_this_psutil_process():
+    # Depends on psutil. Defer the import until needed, who knows what
+    # it imports (psutil imports subprocess which on Python 3 imports
+    # selectors. This can expose issues with monkey-patching.)
+    # Returns a freshly queried object each time.
+    try:
+        from psutil import Process, AccessDenied
+        # Make sure it works (why would we be denied access to our own process?)
+        try:
+            proc = Process()
+            proc.memory_full_info()
+        except AccessDenied: # pragma: no cover
+            proc = None
+    except ImportError:
+        proc = None
+    return proc

@@ -19,6 +19,7 @@
 # THE SOFTWARE.
 from __future__ import absolute_import, print_function, division
 
+import functools
 import unittest
 
 from . import sysinfo
@@ -94,7 +95,60 @@ skipUnderCoverage = unittest.skip if sysinfo.RUN_COVERAGE else _do_not_skip
 skipIf = unittest.skipIf
 skipUnless = unittest.skipUnless
 
+_has_psutil_process = None
+def _check_psutil():
+    global _has_psutil_process
+    if _has_psutil_process is None:
+        _has_psutil_process = sysinfo.get_this_psutil_process() is not None
+    return _has_psutil_process
 
+
+def skipWithoutPSUtil(reason):
+    # Important: If you use this on classes, you must not use the
+    # two-argument form of super()
+    reason = "psutil not available: " + reason
+    def decorator(test_item):
+        # Defer the check until runtime to avoid imports
+        if not isinstance(test_item, type):
+            f = test_item
+            @functools.wraps(test_item)
+            def skip_wrapper(*args):
+                if not _check_psutil():
+                    raise unittest.SkipTest(reason)
+                return f(*args)
+            test_item = skip_wrapper
+        else:
+            # given a class, subclass its setUp method to do the same.
+
+            # The trouble with this is that the decorator automatically
+            # rebinds to the same name, and if there are two-argument calls
+            # like `super(MyClass, self).thing` in the class, we get infinite
+            # recursion (because MyClass has been rebound to the object we return.)
+            # This is easy to fix on Python 3: use the zero argument `super()`, because
+            # the lookup relies not on names but implicit slots.
+            #
+            # I didn't find a good workaround for this on Python 2, so
+            # I'm just forbidding using the two argument super.
+            base = test_item
+            class SkipWrapper(base):
+                def setUp(self):
+                    if not _check_psutil():
+                        raise unittest.SkipTest(reason)
+                    base.setUp(self)
+
+                def _super(self):
+                    return super(base, self)
+            SkipWrapper.__name__ = test_item.__name__
+            SkipWrapper.__module__ = test_item.__module__
+            try:
+                SkipWrapper.__qualname__ = test_item.__qualname__
+            except AttributeError:
+                # Python 2
+                pass
+            test_item = SkipWrapper
+
+        return test_item
+    return decorator
 
 if sysinfo.LIBUV:
     skipOnLibuv = unittest.skip

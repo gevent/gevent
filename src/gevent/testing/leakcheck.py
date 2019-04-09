@@ -25,7 +25,11 @@ import types
 from functools import wraps
 import unittest
 
-import objgraph
+try:
+    import objgraph
+except ImportError: # pragma: no cover
+    # Optional test dependency
+    objgraph = None
 
 import gevent
 import gevent.core
@@ -193,6 +197,11 @@ class _RefCountChecker(object):
 
 
 def wrap_refcount(method):
+    if objgraph is None:
+        import warnings
+        warnings.warn("objgraph not available, leakchecks disabled")
+        return method
+
     if getattr(method, 'ignore_leakcheck', False):
         return method
 

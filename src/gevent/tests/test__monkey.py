@@ -70,7 +70,7 @@ class TestMonkey(SubscriberCleanupMixin, unittest.TestCase):
 
     def test_patch_twice_warnings_events(self):
         import warnings
-        from zope.interface import verify
+        from gevent.testing import verify
 
         orig_saved = {}
         for k, v in monkey.saved.items():
