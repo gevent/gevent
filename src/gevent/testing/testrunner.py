@@ -12,7 +12,6 @@ from datetime import timedelta
 from multiprocessing.pool import ThreadPool
 from multiprocessing import cpu_count
 from . import util
-from .util import log
 from .sysinfo import RUNNING_ON_CI
 from .sysinfo import PYPY
 from .sysinfo import PY2
@@ -125,7 +124,7 @@ def run_many(tests,
 
     try:
         try:
-            log("Running tests in parallel with concurrency %s" % (NWORKERS,),)
+            util.log("Running tests in parallel with concurrency %s" % (NWORKERS,),)
             for cmd, options in tests:
                 total += 1
                 options = options or {}
@@ -136,20 +135,21 @@ def run_many(tests,
             pool.close()
             pool.join()
 
-            log("Running tests marked standalone")
-            for cmd, options in run_alone:
-                run_one(cmd, **options)
+            if run_alone:
+                util.log("Running tests marked standalone")
+                for cmd, options in run_alone:
+                    run_one(cmd, **options)
 
         except KeyboardInterrupt:
             try:
-                log('Waiting for currently running to finish...')
+                util.log('Waiting for currently running to finish...')
                 reap_all()
             except KeyboardInterrupt:
                 pool.terminate()
                 report(total, failed, passed, exit=False, took=time.time() - start,
                        configured_failing_tests=configured_failing_tests,
                        total_cases=total_cases[0], total_skipped=total_skipped[0])
-                log('(partial results)\n')
+                util.log('(partial results)\n')
                 raise
     except:
         traceback.print_exc()
@@ -203,8 +203,15 @@ def discover(
     to_import = []
 
     for filename in tests:
-        module_name = os.path.splitext(filename)[0]
-        qualified_name = package + '.' + module_name if package else module_name
+        # Support either 'gevent.tests.foo' or 'gevent/tests/foo.py'
+        if filename.startswith('gevent.tests'):
+            # XXX: How does this interact with 'package'? Probably not well
+            qualified_name = module_name = filename
+            filename = filename[len('gevent.tests') + 1:]
+            filename = filename.replace('.', os.sep) + '.py'
+        else:
+            module_name = os.path.splitext(filename)[0]
+            qualified_name = package + '.' + module_name if package else module_name
         with open(os.path.abspath(filename), 'rb') as f:
             # Some of the test files (e.g., test__socket_dns) are
             # UTF8 encoded. Depending on the environment, Python 3 may
@@ -291,12 +298,12 @@ def report(total, failed, passed, exit=True, took=None,
     # pylint:disable=redefined-builtin,too-many-branches,too-many-locals
     runtimelog = util.runtimelog
     if runtimelog:
-        log('\nLongest-running tests:')
+        util.log('\nLongest-running tests:')
         runtimelog.sort()
         length = len('%.1f' % -runtimelog[0][0])
         frmt = '%' + str(length) + '.1f seconds: %s'
         for delta, name in runtimelog[:5]:
-            log(frmt, -delta, name)
+            util.log(frmt, -delta, name)
     if took:
         took = ' in %s' % format_seconds(took)
     else:
@@ -311,11 +318,11 @@ def report(total, failed, passed, exit=True, took=None,
             passed_unexpected.append(name)
 
     if passed_unexpected:
-        log('\n%s/%s unexpected passes', len(passed_unexpected), total, color='error')
+        util.log('\n%s/%s unexpected passes', len(passed_unexpected), total, color='error')
         print_list(passed_unexpected)
 
     if failed:
-        log('\n%s/%s tests failed%s', len(failed), total, took)
+        util.log('\n%s/%s tests failed%s', len(failed), total, took)
 
         for name in failed:
             if matches(configured_failing_tests, name, include_flaky=True):
@@ -324,14 +331,14 @@ def report(total, failed, passed, exit=True, took=None,
                 failed_unexpected.append(name)
 
         if failed_expected:
-            log('\n%s/%s expected failures', len(failed_expected), total)
+            util.log('\n%s/%s expected failures', len(failed_expected), total)
             print_list(failed_expected)
 
         if failed_unexpected:
-            log('\n%s/%s unexpected failures', len(failed_unexpected), total, color='error')
+            util.log('\n%s/%s unexpected failures', len(failed_unexpected), total, color='error')
             print_list(failed_unexpected)
     else:
-        log(
+        util.log(
             '\nRan %s tests%s in %s files%s',
             total_cases,
             util._colorize('skipped', " (skipped=%d)" % total_skipped) if total_skipped else '',
@@ -350,7 +357,7 @@ def report(total, failed, passed, exit=True, took=None,
 
 def print_list(lst):
     for name in lst:
-        log(' - %s', name)
+        util.log(' - %s', name)
 
 def _setup_environ(debug=False):
     if ('PYTHONWARNINGS' not in os.environ
@@ -417,6 +424,14 @@ def main():
     parser.add_argument("--package", default="gevent.tests")
     parser.add_argument('tests', nargs='*')
     options = parser.parse_args()
+
+    # Set this before any test imports in case of 'from .util import QUIET';
+    # not that this matters much because we spawn tests in subprocesses,
+    # it's the environment setting that matters
+    util.QUIET = options.quiet
+    if 'GEVENTTEST_QUIET' not in os.environ:
+        os.environ['GEVENTTEST_QUIET'] = str(options.quiet)
+
     FAILING_TESTS = []
     IGNORED_TESTS = []
     RUN_ALONE = []
