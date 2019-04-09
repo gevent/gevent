@@ -146,7 +146,7 @@ def skipWithoutPSUtil(reason):
                 # Python 2
                 pass
             test_item = SkipWrapper
-            print(test_item.mro())
+
         return test_item
     return decorator
 

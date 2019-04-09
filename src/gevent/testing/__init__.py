@@ -145,3 +145,18 @@ except ImportError: # Python 2
                 return unittest.skip(reason)
 
 mock = mock
+
+
+# zope.interface
+try:
+    from zope.interface import verify
+except ImportError:
+    class verify(object):
+
+        @staticmethod
+        def verifyObject(*_):
+            import warnings
+            warnings.warn("zope.interface is not installed; not verifying")
+            return
+
+verify = verify

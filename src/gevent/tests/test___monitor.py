@@ -10,8 +10,8 @@ from greenlet import settrace
 from gevent.monkey import get_original
 from gevent._compat import thread_mod_name
 from gevent._compat import NativeStrIO
-from gevent._compat import get_this_psutil_process
 
+from gevent.testing import verify
 from gevent.testing.skipping import skipWithoutPSUtil
 
 from gevent import _monitor as monitor
@@ -247,7 +247,6 @@ class TestPeriodicMonitorBlocking(_AbstractTestPeriodicMonitoringThread,
         # so nothing is considered blocked
         from gevent.events import subscribers
         from gevent.events import IEventLoopBlocked
-        from zope.interface.verify import verifyObject
         events = []
         subscribers.append(events.append)
 
@@ -265,7 +264,7 @@ class TestPeriodicMonitorBlocking(_AbstractTestPeriodicMonitoringThread,
         # Again without switching is a problem.
         self.assertTrue(self.pmt.monitor_blocking(self.hub))
         self.assertTrue(events)
-        verifyObject(IEventLoopBlocked, events[0])
+        verify.verifyObject(IEventLoopBlocked, events[0])
         del events[:]
 
         # But we can order it not to be a problem

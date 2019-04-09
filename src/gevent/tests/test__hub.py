@@ -329,7 +329,7 @@ class TestPeriodicMonitoringThread(greentest.TestCase):
 class TestLoopInterface(unittest.TestCase):
 
     def test_implemensts_ILoop(self):
-        from zope.interface import verify
+        from gevent.testing import verify
         from gevent._interfaces import ILoop
 
         loop = get_hub().loop
