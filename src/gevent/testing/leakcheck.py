@@ -27,7 +27,7 @@ import unittest
 
 try:
     import objgraph
-except ImportError:
+except ImportError: # pragma: no cover
     # Optional test dependency
     objgraph = None
 
