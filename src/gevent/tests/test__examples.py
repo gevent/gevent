@@ -34,7 +34,7 @@ def _find_files_to_ignore():
 default_time_range = (2, 4)
 time_ranges = {
     'concurrent_download.py': (0, 30),
-    'processes.py': (0, 4)
+    'processes.py': (0, 10)
 }
 
 class _AbstractTestMixin(util.ExampleMixin):
