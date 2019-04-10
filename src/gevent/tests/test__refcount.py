@@ -142,9 +142,15 @@ class Test(greentest.TestCase):
             client = Client(server.server_port)
             start_new_thread(client.make_request)
 
-        # Wait until we do our business
-        while server.socket is not None:
-            sleep(0.01)
+        # Wait until we do our business; we will always close
+        # the server; We may also close the client.
+        # On PyPy, we may not actually see the changes they write to
+        # their dicts immediately.
+        for obj in server, client:
+            if obj is None:
+                continue
+            while obj.socket is not None:
+                sleep(0.01)
 
         # If we have a client, then we should have data
         if run_client:
@@ -152,7 +158,6 @@ class Test(greentest.TestCase):
             self.assertEqual(client.server_data, b'bye')
 
         return wref_to_hidden_server_socket
-
 
     def run_and_check(self, run_client):
         wref_to_hidden_server_socket = self.run_interaction(run_client=run_client)
@@ -169,7 +174,6 @@ class Test(greentest.TestCase):
     def test_clean_exit(self):
         self.run_and_check(True)
         self.run_and_check(True)
-
 
     def test_timeout_exit(self):
         self.run_and_check(False)
