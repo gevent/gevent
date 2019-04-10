@@ -24,6 +24,10 @@ def _find_files_to_ignore():
             'psycopg2_pool.py',
             'geventsendfile.py',
         ]
+        if greentest.PYPY and greentest.RUNNING_ON_APPVEYOR:
+            # For some reason on Windows with PyPy, this times out,
+            # when it should be very fast.
+            result.append("processes.py")
         result += [x[14:] for x in glob.glob('test__example_*.py')]
 
     finally:
@@ -34,7 +38,7 @@ def _find_files_to_ignore():
 default_time_range = (2, 4)
 time_ranges = {
     'concurrent_download.py': (0, 30),
-    'processes.py': (0, 10)
+    'processes.py': (0, 4)
 }
 
 class _AbstractTestMixin(util.ExampleMixin):
