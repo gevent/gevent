@@ -22,12 +22,11 @@ import gevent
 from gevent import socket
 
 from gevent.testing import TestCase, main, tcp_listener
+from gevent.testing import gc_collect_if_needed
 from gevent.testing import skipOnPyPy
 from gevent.testing import params
 
 
-
-PYPY = hasattr(sys, 'pypy_version_info')
 PY3 = sys.version_info[0] >= 3
 
 
@@ -91,28 +90,40 @@ class TestGreenIo(TestCase):
         did_it_work(server)
         server_greenlet.kill()
 
-    @skipOnPyPy("GC is different")
+    @skipOnPyPy("Takes multiple GCs and issues a warning we can't catch")
     def test_del_closes_socket(self):
+        import warnings
         def accept_once(listener):
             # delete/overwrite the original conn
             # object, only keeping the file object around
             # closing the file object should close everything
 
-            # XXX: This is not exactly true on Python 3.
-            # This produces a ResourceWarning.
-            oconn = None
-            try:
-                conn, _ = listener.accept()
-                if PY3:
-                    oconn = conn
-                conn = conn.makefile(mode='wb')
-                conn.write(b'hello\n')
-                conn.close()
-                _write_to_closed(conn, b'a')
-            finally:
-                listener.close()
-                if oconn is not None:
-                    oconn.close()
+            # This is not *exactly* true on Python 3. This produces
+            # a ResourceWarning, which we silence below. (Previously we actually
+            # *saved* a reference to the socket object, so we
+            # weren't testing what we thought we were.)
+
+            # It's definitely not true on PyPy, which needs GC to
+            # reliably close everything; sometimes this is more than
+            # one collection cycle. And PyPy issues a warning with -X
+            # track-resources that we cannot catch.
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore')
+
+                try:
+                    conn = listener.accept()[0]
+                    # Note that we overwrite the original variable,
+                    # losing our reference to the socket.
+                    conn = conn.makefile(mode='wb')
+                    conn.write(b'hello\n')
+                    conn.close()
+                    _write_to_closed(conn, b'a')
+                finally:
+                    listener.close()
+                    del listener
+                    del conn
+                    gc_collect_if_needed()
+                    gc_collect_if_needed()
 
         server = tcp_listener()
         gevent.spawn(accept_once, server)
@@ -121,7 +132,13 @@ class TestGreenIo(TestCase):
             fd = client.makefile()
             client.close()
             self.assertEqual(fd.read(), 'hello\n')
+            # If the socket isn't closed when 'accept_once' finished,
+            # then this will hang and exceed the timeout
             self.assertEqual(fd.read(), '')
+
+            fd.close()
+        del client
+        del fd
 
 
 if __name__ == '__main__':

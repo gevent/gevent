@@ -23,6 +23,7 @@
 are not leaked by the hub.
 """
 from __future__ import print_function
+
 from _socket import socket as c_socket
 import sys
 if sys.version_info[0] >= 3:
@@ -40,11 +41,14 @@ else:
 import _socket
 _socket.socket = Socket
 
-import gevent.testing as greentest
-from gevent import monkey; monkey.patch_all()
-from gevent.testing import flaky
 
-from pprint import pformat
+from gevent import monkey; monkey.patch_all()
+
+import gevent.testing as greentest
+from gevent.testing import support
+from gevent.testing import params
+
+
 try:
     from thread import start_new_thread
 except ImportError:
@@ -60,101 +64,120 @@ SOCKET_TIMEOUT = 0.1
 if greentest.RUNNING_ON_CI:
     SOCKET_TIMEOUT *= 2
 
-def init_server():
-    s = socket.socket()
-    s.settimeout(SOCKET_TIMEOUT)
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    s.bind(('127.0.0.1', 0))
-    s.listen(5)
-    return s
 
+class Server(object):
 
-def handle_request(s, raise_on_timeout):
-    try:
-        conn, _ = s.accept()
-    except socket.timeout:
-        if raise_on_timeout:
-            raise
-        return
-    #print('handle_request - accepted')
-    res = conn.recv(100)
-    assert res == b'hello', repr(res)
-    #print('handle_request - recvd %r' % res)
-    res = conn.send(b'bye')
-    #print('handle_request - sent %r' % res)
-    #print('handle_request - conn refcount: %s' % sys.getrefcount(conn))
-    conn.close()
+    listening = False
+    client_data = None
+    server_port = None
 
-
-def make_request(port):
-    #print('make_request')
-    s = socket.socket()
-    s.connect(('127.0.0.1', port))
-    #print('make_request - connected')
-    res = s.send(b'hello')
-    #print('make_request - sent %s' % res)
-    res = s.recv(100)
-    assert res == b'bye', repr(res)
-    #print('make_request - recvd %r' % res)
-    s.close()
-
-
-def run_interaction(run_client):
-    s = init_server()
-    start_new_thread(handle_request, (s, run_client))
-    if run_client:
-        port = s.getsockname()[1]
-        start_new_thread(make_request, (port, ))
-    sleep(0.1 + SOCKET_TIMEOUT)
-    #print(sys.getrefcount(s._sock))
-    #s.close()
-    w = weakref.ref(s._sock)
-    s.close()
-    if greentest.WIN:
-        # The background thread may not have even had a chance to run
-        # yet, sleep again to be sure it does. Otherwise there could be
-        # strong refs to the socket still around.
+    def __init__(self, raise_on_timeout):
+        self.raise_on_timeout = raise_on_timeout
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            sleep(0.1 + SOCKET_TIMEOUT)
-        except Exception: # pylint:disable=broad-except
-            pass
+            self.server_port = support.bind_port(self.socket, params.DEFAULT_BIND_ADDR)
+        except:
+            self.close()
+            raise
 
-    return w
+    def close(self):
+        self.socket.close()
+        self.socket = None
+
+    def handle_request(self):
+        try:
+            self.socket.settimeout(SOCKET_TIMEOUT)
+
+            self.socket.listen(5)
+
+            self.listening = True
+
+            try:
+                conn, _ = self.socket.accept()
+            except socket.timeout:
+                if self.raise_on_timeout:
+                    raise
+                return
+
+            try:
+                self.client_data = conn.recv(100)
+                conn.send(b'bye')
+            finally:
+                conn.close()
+        finally:
+            self.close()
 
 
-def run_and_check(run_client):
-    w = run_interaction(run_client=run_client)
-    if greentest.PYPY:
-        # PyPy doesn't use a strict ref counting and must
-        # run a gc, but the object should be gone
-        gc.collect()
-    if w():
-        print(pformat(gc.get_referrers(w())))
-        for x in gc.get_referrers(w()):
-            print(pformat(x))
-            for y in gc.get_referrers(x):
-                print('-', pformat(y))
-        raise AssertionError('server should be dead by now')
+class Client(object):
+
+    server_data = None
+
+    def __init__(self, server_port):
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server_port = server_port
 
 
-@greentest.skipOnCI("Often fail with timeouts or force closed connections; not sure why.")
-@greentest.skipIf(
-    greentest.RUN_LEAKCHECKS and greentest.PY3,
-    "Often fail with force closed connections; not sure why. "
-)
+    def close(self):
+        self.socket.close()
+        self.socket = None
+
+    def make_request(self):
+        try:
+            self.socket.connect((params.DEFAULT_CONNECT, self.server_port))
+            self.socket.send(b'hello')
+            self.server_data = self.socket.recv(100)
+        finally:
+            self.close()
+
+
 class Test(greentest.TestCase):
-
     __timeout__ = greentest.LARGE_TIMEOUT
 
-    @flaky.reraises_flaky_timeout(socket.timeout)
-    def test_clean_exit(self):
-        run_and_check(True)
-        run_and_check(True)
+    def run_interaction(self, run_client):
+        server = Server(raise_on_timeout=run_client)
+        wref_to_hidden_server_socket = weakref.ref(server.socket._sock)
+        client = None
+        start_new_thread(server.handle_request)
+        if run_client:
+            client = Client(server.server_port)
+            start_new_thread(client.make_request)
 
-    @flaky.reraises_flaky_timeout(socket.timeout)
+        # Wait until we do our business; we will always close
+        # the server; We may also close the client.
+        # On PyPy, we may not actually see the changes they write to
+        # their dicts immediately.
+        for obj in server, client:
+            if obj is None:
+                continue
+            while obj.socket is not None:
+                sleep(0.01)
+
+        # If we have a client, then we should have data
+        if run_client:
+            self.assertEqual(server.client_data, b'hello')
+            self.assertEqual(client.server_data, b'bye')
+
+        return wref_to_hidden_server_socket
+
+    def run_and_check(self, run_client):
+        wref_to_hidden_server_socket = self.run_interaction(run_client=run_client)
+        greentest.gc_collect_if_needed()
+        if wref_to_hidden_server_socket():
+            from pprint import pformat
+            print(pformat(gc.get_referrers(wref_to_hidden_server_socket())))
+            for x in gc.get_referrers(wref_to_hidden_server_socket()):
+                print(pformat(x))
+                for y in gc.get_referrers(x):
+                    print('-', pformat(y))
+            self.fail('server socket should be dead by now')
+
+    def test_clean_exit(self):
+        self.run_and_check(True)
+        self.run_and_check(True)
+
     def test_timeout_exit(self):
-        run_and_check(False)
-        run_and_check(False)
+        self.run_and_check(False)
+        self.run_and_check(False)
 
 
 if __name__ == '__main__':

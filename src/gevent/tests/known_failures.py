@@ -237,6 +237,7 @@ if PYPY:
 
         FAILING_TESTS += [
             # A few errors and differences:
+            # AssertionError: ('255.255.255.255', 'http') != gaierror(-2,) # DNS Python
             # AssertionError: ('255.255.255.255', 'http') != gaierror(4, 'ARES_ENOTFOUND: Domain name not found')
             # AssertionError: OverflowError('port must be 0-65535.',) != ('readthedocs.org', '65535')
             # AssertionError: Lists differ:

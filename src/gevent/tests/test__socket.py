@@ -1,3 +1,5 @@
+# This line can be commented out so that most tests run with the
+# system socket for comparison.
 from gevent import monkey; monkey.patch_all()
 
 import sys
@@ -9,8 +11,10 @@ import time
 import unittest
 import gevent.testing as greentest
 from functools import wraps
+
 from gevent.testing import six
 from gevent.testing import LARGE_TIMEOUT
+from gevent.testing import support
 
 # we use threading on purpose so that we can test both regular and gevent sockets with the same code
 from threading import Thread as _Thread
@@ -294,25 +298,31 @@ class TestTCP(greentest.TestCase):
     def test_connect_ex_nonblocking_bad_connection(self):
         # Issue 841
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.setblocking(False)
-        ret = s.connect_ex((greentest.DEFAULT_LOCAL_HOST_ADDR, get_port()))
-        self.assertIsInstance(ret, errno_types)
-        s.close()
+        try:
+            s.setblocking(False)
+            ret = s.connect_ex((greentest.DEFAULT_LOCAL_HOST_ADDR, support.find_unused_port()))
+            self.assertIsInstance(ret, errno_types)
+        finally:
+            s.close()
 
     def test_connect_ex_gaierror(self):
         # Issue 841
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        with self.assertRaises(socket.gaierror):
-            s.connect_ex(('foo.bar.fizzbuzz', get_port()))
-        s.close()
+        try:
+            with self.assertRaises(socket.gaierror):
+                s.connect_ex(('foo.bar.fizzbuzz', support.find_unused_port()))
+        finally:
+            s.close()
 
     def test_connect_ex_nonblocking_overflow(self):
         # Issue 841
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.setblocking(False)
-        with self.assertRaises(OverflowError):
-            s.connect_ex((greentest.DEFAULT_LOCAL_HOST_ADDR, 65539))
-        s.close()
+        try:
+            s.setblocking(False)
+            with self.assertRaises(OverflowError):
+                s.connect_ex((greentest.DEFAULT_LOCAL_HOST_ADDR, 65539))
+        finally:
+            s.close()
 
     @unittest.skipUnless(hasattr(socket, 'SOCK_CLOEXEC'),
                          "Requires SOCK_CLOEXEC")
@@ -340,25 +350,34 @@ class TestTCP(greentest.TestCase):
 
         acceptor.join()
 
-def get_port():
-    tempsock = socket.socket()
-    tempsock.bind(('', 0))
-    port = tempsock.getsockname()[1]
-    tempsock.close()
-    return port
-
 
 class TestCreateConnection(greentest.TestCase):
 
     __timeout__ = LARGE_TIMEOUT
 
-    def test_refuses(self):
-        with self.assertRaises(socket.error) as cm:
-            socket.create_connection((greentest.DEFAULT_BIND_ADDR, get_port()),
-                                     timeout=30,
-                                     source_address=('', get_port()))
-        ex = cm.exception
-        self.assertIn('refused', str(ex).lower())
+    def test_refuses(self, **conn_args):
+        connect_port = support.find_unused_port()
+        with self.assertRaisesRegex(
+                socket.error,
+                # We really expect "connection refused". It's unclear
+                # where/why we would get '[errno -2] name or service not known'
+                # but it seems some systems generate that.
+                # https://github.com/gevent/gevent/issues/1389
+                'refused|not known'
+        ):
+            socket.create_connection(
+                (greentest.DEFAULT_BIND_ADDR, connect_port),
+                timeout=30,
+                **conn_args
+            )
+
+    def test_refuses_from_port(self):
+        source_port = support.find_unused_port()
+        # Usually we don't want to bind/connect to '', but
+        # using it as the source is required if we don't want to hang,
+        # at least on some systems (OS X)
+        self.test_refuses(source_address=('', source_port))
+
 
     @greentest.ignores_leakcheck
     def test_base_exception(self):

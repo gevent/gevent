@@ -18,17 +18,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+from . import support
 
 from .sysinfo import PY3
 from .sysinfo import PYPY
 from .sysinfo import WIN
 from .sysinfo import LIBUV
-from .sysinfo import OSX
 
-from .sysinfo import RUNNING_ON_TRAVIS
-from .sysinfo import RUNNING_ON_APPVEYOR
 from .sysinfo import EXPECT_POOR_TIMER_RESOLUTION
-from .sysinfo import RESOLVER_ARES
 
 
 # Travis is slow and overloaded; Appveyor used to be faster, but
@@ -47,33 +44,18 @@ else:
 
 LARGE_TIMEOUT = max(LOCAL_TIMEOUT, CI_TIMEOUT)
 
-DEFAULT_LOCAL_HOST_ADDR = 'localhost'
-DEFAULT_LOCAL_HOST_ADDR6 = DEFAULT_LOCAL_HOST_ADDR
-DEFAULT_BIND_ADDR = ''
+# Previously we set this manually to 'localhost'
+# and then had some conditions where we changed it to
+# 127.0.0.1 (e.g., on Windows or OSX or travis), but Python's test.support says
+# # Don't use "localhost", since resolving it uses the DNS under recent
+# # Windows versions (see issue #18792).
+# and sets it unconditionally to 127.0.0.1.
+DEFAULT_LOCAL_HOST_ADDR = support.HOST
+DEFAULT_LOCAL_HOST_ADDR6 = support.HOSTv6
+# Not all TCP stacks support dual binding where ''
+# binds to both v4 and v6.
+DEFAULT_BIND_ADDR = support.HOST
 
-if RUNNING_ON_TRAVIS or OSX:
-    # As of November 2017 (probably Sept or Oct), after a
-    # Travis upgrade, using "localhost" no longer works,
-    # producing 'OSError: [Errno 99] Cannot assign
-    # requested address'. This is apparently something to do with
-    # docker containers. Sigh.
-
-    # OSX 10.14.3 is also happier using explicit addresses
-    DEFAULT_LOCAL_HOST_ADDR = '127.0.0.1'
-    DEFAULT_LOCAL_HOST_ADDR6 = '::1'
-    # Likewise, binding to '' appears to work, but it cannot be
-    # connected to with the same error.
-    DEFAULT_BIND_ADDR = '127.0.0.1'
-
-if RUNNING_ON_APPVEYOR:
-    DEFAULT_BIND_ADDR = '127.0.0.1'
-    DEFAULT_LOCAL_HOST_ADDR = '127.0.0.1'
-
-
-if RESOLVER_ARES and OSX:
-    # Ares likes to raise "malformed domain name" on '', at least
-    # on OS X
-    DEFAULT_BIND_ADDR = '127.0.0.1'
 
 DEFAULT_CONNECT = DEFAULT_LOCAL_HOST_ADDR
 DEFAULT_BIND_ADDR_TUPLE = (DEFAULT_BIND_ADDR, 0)
