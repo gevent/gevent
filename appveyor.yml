@@ -138,9 +138,6 @@ cache:
   - '%LOCALAPPDATA%\pip\Cache'
 
 build_script:
-  # Sometimes we have a problem installing this?
-  # See https://ci.appveyor.com/project/denik/gevent/builds/23810605/job/83aw4u67artt002b#L602
-  - "%CMD_IN_ENV% %PYEXE% -m pip install -U --upgrade-strategy=eager pycparser"
   # Build the compiled extension
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -m pip install -U --upgrade-strategy=eager -r dev-requirements.txt
 
@@ -151,7 +148,13 @@ test_script:
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -mgevent.tests --config known_failures.py --quiet
 
 after_test:
-  - "%CMD_IN_ENV% %PYEXE% -m pip wheel . -w dist"
+  # pycparser can't be built correctly in an isolated environment.
+  # See
+  # https://ci.appveyor.com/project/denik/gevent/builds/23810605/job/83aw4u67artt002b#L602
+  # So we violate DRY and repeate some requirements in order to use
+  # --no-build-isolation
+  - "%CMD_IN_ENV% %PYEXE% -m pip install -U --upgrade-strategy=eager pycparser wheel cython setuptools"
+  - "%CMD_IN_ENV% %PYEXE% -m pip wheel --no-build-isolation . -w dist"
   - ps: "ls dist"
 
 artifacts:
