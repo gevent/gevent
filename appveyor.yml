@@ -138,6 +138,9 @@ cache:
   - '%LOCALAPPDATA%\pip\Cache'
 
 build_script:
+  # Sometimes we have a problem installing this?
+  # See https://ci.appveyor.com/project/denik/gevent/builds/23810605/job/83aw4u67artt002b#L602
+  - "%CMD_IN_ENV% %PYEXE% -m pip install -U --upgrade-strategy=eager pycparser"
   # Build the compiled extension
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -m pip install -U --upgrade-strategy=eager -r dev-requirements.txt
 
