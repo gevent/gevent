@@ -18,13 +18,9 @@ if [ -d /gevent -a -d /opt/python ]; then
         cd /tmp/build
         git clone /gevent gevent
         cd gevent
-        $variant/bin/pip install -q -U -r ci-requirements.txt
-        # auditwheel 2.0.0 needs this version; auditwheel is installed into
-        # the python3.6 interpreter
-        $variant/bin/pip install wheel==0.31.1
-        PATH=$variant/bin:$PATH $variant/bin/python setup.py bdist_wheel -q
-        auditwheel repair --plat manylinux2010_x86_64 dist/*.whl
-        cp wheelhouse/*.whl /gevent/wheelhouse
+        PATH=$variant/bin:$PATH $variant/bin/pip wheel . -w dist
+        auditwheel repair --plat manylinux2010_x86_64 dist/gevent*.whl
+        cp wheelhouse/gevent*.whl /gevent/wheelhouse
         cd /gevent
         rm -rf /tmp/build
     done

@@ -19,6 +19,7 @@ include *.yml
 include *.txt
 include _setup*.py
 include CHANGES.rst
+include pyproject.toml
 
 include tox.ini
 include .pep8
