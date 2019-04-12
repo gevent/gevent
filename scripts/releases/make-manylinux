@@ -1,7 +1,7 @@
 #!/bin/bash
 # Initially based on a snippet from the greenlet project.
 # This needs to be run from the root of the project.
-# To update: docker pull quay.io/pypa/manylinux1_x86_64
+# To update: docker pull quay.io/pypa/manylinux2010_x86_64
 set -e
 export PYTHONUNBUFFERED=1
 export PYTHONDONTWRITEBYTECODE=1
@@ -12,16 +12,18 @@ if [ -d /gevent -a -d /opt/python ]; then
     cd /gevent
     rm -rf wheelhouse
     mkdir wheelhouse
-    for variant in `ls -d /opt/python/cp{37,27,34,35,36}*`; do
+    for variant in `ls -d /opt/python/cp{27,35,36,37}*`; do
         echo "Building $variant"
         mkdir /tmp/build
         cd /tmp/build
         git clone /gevent gevent
         cd gevent
         $variant/bin/pip install -q -U -r ci-requirements.txt
-        # manylinux 1 is too old to build libuv, don't even try.
-        GEVENT_NO_LIBUV_BUILD=1 PATH=$variant/bin:$PATH $variant/bin/python setup.py bdist_wheel -q
-        auditwheel repair dist/*.whl
+        # auditwheel 2.0.0 needs this version; auditwheel is installed into
+        # the python3.6 interpreter
+        $variant/bin/pip install wheel==0.31.1
+        PATH=$variant/bin:$PATH $variant/bin/python setup.py bdist_wheel -q
+        auditwheel repair --plat manylinux2010_x86_64 dist/*.whl
         cp wheelhouse/*.whl /gevent/wheelhouse
         cd /gevent
         rm -rf /tmp/build
@@ -30,4 +32,4 @@ if [ -d /gevent -a -d /opt/python ]; then
     exit 0
 fi
 
-docker run --rm -ti -v "$(pwd):/gevent" quay.io/pypa/manylinux1_x86_64 /gevent/scripts/releases/$(basename $0)
+docker run --rm -ti -v "$(pwd):/gevent" quay.io/pypa/manylinux2010_x86_64 /gevent/scripts/releases/$(basename $0)
