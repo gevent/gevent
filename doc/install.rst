@@ -11,18 +11,19 @@
 Supported Platforms
 ===================
 
-`gevent 1.4`_ runs on Python 2.7 and Python 3. Releases 3.4.3+, 3.5, 3.6 and
+`gevent 1.4`_ runs on Python 2.7 and Python 3. Releases 3.5, 3.6 and
 3.7 of Python 3 are supported. (Users of older versions of Python 2
 need to install gevent 1.0.x (2.5), 1.1.x (2.6) or 1.2.x (<=2.7.8);
 gevent 1.2 can be installed on Python 3.3. and gevent 1.3 can be
-installed on Python 3.4.0 - 3.4.2) gevent requires the
-`greenlet <https://greenlet.readthedocs.io>`_ library and will install
-the `cffi`_ library by default on Windows.
+installed on Python 3.4.0 - 3.4.2, while gevent 1.4 can be installed
+on Python 3.4.3) gevent requires the `greenlet
+<https://greenlet.readthedocs.io>`_ library and will install the
+`cffi`_ library by default on Windows.
 
-gevent 1.4 also runs on PyPy 5.5 and above, although 6.0 or above is
+gevent 1.5 also runs on PyPy 5.5 and above, although 6.0 or above is
 strongly recommended. On PyPy, there are no external dependencies.
 
-gevent is tested on Windows, OS X, and Linux, and should run on most
+gevent is tested on Windows, macOS, and Linux, and should run on most
 other Unix-like operating systems (e.g., FreeBSD, Solaris, etc.)
 
 .. note:: On Windows using the libev backend, gevent is
@@ -44,29 +45,23 @@ gevent and greenlet can both be installed with `pip`_, e.g., ``pip
 install gevent``. Installation using `buildout
 <http://docs.buildout.org/en/latest/>`_ is also supported.
 
-On Windows, OS X, and Linux, both gevent and greenlet are
+On Windows, macOS, and Linux, both gevent and greenlet are
 distributed as binary `wheels`_.
 
 .. tip::
 
-   You need Pip 8.0 or later, or buildout 2.10.0 to install the
-   binary wheels.
-
-.. tip::
-
-   On Linux, you'll need to install gevent from source if you wish to
-   use the libuv loop implementation. This is because the `manylinux1
-   <https://www.python.org/dev/peps/pep-0513/>`_ specification for the
-   distributed wheels does not support libuv. The `cffi`_ library
-   *must* be installed at build time.
+   You need Pip 8.0 or later, or buildout 2.10.0 to install the binary
+   wheels on Windows or macOS. On Linux, you'll need `pip 19
+   <https://github.com/pypa/pip/pull/5008>`_ to install the
+   manylinux2010 wheels.
 
 
 Installing From Source
 ----------------------
 
 If you are unable to use the binary wheels (for platforms where no
-pre-built wheels are available or if wheel installation is disabled,
-e.g., for libuv support on Linux), here are some things you need to know.
+pre-built wheels are available or if wheel installation is disabled),
+here are some things you need to know.
 
 - You can install gevent from source with ``pip install --no-binary
   gevent gevent``.

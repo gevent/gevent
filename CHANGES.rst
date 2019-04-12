@@ -17,6 +17,9 @@
 
 - gevent is now compiled with Cython 0.29.6 and cffi 1.12.2
 
+- gevent binary wheels are now manylinux2010 and include libuv
+  support. pip 19 is needed to install them. See :issue:`1346`.
+
 - Python 3.7 subprocess: Copy a ``STARTUPINFO`` passed as a parameter.
   Contributed by AndCycle in :pr:`1352`.
 
