@@ -79,10 +79,9 @@ here are some things you need to know.
   `have issues installing gevent for this reason
   <https://github.com/pypa/pipenv/issues/2113>`_.
 
-- To build the libuv backend (which is required on Windows and
-  optional elsewhere), or the CFFI-based libev backend, you must
-  install `cffi`_ before attempting to install gevent on CPython (on
-  PyPy this step is not necessary).
+- gevent comes with a pyproject.toml file that installs the build
+  dependencies, including CFFI (needed for libuv support). pip 18 or
+  above is required.
 
 
 Common Installation Issues
@@ -143,7 +142,7 @@ Development
 
 To install the latest development version::
 
-  pip install setuptools cffi 'cython>=0.28' git+git://github.com/gevent/gevent.git#egg=gevent
+  pip install git+git://github.com/gevent/gevent.git#egg=gevent
 
 .. note::
 

@@ -1,0 +1,17 @@
+[build-system]
+build-backend = "setuptools.build_meta:__legacy__"
+requires = [
+     "setuptools >= 40.8.0",
+     "wheel",
+
+     # Python 3.7 requires at least Cython 0.27.3.
+     # 0.28 is faster, and (important!) lets us specify the target module
+     # name to be created so that we can have both foo.py and _foo.so
+     # at the same time. 0.29 fixes some issues with Python 3.7,
+     # and adds the 3str mode for transition to Python 3.
+     "Cython >= 0.29.6",
+     # See version requirements in setup.py
+     "cffi >= 1.12.2 ; platform_python_implementation == 'CPython'",
+     # Python 3.7 requires at least 0.4.14, which is ABI incompatible with earlier
+     "greenlet>=0.4.14 ; platform_python_implementation == 'CPython'",
+]

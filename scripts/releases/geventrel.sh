@@ -35,10 +35,5 @@ echo cloning $BASE
 git clone $BASE gevent
 cd ./gevent
 pip install -U pip
-pip install -U setuptools greenlet cffi
-pip install -U wheel
-# We may need different versions of deps depending on the
-# version of python; that's captured in this file.
-pip install -U -r dev-requirements.txt
-python ./setup.py sdist bdist_wheel
-cp dist/*whl /tmp/gevent/
+pip wheel . -w dist
+cp dist/gevent*whl /tmp/gevent/

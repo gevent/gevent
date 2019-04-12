@@ -20,6 +20,10 @@
 - gevent binary wheels are now manylinux2010 and include libuv
   support. pip 19 is needed to install them. See :issue:`1346`.
 
+- gevent sources include a pyproject.toml file, specifying the build
+  requirements and enabling build isolation. pip 18 or above is needed
+  to take advantage of this. See :issue:`1180`.
+
 - Python 3.7 subprocess: Copy a ``STARTUPINFO`` passed as a parameter.
   Contributed by AndCycle in :pr:`1352`.
 

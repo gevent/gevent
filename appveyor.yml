@@ -130,12 +130,6 @@ install:
   # about it being out of date.
   - "%CMD_IN_ENV% %PYEXE% -m pip install --disable-pip-version-check --user --upgrade pip"
 
-  # Install the build dependencies of the project. If some dependencies contain
-  # compiled extensions and are not provided as pre-built wheel packages,
-  # pip will build them from source using the MSVC compiler matching the
-  # target Python version and architecture
-  - "%CMD_IN_ENV% %PYEXE% -m pip install -U --upgrade-strategy=eager -r ci-requirements.txt"
-
   - ps: "if(Test-Path(\"${env:PYTHON}\\bin\")) {ls ${env:PYTHON}\\bin;}"
   - ps: "if(Test-Path(\"${env:PYTHON}\\Scripts\")) {ls ${env:PYTHON}\\Scripts;}"
 
@@ -145,14 +139,7 @@ cache:
 
 build_script:
   # Build the compiled extension
-  - "%CMD_IN_ENV% %PYEXE% -m pip wheel . -w dist"
-  - ps: "ls dist"
-  # Now install the wheel.
-  # I couldn't get wildcards to work for pip install, so stuff it
-  # into a variable, using python to glob.
-  - "%PYEXE% -c \"import glob; print(glob.glob('dist/gevent*whl')[0])\" > whl.txt"
-  - set /p PYWHL=<whl.txt
-  - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -m pip install -U --upgrade-strategy=eager %PYWHL%[test,events,dnspython]
+  - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -m pip install -U --upgrade-strategy=eager -r dev-requirements.txt
 
 test_script:
   # Run the project tests
@@ -161,10 +148,13 @@ test_script:
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -mgevent.tests --config known_failures.py --quiet
 
 after_test:
-  # We already built the wheel during build_script, because it's
-  # much faster to do that and install from the wheel than to
-  # rebuild it here
-  #- "%CMD_IN_ENV% %PYEXE% setup.py bdist_wheel bdist_wininst"
+  # pycparser can't be built correctly in an isolated environment.
+  # See
+  # https://ci.appveyor.com/project/denik/gevent/builds/23810605/job/83aw4u67artt002b#L602
+  # So we violate DRY and repeate some requirements in order to use
+  # --no-build-isolation
+  - "%CMD_IN_ENV% %PYEXE% -m pip install -U --upgrade-strategy=eager pycparser wheel cython setuptools"
+  - "%CMD_IN_ENV% %PYEXE% -m pip wheel --no-build-isolation . -w dist"
   - ps: "ls dist"
 
 artifacts:
