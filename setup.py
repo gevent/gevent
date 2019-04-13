@@ -352,7 +352,7 @@ def run_setup(ext_modules, run_make):
         setup_requires=setup_requires,
         extras_require={
             'dnspython': [
-                'dnspython',
+                'dnspython >= 1.16.0',
                 'idna',
             ],
             'events': [
