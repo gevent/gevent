@@ -61,6 +61,11 @@ import socket
 socket._realsocket = Socket
 
 SOCKET_TIMEOUT = 0.1
+if greentest.RESOLVER_DNSPYTHON:
+    # Takes a bit longer to resolve the client
+    # address initially.
+    SOCKET_TIMEOUT *= 2
+
 if greentest.RUNNING_ON_CI:
     SOCKET_TIMEOUT *= 2
 

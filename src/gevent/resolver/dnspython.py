@@ -60,10 +60,11 @@
 # THE SOFTWARE.
 from __future__ import absolute_import, print_function, division
 
-import time
-import re
 import os
+
+import re
 import sys
+import time
 
 import _socket
 from _socket import AI_NUMERICHOST
@@ -89,15 +90,39 @@ __all__ = [
 
 # Import the DNS packages to use the gevent modules,
 # even if the system is not monkey-patched.
+
+# Beginning in dnspython 0.16, note that this imports dns.dnssec,
+# which imports Cryptodome, which wants to load a lot of shared
+# libraries, and to do so it invokes platform.architecture() for each
+# one; that wants to fork and run commands (see events.py for similar
+# issues with platform, and test__threading_2.py for notes about
+# threading._after_fork if the GIL has been initialized), which in
+# turn want to call threading._after_fork if the GIL has been
+# initialized; all of that means that this now wants to have the hub
+# initialized potentially much earlier than before, although we delay
+# importing and creating the resolver until the hub is asked for it.
+# We avoid the _after_fork issues by first caching the results of
+# platform.architecture before doing the patched imports.
 def _patch_dns():
-    top = import_patched('dns')
-    for pkg in ('dns',
-                'dns.rdtypes',
-                'dns.rdtypes.IN',
-                'dns.rdtypes.ANY'):
-        mod = import_patched(pkg)
-        for name in mod.__all__:
-            setattr(mod, name, import_patched(pkg + '.' + name))
+    import platform
+    result = platform.architecture()
+    orig_arch = platform.architecture
+    def arch(*args, **kwargs):
+        if not args and not kwargs:
+            return result
+        return orig_arch(*args, **kwargs)
+    platform.architecture = arch
+    try:
+        top = import_patched('dns')
+        for pkg in ('dns',
+                    'dns.rdtypes',
+                    'dns.rdtypes.IN',
+                    'dns.rdtypes.ANY'):
+            mod = import_patched(pkg)
+            for name in mod.__all__:
+                setattr(mod, name, import_patched(pkg + '.' + name))
+    finally:
+        platform.architecture = orig_arch
     return top
 
 dns = _patch_dns()
@@ -120,119 +145,27 @@ dTimeout = dns.resolver.Timeout
 
 _exc_clear = getattr(sys, 'exc_clear', lambda: None)
 
-# This is a copy of resolver._getaddrinfo with the crucial change that it
-# doesn't have a bare except:, because that breaks Timeout and KeyboardInterrupt
-# A secondary change is that calls to sys.exc_clear() have been inserted to avoid
-# failing tests in test__refcount.py (timeouts).
-# See https://github.com/rthalley/dnspython/pull/300
-def _getaddrinfo(host=None, service=None, family=AF_UNSPEC, socktype=0,
-                 proto=0, flags=0):
-    # pylint:disable=too-many-locals,broad-except,too-many-statements
-    # pylint:disable=too-many-branches
-    # pylint:disable=redefined-argument-from-local
-    # pylint:disable=consider-using-in
-    if flags & (socket.AI_ADDRCONFIG | socket.AI_V4MAPPED) != 0:
-        raise NotImplementedError
-    if host is None and service is None:
-        raise socket.gaierror(socket.EAI_NONAME)
-    v6addrs = []
-    v4addrs = []
-    canonical_name = None
-    try:
-        # Is host None or a V6 address literal?
-        if host is None:
-            canonical_name = 'localhost'
-            if flags & socket.AI_PASSIVE != 0:
-                v6addrs.append('::')
-                v4addrs.append('0.0.0.0')
-            else:
-                v6addrs.append('::1')
-                v4addrs.append('127.0.0.1')
-        else:
-            parts = host.split('%')
-            if len(parts) == 2:
-                ahost = parts[0]
-            else:
-                ahost = host
-            addr = dns.ipv6.inet_aton(ahost)
-            v6addrs.append(host)
-            canonical_name = host
-    except Exception:
-        _exc_clear()
-        try:
-            # Is it a V4 address literal?
-            addr = dns.ipv4.inet_aton(host)
-            v4addrs.append(host)
-            canonical_name = host
-        except Exception:
-            _exc_clear()
-            if flags & socket.AI_NUMERICHOST == 0:
-                try:
-                    if family == socket.AF_INET6 or family == socket.AF_UNSPEC:
-                        v6 = resolver._resolver.query(host, dns.rdatatype.AAAA,
-                                                      raise_on_no_answer=False)
-                        # Note that setting host ensures we query the same name
-                        # for A as we did for AAAA.
-                        host = v6.qname
-                        canonical_name = v6.canonical_name.to_text(True)
-                        if v6.rrset is not None:
-                            for rdata in v6.rrset:
-                                v6addrs.append(rdata.address)
-                    if family == socket.AF_INET or family == socket.AF_UNSPEC:
-                        v4 = resolver._resolver.query(host, dns.rdatatype.A,
-                                                      raise_on_no_answer=False)
-                        host = v4.qname
-                        canonical_name = v4.canonical_name.to_text(True)
-                        if v4.rrset is not None:
-                            for rdata in v4.rrset:
-                                v4addrs.append(rdata.address)
-                except dns.resolver.NXDOMAIN:
-                    _exc_clear()
-                    raise socket.gaierror(socket.EAI_NONAME)
-                except Exception:
-                    _exc_clear()
-                    raise socket.gaierror(socket.EAI_SYSTEM)
-    port = None
-    try:
-        # Is it a port literal?
-        if service is None:
-            port = 0
-        else:
-            port = int(service)
-    except Exception:
-        _exc_clear()
-        if flags & socket.AI_NUMERICSERV == 0:
-            try:
-                port = socket.getservbyname(service)
-            except Exception:
-                _exc_clear()
+# This is a wrapper for dns.resolver._getaddrinfo with two crucial changes.
+# First, it backports https://github.com/rthalley/dnspython/issues/316
+# from version 2.0. This can be dropped when we support only dnspython 2
+# (which means only Python 3.)
 
-    if port is None:
-        raise socket.gaierror(socket.EAI_NONAME)
-    tuples = []
-    if socktype == 0:
-        socktypes = [socket.SOCK_DGRAM, socket.SOCK_STREAM]
-    else:
-        socktypes = [socktype]
-    if flags & socket.AI_CANONNAME != 0:
-        cname = canonical_name
-    else:
-        cname = ''
-    if family == socket.AF_INET6 or family == socket.AF_UNSPEC:
-        for addr in v6addrs:
-            for socktype in socktypes:
-                for proto in resolver._protocols_for_socktype[socktype]:
-                    tuples.append((socket.AF_INET6, socktype, proto,
-                                   cname, (addr, port, 0, 0))) # XXX: gevent: this can get the scopeid wrong
-    if family == socket.AF_INET or family == socket.AF_UNSPEC:
-        for addr in v4addrs:
-            for socktype in socktypes:
-                for proto in resolver._protocols_for_socktype[socktype]:
-                    tuples.append((socket.AF_INET, socktype, proto,
-                                   cname, (addr, port)))
-    if len(tuples) == 0: # pylint:disable=len-as-condition
-        raise socket.gaierror(socket.EAI_NONAME)
-    return tuples
+# Second, it adds calls to sys.exc_clear() to avoid failing tests in
+# test__refcount.py (timeouts) on Python 2. (Actually, this isn't
+# strictly necessary, it was necessary to increase the timeouts in
+# that function because dnspython is doing some parsing/regex/host
+# lookups that are not super fast. But it does have a habit of leaving
+# exceptions around which can complicate our memleak checks.)
+def _getaddrinfo(host=None, service=None, family=AF_UNSPEC, socktype=0,
+                 proto=0, flags=0, _orig_gai=resolver._getaddrinfo):
+    if flags & (socket.AI_ADDRCONFIG | socket.AI_V4MAPPED) != 0:
+        # Not implemented.  We raise a gaierror as opposed to a
+        # NotImplementedError as it helps callers handle errors more
+        # appropriately.  [Issue #316]
+        raise socket.gaierror(socket.EAI_SYSTEM)
+    res = _orig_gai(host, service, family, socktype, proto, flags)
+    _exc_clear()
+    return res
 
 
 resolver._getaddrinfo = _getaddrinfo

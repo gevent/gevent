@@ -15,7 +15,7 @@
 - Support for Python 3.4 has been removed, as that version is no
   longer supported uptstream.
 
-- gevent is now compiled with Cython 0.29.6 and cffi 1.12.2
+- gevent is now compiled with Cython 0.29.6 and cffi 1.12.2.
 
 - gevent binary wheels are now manylinux2010 and include libuv
   support. pip 19 is needed to install them. See :issue:`1346`.
@@ -23,6 +23,8 @@
 - gevent sources include a pyproject.toml file, specifying the build
   requirements and enabling build isolation. pip 18 or above is needed
   to take advantage of this. See :issue:`1180`.
+
+- dnspython >= 1.16.0 is now required for the dnspython resolver.
 
 - Python 3.7 subprocess: Copy a ``STARTUPINFO`` passed as a parameter.
   Contributed by AndCycle in :pr:`1352`.
