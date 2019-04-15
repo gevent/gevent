@@ -47,7 +47,7 @@
 
 #if defined(__DragonFly__)        ||                                      \
     defined(__FreeBSD__)          ||                                      \
-    defined(__FreeBSD_kernel_)    ||                                      \
+    defined(__FreeBSD_kernel__)   ||                                      \
     defined(__OpenBSD__)          ||                                      \
     defined(__NetBSD__)
 # define HAVE_PREADV 1
@@ -61,6 +61,7 @@
 
 #if defined(__APPLE__)
 # include <copyfile.h>
+# include <sys/sysctl.h>
 #elif defined(__linux__) && !defined(FICLONE)
 # include <sys/ioctl.h>
 # define FICLONE _IOW(0x94, 9, int)
@@ -68,6 +69,10 @@
 
 #if defined(_AIX) && !defined(_AIX71)
 # include <utime.h>
+#endif
+
+#if defined(_AIX) && _XOPEN_SOURCE <= 600
+extern char *mkdtemp(char *template); /* See issue #740 on AIX < 7 */
 #endif
 
 #define INIT(subtype)                                                         \
@@ -150,7 +155,7 @@ static ssize_t uv__fs_fsync(uv_fs_t* req) {
   int r;
 
   r = fcntl(req->file, F_FULLFSYNC);
-  if (r != 0 && errno == ENOTTY)
+  if (r != 0)
     r = fsync(req->file);
   return r;
 #else
@@ -311,6 +316,18 @@ done:
 
   req->bufs = NULL;
   req->nbufs = 0;
+
+#ifdef __PASE__
+  /* PASE returns EOPNOTSUPP when reading a directory, convert to EISDIR */
+  if (result == -1 && errno == EOPNOTSUPP) {
+    struct stat buf;
+    ssize_t rc;
+    rc = fstat(req->file, &buf);
+    if (rc == 0 && S_ISDIR(buf.st_mode)) {
+      errno = EISDIR;
+    }
+  }
+#endif
 
   return result;
 }
@@ -722,7 +739,7 @@ static ssize_t uv__fs_utime(uv_fs_t* req) {
   atr.att_atimechg = 1;
   atr.att_mtime = req->mtime;
   atr.att_atime = req->atime;
-  return __lchattr(req->path, &atr, sizeof(atr));
+  return __lchattr((char*) req->path, &atr, sizeof(atr));
 #else
   errno = ENOSYS;
   return -1;
@@ -793,25 +810,40 @@ done:
 static ssize_t uv__fs_copyfile(uv_fs_t* req) {
 #if defined(__APPLE__) && !TARGET_OS_IPHONE
   /* On macOS, use the native copyfile(3). */
+  static int can_clone;
   copyfile_flags_t flags;
+  char buf[64];
+  size_t len;
+  int major;
 
   flags = COPYFILE_ALL;
 
   if (req->flags & UV_FS_COPYFILE_EXCL)
     flags |= COPYFILE_EXCL;
 
-#ifdef COPYFILE_CLONE
-  if (req->flags & UV_FS_COPYFILE_FICLONE)
-    flags |= COPYFILE_CLONE;
-#endif
-
+  /* Check OS version. Cloning is only supported on macOS >= 10.12. */
   if (req->flags & UV_FS_COPYFILE_FICLONE_FORCE) {
-#ifdef COPYFILE_CLONE_FORCE
-    flags |= COPYFILE_CLONE_FORCE;
-#else
-    return UV_ENOSYS;
-#endif
+    if (can_clone == 0) {
+      len = sizeof(buf);
+      if (sysctlbyname("kern.osrelease", buf, &len, NULL, 0))
+        return UV__ERR(errno);
+
+      if (1 != sscanf(buf, "%d", &major))
+        abort();
+
+      can_clone = -1 + 2 * (major >= 16);  /* macOS >= 10.12 */
+    }
+
+    if (can_clone < 0)
+      return UV_ENOSYS;
   }
+
+  /* copyfile() simply ignores COPYFILE_CLONE if it's not supported. */
+  if (req->flags & UV_FS_COPYFILE_FICLONE)
+    flags |= 1 << 24;  /* COPYFILE_CLONE */
+
+  if (req->flags & UV_FS_COPYFILE_FICLONE_FORCE)
+    flags |= 1 << 25;  /* COPYFILE_CLONE_FORCE */
 
   return copyfile(req->path, req->new_path, NULL, flags);
 #else
@@ -1021,9 +1053,81 @@ static void uv__to_stat(struct stat* src, uv_stat_t* dst) {
 }
 
 
+static int uv__fs_statx(int fd,
+                        const char* path,
+                        int is_fstat,
+                        int is_lstat,
+                        uv_stat_t* buf) {
+  STATIC_ASSERT(UV_ENOSYS != -1);
+#ifdef __linux__
+  static int no_statx;
+  struct uv__statx statxbuf;
+  int dirfd;
+  int flags;
+  int mode;
+  int rc;
+
+  if (no_statx)
+    return UV_ENOSYS;
+
+  dirfd = AT_FDCWD;
+  flags = 0; /* AT_STATX_SYNC_AS_STAT */
+  mode = 0xFFF; /* STATX_BASIC_STATS + STATX_BTIME */
+
+  if (is_fstat) {
+    dirfd = fd;
+    flags |= 0x1000; /* AT_EMPTY_PATH */
+  }
+
+  if (is_lstat)
+    flags |= AT_SYMLINK_NOFOLLOW;
+
+  rc = uv__statx(dirfd, path, flags, mode, &statxbuf);
+
+  if (rc == -1) {
+    /* EPERM happens when a seccomp filter rejects the system call.
+     * Has been observed with libseccomp < 2.3.3 and docker < 18.04.
+     */
+    if (errno != EINVAL && errno != EPERM && errno != ENOSYS)
+      return -1;
+
+    no_statx = 1;
+    return UV_ENOSYS;
+  }
+
+  buf->st_dev = 256 * statxbuf.stx_dev_major + statxbuf.stx_dev_minor;
+  buf->st_mode = statxbuf.stx_mode;
+  buf->st_nlink = statxbuf.stx_nlink;
+  buf->st_uid = statxbuf.stx_uid;
+  buf->st_gid = statxbuf.stx_gid;
+  buf->st_rdev = statxbuf.stx_rdev_major;
+  buf->st_ino = statxbuf.stx_ino;
+  buf->st_size = statxbuf.stx_size;
+  buf->st_blksize = statxbuf.stx_blksize;
+  buf->st_blocks = statxbuf.stx_blocks;
+  buf->st_atim.tv_sec = statxbuf.stx_atime.tv_sec;
+  buf->st_atim.tv_nsec = statxbuf.stx_atime.tv_nsec;
+  buf->st_mtim.tv_sec = statxbuf.stx_mtime.tv_sec;
+  buf->st_mtim.tv_nsec = statxbuf.stx_mtime.tv_nsec;
+  buf->st_ctim.tv_sec = statxbuf.stx_ctime.tv_sec;
+  buf->st_ctim.tv_nsec = statxbuf.stx_ctime.tv_nsec;
+  buf->st_birthtim.tv_sec = statxbuf.stx_btime.tv_sec;
+  buf->st_birthtim.tv_nsec = statxbuf.stx_btime.tv_nsec;
+
+  return 0;
+#else
+  return UV_ENOSYS;
+#endif /* __linux__ */
+}
+
+
 static int uv__fs_stat(const char *path, uv_stat_t *buf) {
   struct stat pbuf;
   int ret;
+
+  ret = uv__fs_statx(-1, path, /* is_fstat */ 0, /* is_lstat */ 0, buf);
+  if (ret != UV_ENOSYS)
+    return ret;
 
   ret = stat(path, &pbuf);
   if (ret == 0)
@@ -1037,6 +1141,10 @@ static int uv__fs_lstat(const char *path, uv_stat_t *buf) {
   struct stat pbuf;
   int ret;
 
+  ret = uv__fs_statx(-1, path, /* is_fstat */ 0, /* is_lstat */ 1, buf);
+  if (ret != UV_ENOSYS)
+    return ret;
+
   ret = lstat(path, &pbuf);
   if (ret == 0)
     uv__to_stat(&pbuf, buf);
@@ -1048,6 +1156,10 @@ static int uv__fs_lstat(const char *path, uv_stat_t *buf) {
 static int uv__fs_fstat(int fd, uv_stat_t *buf) {
   struct stat pbuf;
   int ret;
+
+  ret = uv__fs_statx(fd, "", /* is_fstat */ 1, /* is_lstat */ 0, buf);
+  if (ret != UV_ENOSYS)
+    return ret;
 
   ret = fstat(fd, &pbuf);
   if (ret == 0)

@@ -262,8 +262,7 @@ Run:
 
 ```bash
 $ ./gyp_uv.py -f xcode
-$ xcodebuild -ARCHS="x86_64" -project uv.xcodeproj \
-     -configuration Release -target All
+$ xcodebuild -ARCHS="x86_64" -project out/uv.xcodeproj -configuration Release -alltargets
 ```
 
 Using Homebrew:
@@ -313,7 +312,7 @@ $ make -C out
 The default API level is 24, but a different one can be selected as follows:
 
 ```bash
-$ source ./android-configure ~/android-ndk-r15b gyp 21
+$ source ./android-configure-arm ~/android-ndk-r15b gyp 21
 $ make -C out
 ```
 

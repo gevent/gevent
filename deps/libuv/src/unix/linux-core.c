@@ -141,6 +141,7 @@ void uv__platform_invalidate_fd(uv_loop_t* loop, int fd) {
   uintptr_t nfds;
 
   assert(loop->watchers != NULL);
+  assert(fd >= 0);
 
   events = (struct epoll_event*) loop->watchers[loop->nwatchers];
   nfds = (uintptr_t) loop->watchers[loop->nwatchers + 1];
@@ -170,6 +171,7 @@ int uv__io_check_fd(uv_loop_t* loop, int fd) {
   struct epoll_event e;
   int rc;
 
+  memset(&e, 0, sizeof(e));
   e.events = POLLIN;
   e.data.fd = -1;
 
@@ -217,6 +219,8 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
     assert(QUEUE_EMPTY(&loop->watcher_queue));
     return;
   }
+
+  memset(&e, 0, sizeof(e));
 
   while (!QUEUE_EMPTY(&loop->watcher_queue)) {
     q = QUEUE_HEAD(&loop->watcher_queue);
