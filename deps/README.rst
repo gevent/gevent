@@ -20,12 +20,13 @@ Updating libuv
     cd deps/
     wget https://dist.libuv.org/dist/$LIBUV_VER/libuv-$LIBUV_VER.tar.gz
     tar -xf libuv-$LIBUV_VER.tar.gz
+    rm libuv-$LIBUV_VER.tar.gz
     rm -rf libuv
     mv libuv-$LIBUV_VER libuv
     rm -rf libuv/.github
     rm -rf libuv/docs
     rm -rf libuv/samples
-    rm -rf libuv/test
+    rm -rf libuv/test/*.[ch] libuv/test/test.gyp # must leave the fixtures/ dir
     rm -rf libuv/tools
     rm -f libuv/android-configure*
     git apply libuv-win-binary.patch
