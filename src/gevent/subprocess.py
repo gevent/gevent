@@ -1503,10 +1503,20 @@ class Popen(object):
                 errpipe_read = FileObject(errpipe_read, 'rb')
                 data = errpipe_read.read()
             finally:
-                if hasattr(errpipe_read, 'close'):
-                    errpipe_read.close()
-                else:
-                    os.close(errpipe_read)
+                try:
+                    if hasattr(errpipe_read, 'close'):
+                        errpipe_read.close()
+                    else:
+                        os.close(errpipe_read)
+                except OSError:
+                    # Especially on PyPy, we sometimes see the above
+                    # `os.close(errpipe_read)` raise an OSError.
+                    # It's not entirely clear why, but it happens in
+                    # InterprocessSignalTests.test_main sometimes, which must mean
+                    # we have some sort of race condition.
+                    pass
+                finally:
+                    errpipe_read = -1
 
             if data != b"":
                 self.wait()
