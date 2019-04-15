@@ -78,6 +78,7 @@ LIBUV_SOURCES = [
     _libuv_source('uv-data-getter-setters.c'),
     _libuv_source('timer.c'),
     _libuv_source('idna.c'),
+    _libuv_source('strscpy.c')
 ]
 
 if WIN:

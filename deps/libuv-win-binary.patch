@@ -2,9 +2,9 @@ diff --git a/deps/libuv/src/win/fs.c b/deps/libuv/src/win/fs.c
 index 812c1a6d..f4d66628 100644
 --- a/deps/libuv/src/win/fs.c
 +++ b/deps/libuv/src/win/fs.c
-@@ -135,7 +135,14 @@ const WCHAR UNC_PATH_PREFIX_LEN = 8;
+@@ -135,5 +135,12 @@ const WCHAR UNC_PATH_PREFIX_LEN = 8;
  static int uv__file_symlink_usermode_flag = SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE;
- 
+
  void uv_fs_init(void) {
 -  _fmode = _O_BINARY;
 +/* gevent: This breaks `open()` on CPython 2 by changing
@@ -16,5 +16,3 @@ index 812c1a6d..f4d66628 100644
 + * _fmode = _O_BINARY;
 + */
  }
- 
- 

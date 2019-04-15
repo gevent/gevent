@@ -24,6 +24,8 @@
   requirements and enabling build isolation. pip 18 or above is needed
   to take advantage of this. See :issue:`1180`.
 
+- Upgrade libuv from 1.24.0 to 1.27.0.
+
 - dnspython >= 1.16.0 is now required for the dnspython resolver.
 
 - Python 3.7 subprocess: Copy a ``STARTUPINFO`` passed as a parameter.

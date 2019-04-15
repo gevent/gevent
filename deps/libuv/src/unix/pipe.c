@@ -66,8 +66,7 @@ int uv_pipe_bind(uv_pipe_t* handle, const char* name) {
   sockfd = err;
 
   memset(&saddr, 0, sizeof saddr);
-  strncpy(saddr.sun_path, pipe_fname, sizeof(saddr.sun_path) - 1);
-  saddr.sun_path[sizeof(saddr.sun_path) - 1] = '\0';
+  uv__strscpy(saddr.sun_path, pipe_fname, sizeof(saddr.sun_path));
   saddr.sun_family = AF_UNIX;
 
   if (bind(sockfd, (struct sockaddr*)&saddr, sizeof saddr)) {
@@ -186,8 +185,7 @@ void uv_pipe_connect(uv_connect_t* req,
   }
 
   memset(&saddr, 0, sizeof saddr);
-  strncpy(saddr.sun_path, name, sizeof(saddr.sun_path) - 1);
-  saddr.sun_path[sizeof(saddr.sun_path) - 1] = '\0';
+  uv__strscpy(saddr.sun_path, name, sizeof(saddr.sun_path));
   saddr.sun_family = AF_UNIX;
 
   do {
@@ -217,7 +215,7 @@ void uv_pipe_connect(uv_connect_t* req,
   }
 
   if (err == 0)
-    uv__io_start(handle->loop, &handle->io_watcher, POLLIN | POLLOUT);
+    uv__io_start(handle->loop, &handle->io_watcher, POLLOUT);
 
 out:
   handle->delayed_error = err;
@@ -235,9 +233,6 @@ out:
 }
 
 
-typedef int (*uv__peersockfunc)(int, struct sockaddr*, socklen_t*);
-
-
 static int uv__pipe_getsockpeername(const uv_pipe_t* handle,
                                     uv__peersockfunc func,
                                     char* buffer,
@@ -248,10 +243,13 @@ static int uv__pipe_getsockpeername(const uv_pipe_t* handle,
 
   addrlen = sizeof(sa);
   memset(&sa, 0, addrlen);
-  err = func(uv__stream_fd(handle), (struct sockaddr*) &sa, &addrlen);
+  err = uv__getsockpeername((const uv_handle_t*) handle,
+                            func,
+                            (struct sockaddr*) &sa,
+                            (int*) &addrlen);
   if (err < 0) {
     *size = 0;
-    return UV__ERR(errno);
+    return err;
   }
 
 #if defined(__linux__)
