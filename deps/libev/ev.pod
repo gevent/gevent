@@ -413,9 +413,10 @@ make libev check for a fork in each iteration by enabling this flag.
 This works by calling C<getpid ()> on every iteration of the loop,
 and thus this might slow down your event loop if you do a lot of loop
 iterations and little real work, but is usually not noticeable (on my
-GNU/Linux system for example, C<getpid> is actually a simple 5-insn sequence
-without a system call and thus I<very> fast, but my GNU/Linux system also has
-C<pthread_atfork> which is even faster).
+GNU/Linux system for example, C<getpid> is actually a simple 5-insn
+sequence without a system call and thus I<very> fast, but my GNU/Linux
+system also has C<pthread_atfork> which is even faster). (Update: glibc
+versions 2.25 apparently removed the C<getpid> optimisation again).
 
 The big advantage of this flag is that you can forget about fork (and
 forget about forgetting to tell libev about forking, although you still
@@ -2115,11 +2116,11 @@ C<SIGSTOP>).
 
 =item ev_timer_set (ev_timer *, ev_tstamp after, ev_tstamp repeat)
 
-Configure the timer to trigger after C<after> seconds. If C<repeat>
-is C<0.>, then it will automatically be stopped once the timeout is
-reached. If it is positive, then the timer will automatically be
-configured to trigger again C<repeat> seconds later, again, and again,
-until stopped manually.
+Configure the timer to trigger after C<after> seconds (fractional and
+negative values are supported). If C<repeat> is C<0.>, then it will
+automatically be stopped once the timeout is reached. If it is positive,
+then the timer will automatically be configured to trigger again C<repeat>
+seconds later, again, and again, until stopped manually.
 
 The timer itself will do a best-effort at avoiding drift, that is, if
 you configure a timer to trigger every 10 seconds, then it will normally
@@ -2226,8 +2227,8 @@ it, as it uses a relative timeout).
 
 C<ev_periodic> watchers can also be used to implement vastly more complex
 timers, such as triggering an event on each "midnight, local time", or
-other complicated rules. This cannot be done with C<ev_timer> watchers, as
-those cannot react to time jumps.
+other complicated rules. This cannot easily be done with C<ev_timer>
+watchers, as those cannot react to time jumps.
 
 As with timers, the callback is guaranteed to be invoked only when the
 point in time where it is supposed to trigger has passed. If multiple
@@ -2323,10 +2324,28 @@ NOTE: I<< This callback must always return a time that is higher than or
 equal to the passed C<now> value >>.
 
 This can be used to create very complex timers, such as a timer that
-triggers on "next midnight, local time". To do this, you would calculate the
-next midnight after C<now> and return the timestamp value for this. How
-you do this is, again, up to you (but it is not trivial, which is the main
-reason I omitted it as an example).
+triggers on "next midnight, local time". To do this, you would calculate
+the next midnight after C<now> and return the timestamp value for
+this. Here is a (completely untested, no error checking) example on how to
+do this:
+
+   #include <time.h>
+
+   static ev_tstamp
+   my_rescheduler (ev_periodic *w, ev_tstamp now)
+   {
+     time_t tnow = (time_t)now;
+     struct tm tm;
+     localtime_r (&tnow, &tm);
+
+     tm.tm_sec = tm.tm_min = tm.tm_hour = 0; // midnight current day
+     ++tm.tm_mday; // midnight next day
+
+     return mktime (&tm);
+   }
+
+Note: this code might run into trouble on days that have more then two
+midnights (beginning and end).
 
 =back
 
@@ -3519,7 +3538,7 @@ There are some other functions of possible interest. Described. Here. Now.
 
 =over 4
 
-=item ev_once (loop, int fd, int events, ev_tstamp timeout, callback)
+=item ev_once (loop, int fd, int events, ev_tstamp timeout, callback, arg)
 
 This function combines a simple timer and an I/O watcher, calls your
 callback on whichever event happens first and automatically stops both
@@ -3961,14 +3980,14 @@ libev sources can be compiled as C++. Therefore, code that uses the C API
 will work fine.
 
 Proper exception specifications might have to be added to callbacks passed
-to libev: exceptions may be thrown only from watcher callbacks, all
-other callbacks (allocator, syserr, loop acquire/release and periodic
-reschedule callbacks) must not throw exceptions, and might need a C<throw
-()> specification. If you have code that needs to be compiled as both C
-and C++ you can use the C<EV_THROW> macro for this:
+to libev: exceptions may be thrown only from watcher callbacks, all other
+callbacks (allocator, syserr, loop acquire/release and periodic reschedule
+callbacks) must not throw exceptions, and might need a C<noexcept>
+specification. If you have code that needs to be compiled as both C and
+C++ you can use the C<EV_NOEXCEPT> macro for this:
 
    static void
-   fatal_error (const char *msg) EV_THROW
+   fatal_error (const char *msg) EV_NOEXCEPT
    {
      perror (msg);
      abort ();
@@ -4388,11 +4407,11 @@ in your include path (e.g. in libev/ when using -Ilibev):
 
    ev_win32.c      required on win32 platforms only
 
-   ev_select.c     only when select backend is enabled (which is enabled by default)
-   ev_poll.c       only when poll backend is enabled (disabled by default)
-   ev_epoll.c      only when the epoll backend is enabled (disabled by default)
-   ev_kqueue.c     only when the kqueue backend is enabled (disabled by default)
-   ev_port.c       only when the solaris port backend is enabled (disabled by default)
+   ev_select.c     only when select backend is enabled
+   ev_poll.c       only when poll backend is enabled
+   ev_epoll.c      only when the epoll backend is enabled
+   ev_kqueue.c     only when the kqueue backend is enabled
+   ev_port.c       only when the solaris port backend is enabled
 
 F<ev.c> includes the backend files directly when enabled, so you only need
 to compile this single file.

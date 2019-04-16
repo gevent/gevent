@@ -7,7 +7,28 @@
 
   XXX: We need a patch for that.
 
+Updating libev
+==============
 
+Download and unpack the tarball into libev/. Remove these extra
+files::
+
+  rm -f libev/Makefile.am
+  rm -f libev/Symbols.ev
+  rm -f libev/Symbols.event
+  rm -f libev/TODO
+  rm -f libev/aclocal.m4
+  rm -f libev/autogen.sh
+  rm -f libev/compile
+  rm -f libev/configure.ac
+  rm -f libev/libev.m4
+  rm -f libev/mkinstalldirs
+
+
+Check if 'config.guess' and/or 'config.sub' went backwards in time
+(the 'timestamp' and copyright dates'). If so, revert it (or update
+from the latest source
+http://git.savannah.gnu.org/gitweb/?p=config.git;a=tree )
 
 Updating libuv
 ==============
