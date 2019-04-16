@@ -192,4 +192,4 @@ test-py27-noembed: $(PY27)
 	@python2.7.16 scripts/travis.py fold_start conf_libuv "Configuring libuv"
 	cd deps/libuv && ./autogen.sh && ./configure --disable-static && make
 	@python2.7.16 scripts/travis.py fold_end conf_libuv
-	CPPFLAGS="-Ideps/libev -Ideps/c-ares -Ideps/libuv/include" LDFLAGS="-Ldeps/libev/.libs -Ldeps/c-ares/.libs -Ldeps/libuv/.libs" LD_LIBRARY_PATH="$(PWD)/deps/libev/.libs:$(PWD)/deps/c-ares/.libs:$(PWD)/deps/libuv/.libs" EMBED=0 PYTHON=python2.7.16 PATH=$(BUILD_RUNTIMES)/versions/python2.7.16/bin:$(PATH) make develop allbackendtest
+	CPPFLAGS="-Ideps/libev -Ideps/c-ares -Ideps/libuv/include" LDFLAGS="-Ldeps/libev/.libs -Ldeps/c-ares/.libs -Ldeps/libuv/.libs" LD_LIBRARY_PATH="$(PWD)/deps/libev/.libs:$(PWD)/deps/c-ares/.libs:$(PWD)/deps/libuv/.libs" EMBED=0 PYTHON=python2.7.16 PATH=$(BUILD_RUNTIMES)/versions/python2.7.16/bin:$(PATH) make develop alltest cffibackendtest
