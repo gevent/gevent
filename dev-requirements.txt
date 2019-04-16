@@ -9,6 +9,9 @@ pylint>=1.8.0 ; python_version < "3.4"
 pylint >= 2.3.1 ; python_version >= "3.4"  and platform_python_implementation == "CPython"
 astroid >= 2.2.5 ; python_version >= "3.4" and platform_python_implementation == "CPython"
 
+# We need this at runtime to use the libev-CFFI and libuv backends
+cffi >= 1.12.2 ; platform_python_implementation == 'CPython'
+
 # benchmarks use this
 perf >= 1.6.0
 

@@ -257,10 +257,24 @@ def start(command, quiet=False, **kwargs):
 
 
 class RunResult(object):
+    """
+    The results of running an external command.
 
-    def __init__(self, code,
+    If the command was successful, this has a boolean
+    value of True; otherwise, a boolean value of false.
+
+    The integer value of this object is the command's exit code.
+
+    """
+
+    def __init__(self,
+                 command,
+                 run_kwargs,
+                 code,
                  output=None, name=None,
                  run_count=0, skipped_count=0):
+        self.command = command
+        self.run_kwargs = run_kwargs
         self.code = code
         self.output = output
         self.name = name
@@ -269,7 +283,7 @@ class RunResult(object):
 
 
     def __bool__(self):
-        return bool(self.code)
+        return not bool(self.code)
 
     __nonzero__ = __bool__
 
@@ -322,6 +336,7 @@ def _find_test_status(took, out):
 
 
 def run(command, **kwargs): # pylint:disable=too-many-locals
+    "Execute *command*, returning a `RunResult`"
     buffer_output = kwargs.pop('buffer_output', BUFFER_OUTPUT)
     quiet = kwargs.pop('quiet', QUIET)
     verbose = not quiet
@@ -361,7 +376,8 @@ def run(command, **kwargs): # pylint:disable=too-many-locals
             log('- %s %s', name, status)
     if took >= MIN_RUNTIME:
         runtimelog.append((-took, name))
-    return RunResult(result, out, name, run_count, skipped_count)
+    return RunResult(command, kwargs, result,
+                     output=out, name=name, run_count=run_count, skipped_count=skipped_count)
 
 
 class NoSetupPyFound(Exception):

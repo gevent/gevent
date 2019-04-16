@@ -78,6 +78,12 @@
 
 - Spawning greenlets can be up to 10% faster.
 
+- Remove the ``Makefile``. Its most useful commands, ``make clean``
+  and ``make distclean``, can now be accomplished in a cross-platform
+  way using ``python setup.py clean`` and ``python setup.py clean
+  -a``, respectively. The remainder of the ``Makefile`` contained
+  Travis CI commands that have been moved to ``.travis.yml``.
+
 1.4.0 (2019-01-04)
 ==================
 

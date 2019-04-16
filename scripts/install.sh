@@ -10,98 +10,100 @@
 set -e
 set -x
 
-# This is to guard against multiple builds in parallel. The various installers will tend
-# to stomp all over eachother if you do this and they haven't previously successfully
-# succeeded. We use a lock file to block progress so only one install runs at a time.
-# This script should be pretty fast once files are cached, so the lost of concurrency
-# is not a major problem.
-# This should be using the lockfile command, but that's not available on the
-# containerized travis and we can't install it without sudo.
-# Is is unclear if this is actually useful. I was seeing behaviour that suggested
-# concurrent runs of the installer, but I can't seem to find any evidence of this lock
-# ever not being acquired.
 
+# Where installations go
 BASE=${BUILD_RUNTIMES-$PWD/.runtimes}
+PYENV=$BASE/pyenv
 echo $BASE
 mkdir -p $BASE
 
-LOCKFILE="$BASE/.install-lockfile"
-while true; do
-  if mkdir $LOCKFILE 2>/dev/null; then
-    echo "Successfully acquired installer."
-    break
-  else
-    echo "Failed to acquire lock. Is another installer running? Waiting a bit."
-  fi
-
-  sleep $[ ( $RANDOM % 10)  + 1 ].$[ ( $RANDOM % 100) ]s
-
-  if (( $(date '+%s') > 300 + $(stat --format=%X $LOCKFILE) )); then
-    echo "We've waited long enough"
-    rm -rf $LOCKFILE
-  fi
-done
-trap "rm -rf $LOCKFILE" EXIT
-
-
-PYENV=$BASE/pyenv
 
 if [ ! -d "$PYENV/.git" ]; then
-  rm -rf $PYENV
-  git clone https://github.com/pyenv/pyenv.git $BASE/pyenv
+    rm -rf $PYENV
+    git clone https://github.com/pyenv/pyenv.git $BASE/pyenv
 else
-  back=$PWD
-  cd $PYENV
-  git fetch || echo "Fetch failed to complete. Ignoring"
-  git reset --hard origin/master
-  cd $back
+    back=$PWD
+    cd $PYENV
+    # We don't fetch or reset after the initial creation;
+    # doing so causes the Travis cache to need re-packed and uploaded,
+    # and it's pretty large.
+    # So if we need to incorporate changes from pyenv, either temporarily
+    # turn this back on, or remove the Travis caches.
+    # git fetch || echo "Fetch failed to complete. Ignoring"
+    # git reset --hard origin/master
+    cd $back
 fi
 
 
 SNAKEPIT=$BASE/snakepit
 
+##
+# install(exact-version, bin-alias, dir-alias)
+#
+# Produce a python executable at $SNAKEPIT/bin-alias
+# having the exact version given as exact-version.
+#
+# Also produces a $SNAKEPIT/dir-alias/ pointing to the root
+# of the python install.
+##
 install () {
 
-  VERSION="$1"
-  ALIAS="$2"
-  mkdir -p $BASE/versions
-  SOURCE=$BASE/versions/$ALIAS
+    VERSION="$1"
+    ALIAS="$2"
+    DIR_ALIAS="$3"
 
-  if [ ! -e "$SOURCE" ]; then
-    mkdir -p $SNAKEPIT
+    DESTINATION=$BASE/versions/$VERSION
+
     mkdir -p $BASE/versions
-    $BASE/pyenv/plugins/python-build/bin/python-build $VERSION $SOURCE
-  fi
- rm -f $SNAKEPIT/$ALIAS
- mkdir -p $SNAKEPIT
- ls -l $SNAKEPIT
- ls -l $BASE/versions
- ls -l $SOURCE/
- ls -l $SOURCE/bin
- ln -s $SOURCE/bin/python $SNAKEPIT/$ALIAS
- $SOURCE/bin/python -m pip.__main__ install --upgrade pip wheel virtualenv
+    mkdir -p $SNAKEPIT
+
+    if [ ! -e "$DESTINATION" ]; then
+        mkdir -p $SNAKEPIT
+        mkdir -p $BASE/versions
+        $BASE/pyenv/plugins/python-build/bin/python-build $VERSION $DESTINATION
+    fi
+
+    # Travis CI doesn't take symlink changes (or creation!) into
+    # account on its caching, So we need to write an actual file if we
+    # actually changed something. For python version upgrades, this is
+    # usually handled automatically (obviously) because we installed
+    # python. But if we make changes *just* to symlink locations above,
+    # nothing happens. So for every symlink, write a file...with identical contents,
+    # so that we don't get *spurious* caching. (Travis doesn't check for mod times,
+    # just contents, so echoing each time doesn't cause it to re-cache.)
+
+    # Overwrite an existing alias
+    ln -sf $DESTINATION/bin/python $SNAKEPIT/$ALIAS
+    ln -sf $DESTINATION $SNAKEPIT/$DIR_ALIAS
+    echo $VERSION $ALIAS $DIR_ALIAS > $SNAKEPIT/$ALIAS.installed
+    $SNAKEPIT/$ALIAS --version
+    # Set the PATH to include the install's bin directory so pip
+    # doesn't nag.
+    PATH="$DESTINATION/bin/:$PATH" $SNAKEPIT/$ALIAS -m pip install --upgrade pip wheel virtualenv
+    ls -l $SNAKEPIT
+
 }
 
 
 for var in "$@"; do
-  case "${var}" in
-    2.7)
-      install 2.7.16 python2.7.16
-      ;;
-    3.5)
-      install 3.5.6 python3.5.6
-      ;;
-    3.6)
-      install 3.6.8 python3.6.8
-      ;;
-    3.7)
-      install 3.7.2 python3.7.2
-      ;;
-    pypy)
-      install pypy2.7-7.1.0 pypy710
-      ;;
-    pypy3)
-      install pypy3.6-7.1.0 pypy3.6_710
-      ;;
-  esac
+    case "${var}" in
+        2.7)
+            install 2.7.16 python2.7 2.7.d
+            ;;
+        3.5)
+            install 3.5.6 python3.5 3.5.d
+            ;;
+        3.6)
+            install 3.6.8 python3.6 3.6.d
+            ;;
+        3.7)
+            install 3.7.2 python3.7 3.7.d
+            ;;
+        pypy2.7)
+            install pypy2.7-7.1.0 pypy2.7 pypy2.7.d
+            ;;
+        pypy3.6)
+            install pypy3.6-7.1.0 pypy3.6 pypy3.6.d
+            ;;
+    esac
 done

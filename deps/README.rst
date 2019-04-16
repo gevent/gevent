@@ -2,10 +2,6 @@
  Managing Embedded Dependencies
 ================================
 
-- Modify the c-ares Makefile.in[c] to empty out the MANPAGES variables
-  so that we don't have to ship those in the sdist.
-
-  XXX: We need a patch for that.
 
 Updating libev
 ==============
@@ -29,6 +25,17 @@ Check if 'config.guess' and/or 'config.sub' went backwards in time
 (the 'timestamp' and copyright dates'). If so, revert it (or update
 from the latest source
 http://git.savannah.gnu.org/gitweb/?p=config.git;a=tree )
+
+Updating c-ares
+===============
+
+- Modify the c-ares Makefile.in[c] to empty out the MANPAGES variables
+  so that we don't have to ship those in the sdist.
+
+  XXX: We need a patch for that.
+
+- Follow the same 'config.guess' and 'config.sub' steps as libev.
+
 
 Updating libuv
 ==============
@@ -57,3 +64,5 @@ and the build process. Evaluate those and add them to git and to
 ``src/gevent/libuv/_corecffi_build.py`` as needed. Then check if there
 are changes to the build system (e.g., the .gyp files) that need to be
 accounted for in our build file.
+
+- Follow the same 'config.guess' and 'config.sub' steps as libev.

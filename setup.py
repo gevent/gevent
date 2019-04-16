@@ -20,6 +20,7 @@ from _setuputils import PYPY, WIN
 from _setuputils import IGNORE_CFFI
 from _setuputils import SKIP_LIBUV
 from _setuputils import ConfiguringBuildExt
+from _setuputils import GeventClean
 from _setuputils import BuildFailed
 from _setuputils import cythonize1
 
@@ -325,6 +326,17 @@ def run_setup(ext_modules, run_make):
             # TODO: Generalize this.
             if LIBEV_CFFI_MODULE in cffi_modules and not WIN:
                 system(libev_configure_command)
+                # This changed to the libev directory, and ran configure .
+                # It then copied the generated config.h back to the previous
+                # directory, which happened to be beside us. In the embedded case,
+                # we're building in a different directory, so it copied it back to build
+                # directory, but here, we're building in the embedded directory, so
+                # it gave us useless files.
+                bad_file = None
+                for bad_file in ('config.h', 'configure-output.txt'):
+                    if os.path.exists(bad_file):
+                        os.remove(bad_file)
+                del bad_file
 
     setup(
         name='gevent',
@@ -347,7 +359,10 @@ def run_setup(ext_modules, run_make):
         packages=find_packages('src'),
         include_package_data=True,
         ext_modules=ext_modules,
-        cmdclass=dict(build_ext=ConfiguringBuildExt),
+        cmdclass={
+            'build_ext': ConfiguringBuildExt,
+            'clean': GeventClean,
+        },
         install_requires=install_requires,
         setup_requires=setup_requires,
         extras_require={

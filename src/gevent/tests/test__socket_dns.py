@@ -380,7 +380,12 @@ add(TestTypeError, 25)
 class TestHostname(TestCase):
     pass
 
-add(TestHostname, socket.gethostname)
+add(
+    TestHostname,
+    socket.gethostname,
+    skip=greentest.RUNNING_ON_TRAVIS and greentest.RESOLVER_DNSPYTHON,
+    skip_reason="Sometimes get a different result for getaddrinfo",
+)
 
 
 class TestLocalhost(TestCase):

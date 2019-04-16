@@ -221,15 +221,11 @@ class ConfiguringBuildExt(build_ext):
     def build_extension(self, ext):
         self.gevent_prepare(ext)
         try:
-            result = build_ext.build_extension(self, ext)
+            return build_ext.build_extension(self, ext)
         except ext_errors:
             if getattr(ext, 'optional', False):
                 raise BuildFailed()
-            else:
-                raise
-        return result
-
-
+            raise
 
 
 class Extension(_Extension):
@@ -242,3 +238,137 @@ class Extension(_Extension):
         # Python 2 has this as an old-style class for some reason
         # so super() doesn't work.
         _Extension.__init__(self, *args, **kwargs) # pylint:disable=no-member,non-parent-init-called
+
+
+from distutils.command.clean import clean # pylint:disable=no-name-in-module,import-error
+from distutils import log # pylint:disable=no-name-in-module
+from distutils.dir_util import remove_tree # pylint:disable=no-name-in-module,import-error
+
+class GeventClean(clean):
+
+    BASE_GEVENT_SRC = os.path.join('src', 'gevent')
+
+    def __find_directories_in(self, top, named=None):
+        """
+        Iterate directories, beneath and including *top* ignoring '.'
+        entries.
+        """
+        for dirpath, dirnames, _ in os.walk(top):
+            # Modify dirnames in place to prevent walk from
+            # recursing into hidden directories.
+            dirnames[:] = [x for x in dirnames if not x.startswith('.')]
+            for dirname in dirnames:
+                if named is None or named == dirname:
+                    yield os.path.join(dirpath, dirname)
+
+    def __glob_under(self, base, file_pat):
+        return glob_many(
+            os.path.join(base, file_pat),
+            *(os.path.join(x, file_pat)
+              for x in
+              self.__find_directories_in(base)))
+
+    def __remove_dirs(self, remove_file):
+
+        dirs_to_remove = [
+            'htmlcov',
+            '.eggs',
+        ]
+        if self.all:
+            dirs_to_remove += [
+                # tox
+                '.tox',
+                # instal.sh for pyenv
+                '.runtimes',
+                # Built wheels from manylinux
+                'wheelhouse',
+                # Doc build
+                os.path.join('.', 'doc', '_build'),
+            ]
+        dir_finders = [
+            # All python cache dirs
+            (self.__find_directories_in, '.', '__pycache__'),
+        ]
+
+        for finder in dir_finders:
+            func = finder[0]
+            args = finder[1:]
+            dirs_to_remove.extend(func(*args))
+
+        for f in sorted(dirs_to_remove):
+            remove_file(f)
+
+    def run(self):
+        clean.run(self)
+
+        if self.dry_run:
+            def remove_file(f):
+                if os.path.isdir(f):
+                    remove_tree(f, dry_run=self.dry_run)
+                elif os.path.exists(f):
+                    log.info("Would remove '%s'", f)
+        else:
+            def remove_file(f):
+                if os.path.isdir(f):
+                    remove_tree(f, dry_run=self.dry_run)
+                elif os.path.exists(f):
+                    log.info("Removing '%s'", f)
+                    os.remove(f)
+
+        # Remove directories first before searching for individual files
+        self.__remove_dirs(remove_file)
+
+        def glob_gevent(file_path):
+            return glob(os.path.join(self.BASE_GEVENT_SRC, file_path))
+
+        def glob_gevent_and_under(file_pat):
+            return self.__glob_under(self.BASE_GEVENT_SRC, file_pat)
+
+        def glob_root_and_under(file_pat):
+            return self.__glob_under('.', file_pat)
+
+        files_to_remove = [
+            '.coverage',
+            # One-off cython-generated code that doesn't
+            # follow a globbale-pattern
+            os.path.join(self.BASE_GEVENT_SRC, 'libev', 'corecext.c'),
+            os.path.join(self.BASE_GEVENT_SRC, 'libev', 'corecext.h'),
+            os.path.join(self.BASE_GEVENT_SRC, 'resolver', 'cares.c'),
+            os.path.join(self.BASE_GEVENT_SRC, 'resolver', 'cares.c'),
+        ]
+
+        def dep_configure_artifacts(dep):
+            for f in (
+                    'config.h',
+                    'config.log',
+                    'config.status',
+                    '.libs'
+            ):
+                yield os.path.join('deps', dep, f)
+
+        file_finders = [
+            # The base gevent directory contains
+            # only generated .c code. Remove it.
+            (glob_gevent, "*.c"),
+            # Any .html files found in the gevent directory
+            # are the result of Cython annotations. Remove them.
+            (glob_gevent_and_under, "*.html"),
+            # Any compiled binaries have to go
+            (glob_gevent_and_under, "*.so"),
+            (glob_gevent_and_under, "*.pyd"),
+            (glob_root_and_under, "*.o"),
+            # Compiled python files too
+            (glob_gevent_and_under, "*.pyc"),
+            (glob_gevent_and_under, "*.pyo"),
+
+            # Artifacts of building dependencies in place
+            (dep_configure_artifacts, 'libev'),
+            (dep_configure_artifacts, 'libuv'),
+            (dep_configure_artifacts, 'c-ares'),
+        ]
+
+        for func, pat in file_finders:
+            files_to_remove.extend(func(pat))
+
+        for f in sorted(files_to_remove):
+            remove_file(f)

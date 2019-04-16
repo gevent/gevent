@@ -1,9 +1,13 @@
-# .travis.yml based on https://github.com/DRMacIver/hypothesis/blob/master/.travis.yml
-language: python
+# .travis.yml based on
+# https://github.com/DRMacIver/hypothesis/blob/master/.travis.yml
+# Setting the language to C overrides our CC environment variable
+# and disables ccache.
+# Setting it to python overrides our TRAVIS_PYTHON_VERSION (which
+# we're only using in hopes of being able to go *back* to using
+# python: one day so making the migration simpler)
+language: minimal
 dist: xenial
 group: travis_latest
-python:
-  - 3.7
 
 env:
     global:
@@ -13,24 +17,247 @@ env:
         - CCACHE_NOCPP2=true
         - CCACHE_SLOPPINESS=file_macro,time_macros,include_file_ctime,include_file_mtime
         - CCACHE_NOHASHDIR=true
+        - BUILD_LIBS=$HOME/.libs
         - CFLAGS="-g -pipe"
+        - CPPFLAGS="-I$BUILD_LIBS/include"
+        - LDFLAGS="-L$BUILD_LIBS/lib"
+        - LD_LIBRARY_PATH="$BUILD_LIBS/lib"
 
+    # Note that this list is again *manually* expanded
+    # for the 'cache' stage. The benefit of doing this (instead of
+    # only listing a single version here, or using a different 'language')
+    # is that we get separate caches per version. This keeps them small,
+    # and prevents stepping on each other when we change Python minor
+    # versions.
+
+    # We do it here, rather than with the python: keyword
+    # because the way travis handles pypy is pretty messed up.
+
+    # Recall that unless otherwise specified, jobs inherit
+    # the first entry in this list.
     matrix:
-      # These are ordered to get as much diversity in the
-      # first group of parallel runs (4) as possible
-      - TASK=test-py27-noembed
-      - TASK=test-py37
-      - TASK=test-py27
-      - TASK=test-pypy
-      - TASK=test-py36
-      - TASK=test-pypy3
-      - TASK=test-py35
+      - TRAVIS_PYTHON_VERSION=2.7
+      - TRAVIS_PYTHON_VERSION=3.5
+      - TRAVIS_PYTHON_VERSION=3.6
+      - TRAVIS_PYTHON_VERSION=3.7
+      - TRAVIS_PYTHON_VERSION=pypy2.7
+      - TRAVIS_PYTHON_VERSION=pypy3.6
+      - TRAVIS_PYTHON_VERSION=2.7 EMBED=0
 
 matrix:
   fast_finish: true
 
+
+before_install:
+  - export PATH=$BUILD_RUNTIMES/snakepit/$TRAVIS_PYTHON_VERSION.d/bin:$PATH
+
+before_script:
+  # Show some details of interest
+  - python --version
+  - >
+    python -c "import greenlet; print(greenlet, greenlet.__version__)"
+  - >
+    python -c "import gevent.core; print(gevent.core.loop)"
+  - >
+    python -c "import gevent.ares; print(gevent.ares)"
+
+# Installing is taken care of by the first stage.
+install:
+  - ls -l $BUILD_RUNTIMES/snakepit/
+  - echo $BUILD_RUNTIMES/snakepit/$TRAVIS_PYTHON_VERSION.d
+  - ls -l $BUILD_RUNTIMES/snakepit/$TRAVIS_PYTHON_VERSION.d
+  - python -c 'import gevent; print(gevent.__version__)'
 script:
-    - make $TASK
+  # The generic script for the matrix expansion is to
+  # test the defaults.
+  - &test-basic python -m gevent.tests
+
+  # Now, the non-default threaded file object.
+  # In the past, we included all test files that had a reference to 'subprocess'' somewhere in their
+  # text. The monkey-patched stdlib tests were specifically included here.
+  # However, we now always also test on AppVeyor (Windows) which only has GEVENT_FILE=thread,
+  # so we can save a lot of CI time by reducing the set and excluding the stdlib tests without
+  # losing any coverage. Which is good, because coverage fails when run this way.
+  - (cd src/gevent/tests && GEVENT_FILE=thread python -mgevent.tests test__*subprocess*.py)
+
+
+# Submit coverage info
+after_success:
+  - python -m coverage combine
+  - python -m coverage report -i
+  - python -m coveralls
+
+
+stages:
+  - build-gevent
+  - test
+  - test-ares
+
+
+jobs:
+  include:
+    - &build-gevent
+      stage: build-gevent
+      install:
+        # Install the Python runtime
+        - &build-gevent-python time ./scripts/install.sh $TRAVIS_PYTHON_VERSION
+        # Install gevent. Yes, this will create different files each time,
+        # leading to a fresh cache. But because of CCache stats, we had already been doing
+        # that (before we learned about CCACHE_NOSTATS)
+        # First, the build dependencies (see setup.cfg)
+        # so that we don't have to use build isolation and can better use the cache;
+        # Note that we can't use -U for cffi and greenlet on PyPy.
+        - &build-gevent-deps pip install -U setuptools wheel && pip install cffi cython greenlet
+        - GEVENTSETUP_EV_VERIFY=3 pip install --no-build-isolation .[test,events,dnspython]
+      script: ccache -s
+      before_script: true
+      after_success: true
+    - <<: *build-gevent
+      env: TRAVIS_PYTHON_VERSION=3.5
+    - <<: *build-gevent
+      env: TRAVIS_PYTHON_VERSION=3.6
+    - <<: *build-gevent
+      env: TRAVIS_PYTHON_VERSION=3.7
+    - <<: *build-gevent
+      env: TRAVIS_PYTHON_VERSION=pypy2.7
+    - <<: *build-gevent
+      env: TRAVIS_PYTHON_VERSION=pypy3.6
+    - <<: *build-gevent
+      env: TRAVIS_PYTHON_VERSION=2.7 EMBED=0
+      install:
+        # Install the Python runtime
+        - *build-gevent-python
+        - *build-gevent-deps
+        # Install the C dependencies to a known location. This is used
+        # to test "no embed" cases. It might seem like it would prime
+        # the CCache for when we *do* embed if we did it as part of the generic build stage,
+        # but overall it just seems to slow things down. The Travis caching and CCache is not working as
+        # well as we would hope.
+        - pushd deps/libev && ./configure --prefix=$BUILD_LIBS && make install && popd
+        - pushd deps/c-ares && ./configure --prefix=$BUILD_LIBS && make -j4 install && popd
+        - pushd deps/libuv && ./autogen.sh && ./configure --disable-static --prefix=$BUILD_LIBS && make -j4 install && popd
+        # libev builds a manpage each time, and it includes today's date, so it frequently changes.
+        # delete to avoid repacking the archive
+        - rm -rf $BUILD_LIBS/share/man/
+        - ls -l $BUILD_LIBS $BUILD_LIBS/lib
+        - EMBED=0 pip install --no-build-isolation .[test,events,dnspython]
+
+    # Ok, now we switch to the test stage. These are all in addition
+    # to the jobs created by the matrix (and should override the `script` command).
+
+    # Lint the code. Because this is a separate job, even if it fails fast
+    # the tests will still run. Put it at the top for fast feedback.
+    # We only need to do this on one version, and it should be Python 3, because
+    # pylint has stopped updating for Python 2.
+    - stage: test
+      script: python -m pylint --rcfile=.pylintrc gevent
+      env: TRAVIS_PYTHON_VERSION=3.7
+      name: lint37
+
+    # Now the various functional test groups.
+    # We organize these by interpreter, rather than functional test group,
+    # so that it's easy to see which interpreters are in which group.
+
+    # First, default (cpython 2.7). This tests essentially all the groups.
+
+    # Test the c-ares resolver. It's implemented in C, so don't bother with coverage.
+    # Also, we don't support it on PyPy for production, so don't bother to test PyPy.
+    - &test-ares-jobs
+      stage: test
+      script: GEVENT_RESOLVER=ares python -mgevent.tests --ignore tests_that_dont_use_resolver.txt
+      name: ares27
+    # Run dnspython with coverage enabled, it's implemented in python whereas ares is C.
+    # PyPy is supported.
+    - &test-dnspython-jobs
+      script: GEVENT_RESOLVER=dnspython python -mgevent.tests --coverage --ignore tests_that_dont_use_resolver.txt
+      name: dnspython27
+    # Now test the alternate backends, starting with libuv-cffi, which should be present everywhere
+    - &test-libuv-jobs
+      script: GEVENT_LOOP=libuv python -mgevent.tests --coverage
+      name: libuv27
+      # Next the libev-cffi backend, which is only needed on CPython (default on PyPy)
+    - &test-libev-jobs
+      script: GEVENT_LOOP=libev-cffi python -mgevent.tests --coverage
+      name: libev-cffi27
+    # No compiled cython modules on CPython, using the default backend. Get coverage here.
+    # We should only need to run this for a single Python 2 and a Python 3
+    - &test-pure-jobs
+      script: PURE_PYTHON=1 python -mgevent.tests --coverage
+      name: pure27
+    # Run the leaktests; this seems to be extremely slow on Python 3.7
+    # XXX: Figure out why. Can we reproduce locally?
+    - &test-leak-jobs
+      script: GEVENTTEST_LEAKCHECK=1 python -m gevent.tests --ignore tests_that_dont_do_leakchecks.txt
+      name: leak27
+
+    # Now, in order of the matrix, tests for particular versions.
+
+    # For the CPython interpreters, unless we have reason to expect
+    # different behaviour across the versions (e.g., as measured by coverage)
+    # it's sufficient to test the alternate backends for non-current versions;
+    # run the full suite on the current version.
+
+    # 3.5.
+    - <<: *test-libuv-jobs
+      env: TRAVIS_PYTHON_VERSION=3.5
+      name: libuv35
+    - <<: *test-libev-jobs
+      env: TRAVIS_PYTHON_VERSION=3.5
+      name: libev-cffi35
+
+
+    # 3.6
+    - <<: *test-libuv-jobs
+      env: TRAVIS_PYTHON_VERSION=3.6
+      name: libuv36
+    - <<: *test-libev-jobs
+      env: TRAVIS_PYTHON_VERSION=3.6
+      name: libev-cffi36
+
+    # 3.7
+    - <<: *test-ares-jobs
+      env: TRAVIS_PYTHON_VERSION=3.7
+      name: ares37
+    - <<: *test-dnspython-jobs
+      env: TRAVIS_PYTHON_VERSION=3.7
+      name: dnspython37
+    - <<: *test-libuv-jobs
+      env: TRAVIS_PYTHON_VERSION=3.7
+      name: libuv37
+    - <<: *test-libev-jobs
+      env: TRAVIS_PYTHON_VERSION=3.7
+      name: libev-cffi37
+    - <<: *test-pure-jobs
+      env: TRAVIS_PYTHON_VERSION=3.7
+      name: pure37
+
+
+    # 2.7, no-embed. Run the tests that exercise the libraries we linked to.
+    - <<: *test-ares-jobs
+      env: TRAVIS_PYTHON_VERSION=2.7 EMBED=0
+      name: ares27-noembed
+    - <<: *test-libuv-jobs
+      env: TRAVIS_PYTHON_VERSION=2.7 EMBED=0
+      name: libuv27-noembed
+    - <<: *test-libev-jobs
+      env: TRAVIS_PYTHON_VERSION=2.7 EMBED=0
+      name: libev27-noembed
+
+    # PyPy 2.7
+    - <<: *test-dnspython-jobs
+      env: TRAVIS_PYTHON_VERSION=pypy2.7
+      name: dnspythonpypy27
+    - <<: *test-libuv-jobs
+      env: TRAVIS_PYTHON_VERSION=pypy2.7
+      name: libuvpypy27
+
+    # PyPy 3.6
+    # We don't do particular extra tests on it, it's not
+    # considered a production (still alpha at this writing).
+    # - <<: *test-dnspython-jobs
+    #   env: TRAVIS_PYTHON_VERSION=pypy3.6
+    #   name: dnspythonpypy36
+
 
 notifications:
   email: false
@@ -43,6 +270,7 @@ cache:
     - $HOME/.runtimes
     - $HOME/.wheelhouse
     - $HOME/.ccache
+    - $HOME/.libs
 
 before_cache:
     - rm -f $HOME/.cache/pip/log/debug.log

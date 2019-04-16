@@ -8,15 +8,15 @@ from __future__ import print_function
 
 import sys
 
+
 commands = {}
 
 def command(func):
-    commands[func.__name__] = func
+    commands[func.__name__] = lambda: func(*sys.argv[2:])
+    return func
 
 @command
-def fold_start():
-    name = sys.argv[2]
-    msg = sys.argv[3]
+def fold_start(name, msg):
     sys.stdout.write('travis_fold:start:')
     sys.stdout.write(name)
     sys.stdout.write(chr(0o33))
@@ -26,8 +26,7 @@ def fold_start():
     sys.stdout.write('[33;0m\n')
 
 @command
-def fold_end():
-    name = sys.argv[2]
+def fold_end(name):
     sys.stdout.write("\ntravis_fold:end:")
     sys.stdout.write(name)
     sys.stdout.write("\r\n")
