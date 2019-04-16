@@ -103,7 +103,7 @@ leaktest: test_prelim
 	@${PYTHON} scripts/travis.py fold_end default
 
 bench:
-	${PYTHON} benchmarks/bench_sendall.py --loops 3 --processes 2 --values 2 --warmups 2 --quiet
+	time ${PYTHON} benchmarks/bench_sendall.py --loops 3 --processes 2 --values 2 --warmups 2 --quiet
 
 travis_test_linters:
 	make lint
@@ -168,7 +168,7 @@ test-py27: $(PY27)
 	PYTHON=python2.7.16 PATH=$(BUILD_RUNTIMES)/versions/python2.7.16/bin:$(PATH) make develop leaktest cffibackendtest coverage_combine
 
 test-py35: $(PY35)
-	PYTHON=python3.5.6 PATH=$(BUILD_RUNTIMES)/versions/python3.5.6/bin:$(PATH) GEVENTTEST_COVERAGE=1 make develop basictest coverage_combine
+	PYTHON=python3.5.6 PATH=$(BUILD_RUNTIMES)/versions/python3.5.6/bin:$(PATH) make develop basictest
 
 test-py36: $(PY36)
 	PYTHON=python3.6.8 PATH=$(BUILD_RUNTIMES)/versions/python3.6.8/bin:$(PATH) make develop lint basictest
@@ -192,4 +192,4 @@ test-py27-noembed: $(PY27)
 	@python2.7.16 scripts/travis.py fold_start conf_libuv "Configuring libuv"
 	cd deps/libuv && ./autogen.sh && ./configure --disable-static && make
 	@python2.7.16 scripts/travis.py fold_end conf_libuv
-	CPPFLAGS="-Ideps/libev -Ideps/c-ares -Ideps/libuv/include" LDFLAGS="-Ldeps/libev/.libs -Ldeps/c-ares/.libs -Ldeps/libuv/.libs" LD_LIBRARY_PATH="$(PWD)/deps/libev/.libs:$(PWD)/deps/c-ares/.libs:$(PWD)/deps/libuv/.libs" EMBED=0 GEVENT_LOOP=libev-cext PYTHON=python2.7.16 PATH=$(BUILD_RUNTIMES)/versions/python2.7.16/bin:$(PATH) make develop basictest
+	CPPFLAGS="-Ideps/libev -Ideps/c-ares -Ideps/libuv/include" LDFLAGS="-Ldeps/libev/.libs -Ldeps/c-ares/.libs -Ldeps/libuv/.libs" LD_LIBRARY_PATH="$(PWD)/deps/libev/.libs:$(PWD)/deps/c-ares/.libs:$(PWD)/deps/libuv/.libs" EMBED=0 PYTHON=python2.7.16 PATH=$(BUILD_RUNTIMES)/versions/python2.7.16/bin:$(PATH) make develop alltest cffibackendtest
