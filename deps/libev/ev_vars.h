@@ -195,8 +195,8 @@ VARx(unsigned int, loop_depth) /* #ev_run enters - #ev_run leaves */
 
 VARx(void *, userdata)
 /* C++ doesn't support the ev_loop_callback typedef here. stinks. */
-VAR (release_cb, void (*release_cb)(EV_P) EV_THROW)
-VAR (acquire_cb, void (*acquire_cb)(EV_P) EV_THROW)
+VAR (release_cb, void (*release_cb)(EV_P) EV_NOEXCEPT)
+VAR (acquire_cb, void (*acquire_cb)(EV_P) EV_NOEXCEPT)
 VAR (invoke_cb , ev_loop_callback invoke_cb)
 #endif
 

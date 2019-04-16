@@ -26,6 +26,9 @@
 
 - Upgrade libuv from 1.24.0 to 1.27.0.
 
+- Upgrade libev from 4.23 to 4.25 and update its embedded
+  ``config.guess`` to the latest.
+
 - dnspython >= 1.16.0 is now required for the dnspython resolver.
 
 - Python 3.7 subprocess: Copy a ``STARTUPINFO`` passed as a parameter.
