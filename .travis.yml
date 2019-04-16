@@ -18,11 +18,11 @@ env:
     matrix:
       # These are ordered to get as much diversity in the
       # first group of parallel runs (4) as possible
+      - TASK=test-py27-noembed
       - TASK=test-py37
       - TASK=test-py27
       - TASK=test-pypy
       - TASK=test-py36
-      - TASK=test-py27-noembed
       - TASK=test-pypy3
       - TASK=test-py35
 
