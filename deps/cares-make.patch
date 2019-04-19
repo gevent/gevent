@@ -1,15 +1,3 @@
-diff --git a/deps/README.rst b/deps/README.rst
-index 71302063..185e85b7 100644
---- a/deps/README.rst
-+++ b/deps/README.rst
-@@ -2,6 +2,7 @@
-  Managing Embedded Dependencies
- ================================
- 
-+* Generate patches with ``git diff --patch --minimal -b``
- 
- Updating libev
- ==============
 diff --git a/deps/c-ares/Makefile.in b/deps/c-ares/Makefile.in
 index 28d12c03..b6e9d95d 100644
 --- a/deps/c-ares/Makefile.in

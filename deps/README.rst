@@ -38,8 +38,9 @@ Updating c-ares
     cd deps/
     wget https://c-ares.haxx.se/download/c-ares-$CARES_VER.tar.gz
     tar -xf c-ares-$CARES_VER.tar.gz
-    rm -rf c-ares
+    rm -rf c-ares c-ares-$CARES_VER.tar.gz
     mv c-ares-$CARES_VER c-ares
+    cp c-ares/ares_build.h c-ares/ares_build.h.dist
     rm -f c-ares/*.3 c-ares/*.1
     rm -rf c-ares/test
     rm -rf c-ares/vc
