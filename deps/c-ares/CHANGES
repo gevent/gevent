@@ -1,5 +1,241 @@
    Changelog for the c-ares project. Generated with git2changes.pl
 
+Version 1.15.0 (23 Oct 2018)
+
+Brad House (23 Oct 2018)
+- last minute 1.15.0 addition
+
+- [Ben Noordhuis brought this change]
+
+  Report ARES_ENOTFOUND for .onion domain names as per RFC7686. (#228)
+  
+  Quoting RFC 7686:
+  
+      Name Resolution APIs and Libraries (...) MUST either respond
+      to requests for .onion names by resolving them according to
+      [tor-rendezvous] or by responding with NXDOMAIN.
+  
+      A legacy client may inadvertently attempt to resolve a .onion
+      name through the DNS. This causes a disclosure that the client
+      is attempting to use Tor to reach a specific service. Malicious
+      resolvers could be engineered to capture and record such leaks,
+      which might have very adverse consequences for the well-being
+      of the user.
+  
+  Bug: #196
+  Fix By: Ben Noordhuis @bnoordhuis
+
+- prepare for c-ares 1.15.0 release
+
+- AIX Build Fix
+  
+  AIX attempts to include both nameser_compat.h and onameser_compat.h.  It appears
+  the proper fix is to define _USE_IRS so that only nameser_compat.h is used.
+  
+  Bug: #224
+  Fix By: Brad House (@bradh352)
+
+- Fix crash in ares_dup() due to new ARES_OPT_RESOLVCONF
+  
+  ares_dup() calls ares_init_options() by making its own fake option
+  mask since the original mask isn't stored but ARES_OPT_RESOLVCONF
+  was always set, instead of conditionally set.  This caused a crash
+  because ares_strdup() isn't NULL-safe if no custom path was set.
+  
+  Made ares_dup() set ARES_OPT_RESOLVCONF conditionally.
+  
+  Fix By: Brad House (@bradh352)
+
+- [Sarat Addepalli brought this change]
+
+  Add ares_init_options() configurability for path to resolv.conf file
+  
+  Add resolvconf_path to end of struct ares_options with ARES_OPT_RESOLVCONF option
+  so on Unix-like systems a custom path can be specified.  If no path is specified,
+  /etc/resolv.conf is used like normal.
+  
+  Fix By: Sarat Addepalli @SirR4T
+  Fixes Bug: #220
+  Review By: Brad House @bradh352
+
+- remove stale variables
+
+- fix prototype name for ares_strsplit_free()
+
+- add missing prototype
+
+- simplify ares_strsplit() and create ares_strsplit_free() helper function
+
+- missing ares_strsplit.h from HHEADERS for inclusion in distribution
+
+- [Ruslan Baratov brought this change]
+
+  Add CARES_BUILD_TOOLS CMake option (#214)
+  
+  Add ability to exclude building of tools (adig, ahost, acountry) in CMake.  This should also close #200.
+  
+  Fix By: Ruslan Baratov (@ruslo)
+  Bug: #200
+
+- [flyingdutchman23 brought this change]
+
+  Style. Whitespace cleanup. (#213)
+  
+  Small whitespace cleanups.
+  
+  Fix By: @flyingdutchman23
+
+- [John Schember brought this change]
+
+  Android: Support for domain search suffix (#211)
+  
+  Fixes issue #207. Uses LinkProperties.getDomains() to get a list of search domains and adds them to the suffix list.  This also adds a new helper function to split strings into an array based on multiple delimiters replacing multiple other functions for dealing with string splitting.
+  
+  Submitter: John Schember (@user-none)
+  Fixes: #207
+  Approved-by: Brad House (@bradh352)
+
+- [afalin brought this change]
+
+  Improve DNS suffixes extracting from WinNT registry (#202)
+  
+  Join all global and connection specific suffix lists. Use 'HKLM\Software\Policies\Microsoft\Windows NT\DNSClient\SearchList', 'HKLM\System\CurrentControlSet\Services\Tcpip\Parameters\Domain' as global suffix lists.
+  
+  Fix By: @afalin
+
+- Be consistent with indention in CMakeLists.txt
+  
+  The imported TRANSFORM_MAKEFILE_INC function from curl used space indention
+  but the rest of the file used tabs.  Go ahead and make it tabs for
+  consistency as well.
+  
+  Committed By: Brad House
+
+- [flyingdutchman23 brought this change]
+
+  Fix modern gcc warning: argument to 'sizeof' in 'strncpy' call is the same expression as the source
+  
+  Silence warning about using src to determine number of bytes to copy.
+  In this case it doesn't matter whether it is `src` or `dest`. So there
+  is no functionality change.
+  
+  Bug: #210
+  Fix By: @flyingdutchman23
+
+- [Andi Schnebinger brought this change]
+
+  fix stringop-overflow warning of GCC (#201)
+  
+  When using a modern GCC to compile c-ares, there is a stringop-overflow warning.
+  This patch simply silences the false-positive warning, there is no actual code flaw.
+  
+  Bug: https://github.com/c-ares/c-ares/pull/201
+  Fixed By: Andi Schnebinger @Iniesta8
+
+GitHub (18 May 2018)
+- [David Drysdale brought this change]
+
+  travis: do coverage in "coverage" build (#195)
+  
+  Fixes #194, a mistake from commit a255081f2c3c ("travis: Only do
+  coverage/distcheck on normal build")
+
+Brad House (17 May 2018)
+- [Brad Spencer brought this change]
+
+  Apply the IPv6 server blacklist to all nameserver sources, not just Windows (#193)
+  
+  For #164, I mentioned that it seemed like the IPv6 nameserver blacklist should apply to all OSes. In a mailing list post, @bradh352 agreed and suggested that I file a PR to make it so.
+  
+  This moves the blacklist check from being Windows-specific to being a general feature of config_nameservers(), no matter the nameserver source. It also simplifies the ares_ipv6_server_blacklisted() implementation to not parse and re-parse the blacklisted IPv6 addresses from strings on every check. I think they're almost as easy to read as a sequence of hex bytes in an array initializer, and it's definitely less work on each trip through the code.
+  
+  Fix By: Brad Spencer @b-spencer
+  PR: https://github.com/c-ares/c-ares/pull/193
+
+- [Brad Spencer brought this change]
+
+  Fix warnings emitted by MSVC when using -W4 (#192)
+  
+  These changes fix a few warnings emitted by recent versions of MSVC when compiling with -W4. Half of the changes are in Windows-specific code, and the other half should be safe no matter the compiler or OS.
+  
+  The allocation function change is probably the only one that needs explanation. MSVC gives warnings about the function pointers not being stable across DLL boundaries or something to that effect, so for Windows, I've made them be called indirectly, which at least made the compiler happy. I can't say I've tested every linking combination on Windows with them before or after the change, but it seems harmless.
+  
+  Fix By: Brad Spencer @b-spencer
+  PR: https://github.com/c-ares/c-ares/pull/192
+
+- [David Hotham brought this change]
+
+  Prevent changing name servers while queries are outstanding (#191)
+  
+  Changing name servers doesn't work, per #41.  Better to return an error code than to crash.
+  
+  Fix-by: David Hotham @dimbleby
+
+David Drysdale (15 May 2018)
+- [Tobias Nießen brought this change]
+
+  Fix comment in ares_rules.h (#189)
+
+Brad House (6 May 2018)
+- [Brad Spencer brought this change]
+
+  Harden and rationalize c-ares timeout computation (#187)
+  
+  * Harden and rationalize c-ares timeout computation
+  * Remove the rand() part of the timeout calculation completely.
+  
+  When c-ares sends a DNS query, it computes the timeout for that request as follows:
+  
+  timeplus = channel->timeout << (query->try_count / channel->nservers);
+  timeplus = (timeplus * (9 + (rand () & 7))) / 16;
+  I see two issues with this code. Firstly, when either try_count or channel->timeout are large enough, this can end up as an illegal shift.
+  
+  Secondly, the algorithm for adding the random timeout (added in 2009) is surprising. The original commit that introduced this algorithm says it was done to avoid a "packet storm". But, the algorithm appears to only reduce the timeout by an amount proportional to the scaled timeout's magnitude. It isn't clear to me that, for example, cutting a 30 second timeout almost in half to roughly 17 seconds is appropriate. Even with the default timeout of 5000 ms, this algorithm computes values between 2812 ms and 5000 ms, which is enough to cause a slightly latent DNS response to get spuriously dropped.
+  
+  If preventing the timers from all expiring at the same time really is desirable, then it seems better to extend the timeout by a small factor so that the application gets at least the timeout it asked for, and maybe a little more. In my experience, this is common practice for timeouts: applications expect that a timeout will happen at or after the designated time (but not before), allowing for delay in detecting and reporting the timeout. Furthermore, it seems like the timeout shouldn't be extended by very much (we don't want a 30 second timeout changing into a 45 second timeout, either).
+  
+  Consider also the documentation of channel->timeout in ares_init_options():
+  
+  The number of milliseconds each name server is given to respond to a query on the first try. (After the first try, the timeout algorithm becomes more complicated, but scales linearly with the value of timeout.) The default is five seconds.
+  
+  In the current implementation, even the first try does not use the value that the user supplies; it will use anywhere between 56% and 100% of that value.
+  
+  The attached patch attempts to address all of these concerns without trying to make the algorithm much more sophisticated. After performing a safe shift, this patch simply adds a small random timeout to the computed value of between 0 ms and 511 ms. I could see limiting the random amount to be no greater than a proportion of the configured magnitude, but I can't see scaling the random with the overall computed timeout. As far as I understand, the goal is just to schedule retries "not at the same exact time", so a small difference seems sufficient.
+  
+  UPDATE: randomization removed.
+  
+  Closes PR #187
+  Fix by: Brad Spencer
+
+- distribute ares_android.h
+  
+  Distribute ares_android.h when a release distribution package is
+  created.
+  
+  Reported By: Andrey Khranovsky
+  Bug: https://c-ares.haxx.se/mail/c-ares-archive-2018-04/0000.shtml
+
+- ares_set_servers_csv() on failure should not leave channel in a bad state
+  
+  If bad data is passed to ares_set_servers_csv() or
+  ares_set_servers_ports_csv() it will clear the existing channel
+  configured DNS servers, then a call to ares_send() will fail due
+  to a bad malloc which may have undefined behavior.
+  
+  The fix now only clears existing servers on success.  An additional
+  sanity check was added in ares_send() to ensure nservers >= 1 or
+  will result in ARES_ESERVFAIL.
+  
+  Bug: https://c-ares.haxx.se/mail/c-ares-archive-2018-03/0000.shtml
+  Reported-by: Francisco Sedano Crippa
+
+- docs: Not all manpages are listed
+  
+  Some docs aren't installed or not showing up on
+  https://c-ares.haxx.se/docs.html
+  due to not being listed in Makefile.inc.  Add missing docs and
+  ensure docs are alphabetized.
+
 Version 1.14.0 (16 Feb 2018)
 
 Daniel Stenberg (16 Feb 2018)
@@ -4131,80 +4367,3 @@ Dan Fandrich (20 Nov 2008)
 Daniel Stenberg (20 Nov 2008)
 - use unsigned short better intead of mixing with ints to prevent compiler
   warnings
-
-- please the picky compilers by staying with short as the data we get is short
-  only
-
-- - Brad Spencer brought the new function ares_gethostbyname_file() which simply
-    resolves a host name from the given file, using the regular hosts syntax.
-
-Yang Tse (19 Nov 2008)
-- user provided PATH_SEPARATOR always overrides auto-detected one
-
-- attempting to keep lines below 80 chars
-
-- provide a common PATH_SEPARATOR check method which is required by
-  upcomming work to support the broadest range of Autoconf versions
-
-- check for gethostbyaddr and gethostbyname as it is done for other functions
-
-- Make configure script check if ioctl with the SIOCGIFADDR command can be
-  used, and define HAVE_IOCTL_SIOCGIFADDR if appropriate.
-
-- fix leftover from previous commit
-
-- fix inet_pton() runtime configure check
-
-- trim down configure script size
-
-Daniel Stenberg (15 Nov 2008)
-- Fixed an OOM condition reported by Jim Meyering
-
-Yang Tse (14 Nov 2008)
-- fix typo affecting inclusion of <arpa/inet.h> in configure
-  checks for inet_ntoa_r() inet_ntop() and inet_pton()
-
-- #include <string.h> in the getaddrinfo() runtime check for the memset() prototype
-
-- fix symbol definition check for fcntl.h inclusion
-
-- Refactor configure script detection of functions used to set sockets into
-  non-blocking mode, and decouple function detection from function capability.
-
-Daniel Stenberg (1 Nov 2008)
-- Added a TODO file to list things we want changed, added or fixed.
-
-- - Carlo Contavalli added support for the glibc "rotate" option, as documented
-    in man resolv.conf:
-  
-    causes round robin selection of nameservers from among those listed.  This
-    has the effect of spreading the query load among all listed servers, rather
-    than having all clients try the first listed server first every time.
-  
-    You can enable it with ARES_OPT_ROTATE
-
-Yang Tse (1 Nov 2008)
-- Adjust WIN32 freeaddrinfo, getaddrinfo and getnameinfo availability
-
-- WIN32 availability of freeaddrinfo, getaddrinfo and getnameinfo functions is quite
-  convoluted, compiler dependant and in some cases even build target dependat.
-
-- check for freeaddrinfo() at configuration phase
-
-- update aclocal file serial number
-
-- remove verification of the freeability of the addrinfo struct pointer members
-
-- fix comment
-
-- make CHECK_FUNC_GETADDRINFO_UNFREEABLE_AI_ADDR
-   and CHECK_FUNC_GETADDRINFO_UNFREEABLE_AI_CANONNAME
-  internal to CHECK_FUNC_GETADDRINFO
-
-- fix leftover
-
-- Initial attempt to detect at configuration time if the getaddrinfo()
-  function returns an addrinfo with an unfreeable ai_canonname member ptr.
-
-- Initial attempt to detect at configuration time if the getaddrinfo()
-  function returns an addrinfo with an unfreeable ai_addr member ptr.

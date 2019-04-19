@@ -2,6 +2,7 @@
  Managing Embedded Dependencies
 ================================
 
+* Generate patches with ``git diff --patch --minimal -b``
 
 Updating libev
 ==============
@@ -29,10 +30,27 @@ http://git.savannah.gnu.org/gitweb/?p=config.git;a=tree )
 Updating c-ares
 ===============
 
-- Modify the c-ares Makefile.in[c] to empty out the MANPAGES variables
-  so that we don't have to ship those in the sdist.
+- Download and clean up the c-ares Makefile.in[c] to empty out the
+  MANPAGES variables so that we don't have to ship those in the sdist::
 
-  XXX: We need a patch for that.
+    export CARES_VER=1.15.0
+
+    cd deps/
+    wget https://c-ares.haxx.se/download/c-ares-$CARES_VER.tar.gz
+    tar -xf c-ares-$CARES_VER.tar.gz
+    rm -rf c-ares
+    mv c-ares-$CARES_VER c-ares
+    rm -f c-ares/*.3 c-ares/*.1
+    rm -rf c-ares/test
+    rm -rf c-ares/vc
+    rm -f c-ares/maketgz
+    rm -f c-ares/CMakeLists.txt
+    rm -f c-ares/RELEASE-PROCEDURE.md
+    rm -f c-ares/*.cmake c-ares/*.cmake.in
+    git apply cares-make.patch
+
+  At this point there might be new files in libuv that need added to
+  git, evaluate them and add them.
 
 - Follow the same 'config.guess' and 'config.sub' steps as libev.
 
