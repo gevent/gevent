@@ -54,28 +54,46 @@ class Resolver(AbstractResolver):
     the threaded resolver). However, because it does not use threads,
     it may scale better for applications that make many lookups.
 
-    There are some known differences from the system resolver:
+    There are some known differences from the system resolver.
 
-    - ``gethostbyname_ex`` and ``gethostbyaddr`` may return different
-      for the ``aliaslist`` tuple member. (Sometimes the same,
-      sometimes in a different order, sometimes a different alias
-      altogether.)
-    - ``gethostbyname_ex`` may return the ``ipaddrlist`` in a different order.
+    - ``gethostbyname_ex`` and ``gethostbyaddr`` may return
+      different for the ``aliaslist`` tuple member. (Sometimes the
+      same, sometimes in a different order, sometimes a different
+      alias altogether.)
+
+    - ``gethostbyname_ex`` may return the ``ipaddrlist`` in a
+      different order.
+
     - ``getaddrinfo`` does not return ``SOCK_RAW`` results.
+
     - ``getaddrinfo`` may return results in a different order.
-    - Handling of ``.local`` (mDNS) names may be different, even if they are listed in
+
+    - Handling of ``.local`` (mDNS) names may be different, even
+      if they are listed in the hosts file.
+
+    - c-ares will not resolve ``broadcasthost``, even if listed in
       the hosts file.
-    - c-ares will not resolve ``broadcasthost``, even if listed in the hosts file.
-    - This implementation may raise ``gaierror(4)`` where the system implementation would raise
-      ``herror(1)``.
-    - The results for ``localhost`` may be different. In particular, some system
-      resolvers will return more results from ``getaddrinfo`` than c-ares does,
-      such as SOCK_DGRAM results, and c-ares may report more ips on a multi-homed
+
+    - This implementation may raise ``gaierror(4)`` where the
+      system implementation would raise ``herror(1)``.
+
+    - The results for ``localhost`` may be different. In
+      particular, some system resolvers will return more results
+      from ``getaddrinfo`` than c-ares does, such as SOCK_DGRAM
+      results, and c-ares may report more ips on a multi-homed
       host.
 
-    .. caution:: This module is considered extremely experimental on PyPy, and
-       due to its implementation in cython, it may be slower. It may also lead to
-       interpreter crashes.
+    .. caution::
+
+        This module is considered extremely experimental on PyPy, and
+        due to its implementation in cython, it may be slower. It may also lead to
+        interpreter crashes.
+
+    .. versionchanged:: 1.5.0
+       This version of gevent typically embeds c-ares 1.15.0 or newer. In
+       that version of c-ares, domains ending in ``.onion`` `are never
+       resolved <https://github.com/c-ares/c-ares/issues/196>`_ or even
+       sent to the DNS server.
 
     .. _c-ares: http://c-ares.haxx.se
     """
