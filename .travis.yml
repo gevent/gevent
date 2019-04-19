@@ -103,7 +103,9 @@ jobs:
         - &build-gevent-python time ./scripts/install.sh $TRAVIS_PYTHON_VERSION
         # Install gevent. Yes, this will create different files each time,
         # leading to a fresh cache. But because of CCache stats, we had already been doing
-        # that (before we learned about CCACHE_NOSTATS)
+        # that (before we learned about CCACHE_NOSTATS).
+        # We don't install using the requirements file for speed (reduced deps) and because an editable
+        # install doesn't work in the cache.
         # First, the build dependencies (see setup.cfg)
         # so that we don't have to use build isolation and can better use the cache;
         # Note that we can't use -U for cffi and greenlet on PyPy.
@@ -150,6 +152,8 @@ jobs:
     # We only need to do this on one version, and it should be Python 3, because
     # pylint has stopped updating for Python 2.
     - stage: test
+      # We need pylint, since above we're not installing a requirements file
+      install: pip install pylint
       script: python -m pylint --rcfile=.pylintrc gevent
       env: TRAVIS_PYTHON_VERSION=3.7
       name: lint37

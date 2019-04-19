@@ -49,9 +49,10 @@ omit =
     src/gevent/_tblib.py
 
 [paths]
-# Attempt to combine source and
-# paths from the Travis CI installs so they all
-# get collapsed during combining.
+# Combine source and paths from the Travis CI installs so they all get
+# collapsed during combining. Otherwise, coveralls.io reports
+# many different files (/lib/pythonX.Y/site-packages/gevent/...) and we don't
+# get a good aggregate number.
 source =
      src/
      */lib/*/site-packages/
