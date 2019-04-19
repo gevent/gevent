@@ -53,6 +53,11 @@ Updating c-ares
   At this point there might be new files in libuv that need added to
   git, evaluate them and add them.
 
+- Evaluate whether the release has
+  https://github.com/c-ares/c-ares/issues/246 fixed. If not, ``git
+  apply cares-win32.patch``. If so, then delete that file and this
+  part of the instructions.
+
 - Follow the same 'config.guess' and 'config.sub' steps as libev.
 
 

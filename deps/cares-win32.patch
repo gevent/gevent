@@ -1,0 +1,26 @@
+diff --git a/deps/c-ares/ares_gethostbyname.c b/deps/c-ares/ares_gethostbyname.c
+index 8187746b..fb73826b 100644
+--- a/deps/c-ares/ares_gethostbyname.c
++++ b/deps/c-ares/ares_gethostbyname.c
+@@ -346,10 +346,6 @@ static int file_lookup(const char *name, int family, struct hostent **host)
+   int status;
+   int error;
+ 
+-  /* Per RFC 7686, reject queries for ".onion" domain names with NXDOMAIN. */
+-  if (ares__is_onion_domain(name))
+-    return ARES_ENOTFOUND;
+-
+ #ifdef WIN32
+   char PATH_HOSTS[MAX_PATH];
+   win_platform platform;
+@@ -387,6 +383,10 @@ static int file_lookup(const char *name, int family, struct hostent **host)
+     return ARES_ENOTFOUND;
+ #endif
+ 
++  /* Per RFC 7686, reject queries for ".onion" domain names with NXDOMAIN. */
++  if (ares__is_onion_domain(name))
++    return ARES_ENOTFOUND;
++
+   fp = fopen(PATH_HOSTS, "r");
+   if (!fp)
+     {

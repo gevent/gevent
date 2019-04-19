@@ -346,10 +346,6 @@ static int file_lookup(const char *name, int family, struct hostent **host)
   int status;
   int error;
 
-  /* Per RFC 7686, reject queries for ".onion" domain names with NXDOMAIN. */
-  if (ares__is_onion_domain(name))
-    return ARES_ENOTFOUND;
-
 #ifdef WIN32
   char PATH_HOSTS[MAX_PATH];
   win_platform platform;
@@ -386,6 +382,10 @@ static int file_lookup(const char *name, int family, struct hostent **host)
   if (!PATH_HOSTS)
     return ARES_ENOTFOUND;
 #endif
+
+  /* Per RFC 7686, reject queries for ".onion" domain names with NXDOMAIN. */
+  if (ares__is_onion_domain(name))
+    return ARES_ENOTFOUND;
 
   fp = fopen(PATH_HOSTS, "r");
   if (!fp)
