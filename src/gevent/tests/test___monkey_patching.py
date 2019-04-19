@@ -106,7 +106,7 @@ def TESTRUNNER(tests=None):
 
 def main():
     from gevent.testing import testrunner
-    return testrunner.run_many(list(TESTRUNNER(sys.argv[1:])))
+    return testrunner.Runner(list(TESTRUNNER(sys.argv[1:])))()
 
 
 if __name__ == '__main__':

@@ -91,8 +91,3 @@ deps/libuv/.libs
 deps/libuv/*.lo
 deps/libuv/*.la
 deps/libuv/*.o
-
-
-# running setup.py on PyPy
-config.h
-configure-output.txt

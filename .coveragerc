@@ -9,20 +9,20 @@ parallel = True
 source = gevent
 omit =
     # This is for <= 2.7.8, which we don't test
-    src/gevent/_ssl2.py
-    src/gevent/libev/_corecffi_build.py
-    src/gevent/libuv/_corecffi_build.py
-    src/gevent/win32util.py
+    */gevent/_ssl2.py
+    */gevent/libev/_corecffi_build.py
+    */gevent/libuv/_corecffi_build.py
+    */gevent/win32util.py
     # having concurrency=greenlet means that the Queue class
     # which is used from multiple real threads doesn't
     # properly get covered.
-    src/gevent/_threading.py
+    */gevent/_threading.py
     # local.so sometimes gets included, and it can't be parsed
     # as source, so it fails the whole process.
     *.so
-    src/gevent/libev/*.so
-    src/gevent/libuv/*.so
-    src/gevent/resolver/*.so
+    */gevent/libev/*.so
+    */gevent/libuv/*.so
+    */gevent/resolver/*.so
 
 
 [report]
@@ -47,3 +47,17 @@ omit =
     /tmp/test_*
     # Third-party vendored code
     src/gevent/_tblib.py
+
+[paths]
+# Combine source and paths from the Travis CI installs so they all get
+# collapsed during combining. Otherwise, coveralls.io reports
+# many different files (/lib/pythonX.Y/site-packages/gevent/...) and we don't
+# get a good aggregate number.
+source =
+     src/
+     */lib/*/site-packages/
+     */pypy*/site-packages/
+
+# Local Variables:
+# mode: conf
+# End:
