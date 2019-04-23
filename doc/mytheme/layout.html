@@ -105,10 +105,17 @@
       {%- endif %}{% endif %}
 {%- endmacro %}
 
+{%- macro script() %}
+    <script type="text/javascript" id="documentation_options" data-url_root="{{ pathto('', 1) }}" src="{{ pathto('_static/documentation_options.js', 1) }}"></script>
+    {%- for js in script_files %}
+    {{ js_tag(js) }}
+    {%- endfor %}
+{%- endmacro %}
+
 <html xmlns="http://www.w3.org/1999/xhtml" dir="ltr">
 
 <head>
-	<meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
     {{ metatags }}
     {%- if not embedded and docstitle %}
       {%- set titlesuffix = " &mdash; "|safe + docstitle|e %}
@@ -119,28 +126,17 @@
     <link rel="stylesheet" href="{{ pathto('_static/' + style, 1) }}" type="text/css" />
     <link rel="stylesheet" href="{{ pathto('_static/pygments.css', 1) }}" type="text/css" />
     {%- if not embedded %}
-{#    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '{{ url_root }}',
-        VERSION:     '{{ release|e }}',
-        COLLAPSE_MODINDEX: false,
-        FILE_SUFFIX: '{{ file_suffix }}',
-        HAS_SOURCE:  {{ has_source|lower }}
-      };
-  </script>
-    {%- for scriptfile in script_files %}
-    <script type="text/javascript" src="{{ pathto(scriptfile, 1) }}"></script>
-    {%- endfor %}
-    {%- if use_opensearch %}
-    <link rel="search" type="application/opensearchdescription+xml"
-          title="{% trans docstitle=docstitle|e %}Search within {{ docstitle }}{% endtrans %}"
-          href="{{ pathto('_static/opensearch.xml', 1) }}"/>
-    {%- endif %}     #}
-    {%- if favicon %}
-    <link rel="shortcut icon" href="{{ pathto('_static/' + favicon, 1) }}"/>
+
+        {%- block scripts %}
+        {{- script() }}
+        {%- endblock %}
+
+        {%- if favicon %}
+        <link rel="shortcut icon" href="{{ pathto('_static/' + favicon, 1) }}"/>
+        {%- endif %}
     {%- endif %}
-    {%- endif %}
-{%- block linktags %}
+
+    {%- block linktags %}
     {%- if hasdoc('about') %}
     <link rel="author" title="{{ _('About these documents') }}" href="{{ pathto('about') }}" />
     {%- endif %}
@@ -163,7 +159,7 @@
     {%- if prev %}
     <link rel="prev" title="{{ prev.title|striptags }}" href="{{ prev.link|e }}" />
     {%- endif %}
-{%- endblock %}
+    {%- endblock %}
 {%- block extrahead %} {% endblock %}
   </head>
 
@@ -232,7 +228,7 @@
 
 		<div class="left" id="footer-left">
 
-            <p>version {{theme_gevent_version}} <a href="http://denisbilenko.com" class="quiet-link">&copy; 2009-2018 Denis Bilenko, gevent contributors</a></p>
+            <p>version {{theme_gevent_version}} <a href="http://denisbilenko.com" class="quiet-link">&copy; 2009-2019 Denis Bilenko, gevent contributors</a></p>
 
 			<div class="clearer">&nbsp;</div>
 

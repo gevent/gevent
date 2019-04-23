@@ -28,6 +28,10 @@ sys.path.append(os.path.dirname(__file__))  # for mysphinxext
 
 # -- General configuration -----------------------------------------------------
 
+# 1.8 was the last version that runs on Python 2; 2.0+ requires Python 3.
+# `autodoc_default_options` was new in 1.8
+needs_sphinx = "1.8"
+
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
@@ -53,7 +57,13 @@ extlinks = {'issue': ('https://github.com/gevent/gevent/issues/%s',
             'pr': ('https://github.com/gevent/gevent/pull/%s',
                    'pull request #')}
 
-autodoc_default_flags = ['members', 'show-inheritance']
+# Sphinx 1.8+ prefers this to `autodoc_default_flags`. It's documented that
+# either True or None mean the same thing as just setting the flag, but
+# only None works in 1.8 (True works in 2.0)
+autodoc_default_options = {
+    'members': None,
+    'show-inheritance': None,
+}
 autodoc_member_order = 'groupwise'
 autoclass_content = 'both'
 
@@ -71,7 +81,7 @@ master_doc = 'contents'
 
 # General information about the project.
 project = u'gevent'
-copyright = u'2009-2018, gevent contributors'
+copyright = u'2009-2019, gevent contributors'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
