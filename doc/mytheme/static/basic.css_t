@@ -1030,7 +1030,10 @@ p.rubric {
     font-weight: bold;
 }
 
-
+/* Remove RTD cruft */
+body > div.injected {
+    display: none;
+}
 
 /*
 
