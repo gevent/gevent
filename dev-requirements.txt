@@ -15,4 +15,4 @@ cffi >= 1.12.2 ; platform_python_implementation == 'CPython'
 # benchmarks use this
 perf >= 1.6.0
 
--e .[test,events,dnspython,doc]
+-e .[test,events,dnspython,docs]

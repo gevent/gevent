@@ -307,11 +307,11 @@ if ((len(sys.argv) >= 2
 
 def make_long_description():
     readme = read('README.rst')
-    about = read('doc', '_about.rst')
-    install = read('doc', 'install.rst')
-    readme = readme.replace('.. include:: doc/_about.rst',
+    about = read('docs', '_about.rst')
+    install = read('docs', 'install.rst')
+    readme = readme.replace('.. include:: docs/_about.rst',
                             about)
-    readme = readme.replace('.. include:: doc/install.rst',
+    readme = readme.replace('.. include:: docs/install.rst',
                             install)
 
     return readme
@@ -374,7 +374,7 @@ def run_setup(ext_modules, run_make):
                 'zope.event',
                 'zope.interface',
             ],
-            'doc': [
+            'docs': [
                 'repoze.sphinx.autointerface',
             ],
             'test': [

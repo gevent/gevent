@@ -39,8 +39,8 @@ MANIFEST
 htmlcov/
 .coverage
 
-doc/_build
-doc/__pycache__
+docs/_build
+docs/__pycache__
 
 # Artifacts of configuring in place
 deps/c-ares/config.log
