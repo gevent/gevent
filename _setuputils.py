@@ -283,7 +283,7 @@ class GeventClean(clean):
                 # Built wheels from manylinux
                 'wheelhouse',
                 # Doc build
-                os.path.join('.', 'doc', '_build'),
+                os.path.join('.', 'docs', '_build'),
             ]
         dir_finders = [
             # All python cache dirs

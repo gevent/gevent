@@ -11,7 +11,7 @@
 .. image:: https://coveralls.io/repos/gevent/gevent/badge.svg?branch=master&service=github
    :target: https://coveralls.io/github/gevent/gevent?branch=master
 
-.. include:: doc/_about.rst
+.. include:: docs/_about.rst
 
 Read the documentation online at http://www.gevent.org.
 
@@ -19,7 +19,7 @@ Post feedback and issues on the `bug tracker`_, `mailing list`_, blog_
 and `twitter (@gevent)`_.
 
 
-.. include:: doc/install.rst
+.. include:: docs/install.rst
 
 .. _bug tracker: https://github.com/gevent/gevent/wiki/Projects
 .. _mailing list: http://groups.google.com/group/gevent

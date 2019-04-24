@@ -1,7 +1,7 @@
 recursive-include src/greentest *
 recursive-include examples *
 recursive-include src/gevent *
-recursive-include doc *
+recursive-include docs *
 recursive-include deps *
 recursive-include util *
 
@@ -20,6 +20,8 @@ include *.txt
 include _setup*.py
 include CHANGES.rst
 include pyproject.toml
+include .coveragerc
+include .coveragerc-pypy
 
 include tox.ini
 include .pep8
@@ -43,7 +45,7 @@ global-exclude *.o
 global-exclude *.lo
 global-exclude *.la
 global-exclude config.log config.status
-prune doc/_build
+prune docs/_build
 global-exclude *.pyc
 recursive-exclude src/greentest .coverage
 prune src/greentest/htmlcov
@@ -54,17 +56,17 @@ recursive-exclude deps/libev Makefile libtool stamp-h? config.h
 # This is the output of _corecffi_build.py and may be particular
 # to each CFFI version/platform
 recursive-exclude src/gevent _corecffi.c
-# See comments in Makefile; this is renamed to Makefile.ext
-# this exclude keeps check-manifest from complaining
-exclude Makefile
 exclude configure-output
 exclude configure-output.txt
 exclude deps/TAGS
+
 exclude deps/c-ares/ares_build.h
 exclude deps/c-ares/ares_config.h
 exclude deps/c-ares/libcares.pc
 exclude deps/c-ares/libtool
-include Makefile.ext
+exclude deps/c-ares/Makefile
+
+
 recursive-exclude deps/c-ares .deps .libs
 recursive-exclude deps/libuv .deps .libs
 recursive-exclude deps/libev .deps .libs

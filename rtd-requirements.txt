@@ -1,2 +1,0 @@
-cython >= 0.28.1
-repoze.sphinx.autointerface
