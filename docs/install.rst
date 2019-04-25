@@ -163,6 +163,12 @@ To hack on gevent (using a virtualenv)::
    prerequisites (CFFI, Cython), but having a working C compiler that
    can create Python extensions is up to you.
 
+.. warning::
+
+   This pip command does not work with pip 19.1. Either use pip 19.0
+   or below, or use pip 19.1.1 with ``--no-use-pep517``. See `issue
+   1412 <https://github.com/gevent/gevent/issues/1412>`_.
+
 
 Running Tests
 -------------
