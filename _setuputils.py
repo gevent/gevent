@@ -83,7 +83,6 @@ def _parse_environ(key):
                      'Please set it to 1, 0 or an empty string' % (key, value))
 
 IGNORE_CFFI = _parse_environ("GEVENT_NO_CFFI_BUILD")
-SKIP_LIBUV = _parse_environ('GEVENT_NO_LIBUV_BUILD')
 
 def _get_config_value(key, defkey, path=None):
     """

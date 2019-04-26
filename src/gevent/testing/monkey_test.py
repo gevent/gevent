@@ -21,12 +21,7 @@ monkey.patch_all(**kwargs)
 from .sysinfo import RUNNING_ON_APPVEYOR
 from .sysinfo import PY37
 from .patched_tests_setup import disable_tests_in_source
-try:
-    from test import support
-except ImportError:
-    from test import test_support as support
-support.is_resource_enabled = lambda *args: True
-del support.use_resources
+
 if RUNNING_ON_APPVEYOR and PY37:
     # 3.7 added a stricter mode for thread cleanup.
     # It appears to be unstable on Windows (at least appveyor)

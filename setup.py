@@ -18,7 +18,6 @@ from _setuputils import read_version
 from _setuputils import system
 from _setuputils import PYPY, WIN
 from _setuputils import IGNORE_CFFI
-from _setuputils import SKIP_LIBUV
 from _setuputils import ConfiguringBuildExt
 from _setuputils import GeventClean
 from _setuputils import BuildFailed
@@ -193,10 +192,7 @@ if not WIN:
         LIBEV_CFFI_MODULE
     )
 
-if not SKIP_LIBUV:
-    # libuv can't be built on manylinux1 because it needs glibc >= 2.12
-    # but manylinux1 has only 2.5, so we set SKIP_LIBUV in the script make-manylinux
-    cffi_modules.append(LIBUV_CFFI_MODULE)
+cffi_modules.append(LIBUV_CFFI_MODULE)
 
 greenlet_requires = [
     # We need to watch our greenlet version fairly carefully,
