@@ -22,11 +22,12 @@ A re-export of the support module from Python's test package, with some
 version compatibility shims and overrides.
 """
 
-
 import sys
 
 # Proxy through, so that changes to this module reflect in the
 # real module too. In 3.7, this is natively supported.
+# This breaks static analysis (pylint), so we configure pylint
+# to ignore this module.
 
 class _Default(object):
     # A descriptor-like object that will
@@ -84,5 +85,6 @@ class _ModuleProxy(object):
 
 # When is this not defined in test.support?
 HOSTv6 = _Default('::1')
+
 
 sys.modules[__name__] = _ModuleProxy()
