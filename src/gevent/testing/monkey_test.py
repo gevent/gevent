@@ -21,12 +21,16 @@ monkey.patch_all(**kwargs)
 from .sysinfo import RUNNING_ON_APPVEYOR
 from .sysinfo import PY37
 from .patched_tests_setup import disable_tests_in_source
+from . import support
 
 if RUNNING_ON_APPVEYOR and PY37:
     # 3.7 added a stricter mode for thread cleanup.
     # It appears to be unstable on Windows (at least appveyor)
     # and test_socket.py constantly fails with an extra thread
     # on some random test. We disable it entirely.
+    # XXX: Figure out how to make a *definition* in ./support.py actually
+    # override the original in test.support, without having to
+    # manually set it
     import contextlib
     @contextlib.contextmanager
     def wait_threads_exit(timeout=None): # pylint:disable=unused-argument
