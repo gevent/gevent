@@ -22,6 +22,7 @@ from .sysinfo import RUNNING_ON_APPVEYOR
 from .sysinfo import PY37
 from .patched_tests_setup import disable_tests_in_source
 from . import support
+from . import resources
 
 if RUNNING_ON_APPVEYOR and PY37:
     # 3.7 added a stricter mode for thread cleanup.
@@ -37,6 +38,8 @@ if RUNNING_ON_APPVEYOR and PY37:
         yield
     support.wait_threads_exit = wait_threads_exit
 
+# Configure allowed resources
+resources.setup_resources()
 
 __file__ = os.path.join(os.getcwd(), test_filename)
 

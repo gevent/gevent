@@ -407,14 +407,14 @@ def report(total, failed, passed, exit=True, took=None,
         if failed_unexpected:
             util.log('\n%s/%s unexpected failures', len(failed_unexpected), total, color='error')
             print_list(failed_unexpected)
-    else:
-        util.log(
-            '\nRan %s tests%s in %s files%s',
-            total_cases,
-            util._colorize('skipped', " (skipped=%d)" % total_skipped) if total_skipped else '',
-            total,
-            took,
-        )
+
+    util.log(
+        '\nRan %s tests%s in %s files%s',
+        total_cases,
+        util._colorize('skipped', " (skipped=%d)" % total_skipped) if total_skipped else '',
+        total,
+        took,
+    )
 
     if exit:
         if failed_unexpected:
