@@ -23,6 +23,7 @@ from .sysinfo import PY37
 from .patched_tests_setup import disable_tests_in_source
 from . import support
 from . import resources
+from . import SkipTest
 
 if RUNNING_ON_APPVEYOR and PY37:
     # 3.7 added a stricter mode for thread cleanup.
@@ -73,5 +74,14 @@ try:
                           'exec',
                           dont_inherit=True)
     exec(module_code, globals())
+except SkipTest as e:
+    # Some tests can raise test.support.ResourceDenied
+    # in their main method before the testrunner takes over.
+    # That's a kind of SkipTest. we can't get  a skip count because it
+    # hasn't run, though.
+    print(e)
+    # Match the regular unittest output, including ending with skipped
+    print("Ran 0 tests in 0.0s")
+    print('OK (skipped=0)')
 finally:
     os.remove(temp_path)

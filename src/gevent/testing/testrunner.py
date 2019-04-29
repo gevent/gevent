@@ -97,6 +97,11 @@ class Runner(object):
                  failfast=False,
                  quiet=False,
                  configured_run_alone_tests=()):
+        """
+        :keyword quiet: Set to True or False to explicitly choose. Set to
+            `None` to use the default, which may come from the environment variable
+            ``GEVENTTEST_QUIET``.
+        """
         self._tests = tests
         self._configured_failing_tests = configured_failing_tests
         self._failfast = failfast
@@ -110,7 +115,8 @@ class Runner(object):
         self._worker_count = min(len(tests), NWORKERS) or 1
 
     def _run_one(self, cmd, **kwargs):
-        kwargs['quiet'] = self._quiet
+        if self._quiet is not None:
+            kwargs['quiet'] = self._quiet
         result = util.run(cmd, **kwargs)
         if not result and self._failfast:
             sys.exit(1)
