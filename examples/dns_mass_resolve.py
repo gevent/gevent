@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# gevent-test-requires-resource: network
 """Resolve hostnames concurrently, exit after 2 seconds.
 
 Under the hood, this might use an asynchronous resolver based on

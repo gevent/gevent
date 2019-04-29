@@ -2,6 +2,7 @@
 
 [1] http://pypi.python.org/pypi/py-sendfile/
 """
+# gevent-test-requires-resource: sendfile
 # pylint:disable=import-error
 from errno import EAGAIN
 from sendfile import sendfile as original_sendfile

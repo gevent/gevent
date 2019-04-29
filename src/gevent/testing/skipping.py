@@ -172,16 +172,11 @@ def skipWithoutResource(resource, reason=''):
     else:
         reason = reason + ' (' + requires + ')'
 
-
     # Defer until runtime; resources are established as part
     # of test startup.
     def predicate(): # This is easily cached if needed
-        from . import support
-        if not support.gevent_has_setup_resources:
-            # In this case, nothing to do but pull from the environment
-            from . import resources
-            resources.setup_resources()
-        return support.is_resource_enabled(resource)
+        from . import resources
+        return resources.ensure_setup_resources().is_resource_enabled(resource)
 
     return _make_runtime_skip_decorator(reason, predicate)
 

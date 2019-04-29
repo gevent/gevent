@@ -1,3 +1,16 @@
+"""
+Test the contents of the ``examples/`` directory.
+
+If an existing test in *this* directory named ``test__example_<fn>.py`` exists,
+where ``<fn>`` is the base filename of an example file, it will not be tested
+here.
+
+Examples can specify that they need particular test resources to be enabled
+by commenting (one per line) ``# gevent-test-requires-resource: <resource>``;
+most commonly the resource will be ``network``. You can use this technique to specify
+non-existant resources for things that should never be tested.
+"""
+import re
 import sys
 import os
 import glob
@@ -9,23 +22,17 @@ from gevent.testing import util
 
 this_dir = os.path.dirname(__file__)
 
-# XXX: Review these, check those that use external network resources
-# and exclude if that resource is disabled.
-
 def _find_files_to_ignore():
     old_dir = os.getcwd()
     try:
         os.chdir(this_dir)
 
+        # These three are all tested with test___example_servers.
+        # TODO: Refactor those to regular test__example_*foo* files.
         result = [
             'wsgiserver.py',
             'wsgiserver_ssl.py',
             'webproxy.py',
-            'webpy.py',
-            'unixsocket_server.py',
-            'unixsocket_client.py',
-            'psycopg2_pool.py',
-            'geventsendfile.py',
         ]
         if greentest.PYPY and greentest.RUNNING_ON_APPVEYOR:
             # For some reason on Windows with PyPy, this times out,
@@ -48,7 +55,21 @@ class _AbstractTestMixin(util.ExampleMixin):
     time_range = (2, 4)
     filename = None
 
+    def _check_resources(self):
+        from gevent.testing import resources
+
+        with open(os.path.join(self.cwd, self.filename), 'r') as f:
+            contents = f.read()
+
+        pattern = re.compile('^# gevent-test-requires-resource: (.*)$', re.MULTILINE)
+        resources_needed = re.finditer(pattern, contents)
+        for match in resources_needed:
+            needed = contents[match.start(1):match.end(1)]
+            resources.skip_without_resource(needed)
+
     def test_runs(self):
+        self._check_resources()
+
         start = time.time()
         min_time, max_time = self.time_range
         if not util.run([sys.executable, '-u', self.filename],
@@ -76,6 +97,7 @@ def _build_test_classes():
         bn = os.path.basename(filename)
         if bn in ignore:
             continue
+
         tc = type(
             'Test_' + bn,
             (_AbstractTestMixin, greentest.TestCase),

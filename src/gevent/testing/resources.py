@@ -171,6 +171,15 @@ def setup_resources(resources=None):
 
     return resources
 
+def ensure_setup_resources():
+    # Call when you don't know if resources have been setup and you want to
+    # get the environment variable if needed.
+    # Returns an object with `is_resource_enabled`.
+    from . import support
+    if not support.gevent_has_setup_resources:
+        setup_resources()
+
+    return support
 
 def exit_without_resource(resource):
     """
@@ -178,15 +187,22 @@ def exit_without_resource(resource):
 
     Exits with a status of 0 if the resource isn't enabled.
     """
-    from . import support
-    if not support.gevent_has_setup_resources:
-        setup_resources()
 
-    if not support.is_resource_enabled(resource):
+    if not ensure_setup_resources().is_resource_enabled(resource):
         print("Skipped: %r not enabled" % (resource,))
         import sys
         sys.exit(0)
 
+def skip_without_resource(resource, reason=''):
+    requires = 'Requires resource %r' % (resource,)
+    if not reason:
+        reason = requires
+    else:
+        reason = reason + ' (' + requires + ')'
+
+    if not ensure_setup_resources().is_resource_enabled(resource):
+        import unittest
+        raise unittest.SkipTest(reason)
 
 if __name__ == '__main__':
     print(setup_resources())
