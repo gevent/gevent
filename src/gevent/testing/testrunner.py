@@ -14,7 +14,7 @@ from multiprocessing import cpu_count
 from . import util
 from .resources import parse_resources
 from .resources import setup_resources
-from .resources import get_ALL_RESOURCES
+from .resources import unparse_resources
 from .sysinfo import RUNNING_ON_CI
 from .sysinfo import PYPY
 from .sysinfo import PY2
@@ -522,15 +522,8 @@ def main():
 
     options.use = list(set(options.use))
     # Whether or not it came from the environment, put it in the
-    # environment now. 'none' must be special cased because an empty
-    # option string means 'all'. Still, we're explicit about that.
-    if set(options.use) == set(get_ALL_RESOURCES()):
-        option_str = 'all'
-    elif options.use:
-        option_str = ','.join(options.use)
-    else:
-        option_str = 'none'
-    os.environ['GEVENTTEST_USE_RESOURCES'] = option_str
+    # environment now.
+    os.environ['GEVENTTEST_USE_RESOURCES'] = unparse_resources(options.use)
     setup_resources(options.use)
 
 

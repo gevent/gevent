@@ -486,6 +486,7 @@ class SanitizedHostsFile(HostsFile):
                 continue
             yield name, addr
 
+
 @greentest.skipIf(greentest.RUNNING_ON_CI,
                   "This sometimes randomly fails on Travis with ares and on appveyor, beginning Feb 13, 2018")
 # Probably due to round-robin DNS,

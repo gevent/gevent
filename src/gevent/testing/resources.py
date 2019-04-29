@@ -121,9 +121,38 @@ def parse_resources(resource_str=None):
             if requested_resource[1:] in resources:
                 resources.remove(requested_resource[1:])
         else:
+            # TODO: Produce a warning if it's an unknown resource?
             resources.append(requested_resource)
 
     return resources
+
+def unparse_resources(resources):
+    """
+    Given a list of enabled resources, produce the correct environment variable
+    setting to enable (only) that list.
+    """
+    # By default, we assume all resources are enabled, so explicitly
+    # listing them here doesn't actually disable anything. To do that, we want to
+    # list the ones that are disabled. This is usually shorter than starting with
+    # 'none', and manually adding them back in one by one.
+    #
+    # 'none' must be special cased because an empty option string
+    # means 'all'. Still, we're explicit about that.
+    #
+    # TODO: Make this produce the minimal output; sometimes 'none' and
+    # adding would be shorter.
+
+    all_resources = set(get_ALL_RESOURCES())
+    enabled = set(resources)
+
+    if enabled == all_resources:
+        result = 'all'
+    elif resources:
+        explicitly_disabled = all_resources - enabled
+        result = ''.join(sorted('-' + x for x in explicitly_disabled))
+    else:
+        result = 'none'
+    return result
 
 
 def setup_resources(resources=None):
