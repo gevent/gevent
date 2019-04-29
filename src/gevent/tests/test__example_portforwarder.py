@@ -1,7 +1,7 @@
 from __future__ import print_function, absolute_import
 from gevent import monkey; monkey.patch_all(subprocess=True)
 import signal
-import sys
+
 import socket
 from time import sleep
 

@@ -39,9 +39,6 @@ if sys.platform == 'win32':
     # other Windows-related issues (need investigating)
     FAILING_TESTS += [
         'FLAKY test__greenletset.py',
-        # This has been seen to fail on Py3 and Py2 due to socket reuse
-        # errors, probably timing related again.
-        'FLAKY test___example_servers.py',
     ]
 
     if APPVEYOR:
@@ -344,9 +341,14 @@ TEST_FILE_OPTIONS = {
 
 
 # tests that don't do well when run on busy box
+# or that are mutually exclusive
 RUN_ALONE = [
     'test__threadpool.py',
-    'test__examples.py',
+    # These share the same port, which means they can conflict
+    # between concurrent test runs too
+    # XXX: Fix this by dynamically picking a port.
+    'test__example_wsgiserver.py',
+    'test__example_webproxy.py',
 ]
 
 

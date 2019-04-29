@@ -27,19 +27,11 @@ def _find_files_to_ignore():
     try:
         os.chdir(this_dir)
 
-        # These three are all tested with test___example_servers.
-        # TODO: Refactor those to regular test__example_*foo* files.
-        result = [
-            'wsgiserver.py',
-            'wsgiserver_ssl.py',
-            'webproxy.py',
-        ]
+        result = [x[14:] for x in glob.glob('test__example_*.py')]
         if greentest.PYPY and greentest.RUNNING_ON_APPVEYOR:
             # For some reason on Windows with PyPy, this times out,
             # when it should be very fast.
             result.append("processes.py")
-        result += [x[14:] for x in glob.glob('test__example_*.py')]
-
     finally:
         os.chdir(old_dir)
 

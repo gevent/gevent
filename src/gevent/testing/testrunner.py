@@ -522,11 +522,9 @@ def main():
     options = parser.parse_args()
     # options.use will be either None for not given, or a list
     # of the last specified -u argument.
-    if options.use is None:
-        # The default, which we'll take from the environment, if set.
-        options.use = parse_resources()
+    # If not given, use the default, which we'll take from the environment, if set.
+    options.use = list(set(parse_resources() if options.use is None else options.use))
 
-    options.use = list(set(options.use))
     # Whether or not it came from the environment, put it in the
     # environment now.
     os.environ['GEVENTTEST_USE_RESOURCES'] = unparse_resources(options.use)
