@@ -37,15 +37,14 @@ def _find_files_to_ignore():
 
     return result
 
-default_time_range = (2, 4)
+default_time_range = (2, 10)
 time_ranges = {
     'concurrent_download.py': (0, 30),
-    'dns_mass_resolve.py': (2, 10),
-    'processes.py': (0, 4)
+    'processes.py': (0, default_time_range[-1])
 }
 
 class _AbstractTestMixin(util.ExampleMixin):
-    time_range = (2, 4)
+    time_range = default_time_range
     filename = None
 
     def _check_resources(self):
