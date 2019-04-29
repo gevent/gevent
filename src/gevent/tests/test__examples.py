@@ -40,6 +40,7 @@ def _find_files_to_ignore():
 default_time_range = (2, 4)
 time_ranges = {
     'concurrent_download.py': (0, 30),
+    'dns_mass_resolve.py': (2, 10),
     'processes.py': (0, 4)
 }
 
