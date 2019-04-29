@@ -12,6 +12,9 @@ from datetime import timedelta
 from multiprocessing.pool import ThreadPool
 from multiprocessing import cpu_count
 from . import util
+from .resources import parse_resources
+from .resources import setup_resources
+from .resources import get_ALL_RESOURCES
 from .sysinfo import RUNNING_ON_CI
 from .sysinfo import PYPY
 from .sysinfo import PY2
@@ -492,10 +495,38 @@ def main():
     parser.add_argument("--verbose", action="store_false", dest='quiet')
     parser.add_argument("--debug", action="store_true", default=False)
     parser.add_argument("--package", default="gevent.tests")
+    parser.add_argument('-u', '--use', metavar='RES1,RES2,...',
+                        action='store', type=parse_resources,
+                        help='specify which special resource intensive tests '
+                        'to run. "all" is the default; "none" may also be used. '
+                        'Disable individual resources with a leading -.'
+                        'For example, "-u-network". GEVENTTEST_USE_RESOURCES is used '
+                        'if no argument is given. To only use one resources, specify '
+                        '"-unone,resource".')
+
     parser.add_argument("--travis-fold", metavar="MSG",
                         help="Emit Travis CI log fold markers around the output.")
     parser.add_argument('tests', nargs='*')
     options = parser.parse_args()
+    # options.use will be either None for not given, or a list
+    # of the last specified -u argument.
+    if options.use is None:
+        # The default, which we'll take from the environment, if set.
+        options.use = parse_resources()
+
+    options.use = list(set(options.use))
+    # Whether or not it came from the environment, put it in the
+    # environment now. 'none' must be special cased because an empty
+    # option string means 'all'. Still, we're explicit about that.
+    if set(options.use) == set(get_ALL_RESOURCES()):
+        option_str = 'all'
+    elif options.use:
+        option_str = ','.join(options.use)
+    else:
+        option_str = 'none'
+    os.environ['GEVENTTEST_USE_RESOURCES'] = option_str
+    setup_resources(options.use)
+
 
     # Set this before any test imports in case of 'from .util import QUIET';
     # not that this matters much because we spawn tests in subprocesses,

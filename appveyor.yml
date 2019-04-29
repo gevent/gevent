@@ -7,6 +7,10 @@ environment:
     CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\appveyor\\run_with_env.cmd"
     # Use a fixed hash seed for reproducability
     PYTHONHASHSEED: 8675309
+    # Disable tests that use external network resources;
+    # too often we get failures to resolve DNS names or failures
+    # to connect on AppVeyor.
+    GEVENTTEST_USE_RESOURCES: "-network"
 
   matrix:
 

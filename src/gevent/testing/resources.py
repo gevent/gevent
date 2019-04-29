@@ -28,12 +28,12 @@ which are tested with `support.is_resource_enabled`.
 """
 from __future__ import absolute_import, division, print_function
 
-import os
+# This file may be imported early, so it should take care not to import
+# things it doesn't need, which means deferred imports.
 
 
-from . import support
-
-def _get_ALL_RESOURCES():
+def get_ALL_RESOURCES():
+    "Return a fresh list of resource names."
     # RESOURCE_NAMES is the list of all known resources, including those that
     # shouldn't be enabled by default or when asking for "all" resources.
     # ALL_RESOURCES is the list of resources enabled by default or with "all" resources.
@@ -67,7 +67,7 @@ def _get_ALL_RESOURCES():
     return list(ALL_RESOURCES)
 
 
-def parse_resources(resource_str):
+def parse_resources(resource_str=None):
     # str -> Sequence[str]
 
     # Parse it like libregrtest.cmdline documents:
@@ -96,7 +96,11 @@ def parse_resources(resource_str):
     # 'none'. Encountering either of those later in the string resets
     # it, for ease of working with appending to environment variables.
 
-    resources = _get_ALL_RESOURCES()
+    if resource_str is None:
+        import os
+        resource_str = os.environ.get('GEVENTTEST_USE_RESOURCES')
+
+    resources = get_ALL_RESOURCES()
 
     if not resource_str:
         return resources
@@ -110,7 +114,7 @@ def parse_resources(resource_str):
         if not requested_resource:
             continue
         if requested_resource == 'all':
-            resources = list(_get_ALL_RESOURCES())
+            resources = get_ALL_RESOURCES()
         elif requested_resource == 'none':
             resources = []
         elif requested_resource.startswith('-'):
@@ -121,10 +125,18 @@ def parse_resources(resource_str):
 
     return resources
 
-def setup_resources(resources=None):
-    if resources is None:
-        resources = parse_resources(os.environ.get('GEVENTTEST_USE_RESOURCES'))
 
+def setup_resources(resources=None):
+    """
+    Call either with a list of resources or a resource string.
+
+    If ``None`` is given, get the resource string from the environment.
+    """
+
+    if isinstance(resources, str) or resources is None:
+        resources = parse_resources(resources)
+
+    from . import support
     support.use_resources = list(resources)
 
     return resources

@@ -198,7 +198,8 @@ IGNORED_GEVENT_ENV_KEYS = {
 # These should match the defaults.
 IGNORED_GEVENT_ENV_ITEMS = {
     ('GEVENT_RESOLVER', 'thread'),
-    ('GEVENT_RESOLVER_NAMESERVERS', '8.8.8.8')
+    ('GEVENT_RESOLVER_NAMESERVERS', '8.8.8.8'),
+    ('GEVENTTEST_USE_RESOURCES', 'all'),
 }
 
 def getname(command, env=None, setenv=None):
