@@ -54,10 +54,11 @@ DEFAULT_LOCAL_HOST_ADDR = support.HOST
 DEFAULT_LOCAL_HOST_ADDR6 = support.HOSTv6
 # Not all TCP stacks support dual binding where ''
 # binds to both v4 and v6.
+# XXX: This is badly named; you often want DEFAULT_BIND_ADDR_TUPLE
 DEFAULT_BIND_ADDR = support.HOST
 
 
-DEFAULT_CONNECT = DEFAULT_LOCAL_HOST_ADDR
+DEFAULT_CONNECT_HOST = DEFAULT_CONNECT = DEFAULT_LOCAL_HOST_ADDR
 DEFAULT_BIND_ADDR_TUPLE = (DEFAULT_BIND_ADDR, 0)
 
 # For in-process sockets

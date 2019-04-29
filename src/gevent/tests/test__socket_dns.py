@@ -20,6 +20,7 @@ from gevent.testing import util
 from gevent.testing import six
 from gevent.testing.six import xrange
 from gevent.testing import flaky
+from gevent.testing.skipping import skipWithoutExternalNetwork
 
 
 resolver = gevent.get_hub().resolver
@@ -225,7 +226,7 @@ def add(klass, hostname, name=None,
     test5.__name__ = 'test_%s_getnameinfo' % name
     _setattr(klass, test5.__name__, test5)
 
-
+@skipWithoutExternalNetwork("Tries to resolve and compare hostnames/addrinfo")
 class TestCase(greentest.TestCase):
 
     __timeout__ = 30
@@ -466,7 +467,7 @@ class TestBroadcast(TestCase):
 add(TestBroadcast, '<broadcast>')
 
 
-from gevent.resolver.dnspython import HostsFile
+from gevent.resolver.dnspython import HostsFile # XXX: This will move.
 class SanitizedHostsFile(HostsFile):
     def iter_all_host_addr_pairs(self):
         for name, addr in super(SanitizedHostsFile, self).iter_all_host_addr_pairs():
@@ -612,7 +613,7 @@ add(TestInternational, u'президент.рф', 'russian',
     skip=(PY2 and RESOLVER_DNSPYTHON), skip_reason="dnspython can actually resolve these")
 add(TestInternational, u'президент.рф'.encode('idna'), 'idna')
 
-
+@skipWithoutExternalNetwork("Tries to resolve and compare hostnames/addrinfo")
 class TestInterrupted_gethostbyname(gevent.testing.timing.AbstractGenericWaitTestCase):
 
     # There are refs to a Waiter in the C code that don't go

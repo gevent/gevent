@@ -59,7 +59,7 @@ class Test_wsgiserver(util.TestServer):
             self._test_hello()
             # Now create a connection and only partway finish
             # the transaction
-            sock = socket.create_connection(('localhost', self.PORT))
+            sock = socket.create_connection((params.DEFAULT_LOCAL_HOST_ADDR, self.PORT))
             ssl_sock = None
             if self._use_ssl:
                 ssl_sock = ssl.wrap_socket(sock)
@@ -103,6 +103,7 @@ class Test_wsgiserver_ssl(Test_wsgiserver):
 
 
 @greentest.skipOnCI("Timing issues sometimes lead to a connection refused")
+@greentest.skipWithoutExternalNetwork("Tries to reach google.com")
 class Test_webproxy(Test_wsgiserver):
     server = 'webproxy.py'
 

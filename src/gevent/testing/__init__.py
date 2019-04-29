@@ -78,6 +78,8 @@ from .skipping import skipOnPurePython
 from .skipping import skipWithCExtensions
 from .skipping import skipOnLibuvOnTravisOnCPython27
 from .skipping import skipOnPy37
+from .skipping import skipWithoutResource
+from .skipping import skipWithoutExternalNetwork
 
 from .exception import ExpectedException
 
@@ -91,12 +93,15 @@ from .params import LARGE_TIMEOUT
 from .params import DEFAULT_LOCAL_HOST_ADDR
 from .params import DEFAULT_LOCAL_HOST_ADDR6
 from .params import DEFAULT_BIND_ADDR
+from .params import DEFAULT_BIND_ADDR_TUPLE
+from .params import DEFAULT_CONNECT_HOST
 
 
 from .params import DEFAULT_SOCKET_TIMEOUT
 from .params import DEFAULT_XPC_SOCKET_TIMEOUT
 
 main = unittest.main
+SkipTest = unittest.SkipTest
 
 from .hub import QuietHub
 

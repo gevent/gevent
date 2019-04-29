@@ -1,6 +1,6 @@
 
 from __future__ import absolute_import, print_function, division
-import sys
+
 import unittest
 import gevent.testing as greentest
 
@@ -36,13 +36,11 @@ class TestWatchers(unittest.TestCase):
         del self.loop
 
     def test_io(self):
-        if sys.platform == 'win32':
+        if greentest.WIN:
             # libev raises IOError, libuv raises ValueError
             Error = (IOError, ValueError)
-            win32 = True
         else:
             Error = ValueError
-            win32 = False
 
         with self.assertRaises(Error):
             self.loop.io(-1, 1)
@@ -53,7 +51,7 @@ class TestWatchers(unittest.TestCase):
                 self.loop.io(1, core.TIMER) # pylint:disable=no-member
 
         # Test we can set events and io before it's started
-        if not win32:
+        if not greentest.WIN:
             # We can't do this with arbitrary FDs on windows;
             # see libev_vfd.h
             io = self.loop.io(1, core.READ) # pylint:disable=no-member
@@ -144,7 +142,7 @@ class TestLibev(unittest.TestCase):
 
     def test_flags_conversion(self):
         # pylint: disable=no-member
-        if sys.platform != 'win32':
+        if not greentest.WIN:
             self.assertEqual(core.loop(2, default=False).backend_int, 2)
         self.assertEqual(core.loop('select', default=False).backend, 'select')
         self.assertEqual(core._flags_to_int(None), 0)

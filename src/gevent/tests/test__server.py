@@ -8,6 +8,7 @@ import os
 import gevent.testing as greentest
 from gevent.testing import PY3
 from gevent.testing import DEFAULT_SOCKET_TIMEOUT as _DEFAULT_SOCKET_TIMEOUT
+from gevent.testing.sockets import tcp_listener
 from gevent import socket
 import gevent
 from gevent.server import StreamServer
@@ -87,11 +88,7 @@ class TestCase(greentest.TestCase):
             self.server = None
 
     def get_listener(self):
-        sock = socket.socket()
-        sock.bind(('127.0.0.1', 0))
-        sock.listen(5)
-        self._close_on_teardown(sock)
-        return sock
+        return self._close_on_teardown(tcp_listener(backlog=5))
 
     def get_server_host_port_family(self):
         server_host = self.server.server_host
@@ -307,7 +304,7 @@ class TestDefaultSpawn(TestCase):
             self.server.stop()
 
     def test_serve_forever(self):
-        self.server = self.ServerSubClass(('127.0.0.1', 0))
+        self.server = self.ServerSubClass((greentest.DEFAULT_BIND_ADDR, 0))
         self.assertFalse(self.server.started)
         self.assertConnectionRefused()
         self._test_serve_forever()
@@ -456,10 +453,7 @@ class TestSSLSocketNotAllowed(TestCase):
     @unittest.skipUnless(hasattr(socket, 'ssl'), "Uses socket.ssl")
     def test(self):
         from gevent.socket import ssl
-        from gevent.socket import socket as gsocket
-        listener = gsocket()
-        listener.bind(('0.0.0.0', 0))
-        listener.listen(5)
+        listener = self._close_on_teardown(tcp_listener(backlog=5))
         listener = ssl(listener)
         self.assertRaises(TypeError, self.ServerSubClass, listener)
 

@@ -10,7 +10,6 @@ class Test(greentest.TestCase):
     server_port = None
 
     def _accept(self):
-        self.server.listen(1)
         try:
             conn, _ = self.server.accept()
             self._close_on_teardown(conn)
@@ -19,9 +18,7 @@ class Test(greentest.TestCase):
 
     def setUp(self):
         super(Test, self).setUp()
-        self.server = socket.socket()
-        self._close_on_teardown(self.server)
-        self.server.bind(('127.0.0.1', 0))
+        self.server = self._close_on_teardown(greentest.tcp_listener(backlog=1))
         self.server_port = self.server.getsockname()[1]
         self.acceptor = gevent.spawn(self._accept)
         gevent.sleep(0)
@@ -39,7 +36,7 @@ class Test(greentest.TestCase):
         gevent.sleep(0)
         sock = socket.socket()
         self._close_on_teardown(sock)
-        sock.connect(('127.0.0.1', self.server_port))
+        sock.connect((greentest.DEFAULT_CONNECT_HOST, self.server_port))
 
         sock.settimeout(0.1)
         with self.assertRaises(socket.error) as cm:

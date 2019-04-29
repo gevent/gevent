@@ -298,6 +298,12 @@ def discover(
             # XXX: Rework this to avoid importing.
             to_import.append(qualified_name)
         else:
+            # XXX: For simple python module tests, try this with `runpy.run_module`,
+            # very similar to the way we run things for monkey patching.
+            # The idea here is that we can perform setup ahead of time (e.g., setup_resources())
+            # in each test without having to do it manually or force calls or modifications to those
+            # tests.
+
             cmd = [sys.executable, '-u']
             if PYPY and PY2:
                 # Doesn't seem to be an env var for this

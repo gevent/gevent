@@ -19,7 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-"""Test than modules in gevent.green package are indeed green.
+"""Test that modules in gevent.green package are indeed green.
 To do that spawn a green server and then access it using a green socket.
 If either operation blocked the whole script would block and timeout.
 """

@@ -30,7 +30,8 @@ def bind_and_listen(sock, address=DEFAULT_BIND_ADDR_TUPLE, backlog=50, reuse_add
         except error:
             pass
     sock.bind(address)
-    sock.listen(backlog)
+    if backlog is not None: # udp
+        sock.listen(backlog)
 
 
 def tcp_listener(address=DEFAULT_BIND_ADDR_TUPLE, backlog=50, reuse_addr=True):
@@ -38,4 +39,11 @@ def tcp_listener(address=DEFAULT_BIND_ADDR_TUPLE, backlog=50, reuse_addr=True):
     from gevent import socket
     sock = socket.socket()
     bind_and_listen(sock, address, backlog=backlog, reuse_addr=reuse_addr)
+    return sock
+
+def udp_listener(address=DEFAULT_BIND_ADDR_TUPLE, reuse_addr=True):
+    """A shortcut to create a UDF socket, bind it and put it into listening state."""
+    from gevent import socket
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    bind_and_listen(sock, address, backlog=None, reuse_addr=reuse_addr)
     return sock

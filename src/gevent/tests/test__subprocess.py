@@ -33,11 +33,11 @@ python_universal_newlines = hasattr(sys.stdout, 'newlines')
 # See gevent.subprocess for more details.
 python_universal_newlines_broken = PY3 and subprocess.mswindows
 
-
+@greentest.skipWithoutResource('subprocess')
 class Test(greentest.TestCase):
 
     def setUp(self):
-        super(Test, self).setUp()
+        greentest.TestCase.setUp(self)
         gc.collect()
         gc.collect()
 
@@ -186,27 +186,26 @@ class Test(greentest.TestCase):
         finally:
             p.stdout.close()
 
-    if sys.platform != 'win32':
-
-        def test_nonblock_removed(self):
-            # see issue #134
-            r, w = os.pipe()
-            stdin = subprocess.FileObject(r)
-            p = subprocess.Popen(['grep', 'text'], stdin=stdin)
-            try:
-                # Closing one half of the pipe causes Python 3 on OS X to terminate the
-                # child process; it exits with code 1 and the assert that p.poll is None
-                # fails. Removing the close lets it pass under both Python 3 and 2.7.
-                # If subprocess.Popen._remove_nonblock_flag is changed to a noop, then
-                # the test fails (as expected) even with the close removed
-                #os.close(w)
-                time.sleep(0.1)
-                self.assertEqual(p.poll(), None)
-            finally:
-                if p.poll() is None:
-                    p.kill()
-                stdin.close()
-                os.close(w)
+    @greentest.skipOnWindows("Uses 'grep' command")
+    def test_nonblock_removed(self):
+        # see issue #134
+        r, w = os.pipe()
+        stdin = subprocess.FileObject(r)
+        p = subprocess.Popen(['grep', 'text'], stdin=stdin)
+        try:
+            # Closing one half of the pipe causes Python 3 on OS X to terminate the
+            # child process; it exits with code 1 and the assert that p.poll is None
+            # fails. Removing the close lets it pass under both Python 3 and 2.7.
+            # If subprocess.Popen._remove_nonblock_flag is changed to a noop, then
+            # the test fails (as expected) even with the close removed
+            #os.close(w)
+            time.sleep(0.1)
+            self.assertEqual(p.poll(), None)
+        finally:
+            if p.poll() is None:
+                p.kill()
+            stdin.close()
+            os.close(w)
 
     def test_issue148(self):
         for _ in range(7):
@@ -387,6 +386,7 @@ class RunFuncTestCase(greentest.TestCase):
 
     __timeout__ = greentest.LARGE_TIMEOUT
 
+    @greentest.skipWithoutResource('subprocess')
     def run_python(self, code, **kwargs):
         """Run Python code in a subprocess using subprocess.run"""
         argv = [sys.executable, "-c", code]

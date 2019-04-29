@@ -274,5 +274,4 @@ class TestTextMode(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    sys.argv.append('-v')
     greentest.main()

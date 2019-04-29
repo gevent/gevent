@@ -1,6 +1,5 @@
 from __future__ import print_function
 
-import errno
 import unittest
 
 import gevent
@@ -11,6 +10,7 @@ except ImportError as ex:
 from gevent import socket
 
 import gevent.testing as greentest
+from gevent.testing.sockets import udp_listener
 
 @unittest.skipIf(
     Resolver is None,
@@ -20,19 +20,9 @@ class TestTimeout(greentest.TestCase):
 
     __timeout__ = 30
 
-    address = ('', 7153)
-
     def test(self):
-        listener = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-        try:
-            listener.bind(self.address)
-        except socket.error as ex:
-            if ex.errno in (errno.EPERM, errno.EADDRNOTAVAIL) or 'permission denied' in str(ex).lower():
-                raise unittest.SkipTest(
-                    'This test binds on port a port that was already in use or not allowed.\n'
-                )
-            raise
+        listener = self._close_on_teardown(udp_listener())
+        address = listener.getsockname()
 
 
         def reader():
@@ -41,8 +31,8 @@ class TestTimeout(greentest.TestCase):
 
         gevent.spawn(reader)
 
-        r = Resolver(servers=['127.0.0.1'], timeout=0.001, tries=1,
-                     udp_port=self.address[-1])
+        r = Resolver(servers=[address[0]], timeout=0.001, tries=1,
+                     udp_port=address[-1])
 
         with self.assertRaisesRegex(socket.gaierror, "ARES_ETIMEOUT"):
             r.gethostbyname('www.google.com')

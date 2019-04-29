@@ -14,16 +14,17 @@ from gevent.testing import util
 @greentest.skipOnLibuvOnCIOnPyPy("Timing issues sometimes lead to connection refused")
 class Test(util.TestServer):
     server = 'portforwarder.py'
+    # [listen on, forward to]
     args = ['127.0.0.1:10011', '127.0.0.1:10012']
 
-    if sys.platform.startswith('win'):
+    if greentest.WIN:
         from subprocess import CREATE_NEW_PROCESS_GROUP
         # Must be in a new process group to use CTRL_C_EVENT, otherwise
         # we get killed too
         start_kwargs = {'creationflags': CREATE_NEW_PROCESS_GROUP}
 
     def after(self):
-        if sys.platform == 'win32':
+        if greentest.WIN:
             self.assertIsNotNone(self.popen.poll())
         else:
             self.assertEqual(self.popen.poll(), 0)

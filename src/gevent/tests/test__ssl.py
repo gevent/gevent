@@ -9,8 +9,15 @@ import test__socket
 import ssl
 
 
-import unittest
+#import unittest
 from gevent.hub import LoopExit
+
+def ssl_listener(private_key, certificate):
+    raw_listener = socket.socket()
+    greentest.bind_and_listen(raw_listener)
+    sock = ssl.wrap_socket(raw_listener, private_key, certificate)
+    return sock, raw_listener
+
 
 class TestSSL(test__socket.TestTCP):
 
@@ -24,7 +31,7 @@ class TestSSL(test__socket.TestTCP):
     TIMEOUT_ERROR = getattr(socket, 'sslerror', socket.timeout)
 
     def _setup_listener(self):
-        listener, raw_listener = ssl_listener(('127.0.0.1', 0), self.privfile, self.certfile)
+        listener, raw_listener = ssl_listener(self.privfile, self.certfile)
         self._close_on_teardown(raw_listener)
         return listener
 
@@ -65,9 +72,8 @@ class TestSSL(test__socket.TestTCP):
         except LoopExit:
             if greentest.LIBUV and greentest.WIN:
                 # XXX: Unable to duplicate locally
-                raise unittest.SkipTest("libuv on Windows sometimes raises LoopExit")
+                raise greentest.SkipTest("libuv on Windows sometimes raises LoopExit")
             raise
-
 
     @greentest.ignores_leakcheck
     def test_empty_send(self):
@@ -93,11 +99,6 @@ class TestSSL(test__socket.TestTCP):
         # Override; doesn't work with SSL sockets.
         pass
 
-def ssl_listener(address, private_key, certificate):
-    raw_listener = socket.socket()
-    greentest.bind_and_listen(raw_listener, address)
-    sock = ssl.wrap_socket(raw_listener, private_key, certificate)
-    return sock, raw_listener
 
 
 if __name__ == '__main__':

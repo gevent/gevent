@@ -138,8 +138,26 @@ def setup_resources(resources=None):
 
     from . import support
     support.use_resources = list(resources)
+    support.gevent_has_setup_resources = True
 
     return resources
+
+
+def exit_without_resource(resource):
+    """
+    Call this in standalone test modules that can't use unittest.SkipTest.
+
+    Exits with a status of 0 if the resource isn't enabled.
+    """
+    from . import support
+    if not support.gevent_has_setup_resources:
+        setup_resources()
+
+    if not support.is_resource_enabled(resource):
+        print("Skipped: %r not enabled" % (resource,))
+        import sys
+        sys.exit(0)
+
 
 if __name__ == '__main__':
     print(setup_resources())

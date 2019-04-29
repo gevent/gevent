@@ -86,5 +86,7 @@ class _ModuleProxy(object):
 # When is this not defined in test.support?
 HOSTv6 = _Default('::1')
 
+# Set by resources.setup_resources()
+gevent_has_setup_resources = False
 
 sys.modules[__name__] = _ModuleProxy()

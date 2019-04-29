@@ -9,6 +9,9 @@ from gevent.testing import util
 
 this_dir = os.path.dirname(__file__)
 
+# XXX: Review these, check those that use external network resources
+# and exclude if that resource is disabled.
+
 def _find_files_to_ignore():
     old_dir = os.getcwd()
     try:

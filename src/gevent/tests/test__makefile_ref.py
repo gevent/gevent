@@ -4,13 +4,14 @@ from gevent import monkey; monkey.patch_all()
 import socket
 import ssl
 import threading
-import unittest
 import errno
 import weakref
 
 
 import gevent.testing as greentest
-
+from gevent.testing.params import DEFAULT_BIND_ADDR_TUPLE
+from gevent.testing.params import DEFAULT_CONNECT
+from gevent.testing.sockets import tcp_listener
 
 dirname = os.path.dirname(os.path.abspath(__file__))
 certfile = os.path.join(dirname, '2_7_keycert.pem')
@@ -109,7 +110,7 @@ class Test(greentest.TestCase):
 
     def make_open_socket(self):
         s = socket.socket()
-        s.bind(('127.0.0.1', 0))
+        s.bind(DEFAULT_BIND_ADDR_TUPLE)
         self._close_on_teardown(s)
         if WIN or greentest.LINUX:
             # Windows and linux (with psutil) doesn't show as open until
@@ -175,16 +176,14 @@ class TestSocket(Test):
         self.assert_closed(s, fileno)
 
     def test_server_simple(self):
-        listener = socket.socket()
-        listener.bind(('127.0.0.1', 0))
+        listener = tcp_listener(backlog=1)
         port = listener.getsockname()[1]
-        listener.listen(1)
 
         connector = socket.socket()
         self._close_on_teardown(connector)
 
         def connect():
-            connector.connect(('127.0.0.1', port))
+            connector.connect((DEFAULT_CONNECT, port))
 
         t = threading.Thread(target=connect)
         t.start()
@@ -201,16 +200,14 @@ class TestSocket(Test):
             connector.close()
 
     def test_server_makefile1(self):
-        listener = socket.socket()
-        listener.bind(('127.0.0.1', 0))
+        listener = tcp_listener(backlog=1)
         port = listener.getsockname()[1]
-        listener.listen(1)
 
         connector = socket.socket()
         self._close_on_teardown(connector)
 
         def connect():
-            connector.connect(('127.0.0.1', port))
+            connector.connect((DEFAULT_CONNECT, port))
 
         t = threading.Thread(target=connect)
         t.start()
@@ -236,16 +233,14 @@ class TestSocket(Test):
             connector.close()
 
     def test_server_makefile2(self):
-        listener = socket.socket()
-        listener.bind(('127.0.0.1', 0))
+        listener = tcp_listener(backlog=1)
         port = listener.getsockname()[1]
-        listener.listen(1)
 
         connector = socket.socket()
         self._close_on_teardown(connector)
 
         def connect():
-            connector.connect(('127.0.0.1', port))
+            connector.connect((DEFAULT_CONNECT, port))
 
         t = threading.Thread(target=connect)
         t.start()
@@ -270,7 +265,7 @@ class TestSocket(Test):
 class TestSSL(Test):
 
     def _ssl_connect_task(self, connector, port):
-        connector.connect(('127.0.0.1', port))
+        connector.connect((DEFAULT_CONNECT, port))
         try:
             # Note: We get ResourceWarning about 'x'
             # on Python 3 if we don't join the spawned thread
@@ -357,10 +352,8 @@ class TestSSL(Test):
         self.assert_closed(s, fileno)
 
     def test_server_simple(self):
-        listener = socket.socket()
-        listener.bind(('127.0.0.1', 0))
+        listener = tcp_listener(backlog=1)
         port = listener.getsockname()[1]
-        listener.listen(1)
 
         connector = socket.socket()
         self._close_on_teardown(connector)
@@ -381,12 +374,8 @@ class TestSSL(Test):
             self.__cleanup(t, listener, connector)
 
     def test_server_makefile1(self):
-        listener = socket.socket()
-        self._close_on_teardown(listener)
-        listener.bind(('127.0.0.1', 0))
+        listener = self._close_on_teardown(tcp_listener(backlog=1))
         port = listener.getsockname()[1]
-        listener.listen(1)
-
 
         connector = socket.socket()
         self._close_on_teardown(connector)
@@ -412,10 +401,8 @@ class TestSSL(Test):
 
 
     def test_server_makefile2(self):
-        listener = socket.socket()
-        listener.bind(('127.0.0.1', 0))
+        listener = tcp_listener(backlog=1)
         port = listener.getsockname()[1]
-        listener.listen(1)
 
         connector = socket.socket()
         self._close_on_teardown(connector)
@@ -441,12 +428,9 @@ class TestSSL(Test):
             self.__cleanup(t, connector, listener, client_socket)
 
     def test_serverssl_makefile1(self):
-        listener = socket.socket()
+        listener = self._close_on_teardown(tcp_listener(backlog=1))
         fileno = listener.fileno()
-        listener.bind(('127.0.0.1', 0))
         port = listener.getsockname()[1]
-        listener.listen(1)
-        self._close_on_teardown(listener)
         listener = ssl.wrap_socket(listener, keyfile=certfile, certfile=certfile)
 
         connector = socket.socket()
@@ -473,17 +457,14 @@ class TestSSL(Test):
                       "Not too worried about this before Python 3.7rc1. "
                       "https://travis-ci.org/gevent/gevent/jobs/327357684")
     def test_serverssl_makefile2(self):
-        listener = socket.socket()
-        self._close_on_teardown(listener)
-        listener.bind(('127.0.0.1', 0))
+        listener = self._close_on_teardown(tcp_listener(backlog=1))
         port = listener.getsockname()[1]
-        listener.listen(1)
         listener = ssl.wrap_socket(listener, keyfile=certfile, certfile=certfile)
 
         connector = socket.socket()
 
         def connect():
-            connector.connect(('127.0.0.1', port))
+            connector.connect((DEFAULT_CONNECT, port))
             s = ssl.wrap_socket(connector)
             s.sendall(b'test_serverssl_makefile2')
             s.close()
@@ -513,4 +494,4 @@ class TestSSL(Test):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    greentest.main()

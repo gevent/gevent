@@ -1,8 +1,12 @@
 from __future__ import print_function
-import gevent.testing as greentest
+
 import gevent
 from gevent import socket
 from gevent import backdoor
+
+import gevent.testing as greentest
+from gevent.testing.params import DEFAULT_BIND_ADDR_TUPLE
+from gevent.testing.params import DEFAULT_CONNECT
 
 def read_until(conn, postfix):
     read = b''
@@ -36,14 +40,14 @@ class Test(greentest.TestCase):
 
     def _make_server(self, *args, **kwargs):
         assert self._server is None
-        self._server = backdoor.BackdoorServer(('127.0.0.1', 0), *args, **kwargs)
+        self._server = backdoor.BackdoorServer(DEFAULT_BIND_ADDR_TUPLE, *args, **kwargs)
         self._close_on_teardown(self._server.stop)
         self._server.start()
 
     def _create_connection(self):
         conn = socket.socket()
         self._close_on_teardown(conn)
-        conn.connect(('127.0.0.1', self._server.server_port))
+        conn.connect((DEFAULT_CONNECT, self._server.server_port))
         return conn
 
     def _close(self, conn, cmd=b'quit()\r\n)'):
