@@ -211,12 +211,13 @@ greenlet_requires = [
 # The exception is on Windows, where we want the libuv backend we distribute
 # to be the default, and that requires cffi; but don't try to install it
 # on PyPy or it messes up the build
-cffi_requires = [
-    "cffi >= 1.12.2 ; sys_platform == 'win32' and platform_python_implementation == 'CPython'",
+CFFI_DEP = "cffi >= 1.12.2 ; platform_python_implementation == 'CPython'"
+CFFI_REQUIRES = [
+    CFFI_DEP + " and sys_platform == 'win32'"
 ]
 
 
-install_requires = greenlet_requires + cffi_requires
+install_requires = greenlet_requires + CFFI_REQUIRES
 
 # We use headers from greenlet, so it needs to be installed before we
 # can compile. If it isn't already installed before we start
@@ -230,7 +231,7 @@ install_requires = greenlet_requires + cffi_requires
 # to install the headers at all, AFAICS, we don't need to bother with
 # the buggy setup_requires.)
 
-setup_requires = cffi_requires + []
+setup_requires = CFFI_REQUIRES + []
 
 if PYPY:
     # These use greenlet/greenlet.h, which doesn't exist on PyPy
@@ -287,6 +288,29 @@ if IGNORE_CFFI and not PYPY:
     # even if it's available, because CFFI always embeds
     # our copy of libev/libuv and they may not want that.
     del cffi_modules[:]
+
+## Extras
+
+EXTRA_DNSPYTHON = [
+    'dnspython >= 1.16.0',
+    'idna',
+]
+EXTRA_EVENTS = [
+    'zope.event',
+    'zope.interface',
+]
+# Fails to build on PyPy on Windows.
+# TODO: Is that still the case?
+EXTRA_PSUTIL_DEP = 'psutil >= 5.6.1 ; platform_python_implementation == "CPython" or sys_platform != "win32"'
+
+EXTRA_MONITOR = [
+    EXTRA_PSUTIL_DEP,
+]
+
+EXTRA_RECOMMENDED = [
+    # We need this at runtime to use the libev-CFFI and libuv backends
+    CFFI_DEP,
+] + EXTRA_DNSPYTHON + EXTRA_EVENTS + EXTRA_MONITOR
 
 # If we are running info / help commands, or we're being imported by
 # tools like pyroma, we don't need to build anything
@@ -362,28 +386,20 @@ def run_setup(ext_modules, run_make):
         install_requires=install_requires,
         setup_requires=setup_requires,
         extras_require={
-            'dnspython': [
-                'dnspython >= 1.16.0',
-                'idna',
-            ],
-            'events': [
-                'zope.event',
-                'zope.interface',
-            ],
+            # Each extra intended for end users must be documented in install.rst
+            'dnspython': EXTRA_DNSPYTHON,
+            'events': EXTRA_EVENTS,
+            'monitor': EXTRA_MONITOR,
+            'recommended': EXTRA_RECOMMENDED,
+            # End end-user extras
             'docs': [
                 'repoze.sphinx.autointerface',
             ],
-            'test': [
-                # To the extent possible, we should work to make sure
-                # our tests run, at least a basic set, without any of
-                # these extra dependencies (i.e., skip things when they are
-                # missing). This helps serve as a smoketest for users.
-                'zope.interface',
-                'zope.event',
-
-                # Makes tests faster
-                # Fails to build on PyPy on Windows.
-                'psutil >= 5.6.1 ; platform_python_implementation == "CPython" or sys_platform != "win32"',
+            # To the extent possible, we should work to make sure
+            # our tests run, at least a basic set, without any of
+            # these extra dependencies (i.e., skip things when they are
+            # missing). This helps serve as a smoketest for users.
+            'test': EXTRA_RECOMMENDED + [
                 # examples, called from tests, use this
                 'requests',
 
@@ -397,7 +413,7 @@ def run_setup(ext_modules, run_make):
 
                 # leak checks. previously we had a hand-rolled version.
                 'objgraph',
-            ]
+            ],
         },
         # It's always safe to pass the CFFI keyword, even if
         # cffi is not installed: it's just ignored in that case.

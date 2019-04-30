@@ -22,3 +22,13 @@ Platform Support
 gevent 1.4 supports the platforms that gevent 1.3 supported, with the
 exception that for users of Python 3.4, Python 3.4.3 is the minimum
 supported version.
+
+Test Changes
+============
+
+gevent's own test suite is now packaged as part of the gevent install,
+and the ``greentest/testrunner.py`` script is now gone from a source
+distribution or checkout. Instead, tests can be run with ``python -m
+gevent.tests``. Many tests can be run given an installed version of
+gevent, although the test dependencies, including cffi, must be
+installed for all of them to run.

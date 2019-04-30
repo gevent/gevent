@@ -10,6 +10,7 @@ Introduction and Basics
 
    install
    intro
+   whatsnew_1_5
    whatsnew_1_4
    whatsnew_1_3
    api/gevent
@@ -20,6 +21,8 @@ Introduction and Basics
    loop_impls
    configuration
    changelog
+   installing_from_source
+   development
 
 API Details
 ===========
