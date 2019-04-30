@@ -7,18 +7,12 @@
 
     Things to include:
 
-    - Avoiding hard test dependencies.
+    - Writing tests and the gevent test framework:
+      - Avoiding hard test dependencies.
     - Resource usage.
     - Custom commands in ``setup.py``
 
 
-To install the latest development version::
-
-  pip install git+git://github.com/gevent/gevent.git#egg=gevent
-
-.. note::
-
-   You will not be able to run gevent's test suite using that method.
 
 To hack on gevent (using a virtualenv)::
 

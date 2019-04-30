@@ -35,6 +35,19 @@ General Notes
   build dependencies, including CFFI (needed for libuv support). pip
   18 or above is required for this support.
 
+- You can use pip's `VCS support
+  <https://pip.pypa.io/en/stable/reference/pip_install/#vcs-support>`_
+  to install gevent directly from its code repository. This can be
+  useful to check if a bug you're experiencing has been fixed. For
+  example, to install the current development version::
+
+    pip install git+git://github.com/gevent/gevent.git#egg=gevent
+
+  Often one would install this way into a virtual environment.
+
+  If you're using pip 18 or above, that should be all you need. If you
+  have difficulties, see the development instructions for more information.
+
 
 Common Installation Issues
 ==========================
