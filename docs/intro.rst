@@ -48,6 +48,12 @@ in a multi-greenlet environment.
 
 See :doc:`examples/concurrent_download`.
 
+
+.. tip::
+
+   Insight into the monkey-patching process can be obtained by
+   observing the events :mod:`gevent.monkey` emits.
+
 Beyond sockets
 --------------
 

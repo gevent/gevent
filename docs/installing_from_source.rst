@@ -5,9 +5,12 @@
 If you are unable to use the binary wheels (for platforms where no
 pre-built wheels are available or if wheel installation is disabled),
 you can build gevent from source. A normal ``pip install`` will
-fallback to doing this if no binary wheel is available. See
-`Installing From Source <installing-from-source>`_ for more.
+fallback to doing this if no binary wheel is available. (If you'll be
+:ref:`developing <development>` gevent, you'll need to install from
+source also; follow that link for more details.)
 
+General Notes
+=============
 
 - You can force installation of gevent from source with ``pip
   install --no-binary gevent gevent``. This is useful if there is a
@@ -28,9 +31,9 @@ fallback to doing this if no binary wheel is available. See
   `have issues installing gevent for this reason
   <https://github.com/pypa/pipenv/issues/2113>`_.
 
-- gevent comes with a ``pyproject.toml`` file that installs the build
-  dependencies, including CFFI (needed for libuv support). pip 18 or
-  above is required for this support.
+- gevent 1.5 comes with a ``pyproject.toml`` file that installs the
+  build dependencies, including CFFI (needed for libuv support). pip
+  18 or above is required for this support.
 
 
 Common Installation Issues
@@ -48,8 +51,9 @@ those compiling gevent from source.
   <https://github.com/gevent/gevent/issues/570>`_ and `issue #612
   <https://github.com/gevent/gevent/issues/612>`_ for examples.
 
-- Also check for conflicts with environment variables like ``CFLAGS``. For
-  example, see `Library Updates <http://www.gevent.org/whatsnew_1_1.html#library-updates-label>`_.
+- Also check for conflicts with environment variables like ``CFLAGS``.
+  For example, see `Library Updates
+  <http://www.gevent.org/whatsnew_1_1.html#library-updates-label>`_.
 
 - Users of a recent SmartOS release may need to customize the
   ``CPPFLAGS`` (the environment variable containing the default
@@ -63,3 +67,72 @@ those compiling gevent from source.
   == 'CPython'", 'at', " ; sys_platform == 'win32' and
   platform_python_implementation == 'CPython'")``, the version of
   setuptools is too old. Install a more recent version of setuptools.
+
+Build-Time Configuration
+========================
+
+There are a few knobs that can be tweaked at gevent build time. These
+are mostly useful for downstream packagers. They all take the form of
+environment variables that must be set when ``setup.py`` is called
+(note that ``pip install`` will invoke ``setup.py``). Toggle flags
+that have boolean values may take the form of 0/1, true/false, off/on,
+yes/no.
+
+``CPPFLAGS``
+  A standard variable used when building the C extensions. gevent may
+  make slight modifications to this variable.
+``CFLAGS``
+  A standard variable used when building the C extensions. gevent may
+  make slight modifications to this variable.
+``LDFLAGS``
+  A standard variable used when building the C extensions. gevent may
+  make slight modifications to this variable.
+``GEVENTSETUP_EV_VERIFY``
+  If set, the value is passed through as the value of the
+  ``EV_VERIFY`` C compiler macro when libev is embedded.
+
+  In general, setting ``CPPFLAGS`` is more general and can contain
+  other macros recognized by libev.
+
+``GEVENTSETUP_NO_CFFI_BUILD``
+  A boolean; when set to true, this disables all attempts at building
+  the CFFI modules. *This disables libuv.* (TODO: verify that.)
+  Ignored on PyPy and ignored on Windows.
+
+
+Embedding Libraries
+-------------------
+
+By default, gevent builds and embeds tested versions of its
+C dependencies libev, libuv, and c-ares. This is the
+recommended configuration as the specific versions used are tested by
+gevent, and sometimes require patches to be applied. Moreover,
+embedding, especially in the case of libev, can be more efficient as
+features not needed by gevent can be disabled, resulting in smaller or
+faster libraries or runtimes.
+
+However, this can be disabled (TODO: verify how this interacts with
+CFFI; see NO_CFFI_BUILD), either for all libraries at once or for
+individual libraries.
+
+When embedding a library is disabled, the library must already be
+installed on the system in a way the compiler can access and link
+(i.e., correct ``CPPFLAGS``, etc) in order to use the corresponding C
+extension.
+
+``GEVENTSETUP_EMBED``
+  A boolean defaulting to true. When turned off (e.g.,
+  ``GEVENTSETUP_EMBED=0``), libraries are not embedded in the gevent C
+  extensions. The value of this is used as the default for all the
+  libraries if no more specific version is defined.
+``GEVENTSETUP_EMBED_LIBEV``
+  Controls embedding libev.
+``GEVENTSETUP_EMBED_CARES``
+  Controls embedding c-ares.
+``GEVENTSETUP_EMBED_LIBUV``
+  This is not defined or used, only a CFFI extension is available and
+  those are always embedded.
+
+Older versions of gevent supported ``EMBED`` and ``LIBEV_EMBED``, etc,
+to mean the same thing. Those aliases still work but are deprecated
+and print a warning.

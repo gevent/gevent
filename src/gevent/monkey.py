@@ -45,8 +45,10 @@ module provides functions for that purpose.
 - :func:`is_object_patched`
 - :func:`get_original`
 
-Plugins
-=======
+.. _plugins:
+
+Plugins and Events
+==================
 
 Beginning in gevent 1.3, events are emitted during the monkey patching process.
 These events are delivered first to :mod:`gevent.events` subscribers, and then

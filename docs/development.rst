@@ -2,6 +2,16 @@
  Development
 =============
 
+..
+    The contributor guide (CONTRIBUTING.rst) references this document.
+
+    Things to include:
+
+    - Avoiding hard test dependencies.
+    - Resource usage.
+    - Custom commands in ``setup.py``
+
+
 To install the latest development version::
 
   pip install git+git://github.com/gevent/gevent.git#egg=gevent
@@ -41,6 +51,8 @@ above instructions to install gevent in a virtual environment and then
 run::
 
   (env) $ python -mgevent.tests
+
+.. command-output:: python -mgevent.tests --help
 
 Before submitting a pull request, it's a good idea to run the tests
 across all supported versions of Python, and to check the code quality

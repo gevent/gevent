@@ -11,8 +11,6 @@ Introduction and Basics
    install
    intro
    whatsnew_1_5
-   whatsnew_1_4
-   whatsnew_1_3
    api/gevent
    api/gevent.greenlet
    servers
@@ -21,8 +19,6 @@ Introduction and Basics
    loop_impls
    configuration
    changelog
-   installing_from_source
-   development
 
 API Details
 ===========
@@ -31,6 +27,20 @@ API Details
    :maxdepth: 2
 
    api/index
+
+.. This anchor is referenced from CONTRIBUTING.rst
+
+.. _contents-developing:
+
+Developing and Packaging gevent
+===============================
+
+.. toctree::
+   :maxdepth: 2
+
+   installing_from_source
+   development
+
 
 Related Information
 ===================

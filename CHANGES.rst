@@ -86,6 +86,10 @@
   -a``, respectively. The remainder of the ``Makefile`` contained
   Travis CI commands that have been moved to ``.travis.yml``.
 
+- Deprecate the ``EMBED`` and ``LIBEV_EMBED``, etc, build-time environment
+  variables. Instead, use ``GEVENTSETUP_EMBED`` and
+  ``GEVENTSETUP_EMBED_LIBEV``. See :issue:`1402`.
+
 1.4.0 (2019-01-04)
 ==================
 

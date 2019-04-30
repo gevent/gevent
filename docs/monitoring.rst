@@ -57,6 +57,11 @@ be emitted.
 Visibility
 ==========
 
+.. tip::
+
+   Insight into the monkey-patching process can be obtained by
+   observing the events :mod:`gevent.monkey` emits.
+
 It is sometimes useful to get an overview of all existing greenlets
 and their stack traces. The function
 :func:`gevent.util.print_run_info` will collect this info and print it

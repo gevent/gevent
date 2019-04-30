@@ -23,7 +23,8 @@ from _setuputils import GeventClean
 from _setuputils import BuildFailed
 from _setuputils import cythonize1
 
-
+# Environment variables that are intended to be used outside of our own
+# CI should be documented in ``installing_from_source.rst``
 
 if WIN:
     # Make sure the env vars that make.cmd needs are set
@@ -283,10 +284,13 @@ for mod in _to_cythonize:
 del _to_cythonize
 
 
-if IGNORE_CFFI and not PYPY:
+if IGNORE_CFFI and not PYPY and not WIN:
     # Allow distributors to turn off CFFI builds
     # even if it's available, because CFFI always embeds
     # our copy of libev/libuv and they may not want that.
+    # Not allowed on PyPy and not allowed on Windows, because those
+    # backends are required there.
+    # TODO: CONFIRM if this is still the case.
     del cffi_modules[:]
 
 ## Extras
@@ -394,6 +398,7 @@ def run_setup(ext_modules, run_make):
             # End end-user extras
             'docs': [
                 'repoze.sphinx.autointerface',
+                'sphinxcontrib-programoutput',
             ],
             # To the extent possible, we should work to make sure
             # our tests run, at least a basic set, without any of
