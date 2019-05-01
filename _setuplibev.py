@@ -85,7 +85,9 @@ def build_extension():
 
     if LIBEV_EMBED:
         CORE.define_macros += [('LIBEV_EMBED', '1'),
-                               ('EV_COMMON', ''),  # we don't use void* data
+                               # we don't use void* data in the cython implementation;
+                               # the CFFI implementation does and removes this line.
+                               ('EV_COMMON', ''),
                                # libev watchers that we don't use currently:
                                ('EV_CLEANUP_ENABLE', '0'),
                                ('EV_EMBED_ENABLE', '0'),

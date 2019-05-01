@@ -70,12 +70,19 @@ _source = read_source('_corecffi_source.c')
 
 distutils_ext = _setuplibev.build_extension()
 
+macros = list(distutils_ext.define_macros)
+try:
+    # We need the data pointer.
+    macros.remove(('EV_COMMON', ''))
+except ValueError:
+    pass
+
 ffi.cdef(_cdef)
 ffi.set_source(
     'gevent.libev._corecffi',
     _source,
-    include_dirs=distutils_ext.include_dirs,
-    define_macros=distutils_ext.define_macros,
+    include_dirs=distutils_ext.include_dirs + [thisdir], # "libev.h"
+    define_macros=macros,
     libraries=distutils_ext.libraries,
 )
 

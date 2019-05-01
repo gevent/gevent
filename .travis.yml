@@ -141,7 +141,7 @@ jobs:
         # libev builds a manpage each time, and it includes today's date, so it frequently changes.
         # delete to avoid repacking the archive
         - rm -rf $BUILD_LIBS/share/man/
-        - ls -l $BUILD_LIBS $BUILD_LIBS/lib
+        - ls -l $BUILD_LIBS $BUILD_LIBS/lib $BUILD_LIBS/include
         - pip install --no-build-isolation .[test]
         - objdump -p src/gevent/libev/*so
       script:
