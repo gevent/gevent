@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# gevent-test-requires-resource: webpy
 """A web.py application powered by gevent"""
 
 from __future__ import print_function

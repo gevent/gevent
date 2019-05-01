@@ -438,6 +438,9 @@ class IGeventDidPatchBuiltinModulesEvent(IGeventDidPatchEvent):
     """
     Event emitted *after* the builtin modules have been patched.
 
+    If you're going to monkey-patch a third-party library, this is
+    usually the event to listen for.
+
     The values of the *source* and *target* attributes are undefined.
     """
 

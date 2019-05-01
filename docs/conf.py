@@ -39,10 +39,15 @@ extensions = [
     'sphinx.ext.doctest',
     'sphinx.ext.coverage',
     'sphinx.ext.intersphinx',
-    'mysphinxext',
     'sphinx.ext.extlinks',
     'sphinx.ext.viewcode',
+
+    # Third-party
     'repoze.sphinx.autointerface',
+    'sphinxcontrib.programoutput',
+
+    # Ours
+    'mysphinxext',
 ]
 
 intersphinx_mapping = {

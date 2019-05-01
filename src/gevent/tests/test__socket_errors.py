@@ -20,6 +20,7 @@
 # THE SOFTWARE.
 
 import gevent.testing as greentest
+from gevent.testing import support
 from gevent.socket import socket, error
 
 try:
@@ -33,13 +34,16 @@ class TestSocketErrors(greentest.TestCase):
     __timeout__ = 5
 
     def test_connection_refused(self):
+        port = support.find_unused_port()
         s = socket()
         self._close_on_teardown(s)
         try:
-            s.connect(('127.0.0.1', 81))
+            s.connect((greentest.DEFAULT_CONNECT_HOST, port))
         except error as ex:
-            assert ex.args[0] == ECONNREFUSED, repr(ex)
-            assert 'refused' in str(ex).lower(), str(ex)
+            self.assertEqual(ex.args[0], ECONNREFUSED, ex)
+            self.assertIn('refused', str(ex).lower())
+        else:
+            self.fail("Shouldn't have connected")
 
 
 if __name__ == '__main__':

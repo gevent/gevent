@@ -11,7 +11,7 @@ from __future__ import print_function
 import sys
 from gevent import socket
 
-address = ('localhost', 9001)
+address = ('127.0.0.1', 9001)
 message = ' '.join(sys.argv[1:])
 sock = socket.socket(type=socket.SOCK_DGRAM)
 sock.connect(address)

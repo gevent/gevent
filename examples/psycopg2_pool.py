@@ -1,4 +1,5 @@
 from __future__ import print_function
+# gevent-test-requires-resource: psycopg2
 # pylint:disable=import-error,broad-except,bare-except
 import sys
 import contextlib

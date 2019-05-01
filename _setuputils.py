@@ -70,7 +70,12 @@ def glob_many(*globs):
 
 ## Configuration
 
-def _parse_environ(key):
+# Environment variables that are intended to be used outside of our own
+# CI should be documented in ``installing_from_source.rst``.
+# They should all begin with ``GEVENTSETUP_``
+
+
+def _bool_from_environ(key):
     value = os.environ.get(key)
     if not value:
         return
@@ -82,34 +87,50 @@ def _parse_environ(key):
     raise ValueError('Environment variable %r has invalid value %r. '
                      'Please set it to 1, 0 or an empty string' % (key, value))
 
-IGNORE_CFFI = _parse_environ("GEVENT_NO_CFFI_BUILD")
-SKIP_LIBUV = _parse_environ('GEVENT_NO_LIBUV_BUILD')
+IGNORE_CFFI = _bool_from_environ("GEVENTSETUP_NO_CFFI_BUILD")
 
-def _get_config_value(key, defkey, path=None):
+def _check_embed(key, defkey, path=None, warn=False):
     """
     Find a boolean value, configured in the environment at *key* or
     *defkey* (typically, *defkey* will be shared by several calls). If
     those don't exist, then check for the existence of *path* and return
     that (if path is given)
     """
-    value = _parse_environ(key)
+    value = _bool_from_environ(key)
     if value is None:
-        value = _parse_environ(defkey)
+        value = _bool_from_environ(defkey)
     if value is not None:
+        if warn:
+            print("Warning: gevent setup: legacy environment key %s or %s found"
+                  % (key, defkey))
         return value
-    return os.path.exists(path) if path is not None else False
+    return os.path.exists(path) if path is not None else None
 
 def should_embed(dep_name):
     """
-    Check the configuration for the dep_name and see if it
-    should be embedded. Environment keys are derived from the
-    dep name: libev becomes LIBEV_EMBED and c-ares becomes CARES_EMBED.
+    Check the configuration for the dep_name and see if it should be
+    embedded. Environment keys are derived from the dep name: libev
+    becomes GEVENTSETUP_EMBED_LIBEV and c-ares becomes
+    GEVENTSETUP_EMBED_CARES.
     """
     path = dep_abspath(dep_name)
-    defkey = 'EMBED'
-    key = dep_name.replace('-', '').upper() + '_' + defkey
+    normal_dep_key = dep_name.replace('-', '').upper()
 
-    return _get_config_value(key, defkey, path)
+    default_key = 'GEVENTSETUP_EMBED'
+    dep_key = default_key + '_' + normal_dep_key
+
+    result = _check_embed(dep_key, default_key)
+    if result is not None:
+        return result
+
+    # Not defined, check legacy settings, and fallback to the path
+
+    legacy_default_key = 'EMBED'
+    legacy_dep_key = normal_dep_key + '_' + legacy_default_key
+
+
+    return _check_embed(legacy_dep_key, legacy_default_key, path,
+                        warn=True)
 
 ## Headers
 

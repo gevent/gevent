@@ -15,31 +15,29 @@ from functools import wraps
 from gevent.testing import six
 from gevent.testing import LARGE_TIMEOUT
 from gevent.testing import support
+from gevent.testing import params
+from gevent.testing.sockets import tcp_listener
+from gevent.testing.skipping import skipWithoutExternalNetwork
 
 # we use threading on purpose so that we can test both regular and gevent sockets with the same code
 from threading import Thread as _Thread
 
 errno_types = int
 
-def wrap_error(func):
-
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except: # pylint:disable=bare-except
-            traceback.print_exc()
-            os._exit(2)
-
-    return wrapper
-
 
 class Thread(_Thread):
 
     def __init__(self, **kwargs):
         target = kwargs.pop('target')
-        target = wrap_error(target)
-        _Thread.__init__(self, target=target, **kwargs)
+        @wraps(target)
+        def errors_are_fatal(*args, **kwargs):
+            try:
+                return target(*args, **kwargs)
+            except: # pylint:disable=bare-except
+                traceback.print_exc()
+                os._exit(2)
+
+        _Thread.__init__(self, target=errors_are_fatal, **kwargs)
         self.start()
 
 
@@ -73,19 +71,17 @@ class TestTCP(greentest.TestCase):
         self.port = self.listener.getsockname()[1]
 
     def _setup_listener(self):
-        listener = socket.socket()
-        greentest.bind_and_listen(listener, ('127.0.0.1', 0))
-        return listener
+        return tcp_listener()
 
-    def create_connection(self, host='127.0.0.1', port=None, timeout=None,
+    def create_connection(self, host=None, port=None, timeout=None,
                           blocking=None):
-        sock = socket.socket()
-        sock.connect((host, port or self.port))
+        sock = self._close_on_teardown(socket.socket())
+        sock.connect((host or params.DEFAULT_CONNECT, port or self.port))
         if timeout is not None:
             sock.settimeout(timeout)
         if blocking is not None:
             sock.setblocking(blocking)
-        return self._close_on_teardown(sock)
+        return sock
 
     def _test_sendall(self, data, match_data=None, client_method='sendall',
                       **client_args):
@@ -305,6 +301,7 @@ class TestTCP(greentest.TestCase):
         finally:
             s.close()
 
+    @skipWithoutExternalNetwork("Tries to resolve hostname")
     def test_connect_ex_gaierror(self):
         # Issue 841
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -341,7 +338,7 @@ class TestTCP(greentest.TestCase):
             conn.close()
 
         acceptor = Thread(target=accept_once)
-        s.connect(('127.0.0.1', self.port))
+        s.connect((params.DEFAULT_CONNECT, self.port))
         fd = s.makefile(mode='rb')
         self.assertEqual(fd.readline(), b'hello\n')
 
@@ -363,7 +360,9 @@ class TestCreateConnection(greentest.TestCase):
                 # where/why we would get '[errno -2] name or service not known'
                 # but it seems some systems generate that.
                 # https://github.com/gevent/gevent/issues/1389
-                'refused|not known'
+                # Somehow extremly rarely we've also seen 'address already in use',
+                # which makes even less sense.
+                'refused|not known|already in use'
         ):
             socket.create_connection(
                 (greentest.DEFAULT_BIND_ADDR, connect_port),
@@ -380,6 +379,7 @@ class TestCreateConnection(greentest.TestCase):
 
 
     @greentest.ignores_leakcheck
+    @skipWithoutExternalNetwork("Tries to resolve hostname")
     def test_base_exception(self):
         # such as a GreenletExit or a gevent.timeout.Timeout
 
@@ -395,7 +395,7 @@ class TestCreateConnection(greentest.TestCase):
                 MockSocket.created += (self,)
 
             def connect(self, _):
-                raise E()
+                raise E(_)
 
             def close(self):
                 self.closed = True

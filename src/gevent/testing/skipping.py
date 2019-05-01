@@ -103,52 +103,47 @@ def _check_psutil():
     return _has_psutil_process
 
 
-def skipWithoutPSUtil(reason):
-    # Important: If you use this on classes, you must not use the
-    # two-argument form of super()
-    reason = "psutil not available: " + reason
+def _make_runtime_skip_decorator(reason, predicate):
     def decorator(test_item):
-        # Defer the check until runtime to avoid imports
         if not isinstance(test_item, type):
             f = test_item
             @functools.wraps(test_item)
-            def skip_wrapper(*args):
-                if not _check_psutil():
+            def skip_wrapper(*args, **kwargs):
+                if not predicate():
                     raise unittest.SkipTest(reason)
-                return f(*args)
+                return f(*args, **kwargs)
             test_item = skip_wrapper
         else:
-            # given a class, subclass its setUp method to do the same.
-
-            # The trouble with this is that the decorator automatically
-            # rebinds to the same name, and if there are two-argument calls
-            # like `super(MyClass, self).thing` in the class, we get infinite
-            # recursion (because MyClass has been rebound to the object we return.)
-            # This is easy to fix on Python 3: use the zero argument `super()`, because
-            # the lookup relies not on names but implicit slots.
+            # given a class, override setUp() to skip it.
             #
-            # I didn't find a good workaround for this on Python 2, so
-            # I'm just forbidding using the two argument super.
+            # Internally, unittest uses two flags on the class to do this:
+            # __unittest_skip__ and __unittest_skip_why__. It *appears*
+            # these are evaluated for each method in the test, so we can safely
+            # change them at runtime. **This isn't documented.**
+            #
+            # If they are set before execution begins, then the class setUpClass
+            # and tearDownClass are skipped. So changing them at runtime could result
+            # in something being set up but not torn down. It is substantially
+            # faster, though, to set them.
             base = test_item
-            class SkipWrapper(base):
-                def setUp(self):
-                    if not _check_psutil():
-                        raise unittest.SkipTest(reason)
-                    base.setUp(self)
-
-                def _super(self):
-                    return super(base, self)
-            SkipWrapper.__name__ = test_item.__name__
-            SkipWrapper.__module__ = test_item.__module__
-            try:
-                SkipWrapper.__qualname__ = test_item.__qualname__
-            except AttributeError:
-                # Python 2
-                pass
-            test_item = SkipWrapper
+            base_setUp = base.setUp
+            @functools.wraps(test_item)
+            def setUp(self):
+                if not predicate():
+                    base.__unittest_skip__ = True
+                    base.__unittest_skip_why__ = reason
+                    raise unittest.SkipTest(reason)
+                base_setUp(self)
+            base.setUp = setUp
 
         return test_item
+
     return decorator
+
+def skipWithoutPSUtil(reason):
+    reason = "psutil not available: " + reason
+    # Defer the check until runtime to avoid imports
+    return _make_runtime_skip_decorator(reason, _check_psutil)
 
 if sysinfo.LIBUV:
     skipOnLibuv = unittest.skip
@@ -168,3 +163,28 @@ if sysinfo.LIBUV:
             skipOnLibuvOnPyPyOnWin = unittest.skip
 else:
     skipOnLibev = unittest.skip
+
+
+def skipWithoutResource(resource, reason=''):
+    requires = 'Requires resource %r' % (resource,)
+    if not reason:
+        reason = requires
+    else:
+        reason = reason + ' (' + requires + ')'
+
+    # Defer until runtime; resources are established as part
+    # of test startup.
+    def predicate(): # This is easily cached if needed
+        from . import resources
+        return resources.ensure_setup_resources().is_resource_enabled(resource)
+
+    return _make_runtime_skip_decorator(reason, predicate)
+
+def skipWithoutExternalNetwork(reason=''):
+    # Use to decorate test functions or classes that
+    # need access to external network resources (e.g., DNS, HTTP servers, etc)
+    #
+    # Important: If you use this on classes, you must not use the
+    # two-argument form of super()
+
+    return skipWithoutResource('network', reason)

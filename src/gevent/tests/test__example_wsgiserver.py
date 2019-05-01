@@ -4,7 +4,7 @@ try:
     from urllib import request as urllib2
 except ImportError:
     import urllib2
-from unittest import SkipTest
+
 
 import socket
 import ssl
@@ -59,7 +59,7 @@ class Test_wsgiserver(util.TestServer):
             self._test_hello()
             # Now create a connection and only partway finish
             # the transaction
-            sock = socket.create_connection(('localhost', self.PORT))
+            sock = socket.create_connection((params.DEFAULT_LOCAL_HOST_ADDR, self.PORT))
             ssl_sock = None
             if self._use_ssl:
                 ssl_sock = ssl.wrap_socket(sock)
@@ -88,54 +88,6 @@ class Test_wsgiserver(util.TestServer):
 
     def test_a_blocking_client(self):
         self._do_test_a_blocking_client()
-
-@greentest.skipOnCI("Timing issues sometimes lead to a connection refused")
-class Test_wsgiserver_ssl(Test_wsgiserver):
-    server = 'wsgiserver_ssl.py'
-    URL = 'https://%s:8443' % (params.DEFAULT_LOCAL_HOST_ADDR,)
-    PORT = 8443
-    _use_ssl = True
-
-    if hasattr(ssl, '_create_unverified_context'):
-        # Disable verification for our self-signed cert
-        # on Python >= 2.7.9 and 3.4
-        ssl_ctx = ssl._create_unverified_context()
-
-
-@greentest.skipOnCI("Timing issues sometimes lead to a connection refused")
-class Test_webproxy(Test_wsgiserver):
-    server = 'webproxy.py'
-
-    def _run_all_tests(self):
-        status, data = self.read('/')
-        self.assertEqual(status, '200 OK')
-        self.assertIn(b"gevent example", data)
-        status, data = self.read('/http://www.google.com')
-        self.assertEqual(status, '200 OK')
-        self.assertIn(b'google', data.lower())
-
-    def test_a_blocking_client(self):
-        # Not applicable
-        raise SkipTest("Not applicable")
-
-
-# class Test_webpy(Test_wsgiserver):
-#     server = 'webpy.py'
-#     not_found_message = 'not found'
-#
-#     def _test_hello(self):
-#         status, data = self.read('/')
-#         self.assertEqual(status, '200 OK')
-#         assert "Hello, world" in data, repr(data)
-#
-#     def _test_long(self):
-#         start = time.time()
-#         status, data = self.read('/long')
-#         delay = time.time() - start
-#         assert 10 - 0.5 < delay < 10 + 0.5, delay
-#         self.assertEqual(status, '200 OK')
-#         self.assertEqual(data, 'Hello, 10 seconds later')
-
 
 if __name__ == '__main__':
     greentest.main()

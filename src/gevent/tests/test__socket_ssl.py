@@ -2,7 +2,7 @@
 from gevent import monkey
 monkey.patch_all()
 
-import unittest
+
 try:
     import httplib
 except ImportError:
@@ -13,17 +13,17 @@ import socket
 import gevent.testing as greentest
 
 
-@unittest.skipUnless(
+@greentest.skipUnless(
     hasattr(socket, 'ssl'),
-    "Needs socket.ssl"
+    "Needs socket.ssl (Python 2)"
 )
+@greentest.skipWithoutExternalNetwork("Tries to access amazon.com")
 class AmazonHTTPSTests(greentest.TestCase):
 
     __timeout__ = 30
 
     def test_amazon_response(self):
         conn = httplib.HTTPSConnection('sdb.amazonaws.com')
-        conn.debuglevel = 1
         conn.request('GET', '/')
         conn.getresponse()
 

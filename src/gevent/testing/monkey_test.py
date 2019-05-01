@@ -21,23 +21,26 @@ monkey.patch_all(**kwargs)
 from .sysinfo import RUNNING_ON_APPVEYOR
 from .sysinfo import PY37
 from .patched_tests_setup import disable_tests_in_source
-try:
-    from test import support
-except ImportError:
-    from test import test_support as support
-support.is_resource_enabled = lambda *args: True
-del support.use_resources
+from . import support
+from . import resources
+from . import SkipTest
+
 if RUNNING_ON_APPVEYOR and PY37:
     # 3.7 added a stricter mode for thread cleanup.
     # It appears to be unstable on Windows (at least appveyor)
     # and test_socket.py constantly fails with an extra thread
     # on some random test. We disable it entirely.
+    # XXX: Figure out how to make a *definition* in ./support.py actually
+    # override the original in test.support, without having to
+    # manually set it
     import contextlib
     @contextlib.contextmanager
     def wait_threads_exit(timeout=None): # pylint:disable=unused-argument
         yield
     support.wait_threads_exit = wait_threads_exit
 
+# Configure allowed resources
+resources.setup_resources()
 
 __file__ = os.path.join(os.getcwd(), test_filename)
 
@@ -71,5 +74,14 @@ try:
                           'exec',
                           dont_inherit=True)
     exec(module_code, globals())
+except SkipTest as e:
+    # Some tests can raise test.support.ResourceDenied
+    # in their main method before the testrunner takes over.
+    # That's a kind of SkipTest. we can't get  a skip count because it
+    # hasn't run, though.
+    print(e)
+    # Match the regular unittest output, including ending with skipped
+    print("Ran 0 tests in 0.0s")
+    print('OK (skipped=0)')
 finally:
     os.remove(temp_path)

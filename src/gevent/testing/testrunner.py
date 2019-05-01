@@ -12,6 +12,9 @@ from datetime import timedelta
 from multiprocessing.pool import ThreadPool
 from multiprocessing import cpu_count
 from . import util
+from .resources import parse_resources
+from .resources import setup_resources
+from .resources import unparse_resources
 from .sysinfo import RUNNING_ON_CI
 from .sysinfo import PYPY
 from .sysinfo import PY2
@@ -94,6 +97,11 @@ class Runner(object):
                  failfast=False,
                  quiet=False,
                  configured_run_alone_tests=()):
+        """
+        :keyword quiet: Set to True or False to explicitly choose. Set to
+            `None` to use the default, which may come from the environment variable
+            ``GEVENTTEST_QUIET``.
+        """
         self._tests = tests
         self._configured_failing_tests = configured_failing_tests
         self._failfast = failfast
@@ -107,7 +115,8 @@ class Runner(object):
         self._worker_count = min(len(tests), NWORKERS) or 1
 
     def _run_one(self, cmd, **kwargs):
-        kwargs['quiet'] = self._quiet
+        if self._quiet is not None:
+            kwargs['quiet'] = self._quiet
         result = util.run(cmd, **kwargs)
         if not result and self._failfast:
             sys.exit(1)
@@ -295,6 +304,12 @@ def discover(
             # XXX: Rework this to avoid importing.
             to_import.append(qualified_name)
         else:
+            # XXX: For simple python module tests, try this with `runpy.run_module`,
+            # very similar to the way we run things for monkey patching.
+            # The idea here is that we can perform setup ahead of time (e.g., setup_resources())
+            # in each test without having to do it manually or force calls or modifications to those
+            # tests.
+
             cmd = [sys.executable, '-u']
             if PYPY and PY2:
                 # Doesn't seem to be an env var for this
@@ -407,14 +422,14 @@ def report(total, failed, passed, exit=True, took=None,
         if failed_unexpected:
             util.log('\n%s/%s unexpected failures', len(failed_unexpected), total, color='error')
             print_list(failed_unexpected)
-    else:
-        util.log(
-            '\nRan %s tests%s in %s files%s',
-            total_cases,
-            util._colorize('skipped', " (skipped=%d)" % total_skipped) if total_skipped else '',
-            total,
-            took,
-        )
+
+    util.log(
+        '\nRan %s tests%s in %s files%s',
+        total_cases,
+        util._colorize('skipped', " (skipped=%d)" % total_skipped) if total_skipped else '',
+        total,
+        took,
+    )
 
     if exit:
         if failed_unexpected:
@@ -492,10 +507,29 @@ def main():
     parser.add_argument("--verbose", action="store_false", dest='quiet')
     parser.add_argument("--debug", action="store_true", default=False)
     parser.add_argument("--package", default="gevent.tests")
+    parser.add_argument('-u', '--use', metavar='RES1,RES2,...',
+                        action='store', type=parse_resources,
+                        help='specify which special resource intensive tests '
+                        'to run. "all" is the default; "none" may also be used. '
+                        'Disable individual resources with a leading -.'
+                        'For example, "-u-network". GEVENTTEST_USE_RESOURCES is used '
+                        'if no argument is given. To only use one resources, specify '
+                        '"-unone,resource".')
+
     parser.add_argument("--travis-fold", metavar="MSG",
                         help="Emit Travis CI log fold markers around the output.")
     parser.add_argument('tests', nargs='*')
     options = parser.parse_args()
+    # options.use will be either None for not given, or a list
+    # of the last specified -u argument.
+    # If not given, use the default, which we'll take from the environment, if set.
+    options.use = list(set(parse_resources() if options.use is None else options.use))
+
+    # Whether or not it came from the environment, put it in the
+    # environment now.
+    os.environ['GEVENTTEST_USE_RESOURCES'] = unparse_resources(options.use)
+    setup_resources(options.use)
+
 
     # Set this before any test imports in case of 'from .util import QUIET';
     # not that this matters much because we spawn tests in subprocesses,

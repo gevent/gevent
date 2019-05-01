@@ -4,8 +4,6 @@
 
 .. include:: _about.rst
 
-
-
 :ref:`Continue reading <installation>` »
 
 If you like gevent, :doc:`donate <sfc>` to support the development.

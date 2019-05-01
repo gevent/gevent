@@ -1,3 +1,4 @@
+# gevent-test-requires-resource: unixsocket_client
 import os
 from gevent.pywsgi import WSGIServer
 from gevent import socket

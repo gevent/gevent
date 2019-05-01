@@ -19,7 +19,7 @@ env:
         - CCACHE_NOHASHDIR=true
         - BUILD_LIBS=$HOME/.libs
         - CFLAGS="-g -pipe"
-        - CPPFLAGS="-I$BUILD_LIBS/include"
+        - CPPFLAGS="-I$BUILD_LIBS/include -DEV_VERIFY=3"
         - LDFLAGS="-L$BUILD_LIBS/lib"
         - LD_LIBRARY_PATH="$BUILD_LIBS/lib"
 
@@ -42,7 +42,7 @@ env:
       - TRAVIS_PYTHON_VERSION=3.7
       - TRAVIS_PYTHON_VERSION=pypy2.7
       - TRAVIS_PYTHON_VERSION=pypy3.6
-      - TRAVIS_PYTHON_VERSION=2.7 EMBED=0
+      - TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0
 
 matrix:
   fast_finish: true
@@ -110,7 +110,7 @@ jobs:
         # so that we don't have to use build isolation and can better use the cache;
         # Note that we can't use -U for cffi and greenlet on PyPy.
         - &build-gevent-deps pip install -U setuptools wheel && pip install cffi cython greenlet
-        - GEVENTSETUP_EV_VERIFY=3 pip install --no-build-isolation .[test,events,dnspython]
+        - pip install --no-build-isolation .[test]
       script: ccache -s
       before_script: true
       after_success: true
@@ -125,13 +125,13 @@ jobs:
     - <<: *build-gevent
       env: TRAVIS_PYTHON_VERSION=pypy3.6
     - <<: *build-gevent
-      env: TRAVIS_PYTHON_VERSION=2.7 EMBED=0
+      env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0
       install:
         # Install the Python runtime
         - *build-gevent-python
         - *build-gevent-deps
         # Install the C dependencies to a known location. This is used
-        # to test "no embed" cases. It might seem like it would prime
+        # to test 'no embed' cases. It might seem like it would prime
         # the CCache for when we *do* embed if we did it as part of the generic build stage,
         # but overall it just seems to slow things down. The Travis caching and CCache is not working as
         # well as we would hope.
@@ -142,7 +142,7 @@ jobs:
         # delete to avoid repacking the archive
         - rm -rf $BUILD_LIBS/share/man/
         - ls -l $BUILD_LIBS $BUILD_LIBS/lib
-        - EMBED=0 pip install --no-build-isolation .[test,events,dnspython]
+        - pip install --no-build-isolation .[test]
 
     # Ok, now we switch to the test stage. These are all in addition
     # to the jobs created by the matrix (and should override the `script` command).
@@ -236,16 +236,19 @@ jobs:
       name: pure37
 
 
-    # 2.7, no-embed. Run the tests that exercise the libraries we linked to.
+    # 2.7, no-embed. Run the tests that exercise the libraries we
+    # linked to.
+    # XXX: The CFFI backends, as exercised by test-lib[eu]v-jobs
+    # don't really support this!
     - <<: *test-ares-jobs
-      env: TRAVIS_PYTHON_VERSION=2.7 EMBED=0
+      env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0
       name: ares27-noembed
-    - <<: *test-libuv-jobs
-      env: TRAVIS_PYTHON_VERSION=2.7 EMBED=0
-      name: libuv27-noembed
-    - <<: *test-libev-jobs
-      env: TRAVIS_PYTHON_VERSION=2.7 EMBED=0
-      name: libev27-noembed
+    # - <<: *test-libuv-jobs
+    #   env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0
+    #   name: libuv27-noembed
+    # - <<: *test-libev-jobs
+    #   env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0
+    #   name: libev27-noembed
 
     # PyPy 2.7
     - <<: *test-dnspython-jobs

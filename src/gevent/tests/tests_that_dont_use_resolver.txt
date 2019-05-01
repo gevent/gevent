@@ -18,7 +18,7 @@ test__environ.py
 test__event.py
 # uses socket test__example_echoserver.py
 # uses socket test__example_portforwarder.py
-# uses socket test___example_servers.py
+# uses socket test__example_w*.py
 # uses bunch of things test__examples.py
 # uses socket test__example_udp_client.py
 # uses socket test__example_udp_server.py

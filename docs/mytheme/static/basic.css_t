@@ -556,7 +556,7 @@ img.alignright, img.right {margin: 0 0 1em 1.5em;}
 /* Wrapper */
 #site-wrapper {
 	margin: 0 auto;
-	width: 920px;
+	width: 80%;
 }
 
 

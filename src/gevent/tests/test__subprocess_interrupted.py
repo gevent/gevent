@@ -9,6 +9,10 @@ if 'runtestcase' in sys.argv[1:]: # pragma: no cover
     gevent.subprocess.Popen([sys.executable, '-c', '"1/0"'])
     gevent.sleep(1)
 else:
+    # XXX: Handle this more automatically. See comments in the testrunner.
+    from gevent.testing.resources import exit_without_resource
+    exit_without_resource('subprocess')
+
     import subprocess
     for _ in range(5):
         out, err = subprocess.Popen([sys.executable, '-W', 'ignore',

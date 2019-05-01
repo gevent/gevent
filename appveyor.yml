@@ -7,6 +7,10 @@ environment:
     CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\appveyor\\run_with_env.cmd"
     # Use a fixed hash seed for reproducability
     PYTHONHASHSEED: 8675309
+    # Disable tests that use external network resources;
+    # too often we get failures to resolve DNS names or failures
+    # to connect on AppVeyor.
+    GEVENTTEST_USE_RESOURCES: "-network"
 
   matrix:
 
@@ -140,7 +144,7 @@ cache:
 build_script:
   # Build the compiled extension
   # pip 19.1 (exactly) won't work; but 19.1.1 should with --no-use-pep517
-  - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -m pip install -U --upgrade-strategy=eager -r dev-requirements.txt
+  - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -m pip install -r dev-requirements.txt
 
 test_script:
   # Run the project tests
@@ -154,7 +158,7 @@ after_test:
   # https://ci.appveyor.com/project/denik/gevent/builds/23810605/job/83aw4u67artt002b#L602
   # So we violate DRY and repeate some requirements in order to use
   # --no-build-isolation
-  - "%CMD_IN_ENV% %PYEXE% -m pip install -U --upgrade-strategy=eager pycparser wheel cython setuptools"
+  - "%CMD_IN_ENV% %PYEXE% -m pip install -U pycparser wheel cython setuptools cffi"
   - "%CMD_IN_ENV% %PYEXE% -m pip wheel --no-build-isolation . -w dist"
   - ps: "ls dist"
 
