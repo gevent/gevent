@@ -87,7 +87,6 @@ def _bool_from_environ(key):
     raise ValueError('Environment variable %r has invalid value %r. '
                      'Please set it to 1, 0 or an empty string' % (key, value))
 
-IGNORE_CFFI = _bool_from_environ("GEVENTSETUP_NO_CFFI_BUILD")
 
 def _check_embed(key, defkey, path=None, warn=False):
     """

@@ -11,16 +11,29 @@ import sys
 import os
 import os.path # pylint:disable=no-name-in-module
 
+from cffi import FFI
+
+sys.path.append(".")
+
+try:
+    import _setuputils
+except ImportError:
+    print("This file must be imported with setup.py in the current working dir.")
+    raise
+
 
 __all__ = []
 
 WIN = sys.platform.startswith('win32')
+LIBUV_EMBED = _setuputils.should_embed('libuv')
+print("Embedding libuv?", LIBUV_EMBED)
 
-
-from cffi import FFI
 ffi = FFI()
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
+setup_py_dir = os.path.abspath(os.path.join(thisdir, '..', '..', '..'))
+libuv_dir = os.path.abspath(os.path.join(setup_py_dir, 'deps', 'libuv'))
+
 def read_source(name):
     with open(os.path.join(thisdir, name), 'r') as f:
         return f.read()
@@ -49,12 +62,9 @@ _void_pointer_as_integer = 'intptr_t'
 _cdef = _cdef.replace("GEVENT_UV_OS_SOCK_T", 'int' if not WIN else _void_pointer_as_integer)
 
 
-setup_py_dir = os.path.abspath(os.path.join(thisdir, '..', '..', '..'))
-libuv_dir = os.path.abspath(os.path.join(setup_py_dir, 'deps', 'libuv'))
 
 
 LIBUV_INCLUDE_DIRS = [
-    thisdir, # libev_vfd.h
     os.path.join(libuv_dir, 'include'),
     os.path.join(libuv_dir, 'src'),
 ]
@@ -192,7 +202,9 @@ elif sys.platform.startswith('sunos'):
     ]
 
 
-LIBUV_MACROS = []
+LIBUV_MACROS = [
+    ('LIBUV_EMBED', int(LIBUV_EMBED)),
+]
 
 def _define_macro(name, value):
     LIBUV_MACROS.append((name, value))
@@ -239,6 +251,11 @@ elif WIN:
     _add_library('userenv')
     _add_library('ws2_32')
 
+if not LIBUV_EMBED:
+    del LIBUV_SOURCES[:]
+    del LIBUV_INCLUDE_DIRS[:]
+    _add_library('uv')
+
 ffi.cdef(_cdef)
 ffi.set_source('gevent.libuv._corecffi',
                _source,
@@ -249,4 +266,9 @@ ffi.set_source('gevent.libuv._corecffi',
                define_macros=list(LIBUV_MACROS))
 
 if __name__ == '__main__':
-    ffi.compile()
+    # See notes in libev/_corecffi_build.py for how to test this.
+    #
+    # Other than the obvious directory changes, the changes are:
+    #
+    # CPPFLAGS=-Ideps/libuv/include/
+    ffi.compile(verbose=True)

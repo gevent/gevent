@@ -17,7 +17,6 @@ from _setuputils import read
 from _setuputils import read_version
 from _setuputils import system
 from _setuputils import PYPY, WIN
-from _setuputils import IGNORE_CFFI
 from _setuputils import ConfiguringBuildExt
 from _setuputils import GeventClean
 from _setuputils import BuildFailed
@@ -284,15 +283,6 @@ for mod in _to_cythonize:
     EXT_MODULES.append(cythonize1(mod))
 del _to_cythonize
 
-
-if IGNORE_CFFI and not PYPY and not WIN:
-    # Allow distributors to turn off CFFI builds
-    # even if it's available, because CFFI always embeds
-    # our copy of libev/libuv and they may not want that.
-    # Not allowed on PyPy and not allowed on Windows, because those
-    # backends are required there.
-    # TODO: CONFIRM if this is still the case.
-    del cffi_modules[:]
 
 ## Extras
 

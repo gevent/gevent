@@ -12,8 +12,12 @@ import os
 import os.path # pylint:disable=no-name-in-module
 from cffi import FFI
 
-# We must be run from the directory containing setup.py.
-import _setuplibev
+sys.path.append(".")
+try:
+    import _setuplibev
+except ImportError:
+    print("This file must be imported with setup.py in the current working dir.")
+    raise
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
 setup_dir = os.path.abspath(os.path.join(thisdir, '..', '..', '..'))

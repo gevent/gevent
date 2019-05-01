@@ -90,6 +90,9 @@
   variables. Instead, use ``GEVENTSETUP_EMBED`` and
   ``GEVENTSETUP_EMBED_LIBEV``. See :issue:`1402`.
 
+- The CFFI backends now respect the embed build-time setting. This allows
+  building the libuv backend without embedding libuv (except on Windows).
+
 - Support test resources. This allows disabling tests that use the
   network. See :ref:`limiting-test-resource-usage` for more.
 

@@ -22,7 +22,6 @@ from _setuputils import DEFINE_MACROS
 from _setuputils import glob_many
 from _setuputils import dep_abspath
 from _setuputils import should_embed
-from _setuputils import cythonize1
 
 
 LIBEV_EMBED = should_embed('libev')
