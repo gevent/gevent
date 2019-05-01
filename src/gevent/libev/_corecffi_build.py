@@ -101,8 +101,13 @@ if __name__ == '__main__':
     #     python setup.py build_ext -i
     # 3) export DYLD_LIBRARY_PATH=`pwd`/deps/libev/.libs
     #
-    # XXX: The DYLD_LIBRARY_PATH is because the linker hard-codes
+    # The DYLD_LIBRARY_PATH is because the linker hard-codes
     # /usr/local/lib/libev.4.dylib in the corecffi.so dylib, because
     # that's the "install name" of the libev dylib that was built.
     # Adding a -rpath to the LDFLAGS doesn't change things.
+    # This can be fixed with `install_name_tool`:
+    #
+    # 3) install_name_tool -change /usr/local/lib/libev.4.dylib \
+    #    `pwd`/deps/libev/.libs/libev.4.dylib \
+    #     src/gevent/libev/_corecffi.abi3.so
     ffi.compile(verbose=True)

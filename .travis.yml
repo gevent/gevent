@@ -50,6 +50,7 @@ matrix:
 
 before_install:
   - export PATH=$BUILD_RUNTIMES/snakepit/$TRAVIS_PYTHON_VERSION.d/bin:$PATH
+  - export G_SITE=$BUILD_RUNTIMES/snakepit/$TRAVIS_PYTHON_VERSION.d/lib/*/site-packages/
 
 before_script:
   # Show some details of interest
@@ -130,6 +131,7 @@ jobs:
         # Install the Python runtime
         - *build-gevent-python
         - *build-gevent-deps
+        - ls -l $G_SITE
         # Install the C dependencies to a known location. This is used
         # to test 'no embed' cases. It might seem like it would prime
         # the CCache for when we *do* embed if we did it as part of the generic build stage,
@@ -143,7 +145,7 @@ jobs:
         - rm -rf $BUILD_LIBS/share/man/
         - ls -l $BUILD_LIBS $BUILD_LIBS/lib $BUILD_LIBS/include
         - pip install --no-build-isolation .[test]
-        - objdump -p src/gevent/libev/*so
+        - objdump -p $G_SITE/gevent/libev/*so
       script:
         # Verify that we got non-embedded builds
         - python -c 'import gevent.libev.corecffi as CF; assert not CF.LIBEV_EMBED'
