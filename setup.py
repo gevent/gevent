@@ -46,9 +46,10 @@ __version__ = read_version()
 
 from _setuplibev import libev_configure_command
 from _setuplibev import LIBEV_EMBED
-from _setuplibev import CORE
-
+from _setuplibev import build_extension as build_libev_extension
 from _setupares import ARES
+
+CORE = cythonize1(build_libev_extension())
 
 # Get access to the greenlet header file.
 # The sysconfig dir is not enough if we're in a virtualenv

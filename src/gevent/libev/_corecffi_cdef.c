@@ -1,3 +1,7 @@
+/* access whether we built embedded or not */
+
+#define LIBEV_EMBED ...
+
 /* libev interface */
 
 #define EV_MINPRI ...
@@ -55,11 +59,9 @@
 #define GEVENT_STRUCT_DONE int
 #define GEVENT_ST_NLINK_T int
 
-struct ev_loop {
-    int backend_fd;
-    int activecnt;
-    GEVENT_STRUCT_DONE _;
-};
+/* Note that we don't declare the ev_loop struct and fields here. */
+/* If we don't embed libev, we can't access those fields, libev */
+/* keeps it opaque.  */
 
 // Watcher types
 // base for all watchers

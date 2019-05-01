@@ -143,6 +143,10 @@ jobs:
         - rm -rf $BUILD_LIBS/share/man/
         - ls -l $BUILD_LIBS $BUILD_LIBS/lib
         - pip install --no-build-isolation .[test]
+        - objdump -p src/gevent/libev/*so
+      script:
+        # Verify that we got non-embedded builds
+        - python -c 'import gevent.libev.corecffi as CF; assert not CF.LIBEV_EMBED'
 
     # Ok, now we switch to the test stage. These are all in addition
     # to the jobs created by the matrix (and should override the `script` command).

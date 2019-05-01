@@ -1,16 +1,16 @@
-#if defined(LIBEV_EMBED)
-#include "ev.c"
-#undef LIBEV_EMBED
-#define LIBEV_EMBED 1
-#define gevent_ev_loop_origflags(loop) ((loop)->origflags)
-#define gevent_ev_loop_sig_pending(loop) ((loop))->sig_pending
-#define gevent_ev_loop_backend_fd(loop) ((loop))->backend_fd
-#define gevent_ev_loop_activecnt(loop) ((loop))->activecnt
-#if EV_USE_SIGNALFD
-#define gevent_ev_loop_sigfd(loop) ((loop))->sigfd
-#else
-#define gevent_ev_loop_sigfd(loop) -1
-#endif /* !EV_USE_SIGNALFD */
+#if defined(LIBEV_EMBED) && LIBEV_EMBED
+  #include "ev.c"
+  #undef LIBEV_EMBED
+  #define LIBEV_EMBED 1
+  #define gevent_ev_loop_origflags(loop) ((loop)->origflags)
+  #define gevent_ev_loop_sig_pending(loop) ((loop))->sig_pending
+  #define gevent_ev_loop_backend_fd(loop) ((loop))->backend_fd
+  #define gevent_ev_loop_activecnt(loop) ((loop))->activecnt
+  #if EV_USE_SIGNALFD
+    #define gevent_ev_loop_sigfd(loop) ((loop))->sigfd
+  #else
+    #define gevent_ev_loop_sigfd(loop) -1
+  #endif /* !EV_USE_SIGNALFD */
 #else /* !LIBEV_EMBED */
 #include "ev.h"
 

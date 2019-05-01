@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 setup helpers for libev.
+
+Importing this module should have no side-effects; in particular,
+it shouldn't attempt to cythonize anything.
 """
 
 from __future__ import print_function, absolute_import, division
@@ -60,35 +63,40 @@ def configure_libev(bext, ext):
     finally:
         os.chdir(cwd)
 
-CORE = Extension(name='gevent.libev.corecext',
-                 sources=[
-                     'src/gevent/libev/corecext.pyx',
-                     'src/gevent/libev/callbacks.c',
-                 ],
-                 include_dirs=['src/gevent/libev'] + [dep_abspath('libev')] if LIBEV_EMBED else [],
-                 libraries=list(LIBRARIES),
-                 define_macros=list(DEFINE_MACROS),
-                 depends=glob_many('src/gevent/libev/callbacks.*',
-                                   'src/gevent/libev/stathelper.c',
-                                   'src/gevent/libev/libev*.h',
-                                   'deps/libev/*.[ch]'))
-if WIN:
-    CORE.define_macros.append(('EV_STANDALONE', '1'))
-# QQQ libev can also use -lm, however it seems to be added implicitly
+def build_extension():
+    # Return the un-cythonized extension.
+    # This can be used to access things like `libraries` and `include_dirs`
+    # and `define_macros` so we DRY.
+    CORE = Extension(name='gevent.libev.corecext',
+                     sources=[
+                         'src/gevent/libev/corecext.pyx',
+                         'src/gevent/libev/callbacks.c',
+                     ],
+                     include_dirs=['src/gevent/libev'] + [dep_abspath('libev')] if LIBEV_EMBED else [],
+                     libraries=list(LIBRARIES),
+                     define_macros=list(DEFINE_MACROS),
+                     depends=glob_many('src/gevent/libev/callbacks.*',
+                                       'src/gevent/libev/stathelper.c',
+                                       'src/gevent/libev/libev*.h',
+                                       'deps/libev/*.[ch]'))
+    if WIN:
+        CORE.define_macros.append(('EV_STANDALONE', '1'))
+    # QQQ libev can also use -lm, however it seems to be added implicitly
 
-if LIBEV_EMBED:
-    CORE.define_macros += [('LIBEV_EMBED', '1'),
-                           ('EV_COMMON', ''),  # we don't use void* data
-                           # libev watchers that we don't use currently:
-                           ('EV_CLEANUP_ENABLE', '0'),
-                           ('EV_EMBED_ENABLE', '0'),
-                           ("EV_PERIODIC_ENABLE", '0')]
-    CORE.configure = configure_libev
-    if sys.platform == "darwin":
-        os.environ["CPPFLAGS"] = ("%s %s" % (os.environ.get("CPPFLAGS", ""), "-U__llvm__")).lstrip()
-    if os.environ.get('GEVENTSETUP_EV_VERIFY') is not None:
-        CORE.define_macros.append(('EV_VERIFY', os.environ['GEVENTSETUP_EV_VERIFY']))
-else:
-    CORE.libraries.append('ev')
+    if LIBEV_EMBED:
+        CORE.define_macros += [('LIBEV_EMBED', '1'),
+                               ('EV_COMMON', ''),  # we don't use void* data
+                               # libev watchers that we don't use currently:
+                               ('EV_CLEANUP_ENABLE', '0'),
+                               ('EV_EMBED_ENABLE', '0'),
+                               ("EV_PERIODIC_ENABLE", '0')]
+        CORE.configure = configure_libev
+        if sys.platform == "darwin":
+            os.environ["CPPFLAGS"] = ("%s %s" % (os.environ.get("CPPFLAGS", ""), "-U__llvm__")).lstrip()
+        if os.environ.get('GEVENTSETUP_EV_VERIFY') is not None:
+            CORE.define_macros.append(('EV_VERIFY', os.environ['GEVENTSETUP_EV_VERIFY']))
+    else:
+        CORE.define_macros += [('LIBEV_EMBED', '0')]
+        CORE.libraries.append('ev')
 
-CORE = cythonize1(CORE)
+    return CORE
