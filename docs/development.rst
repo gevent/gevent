@@ -161,6 +161,8 @@ something like this::
   coverage html -i
   <open htmlcov/index.html>
 
+.. _limiting-test-resource-usage:
+
 Limiting Resource Usage
 -----------------------
 

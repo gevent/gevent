@@ -90,6 +90,9 @@
   variables. Instead, use ``GEVENTSETUP_EMBED`` and
   ``GEVENTSETUP_EMBED_LIBEV``. See :issue:`1402`.
 
+- Support test resources. This allows disabling tests that use the
+  network. See :ref:`limiting-test-resource-usage` for more.
+
 1.4.0 (2019-01-04)
 ==================
 
