@@ -15,6 +15,7 @@ from cffi import FFI
 sys.path.append(".")
 try:
     import _setuplibev
+    import _setuputils
 except ImportError:
     print("This file must be imported with setup.py in the current working dir.")
     raise
@@ -27,7 +28,7 @@ __all__ = []
 
 
 ffi = FFI()
-
+distutils_ext = _setuplibev.build_extension()
 
 def read_source(name):
     with open(os.path.join(thisdir, name), 'r') as f:
@@ -47,13 +48,18 @@ _cdef = _cdef.replace('#define GEVENT_ST_NLINK_T int',
 _cdef = _cdef.replace('GEVENT_ST_NLINK_T', 'nlink_t')
 
 if _setuplibev.LIBEV_EMBED:
+    # Arrange access to the loop internals
     _cdef += """
 struct ev_loop {
     int backend_fd;
     int activecnt;
     ...;
 };
-"""
+    """
+
+# arrange to be configured.
+_setuputils.ConfiguringBuildExt.gevent_add_pre_run_action(distutils_ext.configure)
+
 
 if sys.platform.startswith('win'):
     # We must have the vfd_open, etc, functions on
@@ -70,9 +76,6 @@ void vfd_free(int);
 
 # source goes to the C compiler
 _source = read_source('_corecffi_source.c')
-
-
-distutils_ext = _setuplibev.build_extension()
 
 macros = list(distutils_ext.define_macros)
 try:

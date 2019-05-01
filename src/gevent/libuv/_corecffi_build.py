@@ -26,7 +26,7 @@ __all__ = []
 
 WIN = sys.platform.startswith('win32')
 LIBUV_EMBED = _setuputils.should_embed('libuv')
-print("Embedding libuv?", LIBUV_EMBED)
+
 
 ffi = FFI()
 

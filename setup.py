@@ -15,7 +15,6 @@ from setuptools import find_packages
 
 from _setuputils import read
 from _setuputils import read_version
-from _setuputils import system
 from _setuputils import PYPY, WIN
 from _setuputils import ConfiguringBuildExt
 from _setuputils import GeventClean
@@ -43,8 +42,6 @@ if PYPY and sys.pypy_version_info[:3] < (2, 6, 1): # pylint:disable=no-member
 __version__ = read_version()
 
 
-from _setuplibev import libev_configure_command
-from _setuplibev import LIBEV_EMBED
 from _setuplibev import build_extension as build_libev_extension
 from _setupares import ARES
 
@@ -307,18 +304,6 @@ EXTRA_RECOMMENDED = [
     CFFI_DEP,
 ] + EXTRA_DNSPYTHON + EXTRA_EVENTS + EXTRA_MONITOR
 
-# If we are running info / help commands, or we're being imported by
-# tools like pyroma, we don't need to build anything
-_BUILDING = True
-if ((len(sys.argv) >= 2
-     and ('--help' in sys.argv[1:]
-          or sys.argv[1] in ('--help-commands',
-                             'egg_info',
-                             '--version',
-                             'clean',
-                             '--long-description')))
-        or __name__ != '__main__'):
-    _BUILDING = False
 
 def make_long_description():
     readme = read('README.rst')
@@ -332,27 +317,7 @@ def make_long_description():
     return readme
 
 
-def run_setup(ext_modules, run_make):
-    if run_make:
-        if (not LIBEV_EMBED and not WIN and cffi_modules) or PYPY:
-            # We're not embedding libev but we do want
-            # to build the CFFI module. We need to configure libev
-            # because the CORE Extension won't.
-            # TODO: Generalize this.
-            if LIBEV_CFFI_MODULE in cffi_modules and not WIN:
-                system(libev_configure_command)
-                # This changed to the libev directory, and ran configure .
-                # It then copied the generated config.h back to the previous
-                # directory, which happened to be beside us. In the embedded case,
-                # we're building in a different directory, so it copied it back to build
-                # directory, but here, we're building in the embedded directory, so
-                # it gave us useless files.
-                bad_file = None
-                for bad_file in ('config.h', 'configure-output.txt'):
-                    if os.path.exists(bad_file):
-                        os.remove(bad_file)
-                del bad_file
-
+def run_setup(ext_modules):
     setup(
         name='gevent',
         version=__version__,
@@ -452,11 +417,10 @@ if os.getenv('READTHEDOCS'):
     os.environ['PATH'] = new_path
 
 try:
-    run_setup(EXT_MODULES, run_make=_BUILDING)
+    run_setup(EXT_MODULES)
 except BuildFailed:
     if ARES not in EXT_MODULES or not ARES.optional:
         raise
-    EXT_MODULES.remove(ARES)
-    run_setup(EXT_MODULES, run_make=_BUILDING)
-if ARES not in EXT_MODULES and __name__ == '__main__' and _BUILDING:
     sys.stderr.write('\nWARNING: The gevent.ares extension has been disabled.\n')
+    EXT_MODULES.remove(ARES)
+    run_setup(EXT_MODULES)

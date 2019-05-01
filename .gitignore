@@ -73,6 +73,7 @@ deps/libev/Makefile
 deps/libev/config.log
 deps/libev/config.h
 deps/libev/config.status
+deps/libev/configure-output.txt
 deps/libev/libtool
 deps/libev/stamp-h1
 deps/libev/.libs
