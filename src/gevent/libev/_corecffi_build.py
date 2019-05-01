@@ -10,21 +10,32 @@ from __future__ import absolute_import, print_function
 import sys
 import os
 import os.path # pylint:disable=no-name-in-module
+from cffi import FFI
+
+sys.path.append(".")
+try:
+    import _setuplibev
+except ImportError:
+    print("This file must be imported with setup.py in the current working dir.")
+    raise
+
+thisdir = os.path.dirname(os.path.abspath(__file__))
+setup_dir = os.path.abspath(os.path.join(thisdir, '..', '..', '..'))
 
 
 __all__ = []
 
 
-from cffi import FFI
 ffi = FFI()
 
-thisdir = os.path.dirname(os.path.abspath(__file__))
+
 def read_source(name):
     with open(os.path.join(thisdir, name), 'r') as f:
         return f.read()
 
+# cdef goes to the cffi library and determines what can be used in
+# Python.
 _cdef = read_source('_corecffi_cdef.c')
-_source = read_source('_corecffi_source.c')
 
 # These defines and uses help keep the C file readable and lintable by
 # C tools.
@@ -35,6 +46,14 @@ _cdef = _cdef.replace('#define GEVENT_ST_NLINK_T int',
                       'typedef int... nlink_t;')
 _cdef = _cdef.replace('GEVENT_ST_NLINK_T', 'nlink_t')
 
+if _setuplibev.LIBEV_EMBED:
+    _cdef += """
+struct ev_loop {
+    int backend_fd;
+    int activecnt;
+    ...;
+};
+"""
 
 if sys.platform.startswith('win'):
     # We must have the vfd_open, etc, functions on
@@ -49,14 +68,27 @@ vfd_socket_t vfd_get(int);
 void vfd_free(int);
 """
 
+# source goes to the C compiler
+_source = read_source('_corecffi_source.c')
 
 
-include_dirs = [
-    thisdir, # libev_vfd.h
-    os.path.abspath(os.path.join(thisdir, '..', '..', '..', 'deps', 'libev')),
-]
+distutils_ext = _setuplibev.build_extension()
+
+macros = list(distutils_ext.define_macros)
+try:
+    # We need the data pointer.
+    macros.remove(('EV_COMMON', ''))
+except ValueError:
+    pass
+
 ffi.cdef(_cdef)
-ffi.set_source('gevent.libev._corecffi', _source, include_dirs=include_dirs)
+ffi.set_source(
+    'gevent.libev._corecffi',
+    _source,
+    include_dirs=distutils_ext.include_dirs + [thisdir], # "libev.h"
+    define_macros=macros,
+    libraries=distutils_ext.libraries,
+)
 
 if __name__ == '__main__':
     # XXX: Note, on Windows, we would need to specify the external libraries
@@ -64,4 +96,22 @@ if __name__ == '__main__':
     # Python.h calls) the proper Python library---at least for PyPy. I never got
     # that to work though, and calling python functions is strongly discouraged
     # from CFFI code.
-    ffi.compile()
+
+    # On macOS to make the non-embedded case work correctly, against
+    # our local copy of libev:
+    #
+    # 1) configure and make libev
+    # 2) CPPFLAGS=-Ideps/libev/ LDFLAGS=-Ldeps/libev/.libs GEVENTSETUP_EMBED_LIBEV=0 \
+    #     python setup.py build_ext -i
+    # 3) export DYLD_LIBRARY_PATH=`pwd`/deps/libev/.libs
+    #
+    # The DYLD_LIBRARY_PATH is because the linker hard-codes
+    # /usr/local/lib/libev.4.dylib in the corecffi.so dylib, because
+    # that's the "install name" of the libev dylib that was built.
+    # Adding a -rpath to the LDFLAGS doesn't change things.
+    # This can be fixed with `install_name_tool`:
+    #
+    # 3) install_name_tool -change /usr/local/lib/libev.4.dylib \
+    #    `pwd`/deps/libev/.libs/libev.4.dylib \
+    #     src/gevent/libev/_corecffi.abi3.so
+    ffi.compile(verbose=True)

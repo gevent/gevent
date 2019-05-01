@@ -389,7 +389,9 @@ class loop(AbstractLoop):
             libev.gevent_reset_sigchld_handler()
 
     def fileno(self):
-        if self._ptr:
+        if self._ptr and LIBEV_EMBED:
+            # If we don't embed, we can't access these fields,
+            # the type is opaque
             fd = self._ptr.backend_fd
             if fd >= 0:
                 return fd
@@ -398,7 +400,9 @@ class loop(AbstractLoop):
     def activecnt(self):
         if not self._ptr:
             raise ValueError('operation on destroyed loop')
-        return self._ptr.activecnt
+        if LIBEV_EMBED:
+            return self._ptr.activecnt
+        return -1
 
 
 @ffi.def_extern()
@@ -424,4 +428,4 @@ def set_syserr_cb(callback):
 
 __SYSERR_CALLBACK = None
 
-LIBEV_EMBED = True
+LIBEV_EMBED = libev.LIBEV_EMBED

@@ -1,3 +1,7 @@
+/* access whether we built embedded or not */
+
+#define LIBUV_EMBED ...
+
 /* markers for the CFFI parser. Replaced when the string is read. */
 #define GEVENT_STRUCT_DONE int
 #define GEVENT_ST_NLINK_T int

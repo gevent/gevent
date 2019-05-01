@@ -1,5 +1,9 @@
-// passed to the real C compiler
+/* passed to the real C compiler */
+#ifndef LIBEV_EMBED
+/* We're normally used to embed libev, assume that */
+/* When this is defined, libev.h includes ev.c */
 #define LIBEV_EMBED 1
+#endif
 
 #ifdef _WIN32
 #define EV_STANDALONE 1

@@ -50,6 +50,7 @@ matrix:
 
 before_install:
   - export PATH=$BUILD_RUNTIMES/snakepit/$TRAVIS_PYTHON_VERSION.d/bin:$PATH
+  - export G_SITE=$BUILD_RUNTIMES/snakepit/$TRAVIS_PYTHON_VERSION.d/lib/*/site-packages/
 
 before_script:
   # Show some details of interest
@@ -130,6 +131,7 @@ jobs:
         # Install the Python runtime
         - *build-gevent-python
         - *build-gevent-deps
+        - ls -l $G_SITE
         # Install the C dependencies to a known location. This is used
         # to test 'no embed' cases. It might seem like it would prime
         # the CCache for when we *do* embed if we did it as part of the generic build stage,
@@ -141,8 +143,16 @@ jobs:
         # libev builds a manpage each time, and it includes today's date, so it frequently changes.
         # delete to avoid repacking the archive
         - rm -rf $BUILD_LIBS/share/man/
-        - ls -l $BUILD_LIBS $BUILD_LIBS/lib
+        - ls -l $BUILD_LIBS $BUILD_LIBS/lib $BUILD_LIBS/include
         - pip install --no-build-isolation .[test]
+        # Test that we're actually linking
+        # to the .so file.
+        - objdump -p $G_SITE/gevent/libev/_corecffi*so | grep "NEEDED.*libev.so"
+        - objdump -p $G_SITE/gevent/libuv/_corecffi*so | grep "NEEDED.*libuv.so"
+      script:
+        # Verify that we got non-embedded builds
+        - python -c 'import gevent.libev.corecffi as CF; assert not CF.LIBEV_EMBED'
+        - python -c 'import gevent.libuv.loop as CF; assert not CF.libuv.LIBUV_EMBED'
 
     # Ok, now we switch to the test stage. These are all in addition
     # to the jobs created by the matrix (and should override the `script` command).
@@ -238,17 +248,18 @@ jobs:
 
     # 2.7, no-embed. Run the tests that exercise the libraries we
     # linked to.
-    # XXX: The CFFI backends, as exercised by test-lib[eu]v-jobs
-    # don't really support this!
     - <<: *test-ares-jobs
+      # This job exercises both the non-embedded ares resolver
+      # and the non-embedded Cython libev loop.
       env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0
       name: ares27-noembed
-    # - <<: *test-libuv-jobs
-    #   env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0
-    #   name: libuv27-noembed
-    # - <<: *test-libev-jobs
-    #   env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0
-    #   name: libev27-noembed
+    # These exercise the CFFI versions.
+    - <<: *test-libuv-jobs
+      env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0
+      name: libuv27-noembed
+    - <<: *test-libev-jobs
+      env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0
+      name: libev27-noembed
 
     # PyPy 2.7
     - <<: *test-dnspython-jobs

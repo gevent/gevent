@@ -107,11 +107,6 @@ yes/no.
   In general, setting ``CPPFLAGS`` is more general and can contain
   other macros recognized by libev.
 
-``GEVENTSETUP_NO_CFFI_BUILD``
-  A boolean; when set to true, this disables all attempts at building
-  the CFFI modules. *This disables libuv.* (TODO: verify that.)
-  Ignored on PyPy and ignored on Windows.
-
 
 Embedding Libraries
 -------------------
@@ -124,8 +119,7 @@ embedding, especially in the case of libev, can be more efficient as
 features not needed by gevent can be disabled, resulting in smaller or
 faster libraries or runtimes.
 
-However, this can be disabled (TODO: verify how this interacts with
-CFFI; see NO_CFFI_BUILD), either for all libraries at once or for
+However, this can be disabled, either for all libraries at once or for
 individual libraries.
 
 When embedding a library is disabled, the library must already be
