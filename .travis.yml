@@ -52,9 +52,9 @@ before_install:
   - export PATH=$BUILD_RUNTIMES/snakepit/$TRAVIS_PYTHON_VERSION.d/bin:$PATH
   - export G_SITE=$BUILD_RUNTIMES/snakepit/$TRAVIS_PYTHON_VERSION.d/lib/*/site-packages/
   # Restore the configure caches
-  - if [-f $BUILD_LIBS/config.cache.ares ]; then cp $BUILD_LIBS/config.cache.ares deps/c-ares/ ; fi
-  - if [-f $BUILD_LIBS/config.cache.libev ]; then cp $BUILD_LIBS/config.cache.ares deps/libev/ ; fi
-  - if [-f $BUILD_LIBS/config.cache.libuv ]; then cp $BUILD_LIBS/config.cache.ares deps/libuv/ ; fi
+  - if [ -f $BUILD_LIBS/config.cache.ares ]; then cp $BUILD_LIBS/config.cache.ares deps/c-ares/ ; fi
+  - if [ -f $BUILD_LIBS/config.cache.libev ]; then cp $BUILD_LIBS/config.cache.libev deps/libev/ ; fi
+  - if [ -f $BUILD_LIBS/config.cache.libuv ]; then cp $BUILD_LIBS/config.cache.libuv deps/libuv/ ; fi
 
 before_script:
   # Show some details of interest
@@ -160,8 +160,8 @@ jobs:
         # the CCache for when we *do* embed if we did it as part of the generic build stage,
         # but overall it just seems to slow things down. The Travis caching and CCache is not working as
         # well as we would hope.
-        - pushd deps/libev && ./configure --prefix=$BUILD_LIBS && make install && popd
-        - pushd deps/c-ares && ./configure --prefix=$BUILD_LIBS && make -j4 install && popd
+        - pushd deps/libev && ./configure -C --prefix=$BUILD_LIBS && make install && popd
+        - pushd deps/c-ares && ./configure -C --prefix=$BUILD_LIBS && make -j4 install && popd
         - pushd deps/libuv && ./autogen.sh && ./configure -C --disable-static --prefix=$BUILD_LIBS && make -j4 install && popd
         # libev builds a manpage each time, and it includes today's date, so it frequently changes.
         # delete to avoid repacking the archive
