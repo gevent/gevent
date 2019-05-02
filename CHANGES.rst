@@ -4,7 +4,7 @@
 
 .. currentmodule:: gevent
 
-1.5.0 (unreleased)
+1.5a1 (2019-05-02)
 ==================
 
 - Python version updates: gevent is now tested with CPython 2.7.16,
