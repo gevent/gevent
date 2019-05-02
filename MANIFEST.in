@@ -44,15 +44,14 @@ global-exclude *.so
 global-exclude *.o
 global-exclude *.lo
 global-exclude *.la
-global-exclude config.log config.status
+global-exclude .dirstamp
+global-exclude config.log config.status config.cache
 prune docs/_build
 global-exclude *.pyc
 recursive-exclude src/greentest .coverage
 prune src/greentest/htmlcov
 recursive-exclude deps/c-ares stamp-h? ares_build.h.orig
-prune deps/libev/.deps
-prune deps/libuv/.deps
-recursive-exclude deps/libev Makefile libtool stamp-h? config.h
+
 # This is the output of _corecffi_build.py and may be particular
 # to each CFFI version/platform
 recursive-exclude src/gevent _corecffi.c
@@ -66,7 +65,19 @@ exclude deps/c-ares/libcares.pc
 exclude deps/c-ares/libtool
 exclude deps/c-ares/Makefile
 
+prune deps/c-ares/.deps
+prune deps/c-ares/.libs
 
-recursive-exclude deps/c-ares .deps .libs
-recursive-exclude deps/libuv .deps .libs
-recursive-exclude deps/libev .deps .libs
+prune deps/libev/.deps
+prune deps/libev/.libs
+recursive-exclude deps/libev Makefile libtool stamp-h? config.h
+
+prune deps/libuv/.deps
+prune deps/libuv/.libs
+prune deps/libuv/src/.deps
+prune deps/libuv/src/unix/.deps
+prune deps/libuv/src/win/.deps
+prune deps/libuv/test/.deps
+prune deps/libuv/autom4te.cache
+prune deps/libuv/m4
+recursive-exclude deps/libuv Makefile Makefile.in ar-lib aclocal.m4 compile configure depcomp install-sh libtool libuv.pc ltmain.sh missing
