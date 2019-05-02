@@ -233,6 +233,28 @@ ext_errors = (CCompilerError, DistutilsExecError, DistutilsPlatformError, IOErro
 
 class ConfiguringBuildExt(build_ext):
 
+    # CFFI subclasses this class with its own, that overrides run()
+    # and invokes a `pre_run` method, if defined. The run() method is
+    # called only once from setup.py (this class is only instantiated
+    # once per invocation of setup()); run() in turn calls
+    # `build_extension` for every defined extension.
+
+    # For extensions we control, we let them define a `configure`
+    # callable attribute, and we invoke that before building. But we
+    # can't control the Extension object that CFFI creates. The best
+    # we can do is provide a global hook that we can invoke in pre_run().
+
+    gevent_pre_run_actions = ()
+
+    @classmethod
+    def gevent_add_pre_run_action(cls, action):
+        # Actions should be idempotent.
+        cls.gevent_pre_run_actions += (action,)
+
+    def finalize_options(self):
+        self.parallel = True # pylint: disable=attribute-defined-outside-init
+        build_ext.finalize_options(self)
+
     def gevent_prepare(self, ext):
         configure = getattr(ext, 'configure', None)
         if configure:
@@ -246,6 +268,13 @@ class ConfiguringBuildExt(build_ext):
             if getattr(ext, 'optional', False):
                 raise BuildFailed()
             raise
+
+    def pre_run(self, *_args):
+        # Called only from CFFI.
+        # With mulitple extensions, this probably gets called multiple
+        # times.
+        for action in self.gevent_pre_run_actions:
+            action()
 
 
 class Extension(_Extension):
@@ -362,6 +391,7 @@ class GeventClean(clean):
                     'config.h',
                     'config.log',
                     'config.status',
+                    'configure-output.txt',
                     '.libs'
             ):
                 yield os.path.join('deps', dep, f)
