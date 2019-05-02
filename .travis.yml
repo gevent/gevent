@@ -18,7 +18,8 @@ env:
         - CCACHE_SLOPPINESS=file_macro,time_macros,include_file_ctime,include_file_mtime
         - CCACHE_NOHASHDIR=true
         - BUILD_LIBS=$HOME/.libs
-        - CFLAGS="-g -pipe"
+        # Disable some warnings produced by libev especially and also some Cython generated code
+        - CFLAGS="-g -pipe -Wno-strict-aliasing -Wno-comment"
         - CPPFLAGS="-I$BUILD_LIBS/include -DEV_VERIFY=3"
         - LDFLAGS="-L$BUILD_LIBS/lib"
         - LD_LIBRARY_PATH="$BUILD_LIBS/lib"
@@ -137,6 +138,7 @@ jobs:
         # Next, build the wheel *in place*. This helps ccache, and also lets us cache the configure
         # output (pip install uses a random temporary directory, making this difficult)
         - python setup.py bdist_wheel
+        - pip uninstall -y gevent
         - pip install `ls dist/*whl`[test]
       script: ccache -s
       before_script: true
@@ -172,6 +174,7 @@ jobs:
         - rm -rf $BUILD_LIBS/share/man/
         - ls -l $BUILD_LIBS $BUILD_LIBS/lib $BUILD_LIBS/include
         - python setup.py bdist_wheel
+        - pip uninstall -y gevent
         - pip install `ls dist/*whl`[test]
         # Test that we're actually linking
         # to the .so file.
