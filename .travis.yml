@@ -51,6 +51,10 @@ matrix:
 before_install:
   - export PATH=$BUILD_RUNTIMES/snakepit/$TRAVIS_PYTHON_VERSION.d/bin:$PATH
   - export G_SITE=$BUILD_RUNTIMES/snakepit/$TRAVIS_PYTHON_VERSION.d/lib/*/site-packages/
+  # Restore the configure caches
+  - if [-f $BUILD_LIBS/config.cache.ares ]; then cp $BUILD_LIBS/config.cache.ares deps/c-ares/ ; fi
+  - if [-f $BUILD_LIBS/config.cache.libev ]; then cp $BUILD_LIBS/config.cache.ares deps/libev/ ; fi
+  - if [-f $BUILD_LIBS/config.cache.libuv ]; then cp $BUILD_LIBS/config.cache.ares deps/libuv/ ; fi
 
 before_script:
   # Show some details of interest
@@ -61,6 +65,25 @@ before_script:
     python -c "import gevent.core; print(gevent.core.loop)"
   - >
     python -c "import gevent.ares; print(gevent.ares)"
+
+cache:
+  pip: true
+  directories:
+    - $HOME/.venv
+    - $HOME/.runtimes
+    - $HOME/.wheelhouse
+    - $HOME/.ccache
+    - $HOME/.libs
+
+before_cache:
+    - rm -f $HOME/.cache/pip/log/debug.log
+    # Store the configure caches. Having a cache can speed up c-ares
+    # configure from 2-3 minutes to 20 seconds.
+    - mkdir -p $BUILD_LIBS
+    - cp deps/c-ares/config.cache $BUILD_LIBS/config.cache.ares
+    - cp deps/libev/config.cache $BUILD_LIBS/config.cache.libev
+    - cp deps/libuv/config.cache $BUILD_LIBS/config.cache.libuv
+
 
 # Installing is taken care of by the first stage.
 install:
@@ -139,7 +162,7 @@ jobs:
         # well as we would hope.
         - pushd deps/libev && ./configure --prefix=$BUILD_LIBS && make install && popd
         - pushd deps/c-ares && ./configure --prefix=$BUILD_LIBS && make -j4 install && popd
-        - pushd deps/libuv && ./autogen.sh && ./configure --disable-static --prefix=$BUILD_LIBS && make -j4 install && popd
+        - pushd deps/libuv && ./autogen.sh && ./configure -C --disable-static --prefix=$BUILD_LIBS && make -j4 install && popd
         # libev builds a manpage each time, and it includes today's date, so it frequently changes.
         # delete to avoid repacking the archive
         - rm -rf $BUILD_LIBS/share/man/
@@ -279,16 +302,3 @@ jobs:
 
 notifications:
   email: false
-
-
-cache:
-  pip: true
-  directories:
-    - $HOME/.venv
-    - $HOME/.runtimes
-    - $HOME/.wheelhouse
-    - $HOME/.ccache
-    - $HOME/.libs
-
-before_cache:
-    - rm -f $HOME/.cache/pip/log/debug.log

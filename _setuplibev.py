@@ -30,7 +30,7 @@ LIBEV_EMBED = should_embed('libev')
 # Configure libev in place
 libev_configure_command = ' '.join([
     "(cd ", quoted_dep_abspath('libev'),
-    " && sh ./configure > configure-output.txt",
+    " && sh ./configure -C > configure-output.txt",
     ")",
 ])
 

@@ -391,6 +391,7 @@ class GeventClean(clean):
                     'config.h',
                     'config.log',
                     'config.status',
+                    'config.cache',
                     'configure-output.txt',
                     '.libs'
             ):
