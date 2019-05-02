@@ -52,9 +52,9 @@ before_install:
   - export PATH=$BUILD_RUNTIMES/snakepit/$TRAVIS_PYTHON_VERSION.d/bin:$PATH
   - export G_SITE=$BUILD_RUNTIMES/snakepit/$TRAVIS_PYTHON_VERSION.d/lib/*/site-packages/
   # Restore the configure caches
-  - if [ -f $BUILD_LIBS/config.cache.ares ]; then cp $BUILD_LIBS/config.cache.ares deps/c-ares/ ; fi
-  - if [ -f $BUILD_LIBS/config.cache.libev ]; then cp $BUILD_LIBS/config.cache.libev deps/libev/ ; fi
-  - if [ -f $BUILD_LIBS/config.cache.libuv ]; then cp $BUILD_LIBS/config.cache.libuv deps/libuv/ ; fi
+  - if [ -f $BUILD_LIBS/config.cache.ares ]; then cp $BUILD_LIBS/config.cache.ares deps/c-ares/config.cache ; fi
+  - if [ -f $BUILD_LIBS/config.cache.libev ]; then cp $BUILD_LIBS/config.cache.libev deps/libev/config.cache ; fi
+  - if [ -f $BUILD_LIBS/config.cache.libuv ]; then cp $BUILD_LIBS/config.cache.libuv deps/libuv/config.cache ; fi
 
 before_script:
   # Show some details of interest
@@ -134,7 +134,10 @@ jobs:
         # so that we don't have to use build isolation and can better use the cache;
         # Note that we can't use -U for cffi and greenlet on PyPy.
         - &build-gevent-deps pip install -U setuptools wheel && pip install cffi cython greenlet
-        - pip install --no-build-isolation .[test]
+        # Next, build the wheel *in place*. This helps ccache, and also lets us cache the configure
+        # output (pip install uses a random temporary directory, making this difficult)
+        - python setup.py bdist_wheel
+        - pip install `ls dist/*whl`[test]
       script: ccache -s
       before_script: true
       after_success: true
@@ -154,12 +157,13 @@ jobs:
         # Install the Python runtime
         - *build-gevent-python
         - *build-gevent-deps
-        - ls -l $G_SITE
         # Install the C dependencies to a known location. This is used
         # to test 'no embed' cases. It might seem like it would prime
-        # the CCache for when we *do* embed if we did it as part of the generic build stage,
-        # but overall it just seems to slow things down. The Travis caching and CCache is not working as
-        # well as we would hope.
+        # the CCache for when we *do* embed if we did it as part of
+        # the generic build stage, but overall it just seems to slow
+        # things down. The Travis caching and CCache is not working as
+        # well as we would hope. (XXX: Probably because in the past we
+        # used pip install which used temporary directories.)
         - pushd deps/libev && ./configure -C --prefix=$BUILD_LIBS && make install && popd
         - pushd deps/c-ares && ./configure -C --prefix=$BUILD_LIBS && make -j4 install && popd
         - pushd deps/libuv && ./autogen.sh && ./configure -C --disable-static --prefix=$BUILD_LIBS && make -j4 install && popd
@@ -167,10 +171,12 @@ jobs:
         # delete to avoid repacking the archive
         - rm -rf $BUILD_LIBS/share/man/
         - ls -l $BUILD_LIBS $BUILD_LIBS/lib $BUILD_LIBS/include
-        - pip install --no-build-isolation .[test]
+        - python setup.py bdist_wheel
+        - pip install `ls dist/*whl`[test]
         # Test that we're actually linking
         # to the .so file.
         - objdump -p $G_SITE/gevent/libev/_corecffi*so | grep "NEEDED.*libev.so"
+        - objdump -p $G_SITE/gevent/libev/corecext*so | grep "NEEDED.*libev.so"
         - objdump -p $G_SITE/gevent/libuv/_corecffi*so | grep "NEEDED.*libuv.so"
       script:
         # Verify that we got non-embedded builds
