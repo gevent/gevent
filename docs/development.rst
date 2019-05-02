@@ -205,3 +205,34 @@ monitor test coverage.
 .. _coverage.py: https://pypi.python.org/pypi/coverage/
 .. _coveralls.io: https://coveralls.io/github/gevent/gevent
 .. _AppVeyor: https://ci.appveyor.com/project/denik/gevent
+
+Releasing gevent
+================
+
+.. note:: This is a semi-organized collection of notes for gevent
+          maintainers.
+
+gevent is released using `zest.releaser
+<https://pypi.org/project/zest.releaser/>`_. The general flow is
+something like this:
+
+1. Push all relevant changes to master.
+2. From the gevent working copy, run ``prerelease``. Fix any issues it
+   brings up. Let it bump the version number (or enter the correct
+   one) and commit.
+3. Run ``release``. Let it create the tag and commit it; let it create
+   an sdist, but **do not** let it upload it.
+4. Push the tag and master to github.
+5. Let appveyor build the tag. Download all the built wheels from that
+   release. The easiest way to do that is with Ned Batchelder's
+   `appveyor-download.py script
+   <https://bitbucket.org/ned/coveragepy/src/tip/ci/download_appveyor.py>`_.
+6. Meanwhile, spin up docker and from the root of the gevent checkout
+   run ``scripts/releases/make-manylinux``. This creates wheels in
+   ``wheelhouse/``.
+7. If on a mac, ``cd scripts/releases && ./geventreleases.sh``. This
+   creates wheels in ``/tmp/gevent/``.
+8. Upload the Appveyor, manylinux, and mac wheels to pypi using
+   ``twine``. Also be sure to upload the sdist!
+9. Run ``postrelease``, let it bump the version and push the changes
+   to github.

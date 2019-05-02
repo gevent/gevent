@@ -3,7 +3,7 @@ recursive-include examples *
 recursive-include src/gevent *
 recursive-include docs *
 recursive-include deps *
-recursive-include util *
+
 
 include LICENSE
 include NOTICE
