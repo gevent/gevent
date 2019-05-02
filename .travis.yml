@@ -54,9 +54,9 @@ before_install:
   - export PATH=$BUILD_RUNTIMES/snakepit/$TRAVIS_PYTHON_VERSION.d/bin:$PATH
   - export G_SITE=$BUILD_RUNTIMES/snakepit/$TRAVIS_PYTHON_VERSION.d/lib/*/site-packages/
   # Restore the configure caches
-  # - if [ -f $BUILD_LIBS/config.cache.ares ]; then cp $BUILD_LIBS/config.cache.ares deps/c-ares/config.cache ; fi
-  # - if [ -f $BUILD_LIBS/config.cache.libev ]; then cp $BUILD_LIBS/config.cache.libev deps/libev/config.cache ; fi
-  # - if [ -f $BUILD_LIBS/config.cache.libuv ]; then cp $BUILD_LIBS/config.cache.libuv deps/libuv/config.cache ; fi
+  - if [ -f $BUILD_LIBS/config.cache.ares ]; then cp $BUILD_LIBS/config.cache.ares deps/c-ares/config.cache ; fi
+  - if [ -f $BUILD_LIBS/config.cache.libev ]; then cp $BUILD_LIBS/config.cache.libev deps/libev/config.cache ; fi
+  - if [ -f $BUILD_LIBS/config.cache.libuv ]; then cp $BUILD_LIBS/config.cache.libuv deps/libuv/config.cache ; fi
 
 before_script:
   # Show some details of interest
