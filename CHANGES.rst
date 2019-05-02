@@ -9,9 +9,11 @@
 
 - Nothing changed yet.
 
-
 1.5a1 (2019-05-02)
 ==================
+
+Platform and Packaging Updates
+------------------------------
 
 - Python version updates: gevent is now tested with CPython 2.7.16,
   3.5.6, 3.6.8, and 3.7.2. It is also tested with PyPy2 7.1 and PyPy 3.6
@@ -21,70 +23,18 @@
 - Support for Python 3.4 has been removed, as that version is no
   longer supported uptstream.
 
-- gevent is now compiled with Cython 0.29.6 and cffi 1.12.2.
-
 - gevent binary wheels are now manylinux2010 and include libuv
   support. pip 19 is needed to install them. See :issue:`1346`.
+
+- gevent is now compiled with Cython 0.29.6 and cffi 1.12.2.
 
 - gevent sources include a pyproject.toml file, specifying the build
   requirements and enabling build isolation. pip 18 or above is needed
   to take advantage of this. See :issue:`1180`.
 
-- Upgrade libuv from 1.24.0 to 1.27.0.
-
-- Upgrade libev from 4.23 to 4.25 and update its embedded
-  ``config.guess`` to the latest.
-
-- Upgrade c-ares from 1.14 to 1.15.
-
-- dnspython >= 1.16.0 is now required for the dnspython resolver.
-
-- Python 3.7 subprocess: Copy a ``STARTUPINFO`` passed as a parameter.
-  Contributed by AndCycle in :pr:`1352`.
-
-- subprocess: ``WIFSTOPPED`` and ``SIGCHLD`` are now handled for
-  determining ``Popen.returncode``. See https://bugs.python.org/issue29335
-
-- The result of ``gevent.ssl.SSLSocket.makefile()`` can be used as a
-  context manager on Python 2.
-
-- subprocess: No longer close redirected FDs if they are in
-  ``pass_fds``. This is `a bugfix from Python 3.7
-  <https://bugs.python.org/issue32270>`_ applied to all versions
-  gevent runs on.
-
-- Python 2: If the backport of the ``_thread_`` module from
-  ``futures`` has already been imported at monkey-patch time, also
-  patch this module to be consistent. The ``pkg_resources`` package
-  imports this, and ``pkg_resources`` is often imported early on
-  Python 2 for namespace packages, so if ``futures`` is installed this
-  will likely be the case.
-
-- Python 2: Avoid a memory leak when an `io.BufferedWriter` is wrapped
-  around a socket. Reported by Damien Tournoud in :issue:`1318`.
-
-- Avoid unbounded memory usage when creating very deep spawn trees.
-  Reported in :issue:`1371` by dmrlawson.
-
 - libev-cffi: Let the compiler fill in the definition of ``nlink_t`` for
   ``st_nlink`` in ``struct stat``, instead of trying to guess it
   ourself. Reported in :issue:`1372` by Andreas Schwab.
-
-- Win: Make ``examples/process.py`` do something useful. See
-  :pr:`1378` by Robert Iannucci.
-
-- Fix certain operations on a Greenlet in an invalid state (with an
-  invalid parent) to raise a `TypeError` sooner rather than an
-  `AttributeError` later. This is also slightly faster on CPython with
-  Cython. Inspired by :issue:`1363` as reported by Carson Ip. This
-  means that some extreme corner cases that might have passed by
-  replacing a Greenlet's parent with something that's not a gevent hub
-  now no longer will.
-
-- Fix: The ``spawning_stack`` for Greenlets on CPython should now have
-  correct line numbers in more cases.
-
-- Spawning greenlets can be up to 10% faster.
 
 - Remove the ``Makefile``. Its most useful commands, ``make clean``
   and ``make distclean``, can now be accomplished in a cross-platform
@@ -101,6 +51,70 @@
 
 - Support test resources. This allows disabling tests that use the
   network. See :ref:`limiting-test-resource-usage` for more.
+
+
+Library and Dependency Updates
+------------------------------
+
+- Upgrade libuv from 1.24.0 to 1.27.0.
+
+- Upgrade libev from 4.23 to 4.25 and update its embedded
+  ``config.guess`` to the latest.
+
+- Upgrade c-ares from 1.14 to 1.15.
+
+- dnspython >= 1.16.0 is now required for the dnspython resolver.
+
+Bug fixes
+---------
+
+- Python 3.7 subprocess: Copy a ``STARTUPINFO`` passed as a parameter.
+  Contributed by AndCycle in :pr:`1352`.
+
+- subprocess: ``WIFSTOPPED`` and ``SIGCHLD`` are now handled for
+  determining ``Popen.returncode``. See
+  https://bugs.python.org/issue29335
+
+- subprocess: No longer close redirected FDs if they are in
+  ``pass_fds``. This is `a bugfix from Python 3.7
+  <https://bugs.python.org/issue32270>`_ applied to all versions
+  gevent runs on.
+
+- Fix certain operations on a Greenlet in an invalid state (with an
+  invalid parent) to raise a `TypeError` sooner rather than an
+  `AttributeError` later. This is also slightly faster on CPython with
+  Cython. Inspired by :issue:`1363` as reported by Carson Ip. This
+  means that some extreme corner cases that might have passed by
+  replacing a Greenlet's parent with something that's not a gevent hub
+  now no longer will.
+
+- Fix: The ``spawning_stack`` for Greenlets on CPython should now have
+  correct line numbers in more cases.
+
+Enhancements
+------------
+
+- The result of ``gevent.ssl.SSLSocket.makefile()`` can be used as a
+  context manager on Python 2.
+
+- Python 2: If the backport of the ``_thread_`` module from
+  ``futures`` has already been imported at monkey-patch time, also
+  patch this module to be consistent. The ``pkg_resources`` package
+  imports this, and ``pkg_resources`` is often imported early on
+  Python 2 for namespace packages, so if ``futures`` is installed this
+  will likely be the case.
+
+- Python 2: Avoid a memory leak when an `io.BufferedWriter` is wrapped
+  around a socket. Reported by Damien Tournoud in :issue:`1318`.
+
+- Avoid unbounded memory usage when creating very deep spawn trees.
+  Reported in :issue:`1371` by dmrlawson.
+
+- Win: Make ``examples/process.py`` do something useful. See
+  :pr:`1378` by Robert Iannucci.
+
+- Spawning greenlets can be up to 10% faster.
+
 
 1.4.0 (2019-01-04)
 ==================

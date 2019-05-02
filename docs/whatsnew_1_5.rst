@@ -38,6 +38,12 @@ CentOS 6 is the baseline for this tag.
 Library Updates
 ===============
 
+The bundled version of libuv has been updated from 1.24 to 1.27, libev
+has been updated from 4.23 to 4.25, and c-ares has been updated from
+1.24 to 1.15.
+
+Version 1.16 or newer of dnspython is required to use the dnspython resolver.
+
 Test Updates
 ============
 
@@ -48,4 +54,4 @@ intended to support downstream packagers. For example, to disable
 tests that require Internet access, one could disable the ``network``
 resource using ``python -m gevent.tests -u-network`` or
 ``GEVENTTEST_USE_RESOURCES=-network python -m gevent.tests``. See
-TODO: WRITE ME for more information.
+:ref:`limiting-test-resource-usage` for more information.
