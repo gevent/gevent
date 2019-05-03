@@ -29,14 +29,19 @@ from . import sysinfo
 from . import util
 
 
-OPTIONAL_MODULES = [
+OPTIONAL_MODULES = frozenset({
+    ## Resolvers.
+    # ares might not be built
     'gevent.resolver_ares',
     'gevent.resolver.ares',
+    # dnspython might not be installed
+    'gevent.resolver.dnspython',
+    ## Backends
     'gevent.libev',
     'gevent.libev.watcher',
     'gevent.libuv.loop',
     'gevent.libuv.watcher',
-]
+})
 
 
 def walk_modules(
@@ -45,6 +50,7 @@ def walk_modules(
         include_so=False,
         recursive=False,
         check_optional=True,
+        optional_modules=OPTIONAL_MODULES,
 ):
     """
     Find gevent modules, yielding tuples of ``(path, importable_module_name)``.
@@ -53,7 +59,7 @@ def walk_modules(
        module that is known to be optional on this system (such as a backend),
        we will attempt to import it; if the import fails, it will not be returned.
        If false, then we will not make such an attempt, the caller will need to be prepared
-       for an `ImportError`; the caller can examine *OPTIONAL_MODULES* against
+       for an `ImportError`; the caller can examine *optional_modules* against
        the yielded *importable_module_name*.
     """
     # pylint:disable=too-many-branches
@@ -78,7 +84,8 @@ def walk_modules(
             if os.path.exists(pkg_init):
                 yield pkg_init, modpath + fn
                 for p, m in walk_modules(path, modpath + fn + ".",
-                                         check_optional=check_optional):
+                                         check_optional=check_optional,
+                                         optional_modules=optional_modules):
                     yield p, m
             continue
 
@@ -90,7 +97,7 @@ def walk_modules(
                      'corecffi', '_corecffi', '_corecffi_build']:
                 continue
             modname = modpath + x
-            if check_optional and modname in OPTIONAL_MODULES:
+            if check_optional and modname in optional_modules:
                 try:
                     with warnings.catch_warnings():
                         warnings.simplefilter('ignore', DeprecationWarning)

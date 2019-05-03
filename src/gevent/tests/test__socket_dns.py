@@ -467,7 +467,7 @@ class TestBroadcast(TestCase):
 add(TestBroadcast, '<broadcast>')
 
 
-from gevent.resolver.dnspython import HostsFile # XXX: This will move.
+from gevent.resolver._hostsfile import HostsFile
 class SanitizedHostsFile(HostsFile):
     def iter_all_host_addr_pairs(self):
         for name, addr in super(SanitizedHostsFile, self).iter_all_host_addr_pairs():
