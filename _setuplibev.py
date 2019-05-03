@@ -21,7 +21,6 @@ from _setuputils import make_universal_header
 from _setuputils import LIBRARIES
 from _setuputils import DEFINE_MACROS
 from _setuputils import glob_many
-from _setuputils import dep_abspath
 from _setuputils import should_embed
 
 
@@ -90,8 +89,6 @@ def build_extension():
                                ('EV_EMBED_ENABLE', '0'),
                                ("EV_PERIODIC_ENABLE", '0')]
         CORE.configure = configure_libev
-        if sys.platform == "darwin":
-            os.environ["CPPFLAGS"] = ("%s %s" % (os.environ.get("CPPFLAGS", ""), "-U__llvm__")).lstrip()
         if os.environ.get('GEVENTSETUP_EV_VERIFY') is not None:
             CORE.define_macros.append(('EV_VERIFY', os.environ['GEVENTSETUP_EV_VERIFY']))
     else:

@@ -7,7 +7,7 @@
 1.5a2 (unreleased)
 ==================
 
-- Nothing changed yet.
+- Update to Cython 0.29.7 and cffi 1.12.3.
 
 1.5a1 (2019-05-02)
 ==================

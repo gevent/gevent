@@ -140,7 +140,7 @@ jobs:
         # output (pip install uses a random temporary directory, making this difficult)
         - python setup.py bdist_wheel
         - pip uninstall -y gevent
-        - pip install `ls dist/*whl`[test]
+        - pip install --no-compile `ls dist/*whl`[test]
       script: ccache -s
       before_script: true
       after_success: true

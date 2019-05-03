@@ -1,4 +1,8 @@
 [build-system]
+# Our setup.py imports other things from this directory, meaning
+# in needs to be on sys.path. That's not guaranteed in a PEP517 world;
+# the __legacy__ build module makes that true. Ultimately we need to do that
+# ourself (and/or continue to simplify our build system).
 build-backend = "setuptools.build_meta:__legacy__"
 requires = [
      "setuptools >= 40.8.0",
@@ -9,9 +13,9 @@ requires = [
      # name to be created so that we can have both foo.py and _foo.so
      # at the same time. 0.29 fixes some issues with Python 3.7,
      # and adds the 3str mode for transition to Python 3.
-     "Cython >= 0.29.6",
+     "Cython >= 0.29.7",
      # See version requirements in setup.py
-     "cffi >= 1.12.2 ; platform_python_implementation == 'CPython'",
+     "cffi >= 1.12.3 ; platform_python_implementation == 'CPython'",
      # Python 3.7 requires at least 0.4.14, which is ABI incompatible with earlier
      "greenlet>=0.4.14 ; platform_python_implementation == 'CPython'",
 ]
