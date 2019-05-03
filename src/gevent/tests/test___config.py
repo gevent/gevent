@@ -42,9 +42,16 @@ class TestResolver(unittest.TestCase):
         self.assertEqual(conf.get(), Resolver)
 
         # A new object reflects it
-        conf = _config.Resolver()
-        from gevent.resolver.dnspython import Resolver as DResolver
-        self.assertEqual(conf.get(), DResolver)
+        try:
+            from gevent.resolver.dnspython import Resolver as DResolver
+        except ImportError: # pragma: no cover
+            # dnspython is optional; skip it.
+            import warnings
+            warnings.warn('dnspython not installed')
+        else:
+            conf = _config.Resolver()
+
+            self.assertEqual(conf.get(), DResolver)
 
     def test_set_str_long(self):
         from gevent.resolver.blocking import Resolver

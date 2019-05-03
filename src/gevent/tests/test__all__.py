@@ -40,15 +40,17 @@ COULD_BE_MISSING = {
 # helpers
 NO_ALL = {
     'gevent.threading',
-    'gevent._util',
     'gevent._compat',
-    'gevent._socketcommon',
+    'gevent._corecffi',
+    'gevent._ffi',
     'gevent._fileobjectcommon',
     'gevent._fileobjectposix',
-    'gevent._tblib',
-    'gevent._corecffi',
     'gevent._patcher',
-    'gevent._ffi',
+    'gevent._socketcommon',
+    'gevent._tblib',
+    'gevent._util',
+    'gevent.resolver._addresses',
+    'gevent.resolver._hostsfile',
 }
 
 ALLOW_IMPLEMENTS = [
@@ -229,7 +231,9 @@ are missing from %r:
                 self.module = importlib.import_module(modname)
             except ImportError:
                 if modname in modules.OPTIONAL_MODULES:
-                    raise unittest.SkipTest("Unable to import %s" % modname)
+                    msg = "Unable to import %s" % modname
+                    warnings.warn(msg) # make the testrunner print it
+                    raise unittest.SkipTest(msg)
                 raise
 
         self.check_all()
