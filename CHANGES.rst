@@ -89,7 +89,7 @@ Bug fixes
   now no longer will.
 
 - Fix: The ``spawning_stack`` for Greenlets on CPython should now have
-  correct line numbers in more cases.
+  correct line numbers in more cases. See :pr:`1379`.
 
 Enhancements
 ------------
@@ -113,7 +113,7 @@ Enhancements
 - Win: Make ``examples/process.py`` do something useful. See
   :pr:`1378` by Robert Iannucci.
 
-- Spawning greenlets can be up to 10% faster.
+- Spawning greenlets can be up to 10% faster. See :pr:`1379`.
 
 
 1.4.0 (2019-01-04)
