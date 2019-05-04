@@ -36,16 +36,16 @@ Here we will describe the available loop implementations.
 |Name      |Library|Default     |Interpreters|Age  |Implementation|Build    |Embedded|
 |          |       |            |            |     |              |Status   |        |
 +==========+=======+============+============+=====+==============+=========+========+
-|libev     |libev  |CPython on  |CPython only|7    |Cython        |Default  |Default;|
+|libev     |libev  |CPython on  |CPython only|8    |Cython        |Default  |Default;|
 |          |       |non-Windows |            |years|              |         |optional|
 |          |       |platforms   |            |     |              |         |        |
 +----------+-------+------------+------------+-----+--------------+---------+--------+
-|libev-cffi|libev  |PyPy on     |CPython and |3    |CFFI          |Optional;|Required|
-|          |       |non-Windows |PyPy        |years|              |default  |        |
+|libev-cffi|libev  |PyPy on     |CPython and |4    |CFFI          |Optional;|Default;|
+|          |       |non-Windows |PyPy        |years|              |default  |optional|
 |          |       |platforms   |            |     |              |         |        |
 +----------+-------+------------+------------+-----+--------------+---------+--------+
-|libuv     |libuv  |All         |CPython and |1    |CFFI          |Optional;|Required|
-|          |       |interpreters|PyPy        |years|              |default  |        |
+|libuv     |libuv  |All         |CPython and |2    |CFFI          |Optional;|Default;|
+|          |       |interpreters|PyPy        |years|              |default  |optional|
 |          |       |on Windows  |            |     |              |         |        |
 +----------+-------+------------+------------+-----+--------------+---------+--------+
 
@@ -77,10 +77,10 @@ source code.
 
 .. rubric:: Platform Support
 
-gevent tests libev on Linux, and macOS (previously it was also tested
-on Windows). There is no known list of platforms officially supported
-by libev, although FreeBSD, OpenBSD and Solaris/SmartOS have been
-reported to work with gevent on libev at various points.
+gevent tests libev on Linux and macOS. There is no known list of
+platforms officially supported by libev, although FreeBSD, OpenBSD and
+Solaris/SmartOS have been reported to work with gevent on libev at
+various points.
 
 On Windows, libev has `many limitations
 <http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#WIN32_PLATFORM_LIMITATIONS_AND_WORKA>`_.
@@ -172,11 +172,6 @@ Because of its newness, and because of some design decisions inherent
 in the library and the ecosystem, there are some limitations and
 differences in the way gevent behaves using libuv compared to libev.
 
-- libuv support is not available in the manylinux wheels uploaded to
-  PyPI. The manylinux specification requires glibc 2.5, while libuv
-  requires glibc 2.12. Install from source to access libuv on Linux
-  (e.g., pip's ``--no-binary`` option).
-
 - Timers (such as ``gevent.sleep`` and ``gevent.Timeout``) only
   support a resolution of 1ms (in practice, it's closer to 1.5ms).
   Attempting to use something smaller will automatically increase it
@@ -203,10 +198,6 @@ differences in the way gevent behaves using libuv compared to libev.
   written (as works with libev) does not appear to work correctly on
   Linux when using ``gevent.select.poll`` or a monkey-patched
   ``selectors.PollSelector``.
-
-- The build system does not support using a system libuv; the
-  embedded copy must be used. Using setuptools to compile libuv was
-  the most portable method found.
 
 - If anything unexpected happens, libuv likes to ``abort()`` the
   entire process instead of reporting an error. For example, closing
