@@ -16,7 +16,7 @@ General Notes
   install --no-binary gevent gevent``. This is useful if there is a
   binary wheel available, but you want to change the compile-time
   options, such as to use a system version of libuv instead of the
-  embedded version. See ``
+  embedded version. See :ref:`build-config`.
 
 - You'll need a working C compiler that can build Python extensions.
   On some platforms, you may need to install Python development
@@ -80,6 +80,8 @@ those compiling gevent from source.
   == 'CPython'", 'at', " ; sys_platform == 'win32' and
   platform_python_implementation == 'CPython'")``, the version of
   setuptools is too old. Install a more recent version of setuptools.
+
+.. _build-config:
 
 Build-Time Configuration
 ========================
