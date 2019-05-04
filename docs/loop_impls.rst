@@ -27,6 +27,18 @@ code.
        import gevent
        gevent.config.loop = "libuv"
 
+.. important::
+
+   In gevent 1.4 and 1.3, if you install gevent from a manylinux1
+   binary wheel as distributed on PyPI, you will not be able to use
+   the libuv loop. You'll need to compile from source to gain access
+   to libuv. gevent 1.5 distributes manylinux2010 wheels which have
+   libuv support.
+
+   If you use a Linux distribution's package of gevent, you may or may
+   not have any other loops besides the default.
+
+
 Loop Implementations
 ====================
 
