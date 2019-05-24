@@ -249,7 +249,9 @@ class ConfiguringBuildExt(build_ext):
         cls.gevent_pre_run_actions += (action,)
 
     def finalize_options(self):
-        self.parallel = True # pylint: disable=attribute-defined-outside-init
+        # Setting parallel to true can break builds when we need to configure
+        # embedded libraries, which we do by changing directories. If that
+        # happens while we're compiling, we may not be able to find source code.
         build_ext.finalize_options(self)
 
     def gevent_prepare(self, ext):
