@@ -198,7 +198,11 @@ class Traceback(object):
         while current:
             f_code = current.tb_frame.f_code
             code = compile('\n' * (current.tb_lineno - 1) + 'raise __traceback_maker', current.tb_frame.f_code.co_filename, 'exec')
-            if PY3:
+            if hasattr(code, "replace"):
+                # Python 3.8 and newer
+                code = code.replace(co_argcount=0,
+                                    co_freevars=(), co_cellvars=())
+            elif PY3:
                 code = CodeType(
                     0, code.co_kwonlyargcount,
                     code.co_nlocals, code.co_stacksize, code.co_flags,
