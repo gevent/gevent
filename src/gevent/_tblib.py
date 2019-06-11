@@ -201,6 +201,7 @@ class Traceback(object):
             if hasattr(code, "replace"):
                 # Python 3.8 and newer
                 code = code.replace(co_argcount=0,
+                                    co_filename=f_code.co_filename, co_name=f_code.co_name,
                                     co_freevars=(), co_cellvars=())
             elif PY3:
                 code = CodeType(
