@@ -1060,11 +1060,14 @@ def main():
     args = {}
     argv = sys.argv[1:]
     verbose = False
+    run_module = False
     script_help, patch_all_args, modules = _get_script_help()
     while argv and argv[0].startswith('--'):
         option = argv[0][2:]
         if option == 'verbose':
             verbose = True
+        elif option == 'module':
+            run_module = True
         elif option.startswith('no-') and option.replace('no-', '') in patch_all_args:
             args[option[3:]] = False
         elif option in patch_all_args:
@@ -1094,8 +1097,11 @@ def main():
         # passing .pyc/.pyo files and packages with a __main__ and
         # potentially even zip files. Previously we used exec, which only
         # worked if we directly read a python source file.
-        runpy.run_path(sys.argv[0],
-                       run_name='__main__')
+        if run_module:
+            runpy.run_module(sys.argv[0])
+        else:
+            runpy.run_path(sys.argv[0],
+                           run_name='__main__')
     else:
         print(script_help)
 
@@ -1111,18 +1117,15 @@ def _get_script_help():
     modules = [x for x in patch_all_args if 'patch_' + x in globals()]
     script_help = """gevent.monkey - monkey patch the standard modules to use gevent.
 
-USAGE: ``python -m gevent.monkey [MONKEY OPTIONS] script [SCRIPT OPTIONS]``
+USAGE: ``python -m gevent.monkey [MONKEY OPTIONS] [--module] (script|module) [SCRIPT OPTIONS]``
 
 If no OPTIONS present, monkey patches all the modules it can patch.
-You can exclude a module with --no-module, e.g. --no-thread. You can
-specify a module to patch with --module, e.g. --socket. In the latter
+You can exclude a module with --no-<module>, e.g. --no-thread. You can
+specify a module to patch with --<module>, e.g. --socket. In the latter
 case only the modules specified on the command line will be patched.
 
-.. versionchanged:: 1.3b1
-    The *script* argument can now be any argument that can be passed to `runpy.run_path`,
-    just like the interpreter itself does, for example a package directory containing ``__main__.py``.
-    Previously it had to be the path to
-    a .py source file.
+The default behavior is to execute the script passed as argument. If you with
+to run a module instead, pass the `--module` argument before the module name.
 
 MONKEY OPTIONS: ``--verbose %s``""" % ', '.join('--[no-]%s' % m for m in modules)
     return script_help, patch_all_args, modules
