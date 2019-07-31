@@ -239,21 +239,32 @@ class FileObjectPosix(FileObjectBase):
     #: platform specific default for the *bufsize* parameter
     default_bufsize = io.DEFAULT_BUFFER_SIZE
 
-    def __init__(self, fobj, mode='rb', bufsize=-1, close=True):
+    def __init__(self, fobj, mode='rb', bufsize=-1, close=True,
+                 encoding=None, errors=None, newline=None):
         """
         :param fobj: Either an integer fileno, or an object supporting the
             usual :meth:`socket.fileno` method. The file *will* be
             put in non-blocking mode using :func:`gevent.os.make_nonblocking`.
-        :keyword str mode: The manner of access to the file, one of "rb", "rU" or "wb"
-            (where the "b" or "U" can be omitted).
-            If "U" is part of the mode, universal newlines will be used. On Python 2,
-            if 't' is not in the mode, this will result in returning byte (native) strings;
-            putting 't'  in the mode will return text strings. This may cause
-            :exc:`UnicodeDecodeError` to be raised.
+        :keyword str mode: The manner of access to the file.
+            One of "r", "rb", "rU", "w" or "wb"
+            If 'U' is passed, universal newlines will be used on Python 2.
+            'U' has no effect on Python 3.
         :keyword int bufsize: If given, the size of the buffer to use. The default
             value means to use a platform-specific default
             Other values are interpreted as for the :mod:`io` package.
             Buffering is ignored in text mode.
+        :keyword encoding: in text mode, has the same meaning as in TextIOWrapper.
+        :keyword errors: in text mode, has the same meaning as in TextIOWrapper.
+        :keyword newline: in text mode, has the same meaning as in TextIOWrapper.
+            Ignored if mode is 'U' on Python 2
+
+        .. versionchanged: 1.5a2
+
+            'mode' is strictly enforced to be one of the documented options, to
+            avoid invalid modes like "wU" or "rbt". Mode 't' is no longer
+            available, but is implicitly on if 'b' is not used.
+            Under Python 3, the object will use 'str' type for reading and
+            writing if 'b' is not included in the mode (text mode)
 
         .. versionchanged:: 1.3a1
 
@@ -278,44 +289,45 @@ class FileObjectPosix(FileObjectBase):
         if not isinstance(fileno, int):
             raise TypeError('fileno must be int: %r' % fileno)
 
-        orig_mode = mode
-        mode = (mode or 'rb').replace('b', '')
-        if 'U' in mode:
-            self._translate = True
-            if bytes is str and 't' not in mode:
-                # We're going to be producing unicode objects, but
-                # universal newlines doesn't do that in the stdlib,
-                # so fix that to return str objects. The fix is two parts:
-                # first, set an encoding on the stream that can round-trip
-                # all bytes, and second, decode all bytes once they've been read.
-                self._translate_encoding = 'latin-1'
-                import functools
-
-                def wrap_method(m):
-                    if m.__name__.startswith("read"):
-                        @functools.wraps(m)
-                        def wrapped(*args, **kwargs):
-                            result = m(*args, **kwargs)
-                            assert isinstance(result, unicode) # pylint:disable=undefined-variable
-                            return result.encode('latin-1')
-                        return wrapped
-                    return m
-                self._wrap_method = wrap_method
-            mode = mode.replace('U', '')
-        else:
-            self._translate = False
-
-        mode = mode.replace('t', '')
-
-        if len(mode) != 1 and mode not in 'rw': # pragma: no cover
+        if mode not in ("r", "rb", "rU", "w", "wb"):  # pragma: no cover
             # Python 3 builtin `open` raises a ValueError for invalid modes;
             # Python 2 ignores it. In the past, we raised an AssertionError, if __debug__ was
             # enabled (which it usually was). Match Python 3 because it makes more sense
             # and because __debug__ may not be enabled.
             # NOTE: This is preventing a mode like 'rwb' for binary random access;
             # that code was never tested and was explicitly marked as "not used"
-            raise ValueError('mode can only be [rb, rU, wb], not %r' % (orig_mode,))
+            raise ValueError('mode can only be [r, rb, rU, w, wb], not %r' % (mode,))
 
+        # We use RawIOBase, which uses "bytes" on Python 3 and "str" on Python 2.
+        # _text_mode will wrap the stream with TextIOWrapper, which uses "str" on
+        # Python 3 and "unicode" on Python 2.
+        # On Python 3 - we want to use _text_mode to use "str" in text mode (no 'b')
+        # On Python 2 - we only need to use TextIOWrapper if 'U' is used (to translate
+        # univeral newlines), but we also need to convert "unicode" back to "str" when reading
+        self._text_mode = False
+        self._text_encoding = encoding
+        self._text_errors = errors
+        self._text_newline = newline
+        if bytes is not str and 'b' not in mode:
+            # Python 3 text mode
+            self._text_mode = True
+
+        if bytes is str and 'U' in mode:
+            # Python 2, use unicode and encode reads
+            self._text_mode = True
+            self._text_newline = None   # universal newlines
+            import functools
+
+            def wrap_method(m):
+                if m.__name__.startswith("read"):
+                    @functools.wraps(m)
+                    def wrapped(*args, **kwargs):
+                        result = m(*args, **kwargs)
+                        assert isinstance(result, unicode) # pylint:disable=undefined-variable
+                        return result.encode()
+                    return wrapped
+                return m
+            self._wrap_method = wrap_method
 
         self._orig_bufsize = bufsize
         if bufsize < 0 or bufsize == 1:
@@ -323,17 +335,15 @@ class FileObjectPosix(FileObjectBase):
         elif bufsize == 0:
             bufsize = 1
 
-        if mode == 'r':
+        if 'r' in mode:
             IOFamily = BufferedReader
         else:
-            assert mode == 'w'
             IOFamily = BufferedWriter
             if self._orig_bufsize == 0:
                 # We could also simply pass self.fileio as *io*, but this way
                 # we at least consistently expose a BufferedWriter in our *io*
                 # attribute.
                 IOFamily = FlushingBufferedWriter
-
 
         self._fobj = fobj
         # This attribute is documented as available for non-blocking reads.

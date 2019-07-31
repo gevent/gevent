@@ -582,10 +582,10 @@ class Popen(object):
                 # Under Python 3, if we left on the 'b' we'd get different results
                 # depending on whether we used FileObjectPosix or FileObjectThread
                 self.stdin = FileObject(p2cwrite, 'wb', bufsize)
-                self.stdin.translate_newlines(None,
-                                              write_through=True,
-                                              line_buffering=(bufsize == 1),
-                                              encoding=self.encoding, errors=self.errors)
+                self.stdin.text_mode(None,
+                                     write_through=True,
+                                     line_buffering=(bufsize == 1),
+                                     encoding=self.encoding, errors=self.errors)
             else:
                 self.stdin = FileObject(p2cwrite, 'wb', bufsize)
         if c2pread != -1:
@@ -600,7 +600,7 @@ class Popen(object):
                     # test__subprocess.py that depend on python_universal_newlines,
                     # but would be inconsistent with the stdlib:
                     #msvcrt.setmode(self.stdout.fileno(), os.O_TEXT)
-                    self.stdout.translate_newlines('r', encoding=self.encoding, errors=self.errors)
+                    self.stdout.text_mode('r', encoding=self.encoding, errors=self.errors)
                 else:
                     self.stdout = FileObject(c2pread, 'rU', bufsize)
             else:
@@ -609,7 +609,7 @@ class Popen(object):
             if universal_newlines or text_mode:
                 if PY3:
                     self.stderr = FileObject(errread, 'rb', bufsize)
-                    self.stderr.translate_newlines(None, encoding=encoding, errors=errors)
+                    self.stderr.text_mode(None, encoding=encoding, errors=errors)
                 else:
                     self.stderr = FileObject(errread, 'rU', bufsize)
             else:

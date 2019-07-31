@@ -60,11 +60,10 @@ class FileObjectBase(object):
     )
 
 
-    # Whether we are translating universal newlines or not.
-    _translate = False
-
-    _translate_encoding = None
-    _translate_errors = None
+    _text_mode = False
+    _text_encoding = None
+    _text_errors = None
+    _text_newline = None
 
     def __init__(self, io, closefd):
         """
@@ -75,10 +74,10 @@ class FileObjectBase(object):
         # pass it along) for compatibility.
         self._close = closefd
 
-        if self._translate:
+        if self._text_mode:
             # This automatically handles delegation by assigning to
             # self.io
-            self.translate_newlines(None, self._translate_encoding, self._translate_errors)
+            self.text_mode(None, self._text_encoding, self._text_errors, self._text_newline)
         else:
             self._do_delegate_methods()
 
@@ -107,12 +106,12 @@ class FileObjectBase(object):
         """
         return method
 
-    def translate_newlines(self, mode, *text_args, **text_kwargs):
+    def text_mode(self, mode, *text_args, **text_kwargs):
         wrapper = TextIOWrapper(self._io, *text_args, **text_kwargs)
         if mode:
             wrapper.mode = mode
         self.io = wrapper
-        self._translate = True
+        self._text_mode = True
 
     @property
     def closed(self):
