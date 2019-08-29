@@ -124,7 +124,7 @@ class TestTCP(greentest.TestCase):
     def test_sendall_str(self):
         self._test_sendall(self.long_data)
 
-    if not six.PY3:
+    if six.PY2:
         def test_sendall_unicode(self):
             self._test_sendall(six.text_type(self.long_data))
 

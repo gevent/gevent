@@ -62,7 +62,7 @@ PY36 = None
 PY37 = None
 
 NON_APPLICABLE_SUFFIXES = ()
-if sys.version_info[0] == 3:
+if sys.version_info[0] >= 3:
     # Python 3
     NON_APPLICABLE_SUFFIXES += ('2', '279')
     PY2 = False
