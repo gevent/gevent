@@ -384,8 +384,10 @@ class TestHostname(TestCase):
 add(
     TestHostname,
     socket.gethostname,
-    skip=greentest.RUNNING_ON_TRAVIS and greentest.RESOLVER_DNSPYTHON,
-    skip_reason="Sometimes get a different result for getaddrinfo",
+    skip=greentest.RUNNING_ON_TRAVIS and greentest.RESOLVER_NOT_SYSTEM,
+    skip_reason=("Sometimes get a different result for getaddrinfo "
+                 "with dnspython; c-ares produces different results for "
+                 "localhost on Travis beginning Sept 2019")
 )
 
 

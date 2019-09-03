@@ -221,6 +221,14 @@ disabled_tests = [
     # Does not exist in the test suite until 2.7.4+. Subclasses Popen, and overrides
     # _execute_child. But our version has a different parameter list than the
     # version that comes with PyPy/CPython, so fails with a TypeError.
+
+    # This one crashes the interpreter if it has a bug parsing the
+    # invalid data.
+    'test_ssl.BasicSocketTests.test_parse_cert_CVE_2019_5010',
+    # We had to copy in a newer version of the test file for SSL fixes
+    # and this doesn't work reliably on all versions.
+    'test_httplib.HeaderTests.test_headers_debuglevel',
+
 ]
 
 if 'thread' in os.getenv('GEVENT_FILE', ''):
@@ -248,6 +256,10 @@ if PY2 and PYPY:
         'test_urllib2_localnet.TestUrlopen.test_info',
         # Sometimes hangs
         'test_ssl.ThreadedTests.test_socketserver',
+        # We had to update 'CERTFILE' to continue working, but
+        # this test hasn't been updated yet (the CPython tests
+        # are also too new to run on PyPy).
+        'test_ssl.BasicSocketTests.test_parse_cert',
 
     ]
 
@@ -702,6 +714,9 @@ if PYPY:
             # This uses ctypes to do funky things including using ptrace,
             # it hangs
             'test_subprocess.ProcessTestcase.test_child_terminated_in_stopped_state',
+
+            # Certificate errors; need updated test
+            'test_urllib2_localnet.TestUrlopen.test_https',
         ]
 
 # Generic Python 3
