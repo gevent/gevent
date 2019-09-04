@@ -61,13 +61,11 @@ Module Listing
    gevent.pool
    gevent.pywsgi
    gevent.queue
-   gevent.queue
    gevent.resolver.ares
    gevent.resolver.blocking
    gevent.resolver.dnspython
    gevent.resolver.thread
    gevent.select
-   gevent.server
    gevent.server
    gevent.signal
    gevent.socket
