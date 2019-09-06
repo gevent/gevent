@@ -21,7 +21,7 @@ PY38 = sys.version_info[:2] >= (3, 8)
 PYPY = hasattr(sys, 'pypy_version_info')
 WIN = sys.platform.startswith("win")
 LINUX = sys.platform.startswith('linux')
-OSX = sys.platform == 'darwin'
+OSX = MAC = sys.platform == 'darwin'
 
 
 PURE_PYTHON = PYPY or os.getenv('PURE_PYTHON')

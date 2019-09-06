@@ -668,6 +668,22 @@ def patch_thread(threading=True, _threading_local=True, Event=True, logging=True
                 raise RuntimeError("Cannot join current thread")
             if thread_greenlet is not None and thread_greenlet.dead:
                 return
+            # You may ask: Why not call thread_greenlet.join()?
+            # Well, in the one case we actually have a greenlet, it's the
+            # low-level greenlet.greenlet object for the main thread, which
+            # doesn't have a join method.
+            #
+            # You may ask: Why not become the main greenlet's *parent*
+            # so you can get notified when it finishes? Because you can't
+            # create a greenlet cycle (the current greenlet is a descendent
+            # of the parent), and nor can you set a greenlet's parent to None,
+            # so there can only ever be one greenlet with a parent of None: the main
+            # greenlet, the one we need to watch.
+            #
+            # You may ask: why not swizzle out the problematic lock on the main thread
+            # into a gevent friendly lock? Well, the interpreter actually depends on that
+            # for the main thread in threading._shutdown; see below.
+
             if not thread.is_alive():
                 return
 
@@ -700,8 +716,34 @@ def patch_thread(threading=True, _threading_local=True, Event=True, logging=True
         if orig_current_thread == threading_mod.main_thread():
             main_thread = threading_mod.main_thread()
             _greenlet = main_thread._greenlet = greenlet.getcurrent()
+            main_thread.__real_tstate_lock = main_thread._tstate_lock
 
-            main_thread.join = make_join_func(main_thread, _greenlet)
+            # The interpreter will call threading._shutdown
+            # when the main thread exits and is about to
+            # go away. It is called *in* the main thread. This
+            # is a perfect place to notify other greenlets that
+            # the main thread is done. We do this by overriding the
+            # lock of the main thread during operation, and only restoring
+            # it to the native blocking version at shutdown time
+            # (the interpreter also has a reference to this lock in a
+            # C data structure).
+            main_thread._tstate_lock = threading_mod.Lock()
+            main_thread._tstate_lock.acquire()
+            orig_shutdown = threading_mod._shutdown
+            def _shutdown():
+                # Release anyone trying to join() me,
+                # and let us switch to them.
+                if main_thread._tstate_lock:
+                    main_thread._tstate_lock.release()
+                    from gevent import sleep
+                    sleep()
+                # The only truly blocking native shutdown lock to
+                # acquire should be our own (hopefully)
+                main_thread._tstate_lock = main_thread.__real_tstate_lock
+                main_thread.__real_tstate_lock = None
+                orig_shutdown()
+
+            threading_mod._shutdown = _shutdown
 
             # Patch up the ident of the main thread to match. This
             # matters if threading was imported before monkey-patching

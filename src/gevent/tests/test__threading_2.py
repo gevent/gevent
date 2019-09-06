@@ -33,6 +33,7 @@ try:
     from test.support import verbose
 except ImportError:
     from test.test_support import verbose
+
 import random
 import re
 import sys
@@ -46,7 +47,7 @@ import unittest
 import weakref
 
 from gevent.tests import lock_tests
-
+verbose = False
 # A trivial mutable counter.
 
 def skipDueToHang(cls):
@@ -132,7 +133,7 @@ class ThreadTests(unittest.TestCase):
             print('waiting for all tasks to complete')
         for t in threads:
             t.join(NUMTASKS)
-            self.assertFalse(t.is_alive())
+            self.assertFalse(t.is_alive(), t.__dict__)
             if hasattr(t, 'ident'):
                 self.assertNotEqual(t.ident, 0)
                 self.assertFalse(t.ident is None)
@@ -351,28 +352,33 @@ class ThreadTests(unittest.TestCase):
         # Issue 1722344
         # Raising SystemExit skipped threading._shutdown
         import subprocess
-        p = subprocess.Popen([sys.executable, "-W", "ignore", "-c", """if 1:
+        script = """if 1:
 %s
                 import threading
                 from time import sleep
 
                 def child():
-                    sleep(1)
+                    sleep(0.3)
                     # As a non-daemon thread we SHOULD wake up and nothing
                     # should be torn down yet
-                    print("Woke up, sleep function is: %%r" %% sleep)
+                    print("Woke up, sleep function is: %%s.%%s" %% (sleep.__module__, sleep.__name__))
 
                 threading.Thread(target=child).start()
                 raise SystemExit
-            """ % setup_4],
+        """ % setup_4
+        p = subprocess.Popen([sys.executable, "-W", "ignore", "-c", script],
                              stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
         stdout, stderr = p.communicate()
         stdout = stdout.strip()
         stdout = stdout.decode('utf-8')
         stderr = stderr.decode('utf-8')
-        assert re.match('^Woke up, sleep function is: <.*?sleep.*?>$', stdout), repr(stdout)
-        stderr = re.sub(r"^\[\d+ refs\]", "", stderr, re.MULTILINE).strip()
+
+
+        self.assertEqual(
+            'Woke up, sleep function is: gevent.hub.sleep',
+            stdout)
+
         # On Python 2, importing pkg_resources tends to result in some 'ImportWarning'
         # being printed to stderr about packages missing __init__.py; the -W ignore is...
         # ignored.
@@ -410,7 +416,7 @@ class ThreadTests(unittest.TestCase):
                     self.should_raise = should_raise
                     self.thread = threading.Thread(target=self._run,
                                                    args=(self,),
-                                                   kwargs={'yet_another': self})
+                                                   kwargs={'_yet_another': self})
                     self.thread.start()
 
                 def _run(self, _other_ref, _yet_another):
@@ -463,7 +469,7 @@ class ThreadJoinOnShutdown(unittest.TestCase):
             t = threading.Thread(target=joiningfunc,
                                  args=(threading.current_thread(),))
             t.start()
-            time.sleep(0.1)
+            time.sleep(0.2)
             print('end of main')
             """
         self._run_and_join(script)

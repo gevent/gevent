@@ -1,10 +1,12 @@
 from __future__ import print_function
 import gevent.monkey
 gevent.monkey.patch_all()
-import gevent
-import os
 
+import os
 import multiprocessing
+
+import gevent
+from gevent._compat import MAC
 
 hub = gevent.get_hub()
 pid = os.getpid()
@@ -46,6 +48,7 @@ def test():
 if __name__ == '__main__':
     # Must call for Windows to fork properly; the fork can't be in the top-level
     multiprocessing.freeze_support()
+
     # fork watchers weren't firing in multi-threading processes.
     # This test is designed to prove that they are.
     # However, it fails on Windows: The fork watcher never runs!

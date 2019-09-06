@@ -42,6 +42,7 @@ env:
       - TRAVIS_PYTHON_VERSION=3.5
       - TRAVIS_PYTHON_VERSION=3.6
       - TRAVIS_PYTHON_VERSION=3.7
+      - TRAVIS_PYTHON_VERSION=3.8
       - TRAVIS_PYTHON_VERSION=pypy2.7
       - TRAVIS_PYTHON_VERSION=pypy3.6
       - TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0
@@ -144,6 +145,8 @@ jobs:
       script: ccache -s
       before_script: true
       after_success: true
+    - <<: *build-gevent
+      env: TRAVIS_PYTHON_VERSION=3.8
     - <<: *build-gevent
       env: TRAVIS_PYTHON_VERSION=3.5
     - <<: *build-gevent
@@ -277,6 +280,14 @@ jobs:
     - <<: *test-pure-jobs
       env: TRAVIS_PYTHON_VERSION=3.7
       name: pure37
+
+    # 3.8
+    - <<: *test-libuv-jobs
+      env: TRAVIS_PYTHON_VERSION=3.8
+      name: libuv36
+    - <<: *test-libev-jobs
+      env: TRAVIS_PYTHON_VERSION=3.8
+      name: libev-cffi36
 
 
     # 2.7, no-embed. Run the tests that exercise the libraries we

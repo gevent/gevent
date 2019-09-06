@@ -47,6 +47,7 @@ from gevent._compat import PY3
 from gevent._compat import PY35
 from gevent._compat import PY36
 from gevent._compat import PY37
+from gevent._compat import PY38
 from gevent._compat import reraise
 from gevent._compat import fspath
 from gevent._compat import fsencode
@@ -68,6 +69,25 @@ __implements__ = [
 if PY3 and not sys.platform.startswith('win32'):
     __implements__.append("_posixsubprocess")
     _posixsubprocess = None
+
+if PY38:
+    # Using os.posix_spawn() to start subprocesses
+    # bypasses our child watchers on certain operating systems,
+    # and with certain library versions. Possibly the right
+    # fix is to monkey-patch os.posix_spawn like we do os.fork?
+    # These have no effect, they're just here to match the stdlib.
+    # TODO: When available, given a monkey patch on them, I think
+    # we ought to be able to use them if the stdlib has identified them
+    # as suitable.
+    __implements__.extend([
+        '_use_posix_spawn',
+        '_USE_POSIX_SPAWN'
+    ])
+
+    def _use_posix_spawn():
+        return False
+
+    _USE_POSIX_SPAWN = False
 
 # Some symbols we define that we expect to export;
 # useful for static analysis
@@ -1720,3 +1740,15 @@ def run(*popenargs, **kwargs):
             raise _with_stdout_stderr(CalledProcessError(retcode, process.args, stdout), stderr)
 
     return CompletedProcess(process.args, retcode, stdout, stderr)
+
+def _gevent_did_monkey_patch(*_args):
+    # Beginning on 3.8 on Mac, the 'spawn' method became the default
+    # start method. That doesn't fire fork watchers and we can't
+    # easily patch to make it do so: multiprocessing uses the private
+    # c accelerated _subprocess module to implement this. Instead we revert
+    # back to using fork.
+    from gevent._compat import MAC
+    if MAC:
+        import multiprocessing
+        if hasattr(multiprocessing, 'set_start_method'):
+            multiprocessing.set_start_method('fork', force=True)

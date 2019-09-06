@@ -160,41 +160,25 @@ else:
 if PY3:
     # XXX: Issue 18808 breaks us on Python 3.4+.
     # Thread objects now expect a callback from the interpreter itself
-    # (threadmodule.c:release_sentinel). Because this never happens
+    # (threadmodule.c:release_sentinel) when the C-level PyThreadState
+    # object is being deallocated. Because this never happens
     # when a greenlet exits, join() and friends will block forever.
-    # The solution below involves capturing the greenlet when it is
-    # started and deferring the known broken methods to it.
+    # Fortunately this is easy to fix: just ensure that the allocation of the
+    # lock, _set_sentinel, creates a *gevent* lock, and release it when
+    # we're done. The main _shutdown code is in Python and deals with
+    # this gracefully.
 
     class Thread(__threading__.Thread):
-        _greenlet = None
-
-        def is_alive(self):
-            return bool(self._greenlet)
-
-        isAlive = is_alive
 
         def _set_tstate_lock(self):
-            self._greenlet = getcurrent()
+            super(Thread, self)._set_tstate_lock()
+            greenlet = getcurrent()
+            greenlet.rawlink(self.__greenlet_finished)
 
-        def run(self):
-            try:
-                super(Thread, self).run()
-            finally:
-                # avoid ref cycles, but keep in __dict__ so we can
-                # distinguish the started/never-started case
-                self._greenlet = None
-                self._stop() # mark as finished
-
-        def join(self, timeout=None):
-            if '_greenlet' not in self.__dict__:
-                raise RuntimeError("Cannot join an inactive thread")
-            if self._greenlet is None:
-                return
-            self._greenlet.join(timeout=timeout)
-
-        def _wait_for_tstate_lock(self, *args, **kwargs):
-            # pylint:disable=arguments-differ
-            raise NotImplementedError()
+        def __greenlet_finished(self, _):
+            if self._tstate_lock:
+                self._tstate_lock.release()
+                self._stop()
 
     __implements__.append('Thread')
 
@@ -203,6 +187,8 @@ if PY3:
 
     __implements__.append('Timer')
 
+    _set_sentinel = allocate_lock
+    __implements__.append('_set_sentinel')
     # The main thread is patched up with more care
     # in _gevent_will_monkey_patch
 

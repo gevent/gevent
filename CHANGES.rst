@@ -12,6 +12,10 @@
 - Add an ``--module`` option to ``gevent.monkey`` allowing to run a Python
   module rather than a script. See :pr:`1440`.
 
+- Add support for CPython 3.8.0b4.
+
+- Improve the way joining the main thread works on Python 3.
+
 1.5a1 (2019-05-02)
 ==================
 
