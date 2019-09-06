@@ -284,10 +284,10 @@ jobs:
     # 3.8
     - <<: *test-libuv-jobs
       env: TRAVIS_PYTHON_VERSION=3.8
-      name: libuv36
+      name: libuv38
     - <<: *test-libev-jobs
       env: TRAVIS_PYTHON_VERSION=3.8
-      name: libev-cffi36
+      name: libev-cffi38
 
 
     # 2.7, no-embed. Run the tests that exercise the libraries we
