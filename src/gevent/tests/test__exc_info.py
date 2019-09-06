@@ -4,7 +4,7 @@ import gevent.testing as greentest
 from gevent.testing import six
 from gevent.testing import ExpectedException as ExpectedError
 
-if not six.PY3:
+if six.PY2:
     sys.exc_clear()
 
 class RawException(Exception):

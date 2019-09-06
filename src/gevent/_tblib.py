@@ -120,7 +120,7 @@ except ImportError:
 __version__ = '1.3.0'
 __all__ = ('Traceback',)
 
-PY3 = sys.version_info[0] == 3
+PY3 = sys.version_info[0] >= 3
 FRAME_RE = re.compile(r'^\s*File "(?P<co_filename>.+)", line (?P<tb_lineno>\d+)(, in (?P<co_name>.+))?$')
 
 
