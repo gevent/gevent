@@ -6,7 +6,6 @@ import os
 import multiprocessing
 
 import gevent
-from gevent._compat import MAC
 
 hub = gevent.get_hub()
 pid = os.getpid()
