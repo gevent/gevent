@@ -17,15 +17,21 @@ class TestRun(unittest.TestCase):
     def tearDown(self):
         os.chdir(self.cwd)
 
-    def _run(self, script):
+    def _run(self, script, module=False):
         env = os.environ.copy()
         env['PYTHONWARNINGS'] = 'ignore'
-        args = [sys.executable, '-m', 'gevent.monkey', script, 'patched']
+        args = [sys.executable, '-m', 'gevent.monkey']
+        if module:
+            args.append('--module')
+        args += [script, 'patched']
         p = Popen(args, stdout=PIPE, stderr=PIPE, env=env)
         gout, gerr = p.communicate()
         self.assertEqual(0, p.returncode, (gout, gerr))
 
-        args = [sys.executable, script, 'stdlib']
+        if module:
+            args = [sys.executable, "-m", script, 'stdlib']
+        else:
+            args = [sys.executable, script, 'stdlib']
         p = Popen(args, stdout=PIPE, stderr=PIPE)
 
         pout, perr = p.communicate()
@@ -44,6 +50,13 @@ class TestRun(unittest.TestCase):
     def test_run_package(self):
         # Run a __main__ inside a package.
         lines, _ = self._run('monkey_package')
+
+        self.assertTrue(lines[0].endswith('__main__.py'), lines[0])
+        self.assertEqual(lines[1], '__main__')
+
+    def test_run_module(self):
+        # Run a __main__ inside a module
+        lines, _ = self._run('monkey_package', module=True)
 
         self.assertTrue(lines[0].endswith('__main__.py'), lines[0])
         self.assertEqual(lines[1], '__main__')

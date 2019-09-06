@@ -9,6 +9,9 @@
 
 - Update to Cython 0.29.7 and cffi 1.12.3.
 
+- Add an ``--module`` option to ``gevent.monkey`` allowing to run a Python
+  module rather than a script.
+
 1.5a1 (2019-05-02)
 ==================
 
