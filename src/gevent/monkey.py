@@ -712,12 +712,13 @@ def patch_thread(threading=True, _threading_local=True, Event=True, logging=True
         # hangs forever. We patch around this if possible. See also
         # gevent.threading.
         greenlet = __import__('greenlet')
+        already_patched = is_object_patched('threading', '_shutdown')
 
-        if orig_current_thread == threading_mod.main_thread():
+        if orig_current_thread == threading_mod.main_thread() and not already_patched:
             main_thread = threading_mod.main_thread()
             _greenlet = main_thread._greenlet = greenlet.getcurrent()
             main_thread.__real_tstate_lock = main_thread._tstate_lock
-
+            assert main_thread.__real_tstate_lock is not None
             # The interpreter will call threading._shutdown
             # when the main thread exits and is about to
             # go away. It is called *in* the main thread. This
@@ -733,17 +734,33 @@ def patch_thread(threading=True, _threading_local=True, Event=True, logging=True
             def _shutdown():
                 # Release anyone trying to join() me,
                 # and let us switch to them.
-                if main_thread._tstate_lock:
-                    main_thread._tstate_lock.release()
-                    from gevent import sleep
-                    sleep()
-                # The only truly blocking native shutdown lock to
-                # acquire should be our own (hopefully)
+                if not main_thread._tstate_lock:
+                    return
+
+                main_thread._tstate_lock.release()
+                from gevent import sleep
+                sleep()
+                # Now, this may have resulted in us getting stopped
+                # if some other greenlet actually just ran there.
+                # That's not good, we're not supposed to be stopped
+                # when we enter _shutdown.
+                main_thread._is_stopped = False
                 main_thread._tstate_lock = main_thread.__real_tstate_lock
                 main_thread.__real_tstate_lock = None
-                orig_shutdown()
+                # The only truly blocking native shutdown lock to
+                # acquire should be our own (hopefully), and the call to
+                # _stop that orig_shutdown makes will discard it.
 
-            threading_mod._shutdown = _shutdown
+                orig_shutdown()
+                patch_item(threading_mod, '_shutdown', orig_shutdown)
+
+            patch_item(threading_mod, '_shutdown', _shutdown)
+
+            # We create a bit of a reference cycle here,
+            # so main_thread doesn't get to be collected in a timely way.
+            # Not good. Take it out of dangling so we don't get
+            # warned about it.
+            threading_mod._dangling.remove(main_thread)
 
             # Patch up the ident of the main thread to match. This
             # matters if threading was imported before monkey-patching
@@ -754,7 +771,7 @@ def patch_thread(threading=True, _threading_local=True, Event=True, logging=True
                 threading_mod._active[main_thread.ident] = threading_mod._active[oldid]
             if oldid != main_thread.ident:
                 del threading_mod._active[oldid]
-        else:
+        elif not already_patched:
             _queue_warning("Monkey-patching not on the main thread; "
                            "threading.main_thread().join() will hang from a greenlet",
                            _warnings)

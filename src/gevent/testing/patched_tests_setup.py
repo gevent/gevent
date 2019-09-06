@@ -26,6 +26,7 @@ from .sysinfo import PY2
 from .sysinfo import PY35
 from .sysinfo import PY36
 from .sysinfo import PY37
+from .sysinfo import PY38
 
 from .sysinfo import WIN
 from .sysinfo import OSX
@@ -791,7 +792,7 @@ if PY3:
 
         ]
 
-    wrapped_tests.update({
+    disabled_tests += [
         # XXX: BUG: We simply don't handle this correctly. On CPython,
         # we wind up raising a BlockingIOError and then
         # BrokenPipeError and then some random TypeErrors, all on the
@@ -799,13 +800,20 @@ if PY3:
         # socket.makefile), whereas CPython 3.6 uses socket.sendall().
         # On PyPy, the behaviour is much worse: we hang indefinitely, perhaps exposing a problem
         # with our signal handling.
+
         # In actuality, though, this test doesn't fully test the EINTR it expects
         # to under gevent (because if its EWOULDBLOCK retry behaviour.)
         # Instead, the failures were all due to `pthread_kill` trying to send a signal
         # to a greenlet instead of a real thread. The solution is to deliver the signal
-        # to the real thread by letting it get the correct ID.
-        'test_wsgiref.IntegrationTests.test_interrupted_write': _make_run_with_original('threading', 'get_ident')
-    })
+        # to the real thread by letting it get the correct ID, and we previously
+        # used make_run_with_original to make it do that.
+        #
+        # But now that we have disabled our wrappers around Thread.join() in favor
+        # of the original implementation, that causes problems:
+        # background.join() thinks that it is the current thread, and won't let it
+        # be joined.
+        'test_wsgiref.IntegrationTests.test_interrupted_write',
+    ]
 
 # PyPy3 3.5.5 v5.8-beta
 
@@ -1133,6 +1141,26 @@ if PY37:
         disabled_tests += [
 
         ]
+
+if PY38:
+    disabled_tests += [
+        # This one seems very strict: doesn't want a pathlike
+        # first argument when shell is true.
+        'test_subprocess.RunFuncTestCase.test_run_with_pathlike_path',
+        # This tests for a warning we don't raise.
+        'test_subprocess.RunFuncTestCase.test_bufsize_equal_one_binary_mode',
+
+        # This compares the output of threading.excepthook with
+        # data constructed in Python. But excepthook is implemented in C
+        # and can't see the patched threading.get_ident() we use, so the
+        # output doesn't match.
+        'test_threading.ExceptHookTests.test_excepthook_thread_None',
+
+        # This tries to use threading.interrupt_main() from a new Thread;
+        # but of course that's actually the same thread and things don't
+        # work as expected.
+        'test_threading.InterruptMainTests.test_interrupt_main_subthread',
+    ]
 
 # if 'signalfd' in os.environ.get('GEVENT_BACKEND', ''):
 #     # tests that don't interact well with signalfd
