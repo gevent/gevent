@@ -556,7 +556,7 @@ else:
             self._threadpool = ThreadPool(max_workers)
             self._threadpool._destroy_worker_hub = True
 
-        def submit(self, fn, *args, **kwargs):
+        def submit(self, fn, *args, **kwargs): # pylint:disable=arguments-differ
             with self._shutdown_lock: # pylint:disable=not-context-manager
                 if self._shutdown:
                     raise RuntimeError('cannot schedule new futures after shutdown')
