@@ -198,9 +198,12 @@ jobs:
     # We only need to do this on one version, and it should be Python 3, because
     # pylint has stopped updating for Python 2.
     - stage: test
-      # We need pylint, since above we're not installing a requirements file
+      # We need pylint, since above we're not installing a
+      # requirements file. Code added to _ssl3.SSLContext for Python
+      # 3.8 triggers an infinite recursion bug in pylint 2.3.1/astroid 2.2.5
+      # unless we disable inference.
       install: pip install pylint
-      script: python -m pylint --rcfile=.pylintrc gevent
+      script: python -m pylint --limit-inference-results=1 --rcfile=.pylintrc gevent
       env: TRAVIS_PYTHON_VERSION=3.7
       name: lint37
 

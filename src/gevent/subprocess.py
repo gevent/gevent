@@ -70,24 +70,6 @@ if PY3 and not sys.platform.startswith('win32'):
     __implements__.append("_posixsubprocess")
     _posixsubprocess = None
 
-if PY38:
-    # Using os.posix_spawn() to start subprocesses
-    # bypasses our child watchers on certain operating systems,
-    # and with certain library versions. Possibly the right
-    # fix is to monkey-patch os.posix_spawn like we do os.fork?
-    # These have no effect, they're just here to match the stdlib.
-    # TODO: When available, given a monkey patch on them, I think
-    # we ought to be able to use them if the stdlib has identified them
-    # as suitable.
-    __implements__.extend([
-        '_use_posix_spawn',
-        '_USE_POSIX_SPAWN'
-    ])
-
-    def _use_posix_spawn():
-        return False
-
-    _USE_POSIX_SPAWN = False
 
 # Some symbols we define that we expect to export;
 # useful for static analysis
@@ -182,6 +164,33 @@ if PY37:
         'CREATE_DEFAULT_ERROR_MODE',
         'CREATE_BREAKAWAY_FROM_JOB'
     ])
+
+if PY38:
+    # Using os.posix_spawn() to start subprocesses
+    # bypasses our child watchers on certain operating systems,
+    # and with certain library versions. Possibly the right
+    # fix is to monkey-patch os.posix_spawn like we do os.fork?
+    # These have no effect, they're just here to match the stdlib.
+    # TODO: When available, given a monkey patch on them, I think
+    # we ought to be able to use them if the stdlib has identified them
+    # as suitable.
+    __implements__.extend([
+        '_use_posix_spawn',
+    ])
+
+    def _use_posix_spawn():
+        return False
+
+    _USE_POSIX_SPAWN = False
+
+    if __subprocess__._USE_POSIX_SPAWN:
+        __implements__.extend([
+            '_USE_POSIX_SPAWN',
+        ])
+    else:
+        __imports__.extend([
+            '_USE_POSIX_SPAWN',
+        ])
 
 actually_imported = copy_globals(__subprocess__, globals(),
                                  only_names=__imports__,
