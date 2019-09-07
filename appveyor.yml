@@ -11,6 +11,7 @@ environment:
     # too often we get failures to resolve DNS names or failures
     # to connect on AppVeyor.
     GEVENTTEST_USE_RESOURCES: "-network"
+    PYTHONTRACEMALLOC: 10
 
   matrix:
 

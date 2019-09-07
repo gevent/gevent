@@ -150,32 +150,34 @@ static void _gevent_fs_poll_callback3(void* handlep, int status, const uv_stat_t
 
 static void gevent_uv_walk_callback_close(uv_handle_t* handle, void* arg)
 {
-	if( handle && !uv_is_closing(handle) ) {
-		uv_close(handle, NULL);
-	}
+    if( handle && !uv_is_closing(handle) ) {
+	uv_close(handle, NULL);
+    }
 }
 
 static void gevent_close_all_handles(uv_loop_t* loop)
 {
+    if (loop) {
 	uv_walk(loop, gevent_uv_walk_callback_close, NULL);
+    }
 }
 
 static void gevent_zero_timer(uv_timer_t* handle)
 {
-	memset(handle, 0, sizeof(uv_timer_t));
+    memset(handle, 0, sizeof(uv_timer_t));
 }
 
 static void gevent_zero_check(uv_check_t* handle)
 {
-	memset(handle, 0, sizeof(uv_check_t));
+    memset(handle, 0, sizeof(uv_check_t));
 }
 
 static void gevent_zero_prepare(uv_prepare_t* handle)
 {
-	memset(handle, 0, sizeof(uv_prepare_t));
+    memset(handle, 0, sizeof(uv_prepare_t));
 }
 
 static void gevent_zero_loop(uv_loop_t* handle)
 {
-	memset(handle, 0, sizeof(uv_loop_t));
+    memset(handle, 0, sizeof(uv_loop_t));
 }
