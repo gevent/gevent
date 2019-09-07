@@ -9,7 +9,7 @@ import time
 import unittest
 from functools import wraps
 
-from gevent import get_hub
+from gevent import getcurrent
 import gevent.testing as greentest
 
 from gevent.testing import six
@@ -34,7 +34,7 @@ class Thread(_Thread):
             try:
                 return target(*args, **kwargs)
             except: # pylint:disable=bare-except
-                get_hub().throw(*sys.exc_info())
+                getcurrent().parent.throw(*sys.exc_info())
 
         _Thread.__init__(self, target=errors_are_fatal, **kwargs)
         self.start()
@@ -95,12 +95,15 @@ class TestTCP(greentest.TestCase):
                 conn, _ = self.listener.accept()
                 r = conn.makefile(mode='rb')
                 read_data.append(r.read())
-                r.flush()
-                r.close()
             finally:
-                for f in (conn, r, self.listener):
+                # Order matters. On Python 2, if we close the
+                # connection before closing the makefile,
+                # test__ssl fails because the underlying socket
+                # has been deleted.
+                for f in (r, conn, self.listener):
                     if f is not None:
                         f.close()
+
 
         server = Thread(target=accept_and_read)
         client = self.create_connection(**client_args)
