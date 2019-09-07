@@ -16,6 +16,8 @@
 
 - Improve the way joining the main thread works on Python 3.
 
+- Implement ``SSLSocket.verify_client_post_handshake()`` when available.
+
 1.5a1 (2019-05-02)
 ==================
 

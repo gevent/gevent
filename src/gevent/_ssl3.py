@@ -678,6 +678,11 @@ class SSLSocket(socket):
             return None
         return self._sslobj.tls_unique_cb()
 
+    def verify_client_post_handshake(self):
+        # Only present in 3.7.1+; an attributeerror is alright
+        if self._sslobj:
+            return self._sslobj.verify_client_post_handshake()
+        raise ValueError("No SSL wrapper around " + str(self))
 
 # Python does not support forward declaration of types
 SSLContext.sslsocket_class = SSLSocket

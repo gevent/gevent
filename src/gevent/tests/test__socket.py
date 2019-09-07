@@ -29,12 +29,13 @@ class Thread(_Thread):
 
     def __init__(self, **kwargs):
         target = kwargs.pop('target')
+        caller = getcurrent()
         @wraps(target)
         def errors_are_fatal(*args, **kwargs):
             try:
                 return target(*args, **kwargs)
             except: # pylint:disable=bare-except
-                getcurrent().parent.throw(*sys.exc_info())
+                caller.throw(*sys.exc_info())
 
         _Thread.__init__(self, target=errors_are_fatal, **kwargs)
         self.start()
