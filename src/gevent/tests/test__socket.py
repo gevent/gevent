@@ -3,14 +3,14 @@
 from gevent import monkey; monkey.patch_all()
 
 import sys
-import os
 import array
 import socket
-import traceback
 import time
 import unittest
-import gevent.testing as greentest
 from functools import wraps
+
+from gevent import get_hub
+import gevent.testing as greentest
 
 from gevent.testing import six
 from gevent.testing import LARGE_TIMEOUT
@@ -34,8 +34,7 @@ class Thread(_Thread):
             try:
                 return target(*args, **kwargs)
             except: # pylint:disable=bare-except
-                traceback.print_exc()
-                os._exit(2)
+                get_hub().throw(*sys.exc_info())
 
         _Thread.__init__(self, target=errors_are_fatal, **kwargs)
         self.start()
@@ -91,18 +90,17 @@ class TestTCP(greentest.TestCase):
 
         def accept_and_read():
             conn = None
+            r = None
             try:
                 conn, _ = self.listener.accept()
                 r = conn.makefile(mode='rb')
                 read_data.append(r.read())
                 r.flush()
                 r.close()
-            except: # pylint:disable=bare-except
-                server_exc_info.append(sys.exc_info())
             finally:
-                if conn:
-                    conn.close()
-                self.listener.close()
+                for f in (conn, r, self.listener):
+                    if f is not None:
+                        f.close()
 
         server = Thread(target=accept_and_read)
         client = self.create_connection(**client_args)
@@ -114,9 +112,10 @@ class TestTCP(greentest.TestCase):
             client.close()
 
         server.join()
+        assert not server.is_alive()
         if match_data is None:
             match_data = self.long_data
-        self.assertEqual(read_data[0], match_data)
+        self.assertEqual(read_data, [match_data])
 
         if server_exc_info:
             six.reraise(*server_exc_info[0])
