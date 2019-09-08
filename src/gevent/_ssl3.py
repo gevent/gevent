@@ -98,6 +98,20 @@ class SSLContext(orig_SSLContext):
         def maximum_version(self, value):
             super(orig_SSLContext, orig_SSLContext).maximum_version.__set__(self, value)
 
+    if hasattr(orig_SSLContext, '_msg_callback'):
+        # And ditto for 3.8
+        # msg_callback is more complex because they want to actually *do* stuff
+        # in the setter, so we need to call it. For that to work we temporarily rebind
+        # SSLContext back. This function cannot switch, so it should be safe,
+        # unless somehow we have multiple threads in a monkey-patched ssl module
+        # at the same time, which doesn't make much sense.
+        @orig_SSLContext._msg_callback.setter
+        def _msg_callback(self, value):
+            __ssl__.SSLContext = orig_SSLContext
+            try:
+                super(SSLContext, SSLContext)._msg_callback.__set__(self, value)
+            finally:
+                __ssl__.SSLContext = SSLContext
 
 class _contextawaresock(socket._gevent_sock_class):
     # We have to pass the raw stdlib socket to SSLContext.wrap_socket.
@@ -664,6 +678,11 @@ class SSLSocket(socket):
             return None
         return self._sslobj.tls_unique_cb()
 
+    def verify_client_post_handshake(self):
+        # Only present in 3.7.1+; an attributeerror is alright
+        if self._sslobj:
+            return self._sslobj.verify_client_post_handshake()
+        raise ValueError("No SSL wrapper around " + str(self))
 
 # Python does not support forward declaration of types
 SSLContext.sslsocket_class = SSLSocket

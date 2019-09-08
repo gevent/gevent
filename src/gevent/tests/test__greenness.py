@@ -29,13 +29,15 @@ monkey.patch_all()
 import gevent.testing as greentest
 
 try:
-    import urllib2
-except ImportError:
     from urllib import request as urllib2
-try:
-    import BaseHTTPServer
-except ImportError:
     from http import server as BaseHTTPServer
+    from http.server import SimpleHTTPRequestHandler
+except ImportError:
+    # Python 2
+    import urllib2
+    import BaseHTTPServer
+    from SimpleHTTPServer import SimpleHTTPRequestHandler
+
 
 import gevent
 from gevent.testing import params
@@ -47,7 +49,8 @@ class TestGreenness(greentest.TestCase):
     def setUp(self):
         server_address = params.DEFAULT_BIND_ADDR_TUPLE
         BaseHTTPServer.BaseHTTPRequestHandler.protocol_version = "HTTP/1.0"
-        self.httpd = BaseHTTPServer.HTTPServer(server_address, BaseHTTPServer.BaseHTTPRequestHandler)
+        self.httpd = BaseHTTPServer.HTTPServer(server_address,
+                                               SimpleHTTPRequestHandler)
         self.httpd.request_count = 0
 
     def tearDown(self):
@@ -62,10 +65,10 @@ class TestGreenness(greentest.TestCase):
         server = gevent.spawn(self.serve)
 
         port = self.httpd.socket.getsockname()[1]
-        with self.assertRaises(urllib2.HTTPError) as exc:
-            urllib2.urlopen('http://127.0.0.1:%s' % port)
-        self.assertEqual(exc.exception.code, 501)
-        server.get(0.01)
+        rsp = urllib2.urlopen('http://127.0.0.1:%s' % port)
+        rsp.read()
+        rsp.close()
+        server.join()
         self.assertEqual(self.httpd.request_count, 1)
 
 

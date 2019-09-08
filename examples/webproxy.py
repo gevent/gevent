@@ -15,7 +15,12 @@ from gevent import monkey; monkey.patch_all()
 import sys
 import re
 import traceback
-from cgi import escape
+
+try:
+    from cgi import escape
+except ImportError:
+    # Python 3.8 removed this API
+    from html import escape
 
 try:
     import urllib2

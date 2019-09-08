@@ -480,17 +480,26 @@ def _setup_environ(debug=False):
     if 'GEVENT_DEBUG' not in os.environ and debug:
         os.environ['GEVENT_DEBUG'] = 'debug'
 
-    if 'PYTHONTRACEMALLOC' not in os.environ:
+    if 'PYTHONTRACEMALLOC' not in os.environ and debug:
+        # This slows the tests down quite a bit. Reserve
+        # for debugging.
         os.environ['PYTHONTRACEMALLOC'] = '10'
 
     if 'PYTHONDEVMODE' not in os.environ:
-        # Python 3.7
+        # Python 3.7 and above.
         os.environ['PYTHONDEVMODE'] = '1'
 
-    if 'PYTHONMALLOC' not in os.environ:
-        # Python 3.6
+    if 'PYTHONMALLOC' not in os.environ and debug:
+        # Python 3.6 and above.
+        # This slows the tests down some, but
+        # can detect memory corruption. Unfortunately
+        # it can also be flaky, especially in pre-release
+        # versions of Python (e.g., lots of crashes on Python 3.8b4).
         os.environ['PYTHONMALLOC'] = 'debug'
 
+    if sys.version_info.releaselevel != 'final' and not debug:
+        os.environ['PYTHONMALLOC'] = 'default'
+        os.environ['PYTHONDEVMODE'] = ''
 
 
 def main():

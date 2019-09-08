@@ -41,6 +41,12 @@ else:
         'interrupt_main',
         'start_new'
     ]
+    if sys.version_info[:2] >= (3, 8):
+        # We can't actually produce a value that "may be used
+        # to identify this particular thread system-wide", right?
+        # Even if we could, I imagine people will want to pass this to
+        # non-Python (native) APIs, so we shouldn't mess with it.
+        __imports__.append('get_native_id')
 
 
 error = __thread__.error

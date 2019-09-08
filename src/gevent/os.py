@@ -385,6 +385,12 @@ if hasattr(os, 'fork'):
             # we're not watching it
             return _waitpid(pid, options)
 
+        def _watch_child(pid, callback=None, loop=None, ref=False):
+            loop = loop or get_hub().loop
+            watcher = loop.child(pid, ref=ref)
+            _watched_children[pid] = watcher
+            watcher.start(_on_child, watcher, callback)
+
         def fork_and_watch(callback=None, loop=None, ref=False, fork=fork_gevent):
             """
             Fork a child process and start a child watcher for it in the parent process.
@@ -413,10 +419,7 @@ if hasattr(os, 'fork'):
             pid = fork()
             if pid:
                 # parent
-                loop = loop or get_hub().loop
-                watcher = loop.child(pid, ref=ref)
-                _watched_children[pid] = watcher
-                watcher.start(_on_child, watcher, callback)
+                _watch_child(pid, callback, loop, ref)
             return pid
 
         __extensions__.append('fork_and_watch')
@@ -474,6 +477,23 @@ if hasattr(os, 'fork'):
                     # take any args to match fork_and_watch
                     return forkpty_and_watch(*args, **kwargs)
             __implements__.append("waitpid")
+
+            if hasattr(os, 'posix_spawn'):
+                _raw_posix_spawn = os.posix_spawn
+                _raw_posix_spawnp = os.posix_spawnp
+
+                def posix_spawn(*args, **kwargs):
+                    pid = _raw_posix_spawn(*args, **kwargs)
+                    _watch_child(pid)
+                    return pid
+
+                def posix_spawnp(*args, **kwargs):
+                    pid = _raw_posix_spawnp(*args, **kwargs)
+                    _watch_child(pid)
+                    return pid
+
+                __implements__.append("posix_spawn")
+                __implements__.append("posix_spawnp")
         else:
             def fork():
                 """
@@ -502,6 +522,7 @@ if hasattr(os, 'fork'):
 
 else:
     __implements__.remove('fork')
+
 
 __imports__ = copy_globals(os, globals(),
                            names_to_ignore=__implements__ + __extensions__,

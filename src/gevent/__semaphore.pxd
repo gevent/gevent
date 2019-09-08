@@ -13,7 +13,7 @@ cdef class Semaphore(AbstractLinkable):
     # threadpool uses it
     cpdef _start_notify(self)
     cpdef int wait(self, object timeout=*) except -1000
-    cpdef bint acquire(self, int blocking=*, object timeout=*) except -1000
+    cpdef bint acquire(self, bint blocking=*, object timeout=*) except -1000
     cpdef __enter__(self)
     cpdef __exit__(self, object t, object v, object tb)
 

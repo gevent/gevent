@@ -351,6 +351,15 @@ RUN_ALONE = [
     'test__example_webproxy.py',
 ]
 
+if APPVEYOR:
+    # Strange failures sometimes, but only on Python 3.7, reporting
+    # "ConnectionAbortedError: [WinError 10053] An established
+    # connection was aborted by the software in your host machine"
+    # when we've done no such thing. Try running not in parallel
+    RUN_ALONE += [
+        'test__ssl.py',
+        'test__server.py',
+    ]
 
 
 if APPVEYOR or TRAVIS:

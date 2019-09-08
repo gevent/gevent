@@ -2,6 +2,7 @@
 from __future__ import absolute_import, print_function, division
 
 import unittest
+import sys
 import gevent.testing as greentest
 
 from gevent import core
@@ -128,6 +129,12 @@ class TestWatchersDefault(TestWatchers):
     "See https://ci.appveyor.com/project/denik/gevent/build/1.0.1380/job/lrlvid6mkjtyrhn5#L1103 "
     "It has also timed out, but only on Appveyor CPython 3.6; local CPython 3.6 does not. "
     "See https://ci.appveyor.com/project/denik/gevent/build/1.0.1414/job/yn7yi8b53vtqs8lw#L1523")
+@greentest.skipIf(
+    greentest.LIBUV and greentest.RUNNING_ON_TRAVIS and sys.version_info == (3, 8, 0, 'beta', 4),
+    "Crashes on 3.8.0b4 on TravisCI. "
+    "(https://travis-ci.org/gevent/gevent/jobs/582031266#L215) "
+    "Unable to reproduce locally so far on macOS."
+)
 class TestWatchersDefaultDestroyed(TestWatchers):
 
     def _makeOne(self):
