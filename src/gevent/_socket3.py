@@ -158,11 +158,16 @@ class socket(object):
             s = '<socket [%r]>' % ex
 
         if s.startswith("<socket object"):
-            s = "<%s.%s%s%s" % (self.__class__.__module__,
-                                self.__class__.__name__,
-                                getattr(self, '_closed', False) and " [closed] " or "",
-                                s[7:])
+            s = "<%s.%s%s%s%s" % (
+                self.__class__.__module__,
+                self.__class__.__name__,
+                getattr(self, '_closed', False) and " [closed] " or "",
+                self._extra_repr(),
+                s[7:])
         return s
+
+    def _extra_repr(self):
+        return ''
 
     def __getstate__(self):
         raise TypeError("Cannot serialize socket object")

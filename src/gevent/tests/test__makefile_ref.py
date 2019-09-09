@@ -264,12 +264,16 @@ class TestSocket(Test):
 @greentest.skipOnAppVeyor("This sometimes times out for no apparent reason.")
 class TestSSL(Test):
 
-    def _ssl_connect_task(self, connector, port):
+    def _ssl_connect_task(self, connector, port, accepted_event):
         connector.connect((DEFAULT_CONNECT, port))
+
         try:
             # Note: We get ResourceWarning about 'x'
             # on Python 3 if we don't join the spawned thread
             x = ssl.wrap_socket(connector)
+            # Wait to be fully accepted. We could otherwise raise ahead
+            # of the server and close ourself before it's ready to read.
+            accepted_event.wait()
         except socket.error:
             # Observed on Windows with PyPy2 5.9.0 and libuv:
             # if we don't switch in a timely enough fashion,
@@ -281,8 +285,11 @@ class TestSSL(Test):
             x.close()
 
     def _make_ssl_connect_task(self, connector, port):
-        t = threading.Thread(target=self._ssl_connect_task, args=(connector, port))
+        accepted_event = threading.Event()
+        t = threading.Thread(target=self._ssl_connect_task,
+                             args=(connector, port, accepted_event))
         t.daemon = True
+        t.accepted_event = accepted_event
         return t
 
     def __cleanup(self, task, *sockets):
@@ -304,7 +311,12 @@ class TestSSL(Test):
 
         task.join()
         for s in sockets:
-            s.close()
+            try:
+                close = s.close
+            except AttributeError:
+                continue
+            else:
+                close()
 
         del sockets
         del task
@@ -363,6 +375,7 @@ class TestSSL(Test):
 
         try:
             client_socket, _addr = listener.accept()
+            t.accepted_event.set()
             self._close_on_teardown(client_socket.close)
             client_socket = ssl.wrap_socket(client_socket, keyfile=certfile, certfile=certfile, server_side=True)
             self._close_on_teardown(client_socket)
@@ -385,6 +398,7 @@ class TestSSL(Test):
 
         try:
             client_socket, _addr = listener.accept()
+            t.accepted_event.set()
             self._close_on_teardown(client_socket.close) # hard ref
             client_socket = ssl.wrap_socket(client_socket, keyfile=certfile, certfile=certfile, server_side=True)
             self._close_on_teardown(client_socket)
@@ -412,6 +426,7 @@ class TestSSL(Test):
 
         try:
             client_socket, _addr = listener.accept()
+            t.accepted_event.set()
             self._close_on_teardown(client_socket)
             client_socket = ssl.wrap_socket(client_socket, keyfile=certfile, certfile=certfile, server_side=True)
             self._close_on_teardown(client_socket)
@@ -441,6 +456,7 @@ class TestSSL(Test):
 
         try:
             client_socket, _addr = listener.accept()
+            t.accepted_event.set()
             fileno = client_socket.fileno()
             self.assert_open(client_socket, fileno)
             f = client_socket.makefile()
@@ -452,30 +468,30 @@ class TestSSL(Test):
         finally:
             self.__cleanup(t, listener, connector)
 
-    @greentest.skipIf(greentest.RUNNING_ON_TRAVIS and greentest.PY37 and greentest.LIBUV,
-                      "Often segfaults, cannot reproduce locally. "
-                      "Not too worried about this before Python 3.7rc1. "
-                      "https://travis-ci.org/gevent/gevent/jobs/327357684")
     def test_serverssl_makefile2(self):
         listener = self._close_on_teardown(tcp_listener(backlog=1))
         port = listener.getsockname()[1]
         listener = ssl.wrap_socket(listener, keyfile=certfile, certfile=certfile)
 
-        connector = socket.socket()
-
-        def connect():
-            connector.connect((DEFAULT_CONNECT, port))
-            s = ssl.wrap_socket(connector)
-            s.sendall(b'test_serverssl_makefile2')
-            s.close()
-            connector.close()
+        accepted_event = threading.Event()
+        def connect(connector=socket.socket()):
+            try:
+                connector.connect((DEFAULT_CONNECT, port))
+                s = ssl.wrap_socket(connector)
+                accepted_event.wait()
+                s.sendall(b'test_serverssl_makefile2')
+                s.shutdown(socket.SHUT_RDWR)
+                s.close()
+            finally:
+                connector.close()
 
         t = threading.Thread(target=connect)
         t.daemon = True
         t.start()
-
+        client_socket = None
         try:
             client_socket, _addr = listener.accept()
+            accepted_event.set()
             fileno = client_socket.fileno()
             self.assert_open(client_socket, fileno)
             f = client_socket.makefile()
@@ -490,7 +506,7 @@ class TestSSL(Test):
             client_socket.close()
             self.assert_closed(client_socket, fileno)
         finally:
-            self.__cleanup(t, listener)
+            self.__cleanup(t, listener, client_socket)
 
 
 if __name__ == '__main__':

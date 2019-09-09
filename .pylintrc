@@ -1,6 +1,14 @@
 [MASTER]
 extension-pkg-whitelist=gevent.libuv._corecffi,gevent.libev._corecffi,gevent.local,gevent._ident
 
+# Control the amount of potential inferred values when inferring a single
+# object. This can help the performance when dealing with large functions or
+# complex, nested conditions.
+# gevent: The changes for Python 3.7 in _ssl3.py lead to infinite recursion
+# in pylint 2.3.1/astroid 2.2.5 in that file unless we this this to 1
+# from the default of 100.
+limit-inference-results=1
+
 [MESSAGES CONTROL]
 
 # Disable the message, report, category or checker with the given id(s). You
@@ -110,3 +118,7 @@ bad-functions=input
 # pylint leaves it off. This is the proximal cause of the
 # undefined-all-variable crash.
 #unsafe-load-any-extension = no
+
+# Local Variables:
+# mode: conf
+# End:

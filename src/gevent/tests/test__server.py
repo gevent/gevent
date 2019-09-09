@@ -205,7 +205,7 @@ class TestCase(greentest.TestCase):
     def init_server(self):
         self.server = self._create_server()
         self.server.start()
-        gevent.sleep(0.01)
+        gevent.sleep()
 
     @property
     def socket(self):
@@ -338,11 +338,6 @@ class TestDefaultSpawn(TestCase):
 
         self.stop_server()
 
-    def init_server(self):
-        self.server = self._create_server()
-        self.server.start()
-        gevent.sleep(0.01)
-
     @property
     def socket(self):
         return self.server.socket
@@ -359,7 +354,7 @@ class TestDefaultSpawn(TestCase):
     def test_server_repr_when_handle_is_instancemethod(self):
         # PR 501
         self.init_server()
-        self.start_server()
+        assert self.server.started
         self.assertIn('Server', repr(self.server))
 
         self.server.set_handle(self.server.handle)

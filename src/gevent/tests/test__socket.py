@@ -19,8 +19,10 @@ from gevent.testing import params
 from gevent.testing.sockets import tcp_listener
 from gevent.testing.skipping import skipWithoutExternalNetwork
 
-# we use threading on purpose so that we can test both regular and gevent sockets with the same code
+# we use threading on purpose so that we can test both regular and
+# gevent sockets with the same code
 from threading import Thread as _Thread
+from threading import Event
 
 errno_types = int
 
@@ -88,12 +90,13 @@ class TestTCP(greentest.TestCase):
 
         read_data = []
         server_exc_info = []
-
+        accepted_event = Event()
         def accept_and_read():
             conn = None
             r = None
             try:
                 conn, _ = self.listener.accept()
+                accepted_event.set()
                 r = conn.makefile(mode='rb')
                 read_data.append(r.read())
             finally:
@@ -108,7 +111,22 @@ class TestTCP(greentest.TestCase):
 
         server = Thread(target=accept_and_read)
         client = self.create_connection(**client_args)
-
+        # It's important to wait for the server to fully accept before
+        # we shutdown and close the socket. In SSL mode, the number
+        # and timing of data exchanges to complete the handshake and
+        # thus exactly when greenlet switches occur, varies by TLS version.
+        #
+        # It turns out that on < TLS1.3, we were getting lucky and the
+        # server was the greenlet that raced ahead and blocked in r.read()
+        # before the client returned from create_connection().
+        #
+        # But when TLS 1.3 was deployed (OpenSSL 1.1), the *client* was the
+        # one that raced ahead while the server had yet to return from
+        # self.listener.accept(). So the client sent the data to the socket,
+        # and closed, before the server could do anything, and the server,
+        # when it got switched to by server.join(), found its new socket
+        # dead.
+        accepted_event.wait()
         try:
             getattr(client, client_method)(data)
         finally:

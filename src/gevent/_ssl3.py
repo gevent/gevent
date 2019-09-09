@@ -172,8 +172,9 @@ else:
 
 class SSLSocket(socket):
     """
-    gevent `ssl.SSLSocket <https://docs.python.org/3/library/ssl.html#ssl-sockets>`_
-    for Python 3.
+    gevent `ssl.SSLSocket
+    <https://docs.python.org/3/library/ssl.html#ssl-sockets>`_ for
+    Python 3.
     """
 
     # pylint:disable=too-many-instance-attributes,too-many-public-methods
@@ -279,6 +280,13 @@ class SSLSocket(socket):
             except socket_error as x:
                 self.close()
                 raise x
+
+    def _extra_repr(self):
+        return ' server=%s, cipher=%r' % (
+            self.server_side,
+            self._sslobj.cipher() if self._sslobj is not None else ''
+
+        )
 
     @property
     def context(self):
@@ -650,16 +658,19 @@ class SSLSocket(socket):
         return self._real_connect(addr, True)
 
     def accept(self):
-        """Accepts a new connection from a remote client, and returns
-        a tuple containing that new connection wrapped with a server-side
-        SSL channel, and the address of the remote client."""
-
-        newsock, addr = socket.accept(self)
+        """
+        Accepts a new connection from a remote client, and returns a
+        tuple containing that new connection wrapped with a
+        server-side SSL channel, and the address of the remote client.
+        """
+        newsock, addr = super().accept()
         newsock._drop_events()
-        newsock = self._context.wrap_socket(newsock,
-                                            do_handshake_on_connect=self.do_handshake_on_connect,
-                                            suppress_ragged_eofs=self.suppress_ragged_eofs,
-                                            server_side=True)
+        newsock = self._context.wrap_socket(
+            newsock,
+            do_handshake_on_connect=self.do_handshake_on_connect,
+            suppress_ragged_eofs=self.suppress_ragged_eofs,
+            server_side=True
+        )
         return newsock, addr
 
     def get_channel_binding(self, cb_type="tls-unique"):

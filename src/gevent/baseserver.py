@@ -1,8 +1,13 @@
 """Base class for implementing servers"""
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
+
 import sys
 import _socket
 import errno
+
 from gevent.greenlet import Greenlet
 from gevent.event import Event
 from gevent.hub import get_hub
@@ -286,11 +291,14 @@ class BaseServer(object):
             return self.address[1]
 
     def init_socket(self):
-        """If the user initialized the server with an address rather than socket,
-        then this function will create a socket, bind it and put it into listening mode.
+        """
+        If the user initialized the server with an address rather than
+        socket, then this function must create a socket, bind it, and
+        put it into listening mode.
 
         It is not supposed to be called by the user, it is called by :meth:`start` before starting
-        the accept loop."""
+        the accept loop.
+        """
 
     @property
     def started(self):

@@ -18,6 +18,8 @@
 
 - Implement ``SSLSocket.verify_client_post_handshake()`` when available.
 
+- Fix tests when TLS1.3 is supported.
+
 1.5a1 (2019-05-02)
 ==================
 
