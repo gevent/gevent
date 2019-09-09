@@ -78,14 +78,16 @@ class Test(greentest.TestCase):
 
         def connect():
             conn, _ = self._create_connection()
-
             conn.sendall(b'2+2\r\n')
             line = readline(conn)
             self.assertEqual(line.strip(), '4', repr(line))
             self._close(conn)
 
         jobs = [WorkerGreenlet.spawn(connect) for _ in range(10)]
-        done = gevent.joinall(jobs, raise_error=True)
+        try:
+            done = gevent.joinall(jobs, raise_error=True)
+        finally:
+            gevent.joinall(jobs, raise_error=False)
 
         self.assertEqual(len(done), len(jobs), done)
 

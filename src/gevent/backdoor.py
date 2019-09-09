@@ -13,6 +13,7 @@ from __future__ import print_function, absolute_import
 import sys
 import socket
 from code import InteractiveConsole
+from time import time as now
 
 from gevent.greenlet import Greenlet
 from gevent.hub import getcurrent
@@ -157,6 +158,13 @@ class BackdoorServer(StreamServer):
             _locals['__builtins__'] = builtins
         return _locals
 
+    def do_read(self):
+        print(now(), "Accepting from", self.socket, file=sys.stderr)
+        result = super(BackdoorServer, self).do_read()
+        print(now(), "Accepted", result, file=sys.stderr)
+        return result
+
+
     def handle(self, conn, _address): # pylint: disable=method-hidden
         """
         Interact with one remote user.
@@ -169,7 +177,7 @@ class BackdoorServer(StreamServer):
         raw_file = conn.makefile(mode="r")
         getcurrent().stdin = _StdIn(conn, raw_file)
         getcurrent().stdout = _StdErr(conn, raw_file)
-
+        print(now(), "Interacting")
         # Swizzle the inputs
         getcurrent().switch_in()
         try:
