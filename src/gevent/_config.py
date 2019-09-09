@@ -106,9 +106,6 @@ def validate_bool(value):
             raise ValueError("Invalid boolean string: %r" % (value,))
     return bool(value)
 
-def get_environ_bool(key, default=None):
-    return validate_bool(os.environ.get(key, default))
-
 def validate_anything(value):
     return value
 

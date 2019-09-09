@@ -14,8 +14,7 @@ from gevent.hub import get_hub
 from gevent._compat import string_types
 from gevent._compat import integer_types
 from gevent._compat import xrange
-from gevent._compat import WIN
-from gevent._config import get_environ_bool
+
 
 
 __all__ = ['BaseServer']
@@ -88,16 +87,17 @@ class BaseServer(object):
     #: Sets the maximum number of consecutive accepts that a process may perform on
     #: a single wake up. High values give higher priority to high connection rates,
     #: while lower values give higher priority to already established connections.
-    #: Default is 100 on Unix and 1 on Windows.
-    #: Note, that in case of multiple working processes on the same
-    #: listening value, it should be set to a lower value. (pywsgi.WSGIServer sets it
-    #: to 1 when environ["wsgi.multiprocess"] is true)
+    #: Default is 100.
+    #:
+    #: Note that, in case of multiple working processes on the same
+    #: listening socket, it should be set to a lower value. (pywsgi.WSGIServer sets it
+    #: to 1 when ``environ["wsgi.multiprocess"]`` is true)
     #:
     #: This is equivalent to libuv's `uv_tcp_simultaneous_accepts
     #: <http://docs.libuv.org/en/v1.x/tcp.html#c.uv_tcp_simultaneous_accepts>`_
     #: value. Setting the environment variable UV_TCP_SINGLE_ACCEPT to a true value
-    #: (usually 1) changes the Unix default to 1.
-    max_accept = 100 if not WIN and not get_environ_bool('UV_TCP_SINGLE_ACCEPT') else 1
+    #: (usually 1) changes the default to 1.
+    max_accept = 100
 
     _spawn = Greenlet.spawn
 
