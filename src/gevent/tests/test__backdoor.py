@@ -1,4 +1,5 @@
 from __future__ import print_function
+from __future__ import absolute_import
 
 import gevent
 from gevent import socket
@@ -24,6 +25,10 @@ def readline(conn):
     with conn.makefile() as f:
         return f.readline()
 
+class WorkerGreenlet(gevent.Greenlet):
+
+    spawning_stack_limit = 2
+
 class Test(greentest.TestCase):
 
     __timeout__ = 10
@@ -48,7 +53,15 @@ class Test(greentest.TestCase):
         conn = socket.socket()
         self._close_on_teardown(conn)
         conn.connect((DEFAULT_CONNECT, self._server.server_port))
-        return conn
+        banner = self._wait_for_prompt(conn)
+        return conn, banner
+
+    def _wait_for_prompt(self, conn):
+        return read_until(conn, b'>>> ')
+
+    def _make_server_and_connect(self, *args, **kwargs):
+        self._make_server(*args, **kwargs)
+        return self._create_connection()
 
     def _close(self, conn, cmd=b'quit()\r\n)'):
         conn.sendall(cmd)
@@ -64,50 +77,40 @@ class Test(greentest.TestCase):
         self._make_server()
 
         def connect():
-            conn = self._create_connection()
-            read_until(conn, b'>>> ')
+            conn, _ = self._create_connection()
+
             conn.sendall(b'2+2\r\n')
             line = readline(conn)
             self.assertEqual(line.strip(), '4', repr(line))
             self._close(conn)
 
-        jobs = [gevent.spawn(connect) for _ in range(10)]
+        jobs = [WorkerGreenlet.spawn(connect) for _ in range(10)]
         done = gevent.joinall(jobs, raise_error=True)
 
         self.assertEqual(len(done), len(jobs), done)
 
-    @greentest.skipOnAppVeyor("Times out")
     def test_quit(self):
-        self._make_server()
-        conn = self._create_connection()
-        read_until(conn, b'>>> ')
+        conn, _ = self._make_server_and_connect()
         self._close(conn)
 
-    @greentest.skipOnAppVeyor("Times out")
     def test_sys_exit(self):
-        self._make_server()
-        conn = self._create_connection()
-        read_until(conn, b'>>> ')
+        conn, _ = self._make_server_and_connect()
         self._close(conn, b'import sys; sys.exit(0)\r\n')
 
-    @greentest.skipOnAppVeyor("Times out")
     def test_banner(self):
-        banner = "Welcome stranger!" # native string
-        self._make_server(banner=banner)
-        conn = self._create_connection()
-        response = read_until(conn, b'>>> ')
-        self.assertEqual(response[:len(banner)], banner, response)
+        expected_banner = "Welcome stranger!" # native string
+        conn, banner = self._make_server_and_connect(banner=expected_banner)
+        self.assertEqual(banner[:len(expected_banner)], expected_banner, banner)
 
         self._close(conn)
 
-    @greentest.skipOnAppVeyor("Times out")
     def test_builtins(self):
-        self._make_server()
-        conn = self._create_connection()
-        read_until(conn, b'>>> ')
+        conn, _ = self._make_server_and_connect()
         conn.sendall(b'locals()["__builtins__"]\r\n')
         response = read_until(conn, b'>>> ')
-        self.assertTrue(len(response) < 300, msg="locals() unusable: %s..." % response)
+        self.assertLess(
+            len(response), 300,
+            msg="locals() unusable: %s..." % response)
 
         self._close(conn)
 
@@ -125,13 +128,13 @@ class Test(greentest.TestCase):
             gevent.sleep(0.1)
             print('switched in')
 
-        self._make_server(locals={'bad': bad})
-        conn = self._create_connection()
-        read_until(conn, b'>>> ')
+        conn, _ = self._make_server_and_connect(locals={'bad': bad})
         conn.sendall(b'bad()\r\n')
-        response = read_until(conn, b'>>> ')
+        response = self._wait_for_prompt(conn)
         response = response.replace('\r\n', '\n')
-        self.assertEqual('switching out, then throwing in\nGot Empty\nswitching out\nswitched in\n>>> ', response)
+        self.assertEqual(
+            'switching out, then throwing in\nGot Empty\nswitching out\nswitched in\n>>> ',
+            response)
 
         self._close(conn)
 

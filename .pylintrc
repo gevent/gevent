@@ -1,5 +1,5 @@
 [MASTER]
-extension-pkg-whitelist=gevent.libuv._corecffi,gevent.libev._corecffi,gevent.local,gevent._ident
+extension-pkg-whitelist=gevent.greenlet,gevent.libuv._corecffi,gevent.libev._corecffi,gevent.local,gevent._ident
 
 # Control the amount of potential inferred values when inferring a single
 # object. This can help the performance when dealing with large functions or
@@ -98,9 +98,7 @@ generated-members=exc_clear
 # List of classes names for which member attributes should not be checked
 # (useful for classes with attributes dynamically set). This supports can work
 # with qualified names.
-# greenlet, Greenlet, parent, dead: all attempts to fix issues in greenlet.py
-# only seen on the service, e.g., self.parent.loop: class parent has no loop
-ignored-classes=SSLContext, SSLSocket, greenlet, Greenlet, parent, dead
+#ignored-classes=SSLContext, SSLSocket, greenlet, Greenlet, parent, dead
 
 # List of module names for which member attributes should not be checked
 # (useful for modules/projects where namespaces are manipulated during runtime
@@ -117,7 +115,7 @@ bad-functions=input
 # Prospector turns ot unsafe-load-any-extension by default, but
 # pylint leaves it off. This is the proximal cause of the
 # undefined-all-variable crash.
-#unsafe-load-any-extension = no
+unsafe-load-any-extension = yes
 
 # Local Variables:
 # mode: conf

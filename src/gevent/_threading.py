@@ -1,9 +1,7 @@
-"""A clone of threading module (version 2.7.2) that always
-targets real OS threads. (Unlike 'threading' which flips between
-green and OS threads based on whether the monkey patching is in effect
-or not).
-
-This module is missing 'Thread' class, but includes 'Queue'.
+"""
+A small selection of primitives that always work with
+native threads. This has very limited utility and is
+targeted only for the use of gevent's threadpool.
 """
 from __future__ import absolute_import
 
@@ -80,6 +78,9 @@ class _Condition(object):
         waiter.acquire()
         self.__waiters.append(waiter)
         saved_state = self._release_save()
+        # This variable is for the monitoring utils to know that
+        # this is an idle frame and shouldn't be counted.
+        gevent_threadpool_worker_idle = True # pylint:disable=unused-variable
         try:    # restore state no matter what (e.g., KeyboardInterrupt)
             waiter.acquire() # Block on the native lock
         finally:

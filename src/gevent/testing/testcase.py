@@ -77,6 +77,21 @@ class TimeAssertMixin(object):
             fuzzy=(0.01 if not sysinfo.EXPECT_POOR_TIMER_RESOLUTION and not sysinfo.LIBUV else 1.0)):
         return self.runs_in_given_time(0.0, fuzzy)
 
+class TestTimeout(gevent.Timeout):
+    _expire_info = ''
+
+    def __init__(self, timeout):
+        gevent.Timeout.__init__(self, timeout, 'test timed out\n', ref=False)
+
+    def _on_expiration(self, prev_greenlet, ex):
+        from gevent.util import format_run_info
+        self._expire_info = '\n'.join(format_run_info())
+        gevent.Timeout._on_expiration(self, prev_greenlet, ex)
+
+    def __str__(self):
+        s = gevent.Timeout.__str__(self)
+        s += self._expire_info
+        return s
 
 def _wrap_timeout(timeout, method):
     if timeout is None:
@@ -84,7 +99,7 @@ def _wrap_timeout(timeout, method):
 
     @wraps(method)
     def wrapper(self, *args, **kwargs):
-        with gevent.Timeout(timeout, 'test timed out', ref=False):
+        with TestTimeout(timeout):
             return method(self, *args, **kwargs)
 
     return wrapper

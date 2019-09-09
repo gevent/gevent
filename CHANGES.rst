@@ -20,6 +20,9 @@
 
 - Fix tests when TLS1.3 is supported.
 
+- Disable Nagle's algorithm in the backdoor server. This can improve
+  interactive response time.
+
 1.5a1 (2019-05-02)
 ==================
 

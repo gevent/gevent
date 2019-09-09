@@ -383,6 +383,7 @@ class Greenlet(greenlet):
         @property
         def dead(self):
             "Boolean indicating that the greenlet is dead and will not run again."
+            # pylint:disable=no-member
             if self._greenlet__main:
                 return False
             if self.__start_cancelled_by_kill() or self.__started_but_aborted():
