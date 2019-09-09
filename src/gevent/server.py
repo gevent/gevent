@@ -104,7 +104,14 @@ class StreamServer(BaseServer):
 
     """
     # the default backlog to use if none was provided in __init__
-    backlog = 256
+    # For TCP, 128 is the (default) maximum at the operating system level on Linux and macOS
+    # larger values are truncated to 128.
+    #
+    # Windows defines SOMAXCONN=0x7fffffff to mean "max reasonable value" --- that value
+    # was undocumented and subject to change, but appears to be 200.
+    # Beginning in Windows 8 there's SOMAXCONN_HINT(b)=(-(b)) which means "at least
+    # as many SOMAXCONN but no more than b" which is a portable way to write 200.
+    backlog = 128
 
     reuse_addr = DEFAULT_REUSE_ADDR
 
@@ -138,7 +145,7 @@ class StreamServer(BaseServer):
     def set_listener(self, listener):
         BaseServer.set_listener(self, listener)
 
-    def _make_socket_stdlib(self):
+    def _make_socket_stdlib(self, fresh):
         # We want to unwrap the gevent wrapping of the listening socket.
         # This lets us be just a hair more efficient: when our 'do_read' is
         # called, we've already waited on the socket to be ready to accept(), so
@@ -151,10 +158,23 @@ class StreamServer(BaseServer):
         # object and not an address. It makes sense to do it always though,
         # so that we get consistent behaviour.
         while hasattr(self.socket, '_sock'):
+            if fresh:
+                if hasattr(self.socket, '_drop_events'):
+                    # Discard event listeners. This socket object is not shared,
+                    # so we don't need them anywhere else.
+                    # This matters somewhat for libuv, where we have to multiplex
+                    # listeners, and we're about to create a new listener.
+                    # If we don't do this, on Windows libuv tends to miss incoming
+                    # connects and our _do_read callback doesn't get called.
+                    self.socket._drop_events()
+                # XXX: Do we need to _drop() for PyPy?
+
             self.socket = self.socket._sock # pylint:disable=attribute-defined-outside-init
 
     def init_socket(self):
+        fresh = False
         if not hasattr(self, 'socket'):
+            fresh = True
             # FIXME: clean up the socket lifetime
             # pylint:disable=attribute-defined-outside-init
             self.socket = self.get_listener(self.address, self.backlog, self.family)
@@ -163,7 +183,7 @@ class StreamServer(BaseServer):
             self._handle = self.wrap_socket_and_handle
         else:
             self._handle = self.handle
-        self._make_socket_stdlib()
+        self._make_socket_stdlib(fresh)
 
     @classmethod
     def get_listener(cls, address, backlog=None, family=None):
