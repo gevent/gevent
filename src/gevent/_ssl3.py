@@ -324,13 +324,14 @@ class SSLSocket(socket):
             # EAGAIN.
             self.getpeername()
 
-    def read(self, len=1024, buffer=None):
+    def read(self, nbytes=2014, buffer=None):
         """Read up to LEN bytes and return them.
         Return zero-length string on EOF."""
         # pylint:disable=too-many-branches
         self._checkClosed()
-        nbytes = len
-        len = __builtins__['len']
+        # The stdlib signature is (len=1024, buffer=None)
+        # but that shadows the len builtin, and its hard/annoying to
+        # get it back.
         initial_buf_len = len(buffer) if buffer is not None else None
         while True:
             if not self._sslobj:
@@ -623,29 +624,6 @@ class SSLSocket(socket):
                 if self.timeout == 0.0:
                     raise
                 self._wait(self._write_event, timeout_exc=_SSLErrorHandshakeTimeout)
-            except ConnectionAbortedError as e:
-                # On AppVeyor 3.7 after Aug 2019, when they upgraded
-                # their Python version and OpenSSL build, we started
-                # getting these, sometimes. According to the 3.7
-                # test_ssl, "We treat ConnectionResetError as though
-                # it were an SSLError - OpenSSL on Ubuntu abruptly
-                # closes the connection when asked to use an
-                # unsupported protocol. " There are tests that
-                # deliberately use bad protocols or options, and then
-                # try again, so it's important that the server catch
-                # these SSLErrors and continue running. But any other
-                # OSError exception kills the server, and the test
-                # dies in a following assert.
-                #
-                # Our best guess is that the Windows version is doing
-                # something similar, with a slightly different code,
-                # and the SSL version isn't yet tested by CPython.
-                reset = ConnectionResetError(str(e))
-                if hasattr(e, 'errno'):
-                    reset.errno = e.errno
-                if hasattr(e, 'winerror'):
-                    reset.winerror = e.errno
-                raise reset
 
         if sys.version_info[:2] < (3, 7) and self._context.check_hostname:
             # In Python 3.7, the underlying OpenSSL name matching is used.

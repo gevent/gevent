@@ -1135,6 +1135,14 @@ if PY37:
         'test_ssl.SimpleBackgroundTests.test_get_server_certificate',
         # Probably the same as NetworkConnectionNoServer.test_create_connection_timeout
         'test_socket.NetworkConnectionNoServer.test_create_connection',
+
+        # Internals of the threading module that change.
+        'test_threading.ThreadedTests.test_finalization_shutdown',
+        'test_threading.ThreadedTests.test_shutdown_locks',
+        # This tries to use threading.interrupt_main() from a new Thread;
+        # but of course that's actually the same thread and things don't
+        # work as expected.
+        'test_threading.InterruptMainTests.test_interrupt_main_subthread',
     ]
 
     if APPVEYOR:
@@ -1155,11 +1163,6 @@ if PY38:
         # and can't see the patched threading.get_ident() we use, so the
         # output doesn't match.
         'test_threading.ExceptHookTests.test_excepthook_thread_None',
-
-        # This tries to use threading.interrupt_main() from a new Thread;
-        # but of course that's actually the same thread and things don't
-        # work as expected.
-        'test_threading.InterruptMainTests.test_interrupt_main_subthread',
     ]
 
 # if 'signalfd' in os.environ.get('GEVENT_BACKEND', ''):

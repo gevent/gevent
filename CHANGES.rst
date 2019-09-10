@@ -23,6 +23,8 @@
 - Disable Nagle's algorithm in the backdoor server. This can improve
   interactive response time.
 
+- Test on Python 3.7.4. There are important SSL test fixes.
+
 1.5a1 (2019-05-02)
 ==================
 
