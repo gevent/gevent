@@ -130,7 +130,7 @@ OP_ENABLE_MIDDLEBOX_COMPAT = getattr(ssl, "OP_ENABLE_MIDDLEBOX_COMPAT", 0)
 
 def handle_error(prefix):
     exc_format = ' '.join(traceback.format_exception(*sys.exc_info()))
-    if support.verbose:
+    if True: # support.verbose: # gevent: temporarily enable
         sys.stdout.write(prefix + exc_format)
 
 def can_clear_options():
@@ -1974,16 +1974,16 @@ class SimpleBackgroundTests(unittest.TestCase):
     def test_ciphers(self):
         with test_wrap_socket(socket.socket(socket.AF_INET),
                              cert_reqs=ssl.CERT_NONE, ciphers="ALL") as s:
-            s.connect(self.server_addr)
+            s.connect(self.server_addr) # gevent: mark 1
         with test_wrap_socket(socket.socket(socket.AF_INET),
                              cert_reqs=ssl.CERT_NONE, ciphers="DEFAULT") as s:
-            s.connect(self.server_addr)
+            s.connect(self.server_addr) # gevent: mark 2
         # Error checking can happen at instantiation or when connecting
         with self.assertRaisesRegex(ssl.SSLError, "No cipher can be selected"):
             with socket.socket(socket.AF_INET) as sock:
                 s = test_wrap_socket(sock,
                                     cert_reqs=ssl.CERT_NONE, ciphers="^$:,;?*'dorothyx")
-                s.connect(self.server_addr)
+                s.connect(self.server_addr) # gevent: mark 3
 
     def test_get_ca_certs_capath(self):
         # capath certs are loaded on request
@@ -2182,7 +2182,7 @@ class ThreadedEchoServer(threading.Thread):
                 # https://github.com/openssl/openssl/issues/6342
                 self.server.conn_errors.append(str(e))
                 if self.server.chatty:
-                    handle_error("\n server:  bad connection attempt from " + repr(self.addr) + ":\n")
+                    handle_error("\n server: 1bad connection attempt from " + repr(self.addr) + ":\n")
                 self.running = False
                 self.close()
                 return False
@@ -2199,7 +2199,7 @@ class ThreadedEchoServer(threading.Thread):
                 # -> traceback -> self (ConnectionHandler) -> server
                 self.server.conn_errors.append(str(e))
                 if self.server.chatty:
-                    handle_error("\n server:  bad connection attempt from " + repr(self.addr) + ":\n")
+                    handle_error("\n server: 2bad connection attempt from " + repr(self.addr) + ":\n")
                 self.running = False
                 self.server.stop()
                 self.close()

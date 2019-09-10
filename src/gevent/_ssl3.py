@@ -330,6 +330,8 @@ class SSLSocket(socket):
         # pylint:disable=too-many-branches
         self._checkClosed()
         nbytes = len
+        len = __builtins__['len']
+        initial_buf_len = len(buffer) if buffer is not None else None
         while True:
             if not self._sslobj:
                 raise ValueError("Read on closed or unwrapped SSL socket.")
@@ -352,9 +354,7 @@ class SSLSocket(socket):
                 self._wait(self._write_event, timeout_exc=_SSLErrorReadTimeout)
             except SSLError as ex:
                 if ex.args[0] == SSL_ERROR_EOF and self.suppress_ragged_eofs:
-                    if buffer is None:
-                        return b''
-                    return 0
+                    return b'' if buffer is None else len(buffer) - initial_buf_len
                 raise
             except ConnectionResetError:
                 # Certain versions of Python, built against certain
@@ -362,7 +362,7 @@ class SSLSocket(socket):
                 # can produce this instead of SSLError. Notably, it looks
                 # like anything built against 1.1.1c do?
                 if self.suppress_ragged_eofs:
-                    return b'' if buffer is None else 0
+                    return b'' if buffer is None else len(buffer) - initial_buf_len
                 raise
 
 
