@@ -57,22 +57,19 @@ class TestTCP(greentest.TestCase):
     def setUp(self):
         super(TestTCP, self).setUp()
         self.listener = self._close_on_teardown(self._setup_listener())
-
-        # XXX: On Windows (at least with libev), if we have a cleanup/tearDown method
-        # that does 'del self.listener' AND we haven't sometime
-        # previously closed the listener (while the test body was executing)
-        # we tend to sometimes see hangs when tests run in succession;
-        # notably test_empty_send followed by test_makefile produces a hang
-        # in test_makefile when it tries to read from the client_file, because
-        # the accept() call in accept_once has not yet returned a new socket to
-        # write to.
-
-        # The cause *seems* to be that the listener socket in both tests gets the
-        # same fileno(); or, at least, if we don't del the listener object,
-        # we get a different fileno, and that scenario works.
-
-        # Perhaps our logic is wrong in libev_vfd in the way we use
-        # _open_osfhandle and determine we can close it?
+        # It is important to watch the lifetimes of socket objects and
+        # ensure that:
+        # (1) they are closed; and
+        # (2) *before* the next test begins.
+        #
+        # For example, it's a bad bad thing to leave a greenlet running past the
+        # scope of the individual test method if that greenlet will close
+        # a socket object --- especially if that socket object might also have been
+        # closed explicitly.
+        #
+        # On Windows, we've seen issue with filenos getting reused while something
+        # still thinks they have the original fileno around. When they later
+        # close that fileno, a completely unrelated object is closed.
         self.port = self.listener.getsockname()[1]
 
     def _setup_listener(self):
@@ -90,71 +87,67 @@ class TestTCP(greentest.TestCase):
 
     def _test_sendall(self, data, match_data=None, client_method='sendall',
                       **client_args):
-        from time import time as now
-        print(now(), "Sendall", client_method)
+        if '-v' in sys.argv:
+            def log(*args):
+                from time import time as now
+                print(now(), *args)
+        else:
+            def log(*_args):
+                "Does nothing"
+        log("Sendall", client_method)
+
         read_data = []
-        server_exc_info = []
         accepted_event = Event()
+
         def accept_and_read():
-            conn = None
-            r = None
-            try:
-                print(now(), "accepting", self.listener)
-                conn, _ = self.listener.accept()
-                print(now(), "accepted", conn)
-                accepted_event.set()
-                r = conn.makefile(mode='rb')
-                print(now(), "reading")
-                read_data.append(r.read())
-            finally:
-                # Order matters. On Python 2, if we close the
-                # connection before closing the makefile,
-                # test__ssl fails because the underlying socket
-                # has been deleted.
-                for f in (r, conn, self.listener):
-                    if f is not None:
-                        f.close()
+            log("accepting", self.listener)
+            conn, _ = self.listener.accept()
+            self._close_on_teardown(conn)
+            r = self._close_on_teardown(conn.makefile(mode='rb'))
+            log("accepted on server", conn)
+            accepted_event.set()
+            log("reading")
+            read_data.append(r.read())
 
 
         server = Thread(target=accept_and_read)
-        print(now(), "creating client connection")
-        client = self.create_connection(**client_args)
-        # It's important to wait for the server to fully accept before
-        # we shutdown and close the socket. In SSL mode, the number
-        # and timing of data exchanges to complete the handshake and
-        # thus exactly when greenlet switches occur, varies by TLS version.
-        #
-        # It turns out that on < TLS1.3, we were getting lucky and the
-        # server was the greenlet that raced ahead and blocked in r.read()
-        # before the client returned from create_connection().
-        #
-        # But when TLS 1.3 was deployed (OpenSSL 1.1), the *client* was the
-        # one that raced ahead while the server had yet to return from
-        # self.listener.accept(). So the client sent the data to the socket,
-        # and closed, before the server could do anything, and the server,
-        # when it got switched to by server.join(), found its new socket
-        # dead.
-        accepted_event.wait()
-        print(now(), "accepted", client)
         try:
-            getattr(client, client_method)(data)
-        except:
-            import traceback; traceback.print_exc()
-            raise
+            log("creating client connection")
+            client = self.create_connection(**client_args)
+            # It's important to wait for the server to fully accept before
+            # we shutdown and close the socket. In SSL mode, the number
+            # and timing of data exchanges to complete the handshake and
+            # thus exactly when greenlet switches occur, varies by TLS version.
+            #
+            # It turns out that on < TLS1.3, we were getting lucky and the
+            # server was the greenlet that raced ahead and blocked in r.read()
+            # before the client returned from create_connection().
+            #
+            # But when TLS 1.3 was deployed (OpenSSL 1.1), the *client* was the
+            # one that raced ahead while the server had yet to return from
+            # self.listener.accept(). So the client sent the data to the socket,
+            # and closed, before the server could do anything, and the server,
+            # when it got switched to by server.join(), found its new socket
+            # dead.
+            accepted_event.wait()
+            log("accepted", client)
+            try:
+                getattr(client, client_method)(data)
+            except:
+                import traceback; traceback.print_exc()
+                raise
+            finally:
+                log("shutdown")
+                client.shutdown(socket.SHUT_RDWR)
+                log("closing")
+                client.close()
         finally:
-            print(now(), "shutdown")
-            client.shutdown(socket.SHUT_RDWR)
-            print(now(), "closing")
-            client.close()
+            server.join()
+            assert not server.is_alive()
 
-        server.join()
-        assert not server.is_alive()
         if match_data is None:
             match_data = self.long_data
         self.assertEqual(read_data, [match_data])
-
-        if server_exc_info:
-            six.reraise(*server_exc_info[0])
 
     def test_sendall_str(self):
         self._test_sendall(self.long_data)

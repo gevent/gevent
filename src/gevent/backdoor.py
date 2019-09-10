@@ -13,7 +13,6 @@ from __future__ import print_function, absolute_import
 import sys
 import socket
 from code import InteractiveConsole
-from time import time as now
 
 from gevent.greenlet import Greenlet
 from gevent.hub import getcurrent

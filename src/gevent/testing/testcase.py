@@ -200,43 +200,26 @@ class TestCase(TestCaseMetaClass("NewBase",
         # XXX: Should some core part of the loop call this?
         gevent.get_hub().loop.update_now()
         self.close_on_teardown = []
+        self.addCleanup(self._tearDownCloseOnTearDown)
 
     def tearDown(self):
         if getattr(self, 'skipTearDown', False):
+            del self.close_on_teardown[:]
             return
 
         cleanup = getattr(self, 'cleanup', _noop)
         cleanup()
         self._error = self._none
-        self._tearDownCloseOnTearDown()
-        self.close_on_teardown = []
         super(TestCase, self).tearDown()
 
     def _tearDownCloseOnTearDown(self):
         while self.close_on_teardown:
-            to_close = reversed(self.close_on_teardown)
-            self.close_on_teardown = []
-
-            for x in to_close:
-                close = getattr(x, 'close', x)
-                try:
-                    close()
-                except Exception: # pylint:disable=broad-except
-                    pass
-
-    @classmethod
-    def setUpClass(cls):
-        import warnings
-        cls._warning_cm = warnings.catch_warnings()
-        cls._warning_cm.__enter__()
-        if not sys.warnoptions:
-            warnings.simplefilter('default')
-        super(TestCase, cls).setUpClass()
-
-    @classmethod
-    def tearDownClass(cls):
-        cls._warning_cm.__exit__(None, None, None)
-        super(TestCase, cls).tearDownClass()
+            x = self.close_on_teardown.pop()
+            close = getattr(x, 'close', x)
+            try:
+                close()
+            except Exception: # pylint:disable=broad-except
+                pass
 
     def _close_on_teardown(self, resource):
         """
