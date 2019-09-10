@@ -130,7 +130,7 @@ OP_ENABLE_MIDDLEBOX_COMPAT = getattr(ssl, "OP_ENABLE_MIDDLEBOX_COMPAT", 0)
 
 def handle_error(prefix):
     exc_format = ' '.join(traceback.format_exception(*sys.exc_info()))
-    if True: # support.verbose: # gevent: temporarily enable
+    if support.verbose:
         sys.stdout.write(prefix + exc_format)
 
 def can_clear_options():

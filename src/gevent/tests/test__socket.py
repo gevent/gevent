@@ -13,7 +13,7 @@ import unittest
 from functools import wraps
 
 from gevent._compat import reraise
-from gevent._compat import PY2
+
 import gevent.testing as greentest
 
 from gevent.testing import six
@@ -162,12 +162,16 @@ class TestTCP(greentest.TestCase):
                 raise
             finally:
                 log("shutdown")
-                if PY2:
+                if greentest.PY2:
                     # The implicit reference-based nastiness of Python 2
                     # sockets interferes, especially when using SSL sockets.
                     # The best way to get a decent FIN to the server is to shutdown
                     # the output. Doing that on Python 3, OTOH, is contraindicated.
                     client.shutdown(socket.SHUT_RDWR)
+                elif hasattr(client, 'unwrap') and greentest.PY37 and greentest.WIN:
+                    # We seem to have a buffer stuck somewhere on appveyor?
+                    # https://ci.appveyor.com/project/denik/gevent/builds/27320824/job/bdbax88sqnjoti6i#L712
+                    client.unwrap()
                 log("closing")
                 client.close()
         finally:

@@ -623,6 +623,29 @@ class SSLSocket(socket):
                 if self.timeout == 0.0:
                     raise
                 self._wait(self._write_event, timeout_exc=_SSLErrorHandshakeTimeout)
+            except ConnectionAbortedError as e:
+                # On AppVeyor 3.7 after Aug 2019, when they upgraded
+                # their Python version and OpenSSL build, we started
+                # getting these, sometimes. According to the 3.7
+                # test_ssl, "We treat ConnectionResetError as though
+                # it were an SSLError - OpenSSL on Ubuntu abruptly
+                # closes the connection when asked to use an
+                # unsupported protocol. " There are tests that
+                # deliberately use bad protocols or options, and then
+                # try again, so it's important that the server catch
+                # these SSLErrors and continue running. But any other
+                # OSError exception kills the server, and the test
+                # dies in a following assert.
+                #
+                # Our best guess is that the Windows version is doing
+                # something similar, with a slightly different code,
+                # and the SSL version isn't yet tested by CPython.
+                reset = ConnectionResetError(str(e))
+                if hasattr(e, 'errno'):
+                    reset.errno = e.errno
+                if hasattr(e, 'winerror'):
+                    reset.winerror = e.errno
+                raise reset
 
         if sys.version_info[:2] < (3, 7) and self._context.check_hostname:
             # In Python 3.7, the underlying OpenSSL name matching is used.
