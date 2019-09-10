@@ -329,18 +329,18 @@ class SSLSocket(socket):
         Return zero-length string on EOF."""
         # pylint:disable=too-many-branches
         self._checkClosed()
-
+        nbytes = len
         while True:
             if not self._sslobj:
                 raise ValueError("Read on closed or unwrapped SSL socket.")
-            if len == 0:
+            if nbytes == 0:
                 return b'' if buffer is None else 0
             # Negative lengths are handled natively when the buffer is None
             # to raise a ValueError
             try:
                 if buffer is not None:
-                    return self._sslobj.read(len, buffer)
-                return self._sslobj.read(len or 1024)
+                    return self._sslobj.read(nbytes, buffer)
+                return self._sslobj.read(nbytes or 1024)
             except SSLWantReadError:
                 if self.timeout == 0.0:
                     raise
@@ -356,6 +356,15 @@ class SSLSocket(socket):
                         return b''
                     return 0
                 raise
+            except ConnectionResetError:
+                # Certain versions of Python, built against certain
+                # versions of OpenSSL operating in certain modes,
+                # can produce this instead of SSLError. Notably, it looks
+                # like anything built against 1.1.1c do?
+                if self.suppress_ragged_eofs:
+                    return b'' if buffer is None else 0
+                raise
+
 
     def write(self, data):
         """Write DATA to the underlying SSL channel.  Returns
@@ -597,7 +606,6 @@ class SSLSocket(socket):
 
     def _real_close(self):
         self._sslobj = None
-        # self._closed = True
         socket._real_close(self)
 
     def do_handshake(self):

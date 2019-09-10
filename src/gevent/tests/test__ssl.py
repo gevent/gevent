@@ -9,10 +9,6 @@ import gevent.testing as greentest
 from gevent.tests import test__socket
 import ssl
 
-
-#import unittest
-from gevent.hub import LoopExit
-
 def ssl_listener(private_key, certificate):
     raw_listener = socket.socket()
     greentest.bind_and_listen(raw_listener)
@@ -37,7 +33,8 @@ class TestSSL(test__socket.TestTCP):
         return listener
 
     def create_connection(self, *args, **kwargs): # pylint:disable=arguments-differ
-        return ssl.wrap_socket(super(TestSSL, self).create_connection(*args, **kwargs))
+        return self._close_on_teardown(
+            ssl.wrap_socket(super(TestSSL, self).create_connection(*args, **kwargs)))
 
     # The SSL library can take a long time to buffer the large amount of data we're trying
     # to send, so we can't compare to the timeout values
@@ -104,7 +101,6 @@ class TestSSL(test__socket.TestTCP):
 
 if __name__ == '__main__':
     import sys
-    sys.argv.append('TestSSL.test_sendall_array')
-    sys.argv.append('TestSSL.test_recv_timeout')
-    sys.argv.append('-v')
+    if sys.version_info[0] >= 3:
+        sys.argv.append('-v')
     greentest.main()

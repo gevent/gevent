@@ -12,7 +12,8 @@ import time
 import unittest
 from functools import wraps
 
-from gevent import getcurrent
+from gevent._compat import reraise
+from gevent._compat import PY2
 import gevent.testing as greentest
 
 from gevent.testing import six
@@ -34,13 +35,14 @@ class Thread(_Thread):
 
     def __init__(self, **kwargs):
         target = kwargs.pop('target')
-        caller = getcurrent()
+        self.terminal_exc = None
         @wraps(target)
         def errors_are_fatal(*args, **kwargs):
             try:
                 return target(*args, **kwargs)
             except: # pylint:disable=bare-except
-                caller.throw(*sys.exc_info())
+                self.terminal_exc = sys.exc_info()
+                raise
 
         _Thread.__init__(self, target=errors_are_fatal, **kwargs)
         self.start()
@@ -58,7 +60,10 @@ class TestTCP(greentest.TestCase):
         super(TestTCP, self).setUp()
         if '-v' in sys.argv:
             printed = []
-            from time import time as now
+            try:
+                from time import perf_counter as now
+            except ImportError:
+                from time import time as now
             def log(*args):
                 if not printed:
                     print()
@@ -127,7 +132,7 @@ class TestTCP(greentest.TestCase):
             accepted_event.set()
             log("reading")
             read_data.append(r.read())
-
+            log("done reading")
 
         server = Thread(target=accept_and_read)
         try:
@@ -157,12 +162,20 @@ class TestTCP(greentest.TestCase):
                 raise
             finally:
                 log("shutdown")
-                client.shutdown(socket.SHUT_RDWR)
+                if PY2:
+                    # The implicit reference-based nastiness of Python 2
+                    # sockets interferes, especially when using SSL sockets.
+                    # The best way to get a decent FIN to the server is to shutdown
+                    # the output. Doing that on Python 3, OTOH, is contraindicated.
+                    client.shutdown(socket.SHUT_RDWR)
                 log("closing")
                 client.close()
         finally:
-            server.join()
+            server.join(4)
             assert not server.is_alive()
+
+        if server.terminal_exc:
+            reraise(*server.terminal_exc)
 
         if match_data is None:
             match_data = self.long_data
@@ -236,7 +249,9 @@ class TestTCP(greentest.TestCase):
 
     def test_recv_timeout(self):
         def accept():
-            # make sure the conn object stays alive until the end.
+            # make sure the conn object stays alive until the end;
+            # premature closing triggers a ResourceWarning and
+            # EOF on the client.
             conn, _ = self.listener.accept()
             self._close_on_teardown(conn)
 
