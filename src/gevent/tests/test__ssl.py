@@ -16,7 +16,7 @@ from gevent.hub import LoopExit
 def ssl_listener(private_key, certificate):
     raw_listener = socket.socket()
     greentest.bind_and_listen(raw_listener)
-    sock = ssl.wrap_socket(raw_listener, private_key, certificate)
+    sock = ssl.wrap_socket(raw_listener, private_key, certificate, server_side=True)
     return sock, raw_listener
 
 
@@ -103,4 +103,6 @@ class TestSSL(test__socket.TestTCP):
 
 
 if __name__ == '__main__':
+    import sys
+    sys.argv.append('-v')
     greentest.main()

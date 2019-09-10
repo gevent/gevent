@@ -141,6 +141,4 @@ class Test(greentest.TestCase):
         self._close(conn)
 
 if __name__ == '__main__':
-    import sys
-    sys.argv.append('-v')
     greentest.main()

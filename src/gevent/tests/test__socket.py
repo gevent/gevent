@@ -1,5 +1,8 @@
 # This line can be commented out so that most tests run with the
 # system socket for comparison.
+from __future__ import print_function
+from __future__ import absolute_import
+
 from gevent import monkey; monkey.patch_all()
 
 import sys
@@ -87,7 +90,8 @@ class TestTCP(greentest.TestCase):
 
     def _test_sendall(self, data, match_data=None, client_method='sendall',
                       **client_args):
-
+        from time import time as now
+        print(now(), "Sendall", client_method)
         read_data = []
         server_exc_info = []
         accepted_event = Event()
@@ -95,9 +99,12 @@ class TestTCP(greentest.TestCase):
             conn = None
             r = None
             try:
+                print(now(), "accepting", self.listener)
                 conn, _ = self.listener.accept()
+                print(now(), "accepted", conn)
                 accepted_event.set()
                 r = conn.makefile(mode='rb')
+                print(now(), "reading")
                 read_data.append(r.read())
             finally:
                 # Order matters. On Python 2, if we close the
@@ -110,6 +117,7 @@ class TestTCP(greentest.TestCase):
 
 
         server = Thread(target=accept_and_read)
+        print(now(), "creating client connection")
         client = self.create_connection(**client_args)
         # It's important to wait for the server to fully accept before
         # we shutdown and close the socket. In SSL mode, the number
@@ -127,10 +135,16 @@ class TestTCP(greentest.TestCase):
         # when it got switched to by server.join(), found its new socket
         # dead.
         accepted_event.wait()
+        print(now(), "accepted", client)
         try:
             getattr(client, client_method)(data)
+        except:
+            import traceback; traceback.print_exc()
+            raise
         finally:
+            print(now(), "shutdown")
             client.shutdown(socket.SHUT_RDWR)
+            print(now(), "closing")
             client.close()
 
         server.join()
