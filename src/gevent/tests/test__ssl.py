@@ -67,14 +67,14 @@ class TestSSL(test__socket.TestTCP):
             client.close()
             server_sock[0][0].close()
 
-    def test_fullduplex(self):
-        try:
-            super(TestSSL, self).test_fullduplex()
-        except LoopExit:
-            if greentest.LIBUV and greentest.WIN:
-                # XXX: Unable to duplicate locally
-                raise greentest.SkipTest("libuv on Windows sometimes raises LoopExit")
-            raise
+    # def test_fullduplex(self):
+    #     try:
+    #         super(TestSSL, self).test_fullduplex()
+    #     except LoopExit:
+    #         if greentest.LIBUV and greentest.WIN:
+    #             # XXX: Unable to duplicate locally
+    #             raise greentest.SkipTest("libuv on Windows sometimes raises LoopExit")
+    #         raise
 
     @greentest.ignores_leakcheck
     def test_empty_send(self):
@@ -104,5 +104,7 @@ class TestSSL(test__socket.TestTCP):
 
 if __name__ == '__main__':
     import sys
+    sys.argv.append('TestSSL.test_sendall_array')
+    sys.argv.append('TestSSL.test_recv_timeout')
     sys.argv.append('-v')
     greentest.main()

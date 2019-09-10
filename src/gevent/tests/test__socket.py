@@ -205,22 +205,21 @@ class TestTCP(greentest.TestCase):
         N = 100000
 
         def server():
-            (remote_client, _) = self.listener.accept()
+            remote_client, _ = self.listener.accept()
+            self._close_on_teardown(remote_client)
             # start reading, then, while reading, start writing. the reader should not hang forever
 
-            def sendall():
-                remote_client.sendall(b't' * N)
-
-            sender = Thread(target=sendall)
-            result = remote_client.recv(1000)
-            self.assertEqual(result, b'hello world')
-            sender.join()
-            remote_client.close()
-            self.listener.close()
+            sender = Thread(target=remote_client.sendall,
+                            args=((b't' * N),))
+            try:
+                result = remote_client.recv(1000)
+                self.assertEqual(result, b'hello world')
+            finally:
+                sender.join()
 
         server_thread = Thread(target=server)
         client = self.create_connection()
-        client_file = client.makefile()
+        client_file = self._close_on_teardown(client.makefile())
         client_reader = Thread(target=client_file.read, args=(N, ))
         time.sleep(0.1)
         client.sendall(b'hello world')
@@ -236,17 +235,22 @@ class TestTCP(greentest.TestCase):
         client_reader.join()
 
     def test_recv_timeout(self):
-        client_sock = []
-        acceptor = Thread(target=lambda: client_sock.append(self.listener.accept()))
+        def accept():
+            # make sure the conn object stays alive until the end.
+            conn, _ = self.listener.accept()
+            self._close_on_teardown(conn)
+
+        acceptor = Thread(target=accept)
         client = self.create_connection()
-        client.settimeout(1)
-        start = time.time()
-        self.assertRaises(self.TIMEOUT_ERROR, client.recv, 1024)
-        took = time.time() - start
-        self.assertTimeWithinRange(took, 1 - 0.1, 1 + 0.1)
-        acceptor.join()
-        client.close()
-        client_sock[0][0].close()
+        try:
+            client.settimeout(1)
+            start = time.time()
+            with self.assertRaises(self.TIMEOUT_ERROR):
+                client.recv(1024)
+            took = time.time() - start
+            self.assertTimeWithinRange(took, 1 - 0.1, 1 + 0.1)
+        finally:
+            acceptor.join()
 
     # Subclasses can disable  this
     _test_sendall_timeout_check_time = True
