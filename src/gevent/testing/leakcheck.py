@@ -117,6 +117,7 @@ class _RefCountChecker(object):
             self.function(self.testcase, *args, **kwargs)
         finally:
             self.testcase.tearDown()
+            self.testcase.doCleanups()
             self.testcase.skipTearDown = True
             self.needs_setUp = True
             if gc_enabled:

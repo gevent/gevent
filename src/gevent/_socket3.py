@@ -45,12 +45,14 @@ from gevent._greenlet_primitives import get_memory as _get_memory
 timeout_default = object()
 
 class _closedsocket(object):
-    __slots__ = ('family', 'type', 'proto')
+    __slots__ = ('family', 'type', 'proto', 'orig_fileno', 'description')
 
-    def __init__(self, family, type, proto):
+    def __init__(self, family, type, proto, orig_fileno, description):
         self.family = family
         self.type = type
         self.proto = proto
+        self.orig_fileno = orig_fileno
+        self.description = description
 
     def fileno(self):
         return -1
@@ -71,6 +73,12 @@ class _closedsocket(object):
 
     __getattr__ = _dummy
 
+    def __repr__(self):
+        return "<socket object [closed proxy at 0x%x fd=%s %s]>" % (
+            id(self),
+            self.orig_fileno,
+            self.description,
+        )
 
 class _wrefsocket(_socket.socket):
     # Plain stdlib socket.socket objects subclass _socket.socket
@@ -185,10 +193,11 @@ class socket(object):
             s = '<socket [%r]>' % ex
 
         if s.startswith("<socket object"):
-            s = "<%s.%s%s%s%s" % (
+            s = "<%s.%s%s at 0x%x%s%s" % (
                 self.__class__.__module__,
                 self.__class__.__name__,
                 getattr(self, '_closed', False) and " [closed]" or "",
+                id(self),
                 self._extra_repr(),
                 s[7:])
         return s
@@ -303,7 +312,7 @@ class socket(object):
             self.hub.cancel_wait(self._write_event, cancel_wait_ex, True)
             self._write_event = None
 
-    def _detach_socket(self):
+    def _detach_socket(self, reason):
         if not self._sock:
             return
 
@@ -322,14 +331,16 @@ class socket(object):
         family = -1
         type = -1
         proto = -1
+        fileno = None
         try:
             family = sock.family
             type = sock.type
             proto = sock.proto
+            fileno = sock.fileno()
         except OSError:
             pass
 
-        self._sock = _closedsocket(family, type, proto)
+        self._sock = _closedsocket(family, type, proto, fileno, reason)
 
     def _real_close(self, _ss=_socket.socket):
         # This function should not reference any globals. See Python issue #808164.
@@ -338,7 +349,7 @@ class socket(object):
 
         sock = self._sock
         try:
-            self._detach_socket()
+            self._detach_socket('closed')
         finally:
             sock.close()
 
@@ -370,7 +381,7 @@ class socket(object):
         """
         self._closed = True
         sock = self._sock
-        self._detach_socket()
+        self._detach_socket('detached')
         return sock.detach()
 
     def connect(self, address):

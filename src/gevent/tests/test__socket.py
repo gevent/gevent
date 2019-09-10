@@ -56,6 +56,31 @@ class TestTCP(greentest.TestCase):
 
     def setUp(self):
         super(TestTCP, self).setUp()
+        if '-v' in sys.argv:
+            printed = []
+            from time import time as now
+            def log(*args):
+                if not printed:
+                    print()
+                    printed.append(1)
+                print("\t ->", now(), *args)
+
+            orig_cot = self._close_on_teardown
+            def cot(o):
+                log("Registering for teardown", o)
+                def c():
+                    log("Closing on teardown", o)
+                    o.close()
+                orig_cot(c)
+                return o
+            self._close_on_teardown = cot
+
+        else:
+            def log(*_args):
+                "Does nothing"
+        self.log = log
+
+
         self.listener = self._close_on_teardown(self._setup_listener())
         # It is important to watch the lifetimes of socket objects and
         # ensure that:
@@ -87,13 +112,7 @@ class TestTCP(greentest.TestCase):
 
     def _test_sendall(self, data, match_data=None, client_method='sendall',
                       **client_args):
-        if '-v' in sys.argv:
-            def log(*args):
-                from time import time as now
-                print(now(), *args)
-        else:
-            def log(*_args):
-                "Does nothing"
+        log = self.log
         log("Sendall", client_method)
 
         read_data = []
