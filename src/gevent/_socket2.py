@@ -216,8 +216,6 @@ class socket(object):
 
     def close(self, _closedsocket=_closedsocket):
         if not self._sock:
-            assert self._read_event is None
-            assert self._write_event is None
             return
 
         # This function should not reference any globals. See Python issue #808164.

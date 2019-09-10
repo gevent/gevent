@@ -44,6 +44,33 @@ from gevent._greenlet_primitives import get_memory as _get_memory
 
 timeout_default = object()
 
+class _closedsocket(object):
+    __slots__ = ('family', 'type', 'proto')
+
+    def __init__(self, family, type, proto):
+        self.family = family
+        self.type = type
+        self.proto = proto
+
+    def fileno(self):
+        return -1
+
+    def close(self):
+        "No-op"
+
+    detach = fileno
+
+    def _dummy(*args, **kwargs): # pylint:disable=no-method-argument,unused-argument
+        raise OSError(EBADF, 'Bad file descriptor')
+    # All _delegate_methods must also be initialized here.
+    send = recv = recv_into = sendto = recvfrom = recvfrom_into = _dummy
+    getsockname = _dummy
+
+    def __bool__(self):
+        return False
+
+    __getattr__ = _dummy
+
 
 class _wrefsocket(_socket.socket):
     # Plain stdlib socket.socket objects subclass _socket.socket
@@ -149,7 +176,7 @@ class socket(object):
     def __repr__(self):
         """Wrap __repr__() to reveal the real class name."""
         try:
-            s = _socket.socket.__repr__(self._sock)
+            s = repr(self._sock)
         except Exception as ex: # pylint:disable=broad-except
             # Observed on Windows Py3.3, printing the repr of a socket
             # that just suffered a ConnectionResetError [WinError 10054]:
@@ -161,7 +188,7 @@ class socket(object):
             s = "<%s.%s%s%s%s" % (
                 self.__class__.__module__,
                 self.__class__.__name__,
-                getattr(self, '_closed', False) and " [closed] " or "",
+                getattr(self, '_closed', False) and " [closed]" or "",
                 self._extra_repr(),
                 s[7:])
         return s
@@ -268,7 +295,7 @@ class socket(object):
         if self._closed:
             self.close()
 
-    def _drop_events(self):
+    def _drop_events(self, cancel_wait_ex=cancel_wait_ex):
         if self._read_event is not None:
             self.hub.cancel_wait(self._read_event, cancel_wait_ex, True)
             self._read_event = None
@@ -276,15 +303,14 @@ class socket(object):
             self.hub.cancel_wait(self._write_event, cancel_wait_ex, True)
             self._write_event = None
 
-    def _real_close(self, _ss=_socket.socket, cancel_wait_ex=cancel_wait_ex):
-        # This function should not reference any globals. See Python issue #808164.
+    def _detach_socket(self):
+        if not self._sock:
+            return
 
         # Break any reference to the loop.io objects. Our fileno,
-        # which they were tied to, is now free to be reused, so these
+        # which they were tied to, is about to be free to be reused, so these
         # objects are no longer functional.
         self._drop_events()
-
-        _ss.close(self._sock)
 
         # Break any references to the underlying socket object. Tested
         # by test__refcount. (Why does this matter?). Be sure to
@@ -292,14 +318,29 @@ class socket(object):
         # don't, we can get TypeError instead of OSError; see
         # test_socket.SendmsgUDP6Test.testSendmsgAfterClose)... but
         # this isn't always possible (see test_socket.test_unknown_socket_family_repr)
-        # TODO: Can we use a simpler proxy, like _socket2 does?
+        sock = self._sock
+        family = -1
+        type = -1
+        proto = -1
         try:
-            self._sock = self._gevent_sock_class(self.family, self.type, self.proto)
+            family = sock.family
+            type = sock.type
+            proto = sock.proto
         except OSError:
             pass
-        else:
-            _ss.close(self._sock)
 
+        self._sock = _closedsocket(family, type, proto)
+
+    def _real_close(self, _ss=_socket.socket):
+        # This function should not reference any globals. See Python issue #808164.
+        if not self._sock:
+            return
+
+        sock = self._sock
+        try:
+            self._detach_socket()
+        finally:
+            sock.close()
 
     def close(self):
         # This function should not reference any globals. See Python issue #808164.
@@ -312,14 +353,25 @@ class socket(object):
         return self._closed
 
     def detach(self):
-        """detach() -> file descriptor
+        """
+        detach() -> file descriptor
 
-        Close the socket object without closing the underlying file descriptor.
-        The object cannot be used after this call, but the file descriptor
-        can be reused for other purposes.  The file descriptor is returned.
+        Close the socket object without closing the underlying file
+        descriptor. The object cannot be used after this call; when the
+        real file descriptor is closed, the number that was previously
+        used here may be reused. The fileno() method, after this call,
+        will return an invalid socket id.
+
+        The previous descriptor is returned.
+
+        .. versionchanged:: 1.5
+
+           Also immediately drop any native event loop resources.
         """
         self._closed = True
-        return self._sock.detach()
+        sock = self._sock
+        self._detach_socket()
+        return sock.detach()
 
     def connect(self, address):
         if self.timeout == 0.0:
@@ -373,7 +425,7 @@ class socket(object):
     def recv(self, *args):
         while True:
             try:
-                return _socket.socket.recv(self._sock, *args)
+                return self._sock.recv(*args)
             except error as ex:
                 if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
@@ -386,7 +438,7 @@ class socket(object):
         def recvmsg(self, *args):
             while True:
                 try:
-                    return _socket.socket.recvmsg(self._sock, *args)
+                    return self._sock.recvmsg(*args)
                 except error as ex:
                     if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                         raise
@@ -397,7 +449,7 @@ class socket(object):
         def recvmsg_into(self, *args):
             while True:
                 try:
-                    return _socket.socket.recvmsg_into(self._sock, *args)
+                    return self._sock.recvmsg_into(*args)
                 except error as ex:
                     if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                         raise
@@ -406,7 +458,7 @@ class socket(object):
     def recvfrom(self, *args):
         while True:
             try:
-                return _socket.socket.recvfrom(self._sock, *args)
+                return self._sock.recvfrom(*args)
             except error as ex:
                 if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
@@ -415,7 +467,7 @@ class socket(object):
     def recvfrom_into(self, *args):
         while True:
             try:
-                return _socket.socket.recvfrom_into(self._sock, *args)
+                return self._sock.recvfrom_into(*args)
             except error as ex:
                 if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
@@ -424,7 +476,7 @@ class socket(object):
     def recv_into(self, *args):
         while True:
             try:
-                return _socket.socket.recv_into(self._sock, *args)
+                return self._sock.recv_into(*args)
             except error as ex:
                 if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
@@ -434,7 +486,7 @@ class socket(object):
         if timeout is timeout_default:
             timeout = self.timeout
         try:
-            return _socket.socket.send(self._sock, data, flags)
+            return self._sock.send(data, flags)
         except error as ex:
             if ex.args[0] not in _socketcommon.GSENDAGAIN or timeout == 0.0:
                 raise
@@ -457,13 +509,13 @@ class socket(object):
 
     def sendto(self, *args):
         try:
-            return _socket.socket.sendto(self._sock, *args)
+            return self._sock.sendto(*args)
         except error as ex:
             if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                 raise
             self._wait(self._write_event)
             try:
-                return _socket.socket.sendto(self._sock, *args)
+                return self._sock.sendto(*args)
             except error as ex2:
                 if ex2.args[0] == EWOULDBLOCK:
                     return 0
@@ -473,7 +525,7 @@ class socket(object):
         # Only on Unix
         def sendmsg(self, buffers, ancdata=(), flags=0, address=None):
             try:
-                return _socket.socket.sendmsg(self._sock, buffers, ancdata, flags, address)
+                return self._sock.sendmsg(buffers, ancdata, flags, address)
             except error as ex:
                 if flags & getattr(_socket, 'MSG_DONTWAIT', 0):
                     # Enable non-blocking behaviour
@@ -484,7 +536,7 @@ class socket(object):
                     raise
                 self._wait(self._write_event)
                 try:
-                    return _socket.socket.sendmsg(self._sock, buffers, ancdata, flags, address)
+                    return self._sock.sendmsg(buffers, ancdata, flags, address)
                 except error as ex2:
                     if ex2.args[0] == EWOULDBLOCK:
                         return 0

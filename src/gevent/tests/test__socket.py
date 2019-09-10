@@ -268,18 +268,19 @@ class TestTCP(greentest.TestCase):
             fd.flush()
             fd.close()
             conn.close()  # for pypy
-            self.listener.close()
 
         acceptor = Thread(target=accept_once)
-        client = self.create_connection()
-        # Closing the socket doesn't close the file
-        client_file = client.makefile(mode='rb')
-        client.close()
-        line = client_file.readline()
-        self.assertEqual(line, b'hello\n')
-        self.assertEqual(client_file.read(), b'')
-        client_file.close()
-        acceptor.join()
+        try:
+            client = self.create_connection()
+            # Closing the socket doesn't close the file
+            client_file = client.makefile(mode='rb')
+            client.close()
+            line = client_file.readline()
+            self.assertEqual(line, b'hello\n')
+            self.assertEqual(client_file.read(), b'')
+            client_file.close()
+        finally:
+            acceptor.join()
 
     def test_makefile_timeout(self):
 
@@ -291,13 +292,15 @@ class TestTCP(greentest.TestCase):
                 conn.close()  # for pypy
 
         acceptor = Thread(target=accept_once)
-        client = self.create_connection()
-        client.settimeout(0.1)
-        fd = client.makefile(mode='rb')
-        self.assertRaises(self.TIMEOUT_ERROR, fd.readline)
-        client.close()
-        fd.close()
-        acceptor.join()
+        try:
+            client = self.create_connection()
+            client.settimeout(0.1)
+            fd = client.makefile(mode='rb')
+            self.assertRaises(self.TIMEOUT_ERROR, fd.readline)
+            client.close()
+            fd.close()
+        finally:
+            acceptor.join()
 
     def test_attributes(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
@@ -366,14 +369,15 @@ class TestTCP(greentest.TestCase):
             conn.close()
 
         acceptor = Thread(target=accept_once)
-        s.connect((params.DEFAULT_CONNECT, self.port))
-        fd = s.makefile(mode='rb')
-        self.assertEqual(fd.readline(), b'hello\n')
+        try:
+            s.connect((params.DEFAULT_CONNECT, self.port))
+            fd = s.makefile(mode='rb')
+            self.assertEqual(fd.readline(), b'hello\n')
 
-        fd.close()
-        s.close()
-
-        acceptor.join()
+            fd.close()
+            s.close()
+        finally:
+            acceptor.join()
 
 
 class TestCreateConnection(greentest.TestCase):
