@@ -554,9 +554,18 @@ class SSLSocket(socket):
         if not self._sslobj:
             raise ValueError("No SSL wrapper around " + str(self))
 
+        try:
+            # 3.7 and newer, that use the SSLSocket object
+            # call its shutdown.
+            shutdown = self._sslobj.shutdown
+        except AttributeError:
+            # Earlier versions use SSLObject, which covers
+            # that with a layer.
+            shutdown = self._sslobj.unwrap
+
         while True:
             try:
-                s = self._sslobj.shutdown()
+                s = shutdown()
                 break
             except SSLWantReadError:
                 # Callers of this method expect to get a socket
