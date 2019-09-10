@@ -1137,12 +1137,18 @@ if PY37:
         'test_socket.NetworkConnectionNoServer.test_create_connection',
 
         # Internals of the threading module that change.
-        'test_threading.ThreadedTests.test_finalization_shutdown',
-        'test_threading.ThreadedTests.test_shutdown_locks',
+        'test_threading.ThreadTests.test_finalization_shutdown',
+        'test_threading.ThreadTests.test_shutdown_locks',
+        # Expects a deprecation warning we don't raise
+        'test_threading.ThreadTests.test_old_threading_api',
         # This tries to use threading.interrupt_main() from a new Thread;
         # but of course that's actually the same thread and things don't
         # work as expected.
         'test_threading.InterruptMainTests.test_interrupt_main_subthread',
+        'test_threading.InterruptMainTests.test_interrupt_main_noerror',
+
+        # TLS1.3 seems flaky
+        'test_ssl.ThreadedTests.test_wrong_cert_tls13',
     ]
 
     if APPVEYOR:

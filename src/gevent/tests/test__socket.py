@@ -126,13 +126,21 @@ class TestTCP(greentest.TestCase):
         def accept_and_read():
             log("accepting", self.listener)
             conn, _ = self.listener.accept()
-            self._close_on_teardown(conn)
-            r = self._close_on_teardown(conn.makefile(mode='rb'))
-            log("accepted on server", conn)
-            accepted_event.set()
-            log("reading")
-            read_data.append(r.read())
-            log("done reading")
+            try:
+                r = conn.makefile(mode='rb')
+                try:
+                    log("accepted on server", conn)
+                    accepted_event.set()
+                    log("reading")
+                    read_data.append(r.read())
+                    log("done reading")
+                finally:
+                    r.close()
+                    del r
+            finally:
+                conn.close()
+                del conn
+
 
         server = Thread(target=accept_and_read)
         try:
