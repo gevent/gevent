@@ -117,6 +117,7 @@ class TestTCP(greentest.TestCase):
 
     def _test_sendall(self, data, match_data=None, client_method='sendall',
                       **client_args):
+        # pylint:disable=too-many-locals,too-many-branches,too-many-statements
         log = self.log
         log("Sendall", client_method)
 
@@ -190,7 +191,16 @@ class TestTCP(greentest.TestCase):
                 if should_shutdown:
                     client.shutdown(socket.SHUT_RDWR)
                 elif should_unwrap:
-                    client.unwrap()
+                    try:
+                        client.unwrap()
+                    except OSError as e:
+                        if greentest.PY37 and greentest.WIN and e.errno == 0:
+                            # ? 3.7.4 on AppVeyor sometimes raises
+                            # "OSError[errno 0] Error" here, which doesn't make
+                            # any sense.
+                            pass
+                        else:
+                            raise
                 log("closing")
                 client.close()
         finally:
