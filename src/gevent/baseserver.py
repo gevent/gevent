@@ -1,12 +1,20 @@
 """Base class for implementing servers"""
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
+
 import sys
 import _socket
 import errno
+
 from gevent.greenlet import Greenlet
 from gevent.event import Event
 from gevent.hub import get_hub
-from gevent._compat import string_types, integer_types, xrange
+from gevent._compat import string_types
+from gevent._compat import integer_types
+from gevent._compat import xrange
+
 
 
 __all__ = ['BaseServer']
@@ -79,9 +87,16 @@ class BaseServer(object):
     #: Sets the maximum number of consecutive accepts that a process may perform on
     #: a single wake up. High values give higher priority to high connection rates,
     #: while lower values give higher priority to already established connections.
-    #: Default is 100. Note, that in case of multiple working processes on the same
-    #: listening value, it should be set to a lower value. (pywsgi.WSGIServer sets it
-    #: to 1 when environ["wsgi.multiprocess"] is true)
+    #: Default is 100.
+    #:
+    #: Note that, in case of multiple working processes on the same
+    #: listening socket, it should be set to a lower value. (pywsgi.WSGIServer sets it
+    #: to 1 when ``environ["wsgi.multiprocess"]`` is true)
+    #:
+    #: This is equivalent to libuv's `uv_tcp_simultaneous_accepts
+    #: <http://docs.libuv.org/en/v1.x/tcp.html#c.uv_tcp_simultaneous_accepts>`_
+    #: value. Setting the environment variable UV_TCP_SINGLE_ACCEPT to a true value
+    #: (usually 1) changes the default to 1.
     max_accept = 100
 
     _spawn = Greenlet.spawn
@@ -286,11 +301,14 @@ class BaseServer(object):
             return self.address[1]
 
     def init_socket(self):
-        """If the user initialized the server with an address rather than socket,
-        then this function will create a socket, bind it and put it into listening mode.
+        """
+        If the user initialized the server with an address rather than
+        socket, then this function must create a socket, bind it, and
+        put it into listening mode.
 
         It is not supposed to be called by the user, it is called by :meth:`start` before starting
-        the accept loop."""
+        the accept loop.
+        """
 
     @property
     def started(self):

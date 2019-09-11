@@ -3,6 +3,7 @@
 Python 2 socket module.
 """
 from __future__ import absolute_import
+from __future__ import print_function
 
 # Our import magic sadly makes this warning useless
 # pylint: disable=undefined-variable
@@ -80,6 +81,11 @@ class _closedsocket(object):
     # All _delegate_methods must also be initialized here.
     send = recv = recv_into = sendto = recvfrom = recvfrom_into = _dummy
 
+    def __nonzero__(self):
+        return False
+
+    __bool__ = __nonzero__
+
     if PYPY:
 
         def _drop(self):
@@ -92,6 +98,7 @@ class _closedsocket(object):
 
 
 timeout_default = object()
+gtype = type
 
 from gevent._hub_primitives import wait_on_socket as _wait_on_socket
 
@@ -111,22 +118,23 @@ class socket(object):
     # pylint:disable=too-many-public-methods
 
     def __init__(self, family=AF_INET, type=SOCK_STREAM, proto=0, _sock=None):
+        timeout = _socket.getdefaulttimeout()
         if _sock is None:
             self._sock = _realsocket(family, type, proto)
-            self.timeout = _socket.getdefaulttimeout()
         else:
             if hasattr(_sock, '_sock'):
-                # passed a gevent socket
-                self._sock = _sock._sock
-                self.timeout = getattr(_sock, 'timeout', False)
-                if self.timeout is False:
-                    self.timeout = _socket.getdefaulttimeout()
-            else:
-                # passed a native socket
-                self._sock = _sock
-                self.timeout = _socket.getdefaulttimeout()
+                timeout = getattr(_sock, 'timeout', timeout)
+                while hasattr(_sock, '_sock'):
+                    # passed a gevent socket or a native
+                    # socket._socketobject. Unwrap this all the way to the
+                    # native _socket.socket.
+                    _sock = _sock._sock
+
+            self._sock = _sock
+
             if PYPY:
                 self._sock._reuse()
+        self.timeout = timeout
         self._sock.setblocking(0)
         fileno = self._sock.fileno()
         self.hub = get_hub()
@@ -207,22 +215,32 @@ class socket(object):
 
 
     def close(self, _closedsocket=_closedsocket):
+        if not self._sock:
+            return
+
         # This function should not reference any globals. See Python issue #808164.
 
-        # Also break any reference to the loop.io objects. Our fileno,
-        # which they were tied to, is now free to be reused, so these
-        # objects are no longer functional.
-        self._drop_events()
+        # First, change self._sock. On CPython, this drops a
+        # reference, and if it was the last reference, __del__ will
+        # close it. (We cannot close it, makefile() relies on
+        # reference counting like this, and it may be shared among
+        # multiple wrapper objects). Methods *must not* cache
+        # `self._sock` separately from
+        # self._write_event/self._read_event, or they will be out of
+        # sync and we may get inappropriate errors. (See
+        # test__hub:TestCloseSocketWhilePolling for an example).
         s = self._sock
-
-        # Note that we change self._sock at this point. Methods *must not*
-        # cache `self._sock` separately from self._write_event/self._read_event,
-        # or they will be out of sync and we may get inappropriate errors.
-        # (See test__hub:TestCloseSocketWhilePolling for an example).
-
         self._sock = _closedsocket()
+
+        # On PyPy we have to manually tell it to drop a ref.
         if PYPY:
             s._drop()
+
+        # Finally, break any reference to the loop.io objects. Our
+        # fileno, which they were tied to, is about to be free to be
+        # reused, so these objects are no longer functional.
+        self._drop_events()
+
 
     @property
     def closed(self):

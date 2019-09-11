@@ -739,7 +739,15 @@ def patch_thread(threading=True, _threading_local=True, Event=True, logging=True
 
                 main_thread._tstate_lock.release()
                 from gevent import sleep
-                sleep()
+                try:
+                    sleep()
+                except: # pylint:disable=bare-except
+                    # A greenlet could have .kill() us
+                    # or .throw() to us. I'm the main greenlet,
+                    # there's no where else for this to go.
+                    from gevent  import get_hub
+                    get_hub().print_exception(_greenlet, *sys.exc_info())
+
                 # Now, this may have resulted in us getting stopped
                 # if some other greenlet actually just ran there.
                 # That's not good, we're not supposed to be stopped

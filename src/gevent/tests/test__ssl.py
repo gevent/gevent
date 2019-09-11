@@ -9,14 +9,10 @@ import gevent.testing as greentest
 from gevent.tests import test__socket
 import ssl
 
-
-#import unittest
-from gevent.hub import LoopExit
-
 def ssl_listener(private_key, certificate):
     raw_listener = socket.socket()
     greentest.bind_and_listen(raw_listener)
-    sock = ssl.wrap_socket(raw_listener, private_key, certificate)
+    sock = ssl.wrap_socket(raw_listener, private_key, certificate, server_side=True)
     return sock, raw_listener
 
 
@@ -37,7 +33,8 @@ class TestSSL(test__socket.TestTCP):
         return listener
 
     def create_connection(self, *args, **kwargs): # pylint:disable=arguments-differ
-        return ssl.wrap_socket(super(TestSSL, self).create_connection(*args, **kwargs))
+        return self._close_on_teardown(
+            ssl.wrap_socket(super(TestSSL, self).create_connection(*args, **kwargs)))
 
     # The SSL library can take a long time to buffer the large amount of data we're trying
     # to send, so we can't compare to the timeout values
@@ -67,14 +64,14 @@ class TestSSL(test__socket.TestTCP):
             client.close()
             server_sock[0][0].close()
 
-    def test_fullduplex(self):
-        try:
-            super(TestSSL, self).test_fullduplex()
-        except LoopExit:
-            if greentest.LIBUV and greentest.WIN:
-                # XXX: Unable to duplicate locally
-                raise greentest.SkipTest("libuv on Windows sometimes raises LoopExit")
-            raise
+    # def test_fullduplex(self):
+    #     try:
+    #         super(TestSSL, self).test_fullduplex()
+    #     except LoopExit:
+    #         if greentest.LIBUV and greentest.WIN:
+    #             # XXX: Unable to duplicate locally
+    #             raise greentest.SkipTest("libuv on Windows sometimes raises LoopExit")
+    #         raise
 
     @greentest.ignores_leakcheck
     def test_empty_send(self):

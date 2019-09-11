@@ -165,17 +165,26 @@ def _format_thread_info(lines, thread_stacks, limit, current_thread_ident):
     thread = None
     frame = None
     for thread_ident, frame in sys._current_frames().items():
+        do_stacks = thread_stacks
         lines.append("*" * 80)
         thread = threads.get(thread_ident)
-        name = thread.name if thread else None
+        name = None
+        if not thread:
+            # Is it an idle threadpool thread? thread pool threads
+            # don't have a Thread object, they're low-level
+            if frame.f_locals and frame.f_locals.get('gevent_threadpool_worker_idle'):
+                name = 'idle threadpool worker'
+                do_stacks = False
+        else:
+            name = thread.name
         if getattr(thread, 'gevent_monitoring_thread', None):
             name = repr(thread.gevent_monitoring_thread())
         if current_thread_ident == thread_ident:
             name = '%s) (CURRENT' % (name,)
         lines.append('Thread 0x%x (%s)\n' % (thread_ident, name))
-        if thread_stacks:
+        if do_stacks:
             lines.append(''.join(traceback.format_stack(frame, limit)))
-        else:
+        elif not thread_stacks:
             lines.append('\t...stack elided...')
 
     # We may have captured our own frame, creating a reference
@@ -191,9 +200,14 @@ def _format_greenlet_info(lines, greenlet_stacks, limit):
     lines.append('*' * 80)
     lines.append('* Greenlets')
     lines.append('*' * 80)
-    for tree in GreenletTree.forest():
+    for tree in sorted(GreenletTree.forest(),
+                       key=lambda t: '' if t.is_current_tree else repr(t.greenlet)):
+        lines.append("---- Thread boundary")
         lines.extend(tree.format_lines(details={
-            'running_stacks': greenlet_stacks,
+            # greenlets from other threads tend to have their current
+            # frame just match our current frame, which is not helpful,
+            # so don't render their stack.
+            'running_stacks': greenlet_stacks if tree.is_current_tree else False,
             'running_stack_limit': limit,
         }))
 
@@ -297,6 +311,8 @@ class GreenletTree(object):
     #: The greenlet this tree represents.
     greenlet = None
 
+    #: Is this tree the root for the current thread?
+    is_current_tree = False
 
     def __init__(self, greenlet):
         self.greenlet = greenlet
@@ -458,33 +474,40 @@ class GreenletTree(object):
         from gevent._greenlet_primitives import get_reachable_greenlets
         main_greenlet = cls._root_greenlet(getcurrent())
 
-        trees = {}
-        roots = {}
+        trees = {} # greenlet -> GreenletTree
+        roots = {} # root greenlet -> GreenletTree
         current_tree = roots[main_greenlet] = trees[main_greenlet] = cls(main_greenlet)
+        current_tree.is_current_tree = True
 
+        root_greenlet = cls._root_greenlet
         glets = get_reachable_greenlets()
 
         for ob in glets:
             spawn_parent = cls.__spawning_parent(ob)
 
             if spawn_parent is None:
-                root = cls._root_greenlet(ob)
-                try:
-                    tree = roots[root]
-                except KeyError: # pragma: no cover
-                    tree = GreenletTree(root)
-                    roots[root] = trees[root] = tree
-            else:
-                try:
-                    tree = trees[spawn_parent]
-                except KeyError: # pragma: no cover
-                    tree = trees[spawn_parent] = cls(spawn_parent)
+                # spawn parent is dead, or raw greenlet.
+                # reparent under the root.
+                spawn_parent = root_greenlet(ob)
+
+            if spawn_parent is root_greenlet(spawn_parent) and spawn_parent not in roots:
+                assert spawn_parent not in trees
+                trees[spawn_parent] = roots[spawn_parent] = cls(spawn_parent)
+
 
             try:
+                parent_tree = trees[spawn_parent]
+            except KeyError: # pragma: no cover
+                parent_tree = trees[spawn_parent] = cls(spawn_parent)
+
+            try:
+                # If the child also happened to be a spawning parent,
+                # we could have seen it before; the reachable greenlets
+                # are in no particular order.
                 child_tree = trees[ob]
             except KeyError:
                 trees[ob] = child_tree = cls(ob)
-            tree.add_child(child_tree)
+            parent_tree.add_child(child_tree)
 
         return roots, current_tree
 

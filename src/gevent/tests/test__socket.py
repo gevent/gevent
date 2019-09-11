@@ -1,5 +1,8 @@
 # This line can be commented out so that most tests run with the
 # system socket for comparison.
+from __future__ import print_function
+from __future__ import absolute_import
+
 from gevent import monkey; monkey.patch_all()
 
 import sys
@@ -9,7 +12,8 @@ import time
 import unittest
 from functools import wraps
 
-from gevent import getcurrent
+from gevent._compat import reraise
+
 import gevent.testing as greentest
 
 from gevent.testing import six
@@ -19,8 +23,10 @@ from gevent.testing import params
 from gevent.testing.sockets import tcp_listener
 from gevent.testing.skipping import skipWithoutExternalNetwork
 
-# we use threading on purpose so that we can test both regular and gevent sockets with the same code
+# we use threading on purpose so that we can test both regular and
+# gevent sockets with the same code
 from threading import Thread as _Thread
+from threading import Event
 
 errno_types = int
 
@@ -29,13 +35,14 @@ class Thread(_Thread):
 
     def __init__(self, **kwargs):
         target = kwargs.pop('target')
-        caller = getcurrent()
+        self.terminal_exc = None
         @wraps(target)
         def errors_are_fatal(*args, **kwargs):
             try:
                 return target(*args, **kwargs)
             except: # pylint:disable=bare-except
-                caller.throw(*sys.exc_info())
+                self.terminal_exc = sys.exc_info()
+                raise
 
         _Thread.__init__(self, target=errors_are_fatal, **kwargs)
         self.start()
@@ -51,23 +58,48 @@ class TestTCP(greentest.TestCase):
 
     def setUp(self):
         super(TestTCP, self).setUp()
+        if '-v' in sys.argv:
+            printed = []
+            try:
+                from time import perf_counter as now
+            except ImportError:
+                from time import time as now
+            def log(*args):
+                if not printed:
+                    print()
+                    printed.append(1)
+                print("\t ->", now(), *args)
+
+            orig_cot = self._close_on_teardown
+            def cot(o):
+                log("Registering for teardown", o)
+                def c():
+                    log("Closing on teardown", o)
+                    o.close()
+                orig_cot(c)
+                return o
+            self._close_on_teardown = cot
+
+        else:
+            def log(*_args):
+                "Does nothing"
+        self.log = log
+
+
         self.listener = self._close_on_teardown(self._setup_listener())
-
-        # XXX: On Windows (at least with libev), if we have a cleanup/tearDown method
-        # that does 'del self.listener' AND we haven't sometime
-        # previously closed the listener (while the test body was executing)
-        # we tend to sometimes see hangs when tests run in succession;
-        # notably test_empty_send followed by test_makefile produces a hang
-        # in test_makefile when it tries to read from the client_file, because
-        # the accept() call in accept_once has not yet returned a new socket to
-        # write to.
-
-        # The cause *seems* to be that the listener socket in both tests gets the
-        # same fileno(); or, at least, if we don't del the listener object,
-        # we get a different fileno, and that scenario works.
-
-        # Perhaps our logic is wrong in libev_vfd in the way we use
-        # _open_osfhandle and determine we can close it?
+        # It is important to watch the lifetimes of socket objects and
+        # ensure that:
+        # (1) they are closed; and
+        # (2) *before* the next test begins.
+        #
+        # For example, it's a bad bad thing to leave a greenlet running past the
+        # scope of the individual test method if that greenlet will close
+        # a socket object --- especially if that socket object might also have been
+        # closed explicitly.
+        #
+        # On Windows, we've seen issue with filenos getting reused while something
+        # still thinks they have the original fileno around. When they later
+        # close that fileno, a completely unrelated object is closed.
         self.port = self.listener.getsockname()[1]
 
     def _setup_listener(self):
@@ -85,44 +117,102 @@ class TestTCP(greentest.TestCase):
 
     def _test_sendall(self, data, match_data=None, client_method='sendall',
                       **client_args):
+        # pylint:disable=too-many-locals,too-many-branches,too-many-statements
+        log = self.log
+        log("Sendall", client_method)
 
         read_data = []
-        server_exc_info = []
+        accepted_event = Event()
 
         def accept_and_read():
-            conn = None
-            r = None
+            log("accepting", self.listener)
+            conn, _ = self.listener.accept()
             try:
-                conn, _ = self.listener.accept()
                 r = conn.makefile(mode='rb')
-                read_data.append(r.read())
+                try:
+                    log("accepted on server", conn)
+                    accepted_event.set()
+                    log("reading")
+                    read_data.append(r.read())
+                    log("done reading")
+                finally:
+                    r.close()
+                    del r
             finally:
-                # Order matters. On Python 2, if we close the
-                # connection before closing the makefile,
-                # test__ssl fails because the underlying socket
-                # has been deleted.
-                for f in (r, conn, self.listener):
-                    if f is not None:
-                        f.close()
+                conn.close()
+                del conn
 
 
         server = Thread(target=accept_and_read)
-        client = self.create_connection(**client_args)
-
         try:
-            getattr(client, client_method)(data)
-        finally:
-            client.shutdown(socket.SHUT_RDWR)
-            client.close()
+            log("creating client connection")
+            client = self.create_connection(**client_args)
 
-        server.join()
-        assert not server.is_alive()
+            # We seem to have a buffer stuck somewhere on appveyor?
+            # https://ci.appveyor.com/project/denik/gevent/builds/27320824/job/bdbax88sqnjoti6i#L712
+            should_unwrap = hasattr(client, 'unwrap') and greentest.PY37 and greentest.WIN
+
+            # The implicit reference-based nastiness of Python 2
+            # sockets interferes, especially when using SSL sockets.
+            # The best way to get a decent FIN to the server is to shutdown
+            # the output. Doing that on Python 3, OTOH, is contraindicated.
+            should_shutdown = greentest.PY2
+
+            # It's important to wait for the server to fully accept before
+            # we shutdown and close the socket. In SSL mode, the number
+            # and timing of data exchanges to complete the handshake and
+            # thus exactly when greenlet switches occur, varies by TLS version.
+            #
+            # It turns out that on < TLS1.3, we were getting lucky and the
+            # server was the greenlet that raced ahead and blocked in r.read()
+            # before the client returned from create_connection().
+            #
+            # But when TLS 1.3 was deployed (OpenSSL 1.1), the *client* was the
+            # one that raced ahead while the server had yet to return from
+            # self.listener.accept(). So the client sent the data to the socket,
+            # and closed, before the server could do anything, and the server,
+            # when it got switched to by server.join(), found its new socket
+            # dead.
+            accepted_event.wait()
+            log("accepted", client)
+            try:
+                getattr(client, client_method)(data)
+            except:
+                import traceback; traceback.print_exc()
+                # unwrapping might not work after this because we're in
+                # a bad state.
+                if should_unwrap:
+                    client.shutdown(socket.SHUT_RDWR)
+                    should_unwrap = False
+                    should_shutdown = False
+                raise
+            finally:
+                log("shutdown")
+                if should_shutdown:
+                    client.shutdown(socket.SHUT_RDWR)
+                elif should_unwrap:
+                    try:
+                        client.unwrap()
+                    except OSError as e:
+                        if greentest.PY37 and greentest.WIN and e.errno == 0:
+                            # ? 3.7.4 on AppVeyor sometimes raises
+                            # "OSError[errno 0] Error" here, which doesn't make
+                            # any sense.
+                            pass
+                        else:
+                            raise
+                log("closing")
+                client.close()
+        finally:
+            server.join(4)
+            assert not server.is_alive()
+
+        if server.terminal_exc:
+            reraise(*server.terminal_exc)
+
         if match_data is None:
             match_data = self.long_data
         self.assertEqual(read_data, [match_data])
-
-        if server_exc_info:
-            six.reraise(*server_exc_info[0])
 
     def test_sendall_str(self):
         self._test_sendall(self.long_data)
@@ -161,22 +251,21 @@ class TestTCP(greentest.TestCase):
         N = 100000
 
         def server():
-            (remote_client, _) = self.listener.accept()
+            remote_client, _ = self.listener.accept()
+            self._close_on_teardown(remote_client)
             # start reading, then, while reading, start writing. the reader should not hang forever
 
-            def sendall():
-                remote_client.sendall(b't' * N)
-
-            sender = Thread(target=sendall)
-            result = remote_client.recv(1000)
-            self.assertEqual(result, b'hello world')
-            sender.join()
-            remote_client.close()
-            self.listener.close()
+            sender = Thread(target=remote_client.sendall,
+                            args=((b't' * N),))
+            try:
+                result = remote_client.recv(1000)
+                self.assertEqual(result, b'hello world')
+            finally:
+                sender.join()
 
         server_thread = Thread(target=server)
         client = self.create_connection()
-        client_file = client.makefile()
+        client_file = self._close_on_teardown(client.makefile())
         client_reader = Thread(target=client_file.read, args=(N, ))
         time.sleep(0.1)
         client.sendall(b'hello world')
@@ -192,17 +281,24 @@ class TestTCP(greentest.TestCase):
         client_reader.join()
 
     def test_recv_timeout(self):
-        client_sock = []
-        acceptor = Thread(target=lambda: client_sock.append(self.listener.accept()))
+        def accept():
+            # make sure the conn object stays alive until the end;
+            # premature closing triggers a ResourceWarning and
+            # EOF on the client.
+            conn, _ = self.listener.accept()
+            self._close_on_teardown(conn)
+
+        acceptor = Thread(target=accept)
         client = self.create_connection()
-        client.settimeout(1)
-        start = time.time()
-        self.assertRaises(self.TIMEOUT_ERROR, client.recv, 1024)
-        took = time.time() - start
-        self.assertTimeWithinRange(took, 1 - 0.1, 1 + 0.1)
-        acceptor.join()
-        client.close()
-        client_sock[0][0].close()
+        try:
+            client.settimeout(1)
+            start = time.time()
+            with self.assertRaises(self.TIMEOUT_ERROR):
+                client.recv(1024)
+            took = time.time() - start
+            self.assertTimeWithinRange(took, 1 - 0.1, 1 + 0.1)
+        finally:
+            acceptor.join()
 
     # Subclasses can disable  this
     _test_sendall_timeout_check_time = True
@@ -243,18 +339,19 @@ class TestTCP(greentest.TestCase):
             fd.flush()
             fd.close()
             conn.close()  # for pypy
-            self.listener.close()
 
         acceptor = Thread(target=accept_once)
-        client = self.create_connection()
-        # Closing the socket doesn't close the file
-        client_file = client.makefile(mode='rb')
-        client.close()
-        line = client_file.readline()
-        self.assertEqual(line, b'hello\n')
-        self.assertEqual(client_file.read(), b'')
-        client_file.close()
-        acceptor.join()
+        try:
+            client = self.create_connection()
+            # Closing the socket doesn't close the file
+            client_file = client.makefile(mode='rb')
+            client.close()
+            line = client_file.readline()
+            self.assertEqual(line, b'hello\n')
+            self.assertEqual(client_file.read(), b'')
+            client_file.close()
+        finally:
+            acceptor.join()
 
     def test_makefile_timeout(self):
 
@@ -266,13 +363,15 @@ class TestTCP(greentest.TestCase):
                 conn.close()  # for pypy
 
         acceptor = Thread(target=accept_once)
-        client = self.create_connection()
-        client.settimeout(0.1)
-        fd = client.makefile(mode='rb')
-        self.assertRaises(self.TIMEOUT_ERROR, fd.readline)
-        client.close()
-        fd.close()
-        acceptor.join()
+        try:
+            client = self.create_connection()
+            client.settimeout(0.1)
+            fd = client.makefile(mode='rb')
+            self.assertRaises(self.TIMEOUT_ERROR, fd.readline)
+            client.close()
+            fd.close()
+        finally:
+            acceptor.join()
 
     def test_attributes(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
@@ -341,14 +440,15 @@ class TestTCP(greentest.TestCase):
             conn.close()
 
         acceptor = Thread(target=accept_once)
-        s.connect((params.DEFAULT_CONNECT, self.port))
-        fd = s.makefile(mode='rb')
-        self.assertEqual(fd.readline(), b'hello\n')
+        try:
+            s.connect((params.DEFAULT_CONNECT, self.port))
+            fd = s.makefile(mode='rb')
+            self.assertEqual(fd.readline(), b'hello\n')
 
-        fd.close()
-        s.close()
-
-        acceptor.join()
+            fd.close()
+            s.close()
+        finally:
+            acceptor.join()
 
 
 class TestCreateConnection(greentest.TestCase):

@@ -234,7 +234,11 @@ class Timeout(BaseException):
 
         # Make sure the timer updates the current time so that we don't
         # expire prematurely.
-        self.timer.start(getcurrent().throw, throws, update=True)
+        self.timer.start(self._on_expiration, getcurrent(), throws, update=True)
+
+    def _on_expiration(self, prev_greenlet, ex):
+        # Hook for subclasses.
+        prev_greenlet.throw(ex)
 
     @classmethod
     def start_new(cls, timeout=None, exception=None, ref=True, _one_shot=False):

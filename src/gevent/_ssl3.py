@@ -20,6 +20,7 @@ from gevent.socket import socket, timeout_default
 from gevent.socket import error as socket_error
 from gevent.socket import timeout as _socket_timeout
 from gevent._util import copy_globals
+from gevent._compat import PY36
 
 from weakref import ref as _wref
 
@@ -45,6 +46,8 @@ orig_SSLContext = __ssl__.SSLContext # pylint:disable=no-member
 
 
 class SSLContext(orig_SSLContext):
+
+    __slots__ = ()
 
     # Added in Python 3.7
     sslsocket_class = None # SSLSocket is assigned later
@@ -152,28 +155,11 @@ class _contextawaresock(socket._gevent_sock_class):
             pass
         raise AttributeError(name)
 
-try:
-    _SSLObject_factory = SSLObject
-except NameError:
-    # 3.4 and below do not have SSLObject, something
-    # we magically import through copy_globals
-    pass
-else:
-    if hasattr(SSLObject, '_create'):
-        # 3.7 is making thing difficult and won't let you
-        # actually construct an object
-        def _SSLObject_factory(sslobj, owner=None, session=None):
-            s = SSLObject.__new__(SSLObject)
-            s._sslobj = sslobj
-            s._sslobj.owner = owner or s
-            if session is not None:
-                s._sslobj.session = session
-            return s
-
 class SSLSocket(socket):
     """
-    gevent `ssl.SSLSocket <https://docs.python.org/3/library/ssl.html#ssl-sockets>`_
-    for Python 3.
+    gevent `ssl.SSLSocket
+    <https://docs.python.org/3/library/ssl.html#ssl-sockets>`_ for
+    Python 3.
     """
 
     # pylint:disable=too-many-instance-attributes,too-many-public-methods
@@ -189,8 +175,11 @@ class SSLSocket(socket):
                  server_hostname=None,
                  _session=None, # 3.6
                  _context=None):
+        # When a *sock* argument is passed, it is used only for its fileno()
+        # and is immediately detach()'d *unless* we raise an error.
 
         # pylint:disable=too-many-locals,too-many-statements,too-many-branches
+
         if _context:
             self._context = _context
         else:
@@ -237,20 +226,17 @@ class SSLSocket(socket):
         self.suppress_ragged_eofs = suppress_ragged_eofs
         connected = False
         if sock is not None:
+            timeout = sock.gettimeout()
             socket.__init__(self,
                             family=sock.family,
                             type=sock.type,
                             proto=sock.proto,
                             fileno=sock.fileno())
-            self.settimeout(sock.gettimeout())
-            # see if it's connected
-            try:
-                sock.getpeername()
-            except socket_error as e:
-                if e.errno != errno.ENOTCONN:
-                    raise
-            else:
-                connected = True
+            self.settimeout(timeout)
+            # When Python 3 sockets are __del__, they close() themselves,
+            # including their underlying fd, unless they have been detached.
+            # Only detach if we succeed in taking ownership; if we raise an exception,
+            # then the user might have no way to close us and release the resources.
             sock.detach()
         elif fileno is not None:
             socket.__init__(self, fileno=fileno)
@@ -260,15 +246,23 @@ class SSLSocket(socket):
         self._sock._sslsock = _wref(self)
         self._closed = False
         self._sslobj = None
+        # see if we're connected
+        try:
+            self._sock.getpeername()
+        except socket_error as e:
+            if e.errno != errno.ENOTCONN:
+                # This file descriptor is hosed, shared or not.
+                # Clean up.
+                self.close()
+                raise
+        else:
+            connected = True
         self._connected = connected
         if connected:
             # create the SSL object
             try:
-                self._sslobj = self._context._wrap_socket(self._sock, server_side,
-                                                          server_hostname)
-                if _session is not None: # 3.6+
-                    self._sslobj = _SSLObject_factory(self._sslobj, owner=self,
-                                                      session=self._session)
+                self._sslobj = self.__create_sslobj(server_side, _session)
+
                 if do_handshake_on_connect:
                     timeout = self.gettimeout()
                     if timeout == 0.0:
@@ -279,6 +273,13 @@ class SSLSocket(socket):
             except socket_error as x:
                 self.close()
                 raise x
+
+    def _extra_repr(self):
+        return ' server=%s, cipher=%r' % (
+            self.server_side,
+            self._sslobj.cipher() if self._sslobj is not None else ''
+
+        )
 
     @property
     def context(self):
@@ -323,23 +324,26 @@ class SSLSocket(socket):
             # EAGAIN.
             self.getpeername()
 
-    def read(self, len=1024, buffer=None):
+    def read(self, nbytes=2014, buffer=None):
         """Read up to LEN bytes and return them.
         Return zero-length string on EOF."""
         # pylint:disable=too-many-branches
         self._checkClosed()
-
+        # The stdlib signature is (len=1024, buffer=None)
+        # but that shadows the len builtin, and its hard/annoying to
+        # get it back.
+        initial_buf_len = len(buffer) if buffer is not None else None
         while True:
             if not self._sslobj:
                 raise ValueError("Read on closed or unwrapped SSL socket.")
-            if len == 0:
+            if nbytes == 0:
                 return b'' if buffer is None else 0
             # Negative lengths are handled natively when the buffer is None
             # to raise a ValueError
             try:
                 if buffer is not None:
-                    return self._sslobj.read(len, buffer)
-                return self._sslobj.read(len or 1024)
+                    return self._sslobj.read(nbytes, buffer)
+                return self._sslobj.read(nbytes or 1024)
             except SSLWantReadError:
                 if self.timeout == 0.0:
                     raise
@@ -351,10 +355,17 @@ class SSLSocket(socket):
                 self._wait(self._write_event, timeout_exc=_SSLErrorReadTimeout)
             except SSLError as ex:
                 if ex.args[0] == SSL_ERROR_EOF and self.suppress_ragged_eofs:
-                    if buffer is None:
-                        return b''
-                    return 0
+                    return b'' if buffer is None else len(buffer) - initial_buf_len
                 raise
+            except ConnectionResetError:
+                # Certain versions of Python, built against certain
+                # versions of OpenSSL operating in certain modes,
+                # can produce this instead of SSLError. Notably, it looks
+                # like anything built against 1.1.1c do?
+                if self.suppress_ragged_eofs:
+                    return b'' if buffer is None else len(buffer) - initial_buf_len
+                raise
+
 
     def write(self, data):
         """Write DATA to the underlying SSL channel.  Returns
@@ -553,9 +564,18 @@ class SSLSocket(socket):
         if not self._sslobj:
             raise ValueError("No SSL wrapper around " + str(self))
 
+        try:
+            # 3.7 and newer, that use the SSLSocket object
+            # call its shutdown.
+            shutdown = self._sslobj.shutdown
+        except AttributeError:
+            # Earlier versions use SSLObject, which covers
+            # that with a layer.
+            shutdown = self._sslobj.unwrap
+
         while True:
             try:
-                s = self._sslobj.shutdown()
+                s = shutdown()
                 break
             except SSLWantReadError:
                 # Callers of this method expect to get a socket
@@ -587,7 +607,6 @@ class SSLSocket(socket):
 
     def _real_close(self):
         self._sslobj = None
-        # self._closed = True
         socket._real_close(self)
 
     def do_handshake(self):
@@ -614,6 +633,25 @@ class SSLSocket(socket):
                                  "argument")
             match_hostname(self.getpeercert(), self.server_hostname)
 
+    if hasattr(SSLObject, '_create'):
+        # 3.7+, making it difficult to create these objects.
+        # There's a new type, _ssl.SSLSocket, that takes the
+        # place of SSLObject for self._sslobj. This one does it all.
+        def __create_sslobj(self, server_side=False, session=None):
+            return self.context._wrap_socket(
+                self._sock, server_side, self.server_hostname,
+                owner=self._sock, session=session
+            )
+    elif PY36: # 3.6
+        def __create_sslobj(self, server_side=False, session=None):
+            sslobj = self._context._wrap_socket(self._sock, server_side, self.server_hostname)
+            return SSLObject(sslobj, owner=self._sock, session=session)
+    else: # 3.5
+        def __create_sslobj(self, server_side=False, session=None): # pylint:disable=unused-argument
+            sslobj = self._context._wrap_socket(self._sock, server_side, self.server_hostname)
+            return SSLObject(sslobj, owner=self._sock)
+
+
     def _real_connect(self, addr, connect_ex):
         if self.server_side:
             raise ValueError("can't connect in server-side mode")
@@ -621,9 +659,8 @@ class SSLSocket(socket):
         # connected at the time of the call.  We connect it, then wrap it.
         if self._connected:
             raise ValueError("attempt to connect already-connected SSLSocket!")
-        self._sslobj = self._context._wrap_socket(self._sock, False, self.server_hostname)
-        if self._session is not None: # 3.6+
-            self._sslobj = _SSLObject_factory(self._sslobj, owner=self, session=self._session)
+        self._sslobj = self.__create_sslobj(False, self._session)
+
         try:
             if connect_ex:
                 rc = socket.connect_ex(self, addr)
@@ -650,17 +687,23 @@ class SSLSocket(socket):
         return self._real_connect(addr, True)
 
     def accept(self):
-        """Accepts a new connection from a remote client, and returns
-        a tuple containing that new connection wrapped with a server-side
-        SSL channel, and the address of the remote client."""
-
-        newsock, addr = socket.accept(self)
-        newsock._drop_events()
-        newsock = self._context.wrap_socket(newsock,
-                                            do_handshake_on_connect=self.do_handshake_on_connect,
-                                            suppress_ragged_eofs=self.suppress_ragged_eofs,
-                                            server_side=True)
-        return newsock, addr
+        """
+        Accepts a new connection from a remote client, and returns a
+        tuple containing that new connection wrapped with a
+        server-side SSL channel, and the address of the remote client.
+        """
+        newsock, addr = super().accept()
+        try:
+            newsock = self._context.wrap_socket(
+                newsock,
+                do_handshake_on_connect=self.do_handshake_on_connect,
+                suppress_ragged_eofs=self.suppress_ragged_eofs,
+                server_side=True
+            )
+            return newsock, addr
+        except:
+            newsock.close()
+            raise
 
     def get_channel_binding(self, cb_type="tls-unique"):
         """Get channel binding data for current connection.  Raise ValueError
@@ -720,9 +763,9 @@ def get_server_certificate(addr, ssl_version=PROTOCOL_SSLv23, ca_certs=None):
         cert_reqs = CERT_REQUIRED
     else:
         cert_reqs = CERT_NONE
-    s = create_connection(addr)
-    s = wrap_socket(s, ssl_version=ssl_version,
-                    cert_reqs=cert_reqs, ca_certs=ca_certs)
-    dercert = s.getpeercert(True)
-    s.close()
+    with create_connection(addr) as sock:
+        with wrap_socket(sock, ssl_version=ssl_version,
+                         cert_reqs=cert_reqs, ca_certs=ca_certs) as sslsock:
+            dercert = sslsock.getpeercert(True)
+
     return DER_cert_to_PEM_cert(dercert)

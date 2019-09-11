@@ -1,5 +1,8 @@
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
 """TCP/SSL server"""
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
 
 from contextlib import closing
 
@@ -101,7 +104,14 @@ class StreamServer(BaseServer):
 
     """
     # the default backlog to use if none was provided in __init__
-    backlog = 256
+    # For TCP, 128 is the (default) maximum at the operating system level on Linux and macOS
+    # larger values are truncated to 128.
+    #
+    # Windows defines SOMAXCONN=0x7fffffff to mean "max reasonable value" --- that value
+    # was undocumented and subject to change, but appears to be 200.
+    # Beginning in Windows 8 there's SOMAXCONN_HINT(b)=(-(b)) which means "at least
+    # as many SOMAXCONN but no more than b" which is a portable way to write 200.
+    backlog = 128
 
     reuse_addr = DEFAULT_REUSE_ADDR
 
@@ -134,13 +144,37 @@ class StreamServer(BaseServer):
 
     def set_listener(self, listener):
         BaseServer.set_listener(self, listener)
-        try:
-            self.socket = self.socket._sock
-        except AttributeError:
-            pass
+
+    def _make_socket_stdlib(self, fresh):
+        # We want to unwrap the gevent wrapping of the listening socket.
+        # This lets us be just a hair more efficient: when our 'do_read' is
+        # called, we've already waited on the socket to be ready to accept(), so
+        # we don't need to (potentially) do it again. Also we avoid a layer
+        # of method calls. The cost, though, is that we have to manually wrap
+        # sockets back up to be non-blocking in do_read(). I'm not sure that's worth
+        # it.
+        #
+        # In the past, we only did this when set_listener() was called with a socket
+        # object and not an address. It makes sense to do it always though,
+        # so that we get consistent behaviour.
+        while hasattr(self.socket, '_sock'):
+            if fresh:
+                if hasattr(self.socket, '_drop_events'):
+                    # Discard event listeners. This socket object is not shared,
+                    # so we don't need them anywhere else.
+                    # This matters somewhat for libuv, where we have to multiplex
+                    # listeners, and we're about to create a new listener.
+                    # If we don't do this, on Windows libuv tends to miss incoming
+                    # connects and our _do_read callback doesn't get called.
+                    self.socket._drop_events()
+                # XXX: Do we need to _drop() for PyPy?
+
+            self.socket = self.socket._sock # pylint:disable=attribute-defined-outside-init
 
     def init_socket(self):
+        fresh = False
         if not hasattr(self, 'socket'):
+            fresh = True
             # FIXME: clean up the socket lifetime
             # pylint:disable=attribute-defined-outside-init
             self.socket = self.get_listener(self.address, self.backlog, self.family)
@@ -149,6 +183,7 @@ class StreamServer(BaseServer):
             self._handle = self.wrap_socket_and_handle
         else:
             self._handle = self.handle
+        self._make_socket_stdlib(fresh)
 
     @classmethod
     def get_listener(cls, address, backlog=None, family=None):
@@ -157,7 +192,6 @@ class StreamServer(BaseServer):
         return _tcp_listener(address, backlog=backlog, reuse_addr=cls.reuse_addr, family=family)
 
     if PY3:
-
         def do_read(self):
             sock = self.socket
             try:
@@ -168,11 +202,13 @@ class StreamServer(BaseServer):
                 raise
 
             sock = GeventSocket(sock.family, sock.type, sock.proto, fileno=fd)
-            # XXX Python issue #7995?
+            # XXX Python issue #7995? "if no default timeout is set
+            # and the listening socket had a (non-zero) timeout, force
+            # the new socket in blocking mode to override
+            # platform-specific socket flags inheritance."
             return sock, address
 
     else:
-
         def do_read(self):
             try:
                 client_socket, address = self.socket.accept()
@@ -180,16 +216,12 @@ class StreamServer(BaseServer):
                 if err.args[0] == EWOULDBLOCK:
                     return
                 raise
-            # XXX: When would this not be the case? In Python 3 it makes sense
-            # because we're using the low-level _accept method,
-            # but not in Python 2.
-            if not isinstance(client_socket, GeventSocket):
-                # This leads to a leak of the watchers in client_socket
-                sockobj = GeventSocket(_sock=client_socket)
-                if PYPY:
-                    client_socket._drop()
-            else:
-                sockobj = client_socket
+
+            sockobj = GeventSocket(_sock=client_socket)
+            if PYPY:
+                # Undo the ref-count bump that the constructor
+                # did. We gave it ownership.
+                client_socket._drop()
             return sockobj, address
 
     def do_close(self, sock, *args):

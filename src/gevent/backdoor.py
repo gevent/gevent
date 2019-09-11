@@ -11,6 +11,7 @@ with other elements of the process.
 """
 from __future__ import print_function, absolute_import
 import sys
+import socket
 from code import InteractiveConsole
 
 from gevent.greenlet import Greenlet
@@ -18,8 +19,11 @@ from gevent.hub import getcurrent
 from gevent.server import StreamServer
 from gevent.pool import Pool
 from gevent._compat import PY36
+from gevent._compat import exc_clear
 
-__all__ = ['BackdoorServer']
+__all__ = [
+    'BackdoorServer',
+]
 
 try:
     sys.ps1
@@ -32,25 +36,47 @@ except AttributeError:
 
 class _Greenlet_stdreplace(Greenlet):
     # A greenlet that replaces sys.std[in/out/err] while running.
-    _fileobj = None
-    saved = None
+
+    __slots__ = (
+        'stdin',
+        'stdout',
+        'prev_stdin',
+        'prev_stdout',
+        'prev_stderr',
+    )
+
+    def __init__(self, *args, **kwargs):
+        Greenlet.__init__(self, *args, **kwargs)
+        self.stdin = None
+        self.stdout = None
+        self.prev_stdin = None
+        self.prev_stdout = None
+        self.prev_stderr = None
 
     def switch(self, *args, **kw):
-        if self._fileobj is not None:
+        if self.stdin is not None:
             self.switch_in()
         Greenlet.switch(self, *args, **kw)
 
     def switch_in(self):
-        self.saved = sys.stdin, sys.stderr, sys.stdout
-        sys.stdin = sys.stdout = sys.stderr = self._fileobj
+        self.prev_stdin = sys.stdin
+        self.prev_stdout = sys.stdout
+        self.prev_stderr = sys.stderr
+
+        sys.stdin = self.stdin
+        sys.stdout = self.stdout
+        sys.stderr = self.stdout
 
     def switch_out(self):
-        sys.stdin, sys.stderr, sys.stdout = self.saved
-        self.saved = None
+        sys.stdin = self.prev_stdin
+        sys.stdout = self.prev_stdout
+        sys.stderr = self.prev_stderr
+
+        self.prev_stdin = self.prev_stdout = self.prev_stderr = None
 
     def throw(self, *args, **kwargs):
         # pylint:disable=arguments-differ
-        if self.saved is None and self._fileobj is not None:
+        if self.prev_stdin is None and self.stdin is not None:
             self.switch_in()
         Greenlet.throw(self, *args, **kwargs)
 
@@ -139,10 +165,12 @@ class BackdoorServer(StreamServer):
             ``locals`` dictionary. Previously they were shared in a
             potentially unsafe manner.
         """
-        fobj = conn.makefile(mode="rw")
-        fobj = _fileobject(conn, fobj, self.stderr)
-        getcurrent()._fileobj = fobj
+        conn.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, True) # pylint:disable=no-member
+        raw_file = conn.makefile(mode="r")
+        getcurrent().stdin = _StdIn(conn, raw_file)
+        getcurrent().stdout = _StdErr(conn, raw_file)
 
+        # Swizzle the inputs
         getcurrent().switch_in()
         try:
             console = InteractiveConsole(self._create_interactive_locals())
@@ -152,15 +180,51 @@ class BackdoorServer(StreamServer):
                 console.interact(banner=self.banner, exitmsg='') # pylint:disable=unexpected-keyword-arg
             else:
                 console.interact(banner=self.banner)
-        except SystemExit:  # raised by quit()
-            if hasattr(sys, 'exc_clear'): # py2
-                sys.exc_clear()
+        except SystemExit:
+            # raised by quit(); obviously this cannot propagate.
+            exc_clear() # Python 2
         finally:
+            raw_file.close()
             conn.close()
-            fobj.close()
+
+class _BaseFileLike(object):
+
+    # Python 2 likes to test for this before writing to stderr.
+    softspace = None
+    encoding = 'utf-8'
+
+    __slots__ = (
+        'sock',
+        'fobj',
+        'fileno',
+    )
+
+    def __init__(self, sock, stdin):
+        self.sock = sock
+        self.fobj = stdin
+        # On Python 3, The builtin input() function (used by the
+        # default InteractiveConsole) calls fileno() on
+        # sys.stdin. If it's the same as the C stdin's fileno,
+        # and isatty(fd) (C function call) returns true,
+        # and all of that is also true for stdout, then input() will use
+        # PyOS_Readline to get the input.
+        #
+        # On Python 2, the sys.stdin object has to extend the file()
+        # class, and return true from isatty(fileno(sys.stdin.f_fp))
+        # (where f_fp is a C-level FILE* member) to use PyOS_Readline.
+        #
+        # If that doesn't hold, both versions fall back to reading and writing
+        # using sys.stdout.write() and sys.stdin.readline().
+        self.fileno = sock.fileno
+
+    def __getattr__(self, name):
+        return getattr(self.fobj, name)
+
+    def close(self):
+        pass
 
 
-class _fileobject(object):
+class _StdErr(_BaseFileLike):
     """
     A file-like object that wraps the result of socket.makefile (composition
     instead of inheritance lets us work identically under CPython and PyPy).
@@ -171,36 +235,24 @@ class _fileobject(object):
     the file in binary mode and translating everywhere with a non-default
     encoding.
     """
-    def __init__(self, sock, fobj, stderr):
-        self._sock = sock
-        self._fobj = fobj
-        self.stderr = stderr
 
-    def __getattr__(self, name):
-        return getattr(self._fobj, name)
-
-    def close(self):
-        self._fobj.close()
-        self._sock.close()
+    def flush(self):
+        "Does nothing. raw_input() calls this, only on Python 3."
 
     def write(self, data):
         if not isinstance(data, bytes):
-            data = data.encode('utf-8')
-        self._sock.sendall(data)
+            data = data.encode(self.encoding)
+        self.sock.sendall(data)
 
-    def isatty(self):
-        return True
-
-    def flush(self):
-        pass
+class _StdIn(_BaseFileLike):
+    # Like _StdErr, but for stdin.
 
     def readline(self, *a):
         try:
-            return self._fobj.readline(*a).replace("\r\n", "\n")
+            return self.fobj.readline(*a).replace("\r\n", "\n")
         except UnicodeError:
             # Typically, under python 3, a ^C on the other end
             return ''
-
 
 if __name__ == '__main__':
     if not sys.argv[1:]:

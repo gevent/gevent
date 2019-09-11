@@ -72,15 +72,23 @@ install () {
     # so that we don't get *spurious* caching. (Travis doesn't check for mod times,
     # just contents, so echoing each time doesn't cause it to re-cache.)
 
-    # Overwrite an existing alias
-    ln -sf $DESTINATION/bin/python $SNAKEPIT/$ALIAS
-    ln -sf $DESTINATION $SNAKEPIT/$DIR_ALIAS
+    # Overwrite an existing alias.
+    # For whatever reason, ln -sf on Travis works fine for the ALIAS,
+    # but fails for the DIR_ALIAS. No clue why. So we delete an existing one of those
+    # manually.
+    if [ -L "$SNAKEPIT/$DIR_ALIAS" ]; then
+        rm -f $SNAKEPIT/$DIR_ALIAS
+    fi
+    ln -sfv $DESTINATION/bin/python $SNAKEPIT/$ALIAS
+    ln -sfv $DESTINATION $SNAKEPIT/$DIR_ALIAS
     echo $VERSION $ALIAS $DIR_ALIAS > $SNAKEPIT/$ALIAS.installed
     $SNAKEPIT/$ALIAS --version
+    $DESTINATION/bin/python --version
     # Set the PATH to include the install's bin directory so pip
     # doesn't nag.
     PATH="$DESTINATION/bin/:$PATH" $SNAKEPIT/$ALIAS -m pip install --upgrade pip wheel virtualenv
     ls -l $SNAKEPIT
+    ls -l $BASE/versions
 
 }
 
@@ -97,7 +105,7 @@ for var in "$@"; do
             install 3.6.8 python3.6 3.6.d
             ;;
         3.7)
-            install 3.7.2 python3.7 3.7.d
+            install 3.7.4 python3.7 3.7.d
             ;;
         3.8)
             install 3.8.0b4 python3.8 3.8.d
