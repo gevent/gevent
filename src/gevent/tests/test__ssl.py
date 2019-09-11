@@ -101,6 +101,4 @@ class TestSSL(test__socket.TestTCP):
 
 if __name__ == '__main__':
     import sys
-    if sys.version_info[0] >= 3:
-        sys.argv.append('-v')
     greentest.main()

@@ -146,6 +146,17 @@ class TestTCP(greentest.TestCase):
         try:
             log("creating client connection")
             client = self.create_connection(**client_args)
+
+            # We seem to have a buffer stuck somewhere on appveyor?
+            # https://ci.appveyor.com/project/denik/gevent/builds/27320824/job/bdbax88sqnjoti6i#L712
+            should_unwrap = hasattr(client, 'unwrap') and greentest.PY37 and greentest.WIN
+
+            # The implicit reference-based nastiness of Python 2
+            # sockets interferes, especially when using SSL sockets.
+            # The best way to get a decent FIN to the server is to shutdown
+            # the output. Doing that on Python 3, OTOH, is contraindicated.
+            should_shutdown = greentest.PY2
+
             # It's important to wait for the server to fully accept before
             # we shutdown and close the socket. In SSL mode, the number
             # and timing of data exchanges to complete the handshake and
@@ -167,18 +178,18 @@ class TestTCP(greentest.TestCase):
                 getattr(client, client_method)(data)
             except:
                 import traceback; traceback.print_exc()
+                # unwrapping might not work after this because we're in
+                # a bad state.
+                if should_unwrap:
+                    client.shutdown(socket.SHUT_RDWR)
+                    should_unwrap = False
+                    should_shutdown = False
                 raise
             finally:
                 log("shutdown")
-                if greentest.PY2:
-                    # The implicit reference-based nastiness of Python 2
-                    # sockets interferes, especially when using SSL sockets.
-                    # The best way to get a decent FIN to the server is to shutdown
-                    # the output. Doing that on Python 3, OTOH, is contraindicated.
+                if should_shutdown:
                     client.shutdown(socket.SHUT_RDWR)
-                elif hasattr(client, 'unwrap') and greentest.PY37 and greentest.WIN:
-                    # We seem to have a buffer stuck somewhere on appveyor?
-                    # https://ci.appveyor.com/project/denik/gevent/builds/27320824/job/bdbax88sqnjoti6i#L712
+                elif should_unwrap:
                     client.unwrap()
                 log("closing")
                 client.close()
