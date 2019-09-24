@@ -123,9 +123,10 @@ class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
             return True
 
         if not blocking:
-            return False
+            success = self._wait(0)
+        else:
+            success = self._wait(timeout)
 
-        success = self._wait(timeout)
         if not success:
             # Our timer expired.
             return False
