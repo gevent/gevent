@@ -274,7 +274,7 @@ class BaseServer(object):
             try:
                 if fself is self:
                     # Checks the __self__ of the handle in case it is a bound
-                    # method of self to prevent recursivly defined reprs.
+                    # method of self to prevent recursively defined reprs.
                     handle_repr = '<bound method %s.%s of self>' % (
                         self.__class__.__name__,
                         handle.__name__,
