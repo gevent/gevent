@@ -4,7 +4,7 @@
 
 .. currentmodule:: gevent
 
-1.5a2 (unreleased)
+1.5a2 (2019-10-21)
 ==================
 
 - Add support for CPython 3.8.0. (Windows wheels are not yet available.)
