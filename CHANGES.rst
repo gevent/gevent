@@ -7,12 +7,12 @@
 1.5a2 (unreleased)
 ==================
 
-- Update to Cython 0.29.7 and cffi 1.12.3.
+- Add support for CPython 3.8.0. (Windows wheels are not yet available.)
+
+- Update to Cython 0.29.13 and cffi 1.12.3.
 
 - Add an ``--module`` option to ``gevent.monkey`` allowing to run a Python
   module rather than a script. See :pr:`1440`.
-
-- Add support for CPython 3.8.0b4.
 
 - Improve the way joining the main thread works on Python 3.
 
