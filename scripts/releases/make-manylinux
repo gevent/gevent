@@ -12,7 +12,7 @@ if [ -d /gevent -a -d /opt/python ]; then
     cd /gevent
     rm -rf wheelhouse
     mkdir wheelhouse
-    for variant in `ls -d /opt/python/cp{27,35,36,37}*`; do
+    for variant in `ls -d /opt/python/cp{27,35,36,37,38}*`; do
         echo "Building $variant"
         mkdir /tmp/build
         cd /tmp/build
