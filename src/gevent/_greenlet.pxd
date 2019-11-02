@@ -23,7 +23,7 @@ cdef extern from "greenlet/greenlet.h":
         # going through the overhead of generic attribute lookup.
         cdef void* parent
 
-    # These are actually macros and so much be included
+    # These are actually macros and so must be included
     # (defined) in each .pxd, as are the two functions
     # that call them.
     greenlet PyGreenlet_GetCurrent()
