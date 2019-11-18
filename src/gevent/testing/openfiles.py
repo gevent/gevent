@@ -122,8 +122,16 @@ else:
         results = dict()
         gc.disable()
         try:
-            process = psutil.Process()
-            results['data'] = process.open_files() + process.connections('all')
+            for _ in range(3):
+                try:
+                    process = psutil.Process()
+                    results['data'] = process.open_files() + process.connections('all')
+                    break
+                except OSError:
+                    pass
+            else:
+                # No break executed
+                raise unittest.SkipTest("Unable to read open files")
         finally:
             gc.enable()
         for x in results['data']:
