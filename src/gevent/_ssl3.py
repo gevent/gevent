@@ -162,7 +162,7 @@ class SSLContext(orig_SSLContext):
             super(orig_SSLContext, orig_SSLContext).sni_callback.__set__(self, value)
     else:
         # In newer versions, this just sets sni_callback.
-        def set_servername_callback(self, cb):
+        def set_servername_callback(self, cb): # pylint:disable=arguments-differ
             if cb and callable(cb):
                 cb = _Callback(cb)
             super().set_servername_callback(cb)

@@ -1007,10 +1007,15 @@ class Popen(object):
             # Process startup details
             if startupinfo is None:
                 startupinfo = STARTUPINFO()
-            elif hasattr(startupinfo, '_copy'):
+            elif hasattr(startupinfo, 'copy'):
                 # bpo-34044: Copy STARTUPINFO since it is modified below,
                 # so the caller can reuse it multiple times.
+                startupinfo = startupinfo.copy()
+            elif hasattr(startupinfo, '_copy'):
+                # When the fix was backported to Python 3.7, copy() was
+                # made private as _copy.
                 startupinfo = startupinfo._copy()
+
             use_std_handles = -1 not in (p2cread, c2pwrite, errwrite)
             if use_std_handles:
                 startupinfo.dwFlags |= STARTF_USESTDHANDLES
