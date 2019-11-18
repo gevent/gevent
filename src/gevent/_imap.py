@@ -206,8 +206,7 @@ class IMap(IMapUnordered):
                 index, value = self.queue.get()
                 if index == self.index:
                     break
-                else:
-                    self._results[index] = value
+                self._results[index] = value
         self.index += 1
         return value
 

@@ -49,6 +49,9 @@ limit-inference-results=1
 # @property
 # def foo(self):
 #   return None # generates useless-return
+# Pylint 2.4 adds import-outside-toplevel. But we do that a lot to defer imports because of patching.
+# Pylint 2.4 adds self-assigning-variable. But we do *that* to avoid unused-import when we
+# "export" the variable and don't have a __all__.
 disable=wrong-import-position,
     wrong-import-order,
     missing-docstring,
@@ -69,7 +72,9 @@ disable=wrong-import-position,
     undefined-all-variable,
     inconsistent-return-statements,
     useless-return,
-    useless-object-inheritance
+    useless-object-inheritance,
+    import-outside-toplevel,
+    self-assigning-variable
 
 
 [FORMAT]

@@ -47,6 +47,14 @@ def NativeStrIO():
     import io
     return io.BytesIO() if str is bytes else io.StringIO()
 
+try:
+    from abc import ABC
+except ImportError:
+    import abc
+    ABC = abc.ABCMeta('ABC', (object,), {'__slots__': ()})
+    del abc
+
+
 ## Exceptions
 if PY3:
     def reraise(t, value, tb=None): # pylint:disable=unused-argument
@@ -86,6 +94,16 @@ else:
     xrange = __builtin__.xrange
     from itertools import izip # python 3: pylint:disable=no-member,no-name-in-module
     izip = izip
+
+## The __fspath__ protocol
+
+try:
+    from os import PathLike # pylint:disable=unused-import
+except ImportError:
+    class PathLike(ABC):
+        @classmethod
+        def __subclasshook__(cls, subclass):
+            return hasattr(subclass, '__fspath__')
 
 # fspath from 3.6 os.py, but modified to raise the same exceptions as the
 # real native implementation.
@@ -152,6 +170,19 @@ except ImportError:
             # Not sure how to handle this.
             raise UnicodeEncodeError("Can't encode path to filesystem encoding")
 
+try:
+    from os import fsdecode # pylint:disable=unused-import
+except ImportError:
+    def fsdecode(filename):
+        """Decode filename (an os.PathLike, bytes, or str) from the filesystem
+        encoding with 'surrogateescape' error handler, return str unchanged. On
+        Windows, use 'strict' error handler if the file system encoding is
+        'mbcs' (which is the default encoding).
+        """
+        filename = fspath(filename)  # Does type-checking of `filename`.
+        if PY3 and isinstance(filename, bytes):
+            return filename.decode(encoding, errors)
+        return filename
 
 ## Clocks
 try:
@@ -162,7 +193,7 @@ except ImportError:
     import time
 
     if sys.platform == "win32":
-        perf_counter = time.clock
+        perf_counter = time.clock # pylint:disable=no-member
     else:
         perf_counter = time.time
 

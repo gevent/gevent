@@ -462,18 +462,29 @@ class Hub(WaitOperationsGreenlet):
 
     def handle_error(self, context, type, value, tb):
         """
-        Called by the event loop when an error occurs. The arguments
-        type, value, and tb are the standard tuple returned by :func:`sys.exc_info`.
+        Called by the event loop when an error occurs. The default
+        action is to print the exception to the :attr:`exception
+        stream <exception_stream>`.
 
-        Applications can set a property on the hub with this same signature
-        to override the error handling provided by this class.
+        The arguments ``type``, ``value``, and ``tb`` are the standard
+        tuple as returned by :func:`sys.exc_info`. (Note that when
+        this is called, it may not be safe to call
+        :func:`sys.exc_info`.)
 
-        Errors that are :attr:`system errors <SYSTEM_ERROR>` are passed
-        to :meth:`handle_system_error`.
+        Errors that are :attr:`not errors <NOT_ERROR>` are not
+        printed.
 
-        :param context: If this is ``None``, indicates a system error that
-            should generally result in exiting the loop and being thrown to the
-            parent greenlet.
+        Errors that are :attr:`system errors <SYSTEM_ERROR>` are
+        passed to :meth:`handle_system_error` after being printed.
+
+        Applications can set a property on the hub instance with this
+        same signature to override the error handling provided by this
+        class. This is an advanced usage and requires great care. This
+        function *must not* raise any exceptions.
+
+        :param context: If this is ``None``, indicates a system error
+            that should generally result in exiting the loop and being
+            thrown to the parent greenlet.
         """
         if isinstance(value, str):
             # Cython can raise errors where the value is a plain string
@@ -513,7 +524,8 @@ class Hub(WaitOperationsGreenlet):
     def exception_stream(self):
         """
         The stream to which exceptions will be written.
-        Defaults to ``sys.stderr`` unless assigned to.
+        Defaults to ``sys.stderr`` unless assigned. Assigning a
+        false (None) value disables printing exceptions.
 
         .. versionadded:: 1.2a1
         """

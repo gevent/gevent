@@ -108,6 +108,17 @@ else:
            (socket.listen(1)). Unlike the lsof implementation, this will only
            return sockets in a state like that.
         """
+        if sysinfo.PYPY:
+            # We've seen OSError: No such file or directory /proc/PID/fd/NUM.
+            # This occurs in the loop that checks open files. It first does listdir()
+            # and then tries readlink() on each file. But the file went away.
+            # This must be because of async GC in PyPy running destructors at arbitrary
+            # times. This became an issue in PyPy 7.2. Try to clean that up before we
+            # begin.
+            import gc
+            gc.collect()
+            gc.collect()
+
         results = dict()
         process = psutil.Process()
         results['data'] = process.open_files() + process.connections('all')

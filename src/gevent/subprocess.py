@@ -49,8 +49,9 @@ from gevent._compat import PY36
 from gevent._compat import PY37
 from gevent._compat import PY38
 from gevent._compat import reraise
-from gevent._compat import fspath
+from gevent._compat import fsdecode
 from gevent._compat import fsencode
+from gevent._compat import PathLike
 from gevent._util import _NONE
 from gevent._util import copy_globals
 
@@ -648,7 +649,7 @@ class Popen(object):
         # Convert here for the sake of all platforms. os.chdir accepts
         # path-like objects natively under 3.6, but CreateProcess
         # doesn't.
-        cwd = fspath(cwd) if cwd is not None else None
+        cwd = fsdecode(cwd) if cwd is not None else None
         try:
             self._execute_child(args, executable, preexec_fn, close_fds,
                                 pass_fds, cwd, env, universal_newlines,
@@ -983,6 +984,22 @@ class Popen(object):
             """Execute program (MS Windows version)"""
             # pylint:disable=undefined-variable
             assert not pass_fds, "pass_fds not supported on Windows."
+            if isinstance(args, str):
+                pass
+            elif isinstance(args, bytes):
+                if shell and PY3:
+                    raise TypeError('bytes args is not allowed on Windows')
+                args = list2cmdline([args])
+            elif isinstance(args, PathLike):
+                if shell:
+                    raise TypeError('path-like args is not allowed when '
+                                    'shell is true')
+                args = list2cmdline([args])
+            else:
+                args = list2cmdline(args)
+
+            if executable is not None:
+                executable = fsdecode(executable)
 
             if not isinstance(args, string_types):
                 args = list2cmdline(args)
@@ -1060,7 +1077,7 @@ class Popen(object):
                                                  int(not close_fds),
                                                  creationflags,
                                                  env,
-                                                 cwd,
+                                                 cwd, # fsdecode handled earlier
                                                  startupinfo)
             except IOError as e: # From 2.6 on, pywintypes.error was defined as IOError
                 # Translate pywintypes.error to WindowsError, which is
@@ -1345,14 +1362,20 @@ class Popen(object):
                 args = [args]
             elif not PY3 and isinstance(args, string_types):
                 args = [args]
+            elif isinstance(args, PathLike):
+                if shell:
+                    raise TypeError('path-like args is not allowed when '
+                                    'shell is true')
+                args = [fsencode(args)] # os.PathLike -> [str]
             else:
-                try:
-                    args = list(args)
-                except TypeError:  # os.PathLike instead of a sequence?
-                    args = [fsencode(args)]  # os.PathLike -> [str]
+                args = list(args)
 
             if shell:
-                args = ["/bin/sh", "-c"] + args
+                # On Android the default shell is at '/system/bin/sh'.
+                unix_shell = (
+                    '/system/bin/sh' if hasattr(sys, 'getandroidapilevel') else '/bin/sh'
+                )
+                args = [unix_shell, "-c"] + args
                 if executable:
                     args[0] = executable
 

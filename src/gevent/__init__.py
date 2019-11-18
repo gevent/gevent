@@ -31,29 +31,29 @@ __version__ = '1.5a3.dev0'
 
 
 __all__ = [
-    'get_hub',
     'Greenlet',
     'GreenletExit',
+    'Timeout',
+    'config', # Added in 1.3a2
+    'fork',
+    'get_hub',
+    'getcurrent',
+    'getswitchinterval',
+    'idle',
+    'iwait',
+    'joinall',
+    'kill',
+    'killall',
+    'reinit',
+    'setswitchinterval',
+    'signal', # deprecated
+    'signal_handler',
+    'sleep',
     'spawn',
     'spawn_later',
     'spawn_raw',
-    'iwait',
     'wait',
-    'killall',
-    'Timeout',
     'with_timeout',
-    'getcurrent',
-    'sleep',
-    'idle',
-    'kill',
-    'signal', # deprecated
-    'signal_handler',
-    'fork',
-    'reinit',
-    'getswitchinterval',
-    'setswitchinterval',
-    # Added in 1.3a2
-    'config',
 ]
 
 
@@ -89,11 +89,9 @@ from gevent._hub_primitives import iwait_on_objects as iwait
 from gevent._hub_primitives import wait_on_objects as wait
 
 from gevent.greenlet import Greenlet, joinall, killall
-joinall = joinall # export for pylint
 spawn = Greenlet.spawn
 spawn_later = Greenlet.spawn_later
 #: The singleton configuration object for gevent.
-config = config
 
 from gevent.timeout import Timeout, with_timeout
 from gevent.hub import getcurrent, GreenletExit, spawn_raw, sleep, idle, kill, reinit
@@ -163,7 +161,7 @@ del sys
 # outdated on each major release.
 
 def __dependencies_for_freezing(): # pragma: no cover
-    # pylint:disable=unused-import
+    # pylint:disable=unused-import, import-outside-toplevel
     from gevent import core
     from gevent import resolver_thread
     from gevent import resolver_ares

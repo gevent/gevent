@@ -398,7 +398,7 @@ class socket(object):
 
                 if not result or result == EISCONN:
                     break
-                elif (result in (EWOULDBLOCK, EINPROGRESS, EALREADY)) or (result == EINVAL and is_windows):
+                if (result in (EWOULDBLOCK, EINPROGRESS, EALREADY)) or (result == EINVAL and is_windows):
                     self._wait(self._write_event)
                 else:
                     if (isinstance(address, tuple)

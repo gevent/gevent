@@ -24,6 +24,7 @@ from .patched_tests_setup import disable_tests_in_source
 from . import support
 from . import resources
 from . import SkipTest
+from . import util
 
 if RUNNING_ON_APPVEYOR and PY37:
     # 3.7 added a stricter mode for thread cleanup.
@@ -41,6 +42,15 @@ if RUNNING_ON_APPVEYOR and PY37:
 
 # Configure allowed resources
 resources.setup_resources()
+
+if not os.path.exists(test_filename) and os.sep not in test_filename:
+    # A simple filename, given without a path, that doesn't exist.
+    # So we change to the appropriate directory, if we can find it.
+    # This happens when copy-pasting the output of the testrunner
+    for d in util.find_stdlib_tests():
+        if os.path.exists(os.path.join(d, test_filename)):
+            os.chdir(d)
+            break
 
 __file__ = os.path.join(os.getcwd(), test_filename)
 
