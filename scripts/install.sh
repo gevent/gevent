@@ -29,8 +29,8 @@ else
     # and it's pretty large.
     # So if we need to incorporate changes from pyenv, either temporarily
     # turn this back on, or remove the Travis caches.
-    # git fetch || echo "Fetch failed to complete. Ignoring"
-    # git reset --hard origin/master
+    git fetch || echo "Fetch failed to complete. Ignoring"
+    git reset --hard origin/master
     cd $back
 fi
 

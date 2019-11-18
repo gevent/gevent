@@ -293,10 +293,9 @@ class IntegrationTests(TestCase):
                 received = len(response.read())
             http.close()
 
-        background = threading.Thread(target=run_client, name='gevent')
+        background = threading.Thread(target=run_client)
         background.start()
         server.handle_request()
-        print(dir(background))
         background.join()
         self.assertEqual(received, support.SOCK_MAX_SIZE - 100)
 
@@ -587,10 +586,10 @@ class HandlerTests(TestCase):
         expected.update({
             # X doesn't exist in os_environ
             "X": "Y",
-            # HOME is overriden by TestHandler
+            # HOME is overridden by TestHandler
             'HOME': "/override/home",
 
-            # overriden by setup_testing_defaults()
+            # overridden by setup_testing_defaults()
             "SCRIPT_NAME": "",
             "SERVER_NAME": "127.0.0.1",
 
