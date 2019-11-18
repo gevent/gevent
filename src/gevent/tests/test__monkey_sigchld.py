@@ -1,7 +1,6 @@
 import errno
 import os
 import sys
-#os.environ['GEVENT_NOWAITPID'] = 'True'
 
 import gevent
 import gevent.monkey
@@ -19,8 +18,27 @@ def handle_sigchld(*_args):
     # Raise an ignored error
     raise TypeError("This should be ignored but printed")
 
+# Try to produce output compatible with unittest output so
+# our status parsing functions work.
+
 import signal
 if hasattr(signal, 'SIGCHLD'):
+    # In Python 3.8.0 final, on both Travis CI/Linux and locally
+    # on macOS, the *child* process started crashing on exit with a memory
+    # error:
+    #
+    # Debug memory block at address p=0x7fcf5d6b5000: API ''
+    #     6508921152173528397 bytes originally requested
+    #     The 7 pad bytes at p-7 are not all FORBIDDENBYTE (0xfd):
+    #
+    # When PYTHONDEVMODE is set. This happens even if we just simply fork
+    # the child process and don't have gevent even /imported/ in the most
+    # minimal test case. It's not clear what caused that.
+    if sys.version_info[:2] >= (3, 8) and os.environ.get("PYTHONDEVMODE"):
+        print("Ran 1 tests in 0.0s (skipped=1)")
+        sys.exit(0)
+
+
     assert signal.getsignal(signal.SIGCHLD) == signal.SIG_DFL
     signal.signal(signal.SIGCHLD, handle_sigchld)
     handler = signal.getsignal(signal.SIGCHLD)
@@ -64,6 +82,8 @@ if hasattr(signal, 'SIGCHLD'):
                 raise AssertionError("Failed to wait using", func)
             finally:
                 timeout.close()
+    print("Ran 1 tests in 0.0s")
     sys.exit(0)
 else:
     print("No SIGCHLD, not testing")
+    print("Ran 1 tests in 0.0s (skipped=1)")

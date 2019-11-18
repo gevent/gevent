@@ -18,7 +18,6 @@ import os
 import subprocess
 import signal
 
-# from test import lock_tests
 from gevent.tests import lock_tests # gevent: use our local copy
 from test import support
 

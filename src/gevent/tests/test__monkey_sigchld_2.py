@@ -16,6 +16,11 @@ def handle(*_args):
         os.waitpid(-1, os.WNOHANG)
 # The signal watcher must be installed *before* monkey patching
 if hasattr(signal, 'SIGCHLD'):
+    if sys.version_info[:2] >= (3, 8) and os.environ.get("PYTHONDEVMODE"):
+        # See test__monkey_sigchld.py
+        print("Ran 1 tests in 0.0s (skipped=1)")
+        sys.exit(0)
+
     # On Python 2, the signal handler breaks the platform
     # module, because it uses os.popen. pkg_resources uses the platform
     # module.

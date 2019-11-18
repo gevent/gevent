@@ -137,3 +137,16 @@ RESOLVER_ARES = os.getenv('GEVENT_RESOLVER') == 'ares'
 RESOLVER_DNSPYTHON = os.getenv('GEVENT_RESOLVER') == 'dnspython'
 
 RESOLVER_NOT_SYSTEM = RESOLVER_ARES or RESOLVER_DNSPYTHON
+
+def get_python_version():
+    """
+    Return a string of the simple python version,
+    such as '3.8.0b4'. Handles alpha and beta and final releases.
+    """
+    version = '%s.%s.%s' % sys.version_info[:3]
+    if sys.version_info[3] == 'alpha':
+        version += 'a%s' % sys.version_info[4]
+    elif sys.version_info[3] == 'beta':
+        version += 'b%s' % sys.version_info[4]
+
+    return version

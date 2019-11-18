@@ -9,6 +9,8 @@ import gevent.testing as greentest
 from gevent.tests import test__socket
 import ssl
 
+from gevent.testing import PY2
+
 def ssl_listener(private_key, certificate):
     raw_listener = socket.socket()
     greentest.bind_and_listen(raw_listener)
@@ -24,8 +26,11 @@ class TestSSL(test__socket.TestTCP):
     # ssl.SSLError); That's gone in Py3 though. In Python 2, most timeouts are raised
     # as SSLError, but Python 3 raises the normal socket.timeout instead. So this has
     # the effect of making TIMEOUT_ERROR be SSLError on Py2 and socket.timeout on Py3
-    # See https://bugs.python.org/issue10272
-    TIMEOUT_ERROR = getattr(socket, 'sslerror', socket.timeout)
+    # See https://bugs.python.org/issue10272.
+    # PyPy3 7.2 has a bug, though: it shares much of the SSL implementation with Python 2,
+    # and it unconditionally does `socket.sslerror = SSLError` when ssl is imported.
+    # So we can't rely on getattr/hasattr tests, we must be explicit.
+    TIMEOUT_ERROR = socket.sslerror if PY2 else socket.timeout # pylint:disable=no-member
 
     def _setup_listener(self):
         listener, raw_listener = ssl_listener(self.privfile, self.certfile)

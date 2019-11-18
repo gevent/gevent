@@ -44,6 +44,31 @@ if 'namedtuple' in __all__:
 
 orig_SSLContext = __ssl__.SSLContext # pylint:disable=no-member
 
+# We have to pass the raw stdlib socket to SSLContext.wrap_socket.
+# That method in turn can pass that object on to things like SNI callbacks.
+# It wouldn't have access to any of the attributes on the SSLSocket, like
+# context, that it's supposed to (see test_ssl.test_sni_callback). Previously
+# we just delegated to the sslsocket with __getattr__, but 3.8
+# added some new callbacks and a test that the object they get is an instance
+# of the high-level SSLSocket class, so that doesn't work anymore. Instead,
+# we wrap the callback and get the real socket to pass on.
+class _contextawaresock(socket._gevent_sock_class):
+    __slots__ = ('_sslsock',)
+
+    def __init__(self, family, type, proto, fileno, sslsocket_wref):
+        super().__init__(family, type, proto, fileno)
+        self._sslsock = sslsocket_wref
+
+class _Callback(object):
+
+    __slots__ = ('user_function',)
+
+    def __init__(self, user_function):
+        self.user_function = user_function
+
+    def __call__(self, conn, *args):
+        conn = conn._sslsock()
+        return self.user_function(conn, *args)
 
 class SSLContext(orig_SSLContext):
 
@@ -67,10 +92,6 @@ class SSLContext(orig_SSLContext):
             server_hostname=server_hostname,
             _context=self,
             _session=session)
-
-    if not hasattr(orig_SSLContext, 'check_hostname'):
-        # Python 3.3 lacks this
-        check_hostname = False
 
     if hasattr(orig_SSLContext.options, 'setter'):
         # In 3.6, these became properties. They want to access the
@@ -108,52 +129,44 @@ class SSLContext(orig_SSLContext):
         # SSLContext back. This function cannot switch, so it should be safe,
         # unless somehow we have multiple threads in a monkey-patched ssl module
         # at the same time, which doesn't make much sense.
-        @orig_SSLContext._msg_callback.setter
+        @property
+        def _msg_callback(self):
+            result = super()._msg_callback
+            if isinstance(result, _Callback):
+                result = result.user_function
+            return result
+
+        @_msg_callback.setter
         def _msg_callback(self, value):
+            if value and callable(value):
+                value = _Callback(value)
+
             __ssl__.SSLContext = orig_SSLContext
             try:
                 super(SSLContext, SSLContext)._msg_callback.__set__(self, value)
             finally:
                 __ssl__.SSLContext = SSLContext
 
-class _contextawaresock(socket._gevent_sock_class):
-    # We have to pass the raw stdlib socket to SSLContext.wrap_socket.
-    # That method in turn can pass that object on to things like SNI callbacks.
-    # It wouldn't have access to any of the attributes on the SSLSocket, like
-    # context, that it's supposed to (see test_ssl.test_sni_callback). Our
-    # solution is to keep a weak reference to the SSLSocket on the raw
-    # socket and delegate.
+    if hasattr(orig_SSLContext, 'sni_callback'):
+        # Added in 3.7.
+        @property
+        def sni_callback(self):
+            result = super().sni_callback
+            if isinstance(result, _Callback):
+                result = result.user_function
+            return result
+        @sni_callback.setter
+        def sni_callback(self, value):
+            if value and callable(value):
+                value = _Callback(value)
+            super(orig_SSLContext, orig_SSLContext).sni_callback.__set__(self, value)
+    else:
+        # In newer versions, this just sets sni_callback.
+        def set_servername_callback(self, cb): # pylint:disable=arguments-differ
+            if cb and callable(cb):
+                cb = _Callback(cb)
+            super().set_servername_callback(cb)
 
-    # We keep it in a slot to avoid having the ability to set any attributes
-    # we're not prepared for (because we don't know what to delegate.)
-
-    __slots__ = ('_sslsock',)
-
-    @property
-    def context(self):
-        return self._sslsock().context
-
-    @context.setter
-    def context(self, ctx):
-        self._sslsock().context = ctx
-
-    @property
-    def session(self):
-        """The SSLSession for client socket."""
-        return self._sslsock().session
-
-    @session.setter
-    def session(self, session):
-        self._sslsock().session = session
-
-    def __getattr__(self, name):
-        try:
-            return getattr(self._sslsock(), name)
-        except RuntimeError:
-            # XXX: If the attribute doesn't exist,
-            # we infinitely recurse
-            pass
-        raise AttributeError(name)
 
 class SSLSocket(socket):
     """
@@ -163,8 +176,6 @@ class SSLSocket(socket):
     """
 
     # pylint:disable=too-many-instance-attributes,too-many-public-methods
-
-    _gevent_sock_class = _contextawaresock
 
     def __init__(self, sock=None, keyfile=None, certfile=None,
                  server_side=False, cert_reqs=CERT_NONE,
@@ -243,7 +254,6 @@ class SSLSocket(socket):
         else:
             socket.__init__(self, family=family, type=type, proto=proto)
 
-        self._sock._sslsock = _wref(self)
         self._closed = False
         self._sslobj = None
         # see if we're connected
@@ -273,6 +283,9 @@ class SSLSocket(socket):
             except socket_error as x:
                 self.close()
                 raise x
+
+    def _gevent_sock_class(self, family, type, proto, fileno):
+        return _contextawaresock(family, type, proto, fileno, _wref(self))
 
     def _extra_repr(self):
         return ' server=%s, cipher=%r' % (

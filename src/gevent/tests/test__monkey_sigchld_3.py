@@ -25,6 +25,11 @@ def _waitpid(p):
     assert stat == 0, stat
 
 if hasattr(signal, 'SIGCHLD'):
+    if sys.version_info[:2] >= (3, 8) and os.environ.get("PYTHONDEVMODE"):
+        # See test__monkey_sigchld.py
+        print("Ran 1 tests in 0.0s (skipped=1)")
+        sys.exit(0)
+
     # Do what subprocess does and make sure we have the watcher
     # in the parent
     get_hub().loop.install_sigchld()
@@ -50,3 +55,4 @@ if hasattr(signal, 'SIGCHLD'):
         sys.exit(0)
 else:
     print("No SIGCHLD, not testing")
+    print("Ran 1 tests in 0.0s (skipped=1)")

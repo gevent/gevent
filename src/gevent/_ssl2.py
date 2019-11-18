@@ -235,8 +235,7 @@ class SSLSocket(socket):
                         sys.exc_clear()
                         self._wait(self._read_event)
                         continue
-                    else:
-                        raise
+                    raise
         else:
             return socket.recv_into(self, buffer, nbytes, flags)
 

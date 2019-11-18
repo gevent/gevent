@@ -418,6 +418,40 @@ def search_for_setup_py(a_file=None, a_module_name=None, a_class=None, climb_cwd
 
     raise NoSetupPyFound("After checking %r" % (locals(),))
 
+def _version_dir_components():
+    directory = '%s.%s' % sys.version_info[:2]
+    full_directory = '%s.%s.%s' % sys.version_info[:3]
+    if hasattr(sys, 'pypy_version_info'):
+        directory += 'pypy'
+        full_directory += 'pypy'
+
+    return directory, full_directory
+
+def find_stdlib_tests():
+    """
+    Return a sequence of directories that could contain
+    stdlib tests for the running version of Python.
+
+    The most specific tests are at the end of the sequence.
+
+    No checks are performed on existence of the directories.
+    """
+    setup_py = search_for_setup_py(a_file=__file__)
+    greentest = os.path.join(setup_py, 'src', 'greentest')
+
+
+    directory, full_directory = _version_dir_components()
+
+    directory = '%s.%s' % sys.version_info[:2]
+    full_directory = '%s.%s.%s' % sys.version_info[:3]
+    if hasattr(sys, 'pypy_version_info'):
+        directory += 'pypy'
+        full_directory += 'pypy'
+
+    directory = os.path.join(greentest, directory)
+    full_directory = os.path.join(greentest, full_directory)
+
+    return directory, full_directory
 
 class ExampleMixin(object):
     "Something that uses the examples/ directory"
