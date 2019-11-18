@@ -110,12 +110,17 @@ class Test(greentest.TestCase):
 
     def make_open_socket(self):
         s = socket.socket()
-        s.bind(DEFAULT_BIND_ADDR_TUPLE)
-        if WIN or greentest.LINUX:
-            # Windows and linux (with psutil) doesn't show as open until
-            # we call listen (linux with lsof accepts either)
-            s.listen(1)
-        self.assert_open(s, s.fileno())
+        try:
+            s.bind(DEFAULT_BIND_ADDR_TUPLE)
+            if WIN or greentest.LINUX:
+                # Windows and linux (with psutil) doesn't show as open until
+                # we call listen (linux with lsof accepts either)
+                s.listen(1)
+            self.assert_open(s, s.fileno())
+        except:
+            s.close()
+            s = None
+            raise
         return s
 
 # Sometimes its this one, sometimes it's test_ssl. No clue why or how.
