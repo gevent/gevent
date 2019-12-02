@@ -321,25 +321,7 @@ class FileObjectPosix(FileObjectBase):
             self._translate_newline = None
 
             if PY2 and not text_mode:
-                # We're going to be producing unicode objects, but
-                # universal newlines doesn't do that in the stdlib,
-                # so fix that to return str objects. The fix is two parts:
-                # first, set an encoding on the stream that can round-trip
-                # all bytes, and second, decode all bytes once they've been read.
-                self._translate_encoding = 'latin-1'
-                import functools
-
-                def wrap_method(m):
-                    if m.__name__.startswith("read"):
-                        @functools.wraps(m)
-                        def wrapped(*args, **kwargs):
-                            result = m(*args, **kwargs)
-                            assert isinstance(result, unicode) # pylint:disable=undefined-variable
-                            return result.encode('latin-1')
-                        return wrapped
-                    return m
-                self._wrap_method = wrap_method
-
+                self._translate_mode = 'byte_newlines'
 
         self._orig_bufsize = bufsize
         if bufsize < 0 or bufsize == 1:

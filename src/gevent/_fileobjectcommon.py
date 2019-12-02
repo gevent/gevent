@@ -11,6 +11,7 @@ import sys
 
 
 from gevent.hub import _get_hub_noargs as get_hub
+from gevent._compat import PY2
 from gevent._compat import integer_types
 from gevent._compat import reraise
 from gevent._compat import fspath
@@ -28,6 +29,30 @@ class FileObjectClosed(IOError):
     def __init__(self):
         super(FileObjectClosed, self).__init__(
             EBADF, 'Bad file descriptor (FileObject was closed)')
+
+class _UniversalNewlineBytesWrapper(io.TextIOWrapper):
+    """
+    Uses TextWrapper to decode universal newlines, but returns the
+    results as bytes.
+
+    This is for Python 2 where the 'rU' mode did that.
+    """
+
+    def __init__(self, fobj):
+        io.TextIOWrapper.__init__(self, fobj, encoding='latin-1', newline=None)
+
+    def read(self, *args, **kwargs):
+        result = io.TextIOWrapper.read(self, *args, **kwargs)
+        return result.encode('latin-1')
+
+    def readline(self, *args, **kwargs):
+        result = io.TextIOWrapper.readline(self, *args, **kwargs)
+        return result.encode('latin-1')
+
+    def readlines(self, *args, **kwargs):
+        result = io.TextIOWrapper.readlines(self, *args, **kwargs)
+        return [x.encode('latin-1') for x in result]
+
 
 class FileObjectBase(object):
     """
@@ -64,6 +89,7 @@ class FileObjectBase(object):
     # Whether we should apply a TextWrapper (the names are historical).
     # Subclasses should set these before calling our constructor.
     _translate = False
+    _translate_mode = None
     _translate_encoding = None
     _translate_errors = None
     _translate_newline = None # None means universal
@@ -80,7 +106,7 @@ class FileObjectBase(object):
         if self._translate:
             # This automatically handles delegation by assigning to
             # self.io
-            self.translate_newlines(None,
+            self.translate_newlines(self._translate_mode,
                                     self._translate_encoding,
                                     self._translate_errors)
         else:
@@ -112,9 +138,13 @@ class FileObjectBase(object):
         return method
 
     def translate_newlines(self, mode, *text_args, **text_kwargs):
-        wrapper = io.TextIOWrapper(self._io, *text_args, **text_kwargs)
+        if mode == 'byte_newlines':
+            wrapper = _UniversalNewlineBytesWrapper(self._io)
+            mode = None
+        else:
+            wrapper = io.TextIOWrapper(self._io, *text_args, **text_kwargs)
         if mode:
-            wrapper.mode = mode
+            wrapper.mode = mode # pylint:disable=attribute-defined-outside-init
         self.io = wrapper
         self._translate = True
 
@@ -151,6 +181,19 @@ class FileObjectBase(object):
     def __exit__(self, *args):
         self.close()
 
+    # Modes that work with native strings on Python 2
+    _NATIVE_PY2_MODES = ('r', 'r+', 'w', 'w+', 'a', 'a+')
+
+    if PY2:
+        @classmethod
+        def _use_FileIO(cls, mode, encoding, errors):
+            return mode in cls._NATIVE_PY2_MODES \
+                and encoding is None and errors is None
+    else:
+        @classmethod
+        def _use_FileIO(cls, mode, encoding, errors): # pylint:disable=unused-argument
+            return False
+
     @classmethod
     def _open_raw(cls, fobj, mode='r', buffering=-1,
                   encoding=None, errors=None, newline=None, closefd=True):
@@ -179,8 +222,7 @@ class FileObjectBase(object):
             fobj = fspath(fobj)
             closefd = True
 
-        if bytes is str and mode in ('r', 'r+', 'w', 'w+', 'a', 'a+') \
-           and encoding is None and errors is None:
+        if cls._use_FileIO(mode, encoding, errors):
             # Python 2, default open. Return native str type, not unicode, which
             # is what would happen with io.open('r'), but we don't want to open the file
             # in binary mode since that skips newline conversion.
@@ -259,9 +301,15 @@ class FileObjectThread(FileObjectBase):
             self.lock = DummySemaphore()
         if not hasattr(self.lock, '__enter__'):
             raise TypeError('Expected a Semaphore or boolean, got %r' % type(self.lock))
+        universal_newline = 'U' in mode or newline is None
+        mode = mode.replace('U', '')
         fobj = self._open_raw(fobj, mode, bufsize,
                               encoding=encoding, errors=errors, newline=newline,
                               closefd=close)
+        if self._use_FileIO(mode, encoding, errors) and universal_newline:
+            self._translate_mode = 'byte_newlines'
+            self._translate = True
+
         self.__io_holder = [fobj] # signal for _wrap_method
         super(FileObjectThread, self).__init__(fobj, closefd)
 

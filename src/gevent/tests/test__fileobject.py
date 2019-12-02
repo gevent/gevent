@@ -13,7 +13,7 @@ import gevent.testing as greentest
 from gevent.testing.sysinfo import PY3
 from gevent.testing.flaky import reraiseFlakyTestRaceConditionLibuv
 from gevent.testing.skipping import skipOnLibuvOnCIOnPyPy
-
+from gevent.testing.skipping import skipOnLibuv
 
 try:
     ResourceWarning
@@ -293,6 +293,13 @@ class TestFileObjectPosix(ConcurrentFileObjectMixin,
         self.assertEqual(io_ex.args, os_ex.args)
         self.assertEqual(str(io_ex), str(os_ex))
 
+    @skipOnLibuv("libuv on linux raises EPERM ") # but works fine on macOS
+    def test_str_default_to_native(self):
+        TestFileObjectBlock.test_str_default_to_native(self)
+
+    @skipOnLibuv("libuv in linux raises EPERM")
+    def test_text_encoding(self):
+        TestFileObjectBlock.test_text_encoding(self)
 
 class TestTextMode(unittest.TestCase):
 
