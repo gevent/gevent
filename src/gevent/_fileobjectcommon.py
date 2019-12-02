@@ -301,7 +301,8 @@ class FileObjectThread(FileObjectBase):
             self.lock = DummySemaphore()
         if not hasattr(self.lock, '__enter__'):
             raise TypeError('Expected a Semaphore or boolean, got %r' % type(self.lock))
-        universal_newline = 'U' in mode or newline is None
+        using_fileio = self._use_FileIO(mode.replace('U', ''), encoding, errors)
+        universal_newline = 'U' in mode or (not using_fileio and newline is None)
         mode = mode.replace('U', '')
         fobj = self._open_raw(fobj, mode, bufsize,
                               encoding=encoding, errors=errors, newline=newline,
