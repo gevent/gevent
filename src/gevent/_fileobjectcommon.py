@@ -5,8 +5,7 @@ try:
 except ImportError:
     EBADF = 9
 
-import os
-from io import TextIOWrapper
+import io
 import functools
 import sys
 
@@ -14,6 +13,7 @@ import sys
 from gevent.hub import _get_hub_noargs as get_hub
 from gevent._compat import integer_types
 from gevent._compat import reraise
+from gevent._compat import fspath
 from gevent.lock import Semaphore, DummySemaphore
 
 class cancel_wait_ex(IOError):
@@ -32,7 +32,8 @@ class FileObjectClosed(IOError):
 class FileObjectBase(object):
     """
     Internal base class to ensure a level of consistency
-    between FileObjectPosix and FileObjectThread
+    between :class:`~.FileObjectPosix`, :class:`~.FileObjectThread`
+    and :class:`~.FileObjectBlock`.
     """
 
     # List of methods we delegate to the wrapping IO object, if they
@@ -60,17 +61,18 @@ class FileObjectBase(object):
     )
 
 
-    # Whether we are translating universal newlines or not.
+    # Whether we should apply a TextWrapper (the names are historical).
+    # Subclasses should set these before calling our constructor.
     _translate = False
-
     _translate_encoding = None
     _translate_errors = None
+    _translate_newline = None # None means universal
 
-    def __init__(self, io, closefd):
+    def __init__(self, fobj, closefd):
         """
-        :param io: An io.IOBase-like object.
+        :param fobj: An io.IOBase-like object.
         """
-        self._io = io
+        self._io = fobj
         # We don't actually use this property ourself, but we save it (and
         # pass it along) for compatibility.
         self._close = closefd
@@ -78,7 +80,9 @@ class FileObjectBase(object):
         if self._translate:
             # This automatically handles delegation by assigning to
             # self.io
-            self.translate_newlines(None, self._translate_encoding, self._translate_errors)
+            self.translate_newlines(None,
+                                    self._translate_encoding,
+                                    self._translate_errors)
         else:
             self._do_delegate_methods()
 
@@ -108,7 +112,7 @@ class FileObjectBase(object):
         return method
 
     def translate_newlines(self, mode, *text_args, **text_kwargs):
-        wrapper = TextIOWrapper(self._io, *text_args, **text_kwargs)
+        wrapper = io.TextIOWrapper(self._io, *text_args, **text_kwargs)
         if mode:
             wrapper.mode = mode
         self.io = wrapper
@@ -123,9 +127,9 @@ class FileObjectBase(object):
         if self._io is None:
             return
 
-        io = self._io
+        fobj = self._io
         self._io = None
-        self._do_close(io, self._close)
+        self._do_close(fobj, self._close)
 
     def _do_close(self, fobj, closefd):
         raise NotImplementedError()
@@ -147,21 +151,70 @@ class FileObjectBase(object):
     def __exit__(self, *args):
         self.close()
 
+    @classmethod
+    def _open_raw(cls, fobj, mode='r', buffering=-1,
+                  encoding=None, errors=None, newline=None, closefd=True):
+        """
+        Uses :func:`io.open` on *fobj* and returns the IO object.
+
+        This is a compatibility wrapper for Python 2 and Python 3. It
+        supports PathLike objects for *fobj* on all versions.
+
+        If the object is already an object with a ``fileno`` method,
+        it is returned unchanged.
+
+        On Python 2, if the mode only specifies read, write or append,
+        and encoding and errors are not specified, then
+        :obj:`io.FileIO` is used to get the IO object. This ensures we
+        return native strings unless explicitly requested.
+
+        .. versionchanged: 1.5
+           Support closefd for Python 2 native string readers.
+        """
+        if hasattr(fobj, 'fileno'):
+            return fobj
+
+        if not isinstance(fobj, integer_types):
+            # Not an integer. Support PathLike on Python 2 and Python <= 3.5.
+            fobj = fspath(fobj)
+            closefd = True
+
+        if bytes is str and mode in ('r', 'r+', 'w', 'w+', 'a', 'a+') \
+           and encoding is None and errors is None:
+            # Python 2, default open. Return native str type, not unicode, which
+            # is what would happen with io.open('r'), but we don't want to open the file
+            # in binary mode since that skips newline conversion.
+            fobj = io.FileIO(fobj, mode, closefd=closefd)
+            if '+' in mode:
+                BufFactory = io.BufferedRandom
+            elif mode[0] == 'r':
+                BufFactory = io.BufferedReader
+            else:
+                BufFactory = io.BufferedWriter
+
+            if buffering == -1:
+                fobj = BufFactory(fobj)
+            elif buffering != 0:
+                fobj = BufFactory(fobj, buffering)
+        else:
+            # Python 3, or we have a mode that Python 2's os.fdopen/open can't handle
+            # (x) or they explicitly asked for binary or text mode.
+
+            fobj = io.open(fobj, mode, buffering, encoding, errors, newline, closefd)
+        return fobj
+
 class FileObjectBlock(FileObjectBase):
 
     def __init__(self, fobj, *args, **kwargs):
-        closefd = kwargs.pop('close', True)
-        if kwargs:
-            raise TypeError('Unexpected arguments: %r' % kwargs.keys())
-        if isinstance(fobj, integer_types):
-            if not closefd:
-                # we cannot do this, since fdopen object will close the descriptor
-                raise TypeError('FileObjectBlock does not support close=False on an fd.')
-            fobj = os.fdopen(fobj, *args)
+        closefd = kwargs['closefd'] = kwargs.pop('close', True)
+        if 'bufsize' in kwargs: # compat with other constructors
+            kwargs['buffering'] = kwargs.pop('bufsize')
+        fobj = self._open_raw(fobj, *args, **kwargs)
         super(FileObjectBlock, self).__init__(fobj, closefd)
 
     def _do_close(self, fobj, closefd):
         fobj.close()
+
 
 class FileObjectThread(FileObjectBase):
     """
@@ -176,12 +229,18 @@ class FileObjectThread(FileObjectBase):
        The file object is closed using the threadpool. Note that whether or
        not this action is synchronous or asynchronous is not documented.
 
+    .. versionchanged:: 1.5
+       Accept str and ``PathLike`` objects for *fobj* on all versions of Python.
+    .. versionchanged:: 1.5
+       Add *encoding*, *errors* and *newline* arguments.
     """
 
-    def __init__(self, fobj, mode=None, bufsize=-1, close=True, threadpool=None, lock=True):
+    def __init__(self, fobj, mode='r', bufsize=-1, close=True, threadpool=None, lock=True,
+                 encoding=None, errors=None, newline=None):
         """
-        :param fobj: The underlying file-like object to wrap, or an integer fileno
-           that will be pass to :func:`os.fdopen` along with *mode* and *bufsize*.
+        :param fobj: The underlying file-like object to wrap, or something
+           acceptable to :func:`io.open` (along with *mode* and *bufsize*, which is translated
+           to *buffering*).
         :keyword bool lock: If True (the default) then all operations will
            be performed one-by-one. Note that this does not guarantee that, if using
            this file object from multiple threads/greenlets, operations will be performed
@@ -200,16 +259,9 @@ class FileObjectThread(FileObjectBase):
             self.lock = DummySemaphore()
         if not hasattr(self.lock, '__enter__'):
             raise TypeError('Expected a Semaphore or boolean, got %r' % type(self.lock))
-        if isinstance(fobj, integer_types):
-            if not closefd:
-                # we cannot do this, since fdopen object will close the descriptor
-                raise TypeError('FileObjectThread does not support close=False on an fd.')
-            if mode is None:
-                assert bufsize == -1, "If you use the default mode, you can't choose a bufsize"
-                fobj = os.fdopen(fobj)
-            else:
-                fobj = os.fdopen(fobj, mode, bufsize)
-
+        fobj = self._open_raw(fobj, mode, bufsize,
+                              encoding=encoding, errors=errors, newline=newline,
+                              closefd=close)
         self.__io_holder = [fobj] # signal for _wrap_method
         super(FileObjectThread, self).__init__(fobj, closefd)
 
@@ -244,8 +296,8 @@ class FileObjectThread(FileObjectBase):
 
     def _do_delegate_methods(self):
         super(FileObjectThread, self)._do_delegate_methods()
-        if not hasattr(self, 'read1') and 'r' in getattr(self._io, 'mode', ''):
-            self.read1 = self.read
+        # if not hasattr(self, 'read1') and 'r' in getattr(self._io, 'mode', ''):
+        #     self.read1 = self.read
         self.__io_holder[0] = self._io
 
     def _extra_repr(self):

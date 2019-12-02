@@ -7,6 +7,7 @@ import unittest
 
 import gevent
 from gevent import fileobject
+from gevent._compat import PY2
 
 import gevent.testing as greentest
 from gevent.testing.sysinfo import PY3
@@ -21,7 +22,7 @@ except NameError:
         "Python 2 fallback"
 
 
-def writer(fobj, line):
+def Writer(fobj, line):
     for character in line:
         fobj.write(character)
         fobj.flush()
@@ -34,7 +35,7 @@ def close_fd_quietly(fd):
     except (IOError, OSError):
         pass
 
-class TestFileObjectBlock(greentest.TestCase):
+class TestFileObjectBlock(greentest.TestCase): # serves as a base for the concurrent tests too
 
     def _getTargetClass(self):
         return fileobject.FileObjectBlock
@@ -127,6 +128,34 @@ class TestFileObjectBlock(greentest.TestCase):
         self.assertEqual(native_data, s)
         self.assertEqual(native_data, fileobj_data)
 
+    def test_str_default_to_native(self):
+        # With no 'b' or 't' given, read and write native str.
+        fileno, path = tempfile.mkstemp('.gevent_test_str_default')
+        self.addCleanup(os.remove, path)
+
+        os.write(fileno, b'abcdefg')
+        os.close(fileno)
+
+        with open(path, 'r') as f:
+            native_data = f.read()
+
+        with self._makeOne(path, 'r') as f:
+            gevent_data = f.read()
+
+        self.assertEqual(native_data, gevent_data)
+
+    def test_text_encoding(self):
+        fileno, path = tempfile.mkstemp('.gevent_test_str_default')
+        self.addCleanup(os.remove, path)
+
+        os.write(fileno, u'\N{SNOWMAN}'.encode('utf-8'))
+        os.close(fileno)
+
+        with self._makeOne(path, 'r+', bufsize=5, encoding='utf-8') as f:
+            gevent_data = f.read()
+
+        self.assertEqual(u'\N{SNOWMAN}', gevent_data)
+
     def test_close_pipe(self):
         # Issue #190, 203
         r, w = os.pipe()
@@ -140,14 +169,31 @@ class ConcurrentFileObjectMixin(object):
     # Additional tests for fileobjects that cooperate
     # and we have full control of the implementation
 
-    def test_read1(self):
+    def test_read1_binary_present(self):
         # Issue #840
         r, w = os.pipe()
-        x = self._makeOne(r)
-        y = self._makeOne(w, 'w')
-        self._close_on_teardown(x)
-        self._close_on_teardown(y)
-        self.assertTrue(hasattr(x, 'read1'))
+        reader = self._makeOne(r, 'rb')
+        self._close_on_teardown(reader)
+        writer = self._makeOne(w, 'w')
+        self._close_on_teardown(writer)
+        self.assertTrue(hasattr(reader, 'read1'), dir(reader))
+
+    def test_read1_text_not_present(self):
+        # Only defined for binary.
+        r, w = os.pipe()
+        reader = self._makeOne(r, 'rt')
+        self._close_on_teardown(reader)
+        self.addCleanup(os.close, w)
+        self.assertFalse(hasattr(reader, 'read1'), dir(reader))
+
+    def test_read1_default(self):
+        # If just 'r' is given, whether it has one or not
+        # depends on if we're Python 2 or 3.
+        r, w = os.pipe()
+        self.addCleanup(os.close, w)
+        reader = self._makeOne(r)
+        self._close_on_teardown(reader)
+        self.assertEqual(PY2, hasattr(reader, 'read1'))
 
     def test_bufsize_0(self):
         # Issue #840
@@ -168,7 +214,7 @@ class ConcurrentFileObjectMixin(object):
         import warnings
         r, w = os.pipe()
         lines = [b'line1\n', b'line2\r', b'line3\r\n', b'line4\r\nline5', b'\nline6']
-        g = gevent.spawn(writer, self._makeOne(w, 'wb'), lines)
+        g = gevent.spawn(Writer, self._makeOne(w, 'wb'), lines)
 
         try:
             with warnings.catch_warnings():
@@ -188,13 +234,12 @@ class TestFileObjectThread(ConcurrentFileObjectMixin,
     def _getTargetClass(self):
         return fileobject.FileObjectThread
 
-    # FileObjectThread uses os.fdopen() when passed a file-descriptor,
-    # which returns an object with a destructor that can't be
-    # bypassed, so we can't even create one that way
     def test_del_noclose(self):
-        with self.assertRaisesRegex(TypeError,
-                                    'FileObjectThread does not support close=False on an fd.'):
-            self._test_del(close=False)
+        # In the past, we used os.fdopen() when given a file descriptor,
+        # and that has a destructor that can't be bypassed, so
+        # close=false wasn't allowed. Now that we do everything with the
+        # io module, it is allowed.
+        self._test_del(close=False)
 
     # We don't test this with FileObjectThread. Sometimes the
     # visibility of the 'close' operation, which happens in a

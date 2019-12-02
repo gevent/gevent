@@ -10,6 +10,8 @@ from io import RawIOBase
 from io import UnsupportedOperation
 
 from gevent._compat import reraise
+from gevent._compat import PY2
+from gevent._compat import PY3
 from gevent._fileobjectcommon import cancel_wait_ex
 from gevent._fileobjectcommon import FileObjectBase
 from gevent.hub import get_hub
@@ -183,6 +185,8 @@ class FlushingBufferedWriter(BufferedWriter):
         return ret
 
 
+_marker = object()
+
 class FileObjectPosix(FileObjectBase):
     """
     A file-like object that operates on non-blocking files but
@@ -234,12 +238,21 @@ class FileObjectPosix(FileObjectBase):
        better file-like semantics (and portability to Python 3).
     .. versionchanged:: 1.2a1
        Document the ``fileio`` attribute for non-blocking reads.
+    .. versionchanged:: 1.5
+       The default value for *mode* was changed from ``rb`` to ``r``.
+    .. versionchanged:: 1.5
+       Support strings and ``PathLike`` objects for ``fobj`` on all versions
+       of Python. Note that caution above.
+    .. versionchanged:: 1.5
+       Add *encoding*, *errors* and *newline* argument.
     """
 
     #: platform specific default for the *bufsize* parameter
     default_bufsize = io.DEFAULT_BUFFER_SIZE
 
-    def __init__(self, fobj, mode='rb', bufsize=-1, close=True):
+    def __init__(self, fobj, mode='r', bufsize=-1, close=True,
+                 encoding=None, errors=None, newline=_marker):
+        # pylint:disable=too-many-locals
         """
         :param fobj: Either an integer fileno, or an object supporting the
             usual :meth:`socket.fileno` method. The file *will* be
@@ -248,7 +261,7 @@ class FileObjectPosix(FileObjectBase):
             (where the "b" or "U" can be omitted).
             If "U" is part of the mode, universal newlines will be used. On Python 2,
             if 't' is not in the mode, this will result in returning byte (native) strings;
-            putting 't'  in the mode will return text strings. This may cause
+            putting 't'  in the mode will return text (unicode) strings. This may cause
             :exc:`UnicodeDecodeError` to be raised.
         :keyword int bufsize: If given, the size of the buffer to use. The default
             value means to use a platform-specific default
@@ -274,15 +287,40 @@ class FileObjectPosix(FileObjectBase):
             fileno = fobj
             fobj = None
         else:
+            # The underlying object, if we have to open it, should be
+            # in binary mode. We'll take care of any coding needed.
+            raw_mode = mode.replace('t', 'b')
+            raw_mode = raw_mode + 'b' if 'b' not in raw_mode else raw_mode
+            new_fobj = self._open_raw(fobj, raw_mode, bufsize, closefd=False)
+            if new_fobj is not fobj:
+                close = True
+                fobj = new_fobj
             fileno = fobj.fileno()
-        if not isinstance(fileno, int):
-            raise TypeError('fileno must be int: %r' % fileno)
 
-        orig_mode = mode
-        mode = (mode or 'rb').replace('b', '')
+        self.__fobj = fobj
+        assert isinstance(fileno, int)
+
+        # We want text mode if:
+        # - We're on Python 3, and no 'b' is in the mode.
+        # - A 't' is in the mode on any version.
+        # - We're on Python 2 and no 'b' is in the mode, and an encoding or errors is
+        #   given.
+        text_mode = (
+            't' in mode
+            or (PY3 and 'b' not in mode)
+            or (PY2 and 'b' not in mode and (encoding, errors) != (None, None))
+        )
+        if text_mode:
+            self._translate = True
+            self._translate_newline = os.linesep if newline is _marker else newline
+            self._translate_encoding = encoding
+            self._transalate_errors = errors
+
         if 'U' in mode:
             self._translate = True
-            if bytes is str and 't' not in mode:
+            self._translate_newline = None
+
+            if PY2 and not text_mode:
                 # We're going to be producing unicode objects, but
                 # universal newlines doesn't do that in the stdlib,
                 # so fix that to return str objects. The fix is two parts:
@@ -301,20 +339,6 @@ class FileObjectPosix(FileObjectBase):
                         return wrapped
                     return m
                 self._wrap_method = wrap_method
-            mode = mode.replace('U', '')
-        else:
-            self._translate = False
-
-        mode = mode.replace('t', '')
-
-        if len(mode) != 1 and mode not in 'rw': # pragma: no cover
-            # Python 3 builtin `open` raises a ValueError for invalid modes;
-            # Python 2 ignores it. In the past, we raised an AssertionError, if __debug__ was
-            # enabled (which it usually was). Match Python 3 because it makes more sense
-            # and because __debug__ may not be enabled.
-            # NOTE: This is preventing a mode like 'rwb' for binary random access;
-            # that code was never tested and was explicitly marked as "not used"
-            raise ValueError('mode can only be [rb, rU, wb], not %r' % (orig_mode,))
 
 
         self._orig_bufsize = bufsize
@@ -323,10 +347,10 @@ class FileObjectPosix(FileObjectBase):
         elif bufsize == 0:
             bufsize = 1
 
-        if mode == 'r':
+        if mode[0] == 'r':
             IOFamily = BufferedReader
         else:
-            assert mode == 'w'
+            assert mode[0] == 'w'
             IOFamily = BufferedWriter
             if self._orig_bufsize == 0:
                 # We could also simply pass self.fileio as *io*, but this way
@@ -335,7 +359,7 @@ class FileObjectPosix(FileObjectBase):
                 IOFamily = FlushingBufferedWriter
 
 
-        self._fobj = fobj
+
         # This attribute is documented as available for non-blocking reads.
         self.fileio = GreenFileDescriptorIO(fileno, mode, closefd=close)
 
@@ -349,8 +373,13 @@ class FileObjectPosix(FileObjectBase):
             # self.fileio already knows whether or not to close the
             # file descriptor
             self.fileio.close()
+            if closefd and self.__fobj is not None:
+                try:
+                    self.__fobj.close()
+                except IOError:
+                    pass
         finally:
-            self._fobj = None
+            self.__fobj = None
             self.fileio = None
 
     def __iter__(self):
