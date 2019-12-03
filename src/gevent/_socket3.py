@@ -261,7 +261,9 @@ class socket(object):
         except the only mode characters supported are 'r', 'w' and 'b'.
         The semantics are similar too.
         """
-        # (XXX refactor to share code?)
+        # XXX refactor to share code? We ought to be able to use our FileObject,
+        # adding the appropriate amount of refcounting. At the very least we can use our
+        # OpenDescriptor to handle the parsing.
         for c in mode:
             if c not in {"r", "w", "b"}:
                 raise ValueError("invalid mode %r (only r, w, b allowed)")

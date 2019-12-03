@@ -77,7 +77,7 @@ class FlushingBufferedWriter(io.BufferedWriter):
 
 class OpenDescriptor(object): # pylint:disable=too-many-instance-attributes
     """
-    Interprets the arguments to `open`.
+    Interprets the arguments to `open`. Internal use only.
 
     Originally based on code in the stdlib's _pyio.py (Python implementation of
     the :mod:`io` module), but modified for gevent:
@@ -137,8 +137,10 @@ class OpenDescriptor(object): # pylint:disable=too-many-instance-attributes
         binary = "b" in modes
         universal = 'U' in modes
 
+        can_write = creating or writing or appending or updating
+
         if universal:
-            if creating or writing or appending or updating:
+            if can_write:
                 raise ValueError("mode U cannot be combined with 'x', 'w', 'a', or '+'")
             import warnings
             warnings.warn("'U' mode is deprecated",
@@ -179,6 +181,8 @@ class OpenDescriptor(object): # pylint:disable=too-many-instance-attributes
         self.updating = updating
         self.text = text
         self.binary = binary
+        self.can_write = can_write
+        self.can_read = reading or updating
         self.native = (
             not self.text and not self.binary # Neither t nor b given.
             and not encoding and not errors # And no encoding or error handling either.
@@ -309,9 +313,6 @@ class FileObjectBase(object):
     _io = None
 
     def __init__(self, fobj, closefd):
-        """
-        :param fobj: An io.IOBase-like object.
-        """
         self._io = fobj
         # We don't actually use this property ourself, but we save it (and
         # pass it along) for compatibility.
@@ -395,6 +396,13 @@ class FileObjectBase(object):
 
 
 class FileObjectBlock(FileObjectBase):
+    """
+    FileObjectBlock()
+
+    A simple synchronous wrapper around a file object.
+
+    Adds no concurrency or gevent compatibility.
+    """
 
     def __init__(self, fobj, *args, **kwargs):
         descriptor = OpenDescriptor(fobj, *args, **kwargs)
@@ -406,6 +414,8 @@ class FileObjectBlock(FileObjectBase):
 
 class FileObjectThread(FileObjectBase):
     """
+    FileObjectThread()
+
     A file-like object wrapping another file-like object, performing all blocking
     operations on that object in a background thread.
 
@@ -416,21 +426,11 @@ class FileObjectThread(FileObjectBase):
     .. versionchanged:: 1.1b1
        The file object is closed using the threadpool. Note that whether or
        not this action is synchronous or asynchronous is not documented.
-
-    .. versionchanged:: 1.5
-       Accept str and ``PathLike`` objects for *fobj* on all versions of Python.
-    .. versionchanged:: 1.5
-       Add *encoding*, *errors* and *newline* arguments.
-    .. versionchanged:: 1.5
-       Accept *closefd* and *buffering* instead of *close* and *bufsize* arguments.
-       The latter remain for backwards compatibility.
     """
 
 
     def __init__(self, *args, **kwargs):
         """
-        :param fobj: The underlying file-like object to wrap, or something
-           acceptable to :func:`io.open` (along with *mode* and *buffering*)
         :keyword bool lock: If True (the default) then all operations will
            be performed one-by-one. Note that this does not guarantee that, if using
            this file object from multiple threads/greenlets, operations will be performed

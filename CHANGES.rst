@@ -15,7 +15,8 @@
   consistently text and binary modes. If neither 'b' nor 't' is given
   in the mode, they will read and write native strings. If 't' is
   given, they will always work with unicode strings, and 'b' will
-  always work with byte strings. See :issue:`1441`.
+  always work with byte strings. (FileObjectPosix already worked this
+  way.) See :issue:`1441`.
 
 - The file objects accept *encoding*, *errors* and *newline*
   arguments. On Python 2, these are only used if 't' is in the mode.

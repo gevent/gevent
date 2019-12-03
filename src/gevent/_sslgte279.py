@@ -56,14 +56,16 @@ if 'namedtuple' in __all__:
 
 # See notes in _socket2.py. Python 3 returns much nicer
 # `io` object wrapped around a SocketIO class.
-assert not hasattr(__ssl__._fileobject, '__enter__') # pylint:disable=no-member
+if hasattr(__ssl__, '_fileobject'):
+    assert not hasattr(__ssl__._fileobject, '__enter__') # pylint:disable=no-member
 
-class _fileobject(__ssl__._fileobject): # pylint:disable=no-member
+class _fileobject(getattr(__ssl__, '_fileobject', object)): # pylint:disable=no-member
 
     def __enter__(self):
         return self
 
     def __exit__(self, *args):
+        # pylint:disable=no-member
         if not self.closed:
             self.close()
 
@@ -96,14 +98,14 @@ def create_default_context(purpose=Purpose.SERVER_AUTH, cafile=None,
     context = SSLContext(PROTOCOL_SSLv23)
 
     # SSLv2 considered harmful.
-    context.options |= OP_NO_SSLv2
+    context.options |= OP_NO_SSLv2 # pylint:disable=no-member
 
     # SSLv3 has problematic security and is only required for really old
     # clients such as IE6 on Windows XP
-    context.options |= OP_NO_SSLv3
+    context.options |= OP_NO_SSLv3 # pylint:disable=no-member
 
     # disable compression to prevent CRIME attacks (OpenSSL 1.0+)
-    context.options |= getattr(_ssl, "OP_NO_COMPRESSION", 0)
+    context.options |= getattr(_ssl, "OP_NO_COMPRESSION", 0) # pylint:disable=no-member
 
     if purpose == Purpose.SERVER_AUTH:
         # verify certs and host name in client mode
@@ -112,11 +114,11 @@ def create_default_context(purpose=Purpose.SERVER_AUTH, cafile=None,
     elif purpose == Purpose.CLIENT_AUTH:
         # Prefer the server's ciphers by default so that we get stronger
         # encryption
-        context.options |= getattr(_ssl, "OP_CIPHER_SERVER_PREFERENCE", 0)
+        context.options |= getattr(_ssl, "OP_CIPHER_SERVER_PREFERENCE", 0) # pylint:disable=no-member
 
         # Use single use keys in order to improve forward secrecy
-        context.options |= getattr(_ssl, "OP_SINGLE_DH_USE", 0)
-        context.options |= getattr(_ssl, "OP_SINGLE_ECDH_USE", 0)
+        context.options |= getattr(_ssl, "OP_SINGLE_DH_USE", 0) # pylint:disable=no-member
+        context.options |= getattr(_ssl, "OP_SINGLE_ECDH_USE", 0) # pylint:disable=no-member
 
         # disallow ciphers with known vulnerabilities
         context.set_ciphers(_RESTRICTED_SERVER_CIPHERS)
@@ -146,10 +148,10 @@ def _create_unverified_context(protocol=PROTOCOL_SSLv23, cert_reqs=None,
 
     context = SSLContext(protocol)
     # SSLv2 considered harmful.
-    context.options |= OP_NO_SSLv2
+    context.options |= OP_NO_SSLv2 # pylint:disable=no-member
     # SSLv3 has problematic security and is only required for really old
     # clients such as IE6 on Windows XP
-    context.options |= OP_NO_SSLv3
+    context.options |= OP_NO_SSLv3 # pylint:disable=no-member
 
     if cert_reqs is not None:
         context.verify_mode = cert_reqs

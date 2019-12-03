@@ -23,6 +23,9 @@ from gevent.os import make_nonblocking
 
 
 class GreenFileDescriptorIO(RawIOBase):
+    # Internal, undocumented, class. All that's documented is that this
+    # is a IOBase object. Constructor is private.
+
     # Note that RawIOBase has a __del__ method that calls
     # self.close(). (In C implementations like CPython, this is
     # the type's tp_dealloc slot; prior to Python 3, the object doesn't
@@ -34,15 +37,15 @@ class GreenFileDescriptorIO(RawIOBase):
     _seekable = None
     _keep_alive = None # An object that needs to live as long as we do.
 
-    def __init__(self, fileno, mode='r', closefd=True):
+    def __init__(self, fileno, open_descriptor, closefd=True):
         RawIOBase.__init__(self)
 
         self._closefd = closefd
         self._fileno = fileno
-        self.mode = mode
+        self.mode = open_descriptor.fileio_mode
         make_nonblocking(fileno)
-        readable = 'r' in mode or '+' in mode
-        writable = 'w' in mode or '+' in mode
+        readable = open_descriptor.can_read
+        writable = open_descriptor.can_write
 
         self.hub = get_hub()
         io_watcher = self.hub.loop.io
@@ -70,6 +73,7 @@ class GreenFileDescriptorIO(RawIOBase):
             raise
 
     def isatty(self):
+        # TODO: Couldn't we just subclass FileIO?
         f = FileIO(self._fileno, 'r', False)
         try:
             return f.isatty()
@@ -206,7 +210,7 @@ class GreenOpenDescriptor(OpenDescriptor):
 
     def open_raw(self):
         if self.is_fd():
-            fileio = GreenFileDescriptorIO(self.fobj, self.fileio_mode, closefd=self.closefd)
+            fileio = GreenFileDescriptorIO(self.fobj, self, closefd=self.closefd)
         else:
             closefd = False
             # Either an existing file object or a path string (which
@@ -219,13 +223,15 @@ class GreenOpenDescriptor(OpenDescriptor):
                 raw = OpenDescriptor.open_raw(self)
 
             fileno = raw.fileno()
-            fileio = GreenFileDescriptorIO(fileno, self.fileio_mode, closefd=closefd)
+            fileio = GreenFileDescriptorIO(fileno, self, closefd=closefd)
             fileio._keep_alive = raw
         return fileio
 
 
 class FileObjectPosix(FileObjectBase):
     """
+    FileObjectPosix()
+
     A file-like object that operates on non-blocking files but
     provides a synchronous, cooperative interface.
 
@@ -250,11 +256,6 @@ class FileObjectPosix(FileObjectBase):
          :func:`~gevent.os.tp_read` and :func:`~gevent.os.tp_write` to bypass this
          concern.
 
-    .. note::
-         Random read/write (e.g., ``mode='rwb'``) is not supported.
-         For that, use :class:`io.BufferedRWPair` around two instance of this
-         class.
-
     .. tip::
          Although this object provides a :meth:`fileno` method and so
          can itself be passed to :func:`fcntl.fcntl`, setting the
@@ -275,61 +276,32 @@ class FileObjectPosix(FileObjectBase):
        better file-like semantics (and portability to Python 3).
     .. versionchanged:: 1.2a1
        Document the ``fileio`` attribute for non-blocking reads.
+    .. versionchanged:: 1.2a1
+
+        A bufsize of 0 in write mode is no longer forced to be 1.
+        Instead, the underlying buffer is flushed after every write
+        operation to simulate a bufsize of 0. In gevent 1.0, a
+        bufsize of 0 was flushed when a newline was written, while
+        in gevent 1.1 it was flushed when more than one byte was
+        written. Note that this may have performance impacts.
+    .. versionchanged:: 1.3a1
+        On Python 2, enabling universal newlines no longer forces unicode
+        IO.
     .. versionchanged:: 1.5
        The default value for *mode* was changed from ``rb`` to ``r``. This is consistent
        with :func:`open`, :func:`io.open`, and :class:`~.FileObjectThread`, which is the
        default ``FileObject`` on some platforms.
-    .. versionchanged:: 1.5
-       Support strings and ``PathLike`` objects for ``fobj`` on all versions
-       of Python. Note that caution above.
-    .. versionchanged:: 1.5
-       Add *encoding*, *errors* and *newline* argument.
-    .. versionchanged:: 1.5
-       Accept *closefd* and *buffering* instead of *close* and *bufsize* arguments.
-       The latter remain for backwards compatibility.
-    .. versionchanged:: 1.5
+     .. versionchanged:: 1.5
        Stop forcing buffering. Previously, given a ``buffering=0`` argument,
-       *buffering8 would be set to 1, and ``buffering=1`` would be forced to
+       *buffering* would be set to 1, and ``buffering=1`` would be forced to
        the default buffer size. This was a workaround for a long-standing concurrency
        issue. Now the *buffering* argument is interpreted as intended.
     """
 
-    #: platform specific default for the *bufsize* parameter
     default_bufsize = DEFAULT_BUFFER_SIZE
 
     def __init__(self, *args, **kwargs):
-        # pylint:disable=too-many-locals
-        """
-        :param fobj: Either an integer fileno, or an object supporting the
-            usual :meth:`socket.fileno` method. The file *will* be
-            put in non-blocking mode using :func:`gevent.os.make_nonblocking`.
-        :keyword str mode: The manner of access to the file, one of "rb", "rU" or "wb"
-            (where the "b" or "U" can be omitted).
-            If "U" is part of the mode, universal newlines will be used. On Python 2,
-            if 't' is not in the mode, this will result in returning byte (native) strings;
-            putting 't'  in the mode will return text (unicode) strings. This may cause
-            :exc:`UnicodeDecodeError` to be raised.
-        :keyword int buffering: If given, the size of the buffer to use. The default
-            value means to use a platform-specific default
-            Other values are interpreted as for the :mod:`io` package.
-            Buffering is ignored in text mode.
-
-        .. versionchanged:: 1.3a1
-
-           On Python 2, enabling universal newlines no longer forces unicode
-           IO.
-
-        .. versionchanged:: 1.2a1
-
-           A bufsize of 0 in write mode is no longer forced to be 1.
-           Instead, the underlying buffer is flushed after every write
-           operation to simulate a bufsize of 0. In gevent 1.0, a
-           bufsize of 0 was flushed when a newline was written, while
-           in gevent 1.1 it was flushed when more than one byte was
-           written. Note that this may have performance impacts.
-        """
         descriptor = GreenOpenDescriptor(*args, **kwargs)
-
         # This attribute is documented as available for non-blocking reads.
         self.fileio, buffered_fobj = descriptor.open_raw_and_wrapped()
         super(FileObjectPosix, self).__init__(buffered_fobj, descriptor.closefd)
