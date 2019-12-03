@@ -57,7 +57,7 @@ class BlockingTestMixin(object):
             self.fail("blocking function '%r' appeared not to block" %
                       block_func)
         self.t.join(10) # make sure the thread terminates
-        if self.t.isAlive():
+        if self.t.is_alive():
             self.fail("trigger function '%r' appeared to not return" %
                       trigger_func)
         return self.result
@@ -72,7 +72,7 @@ class BlockingTestMixin(object):
                 block_func(*block_args)
         finally:
             self.t.join(10) # make sure the thread terminates
-            if self.t.isAlive():
+            if self.t.is_alive():
                 self.fail("trigger function '%r' appeared to not return" %
                           trigger_func)
             if not self.t.startedEvent.isSet():

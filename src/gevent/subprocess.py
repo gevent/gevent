@@ -37,7 +37,9 @@ import os
 import signal
 import sys
 import traceback
+
 from gevent.event import AsyncResult
+from gevent.exceptions import ConcurrentObjectUseError
 from gevent.hub import _get_hub_noargs as get_hub
 from gevent.hub import linkproxy
 from gevent.hub import sleep
@@ -428,7 +430,7 @@ else:
     _set_inheritable = lambda i, v: True
 
 
-def FileObject(*args):
+def FileObject(*args, **kwargs):
     # Defer importing FileObject until we need it
     # to allow it to be configured more easily.
     from gevent.fileobject import FileObject as _FileObject
@@ -611,26 +613,20 @@ class Popen(object):
             if PY3 and text_mode:
                 # Under Python 3, if we left on the 'b' we'd get different results
                 # depending on whether we used FileObjectPosix or FileObjectThread
-                self.stdin = FileObject(p2cwrite, 'wb', bufsize)
-                self.stdin.translate_newlines(None,
-                                              write_through=True,
-                                              line_buffering=(bufsize == 1),
-                                              encoding=self.encoding, errors=self.errors)
+                self.stdin = FileObject(p2cwrite, 'w', bufsize,
+                                        encoding=self.encoding, errors=self.errors)
             else:
                 self.stdin = FileObject(p2cwrite, 'wb', bufsize)
         if c2pread != -1:
             if universal_newlines or text_mode:
                 if PY3:
-                    # FileObjectThread doesn't support the 'U' qualifier
-                    # with a bufsize of 0
-                    self.stdout = FileObject(c2pread, 'rb', bufsize)
+                    self.stdout = FileObject(c2pread, 'r', bufsize,
+                                             encoding=self.encoding, errors=self.errors)
                     # NOTE: Universal Newlines are broken on Windows/Py3, at least
                     # in some cases. This is true in the stdlib subprocess module
                     # as well; the following line would fix the test cases in
                     # test__subprocess.py that depend on python_universal_newlines,
                     # but would be inconsistent with the stdlib:
-                    #msvcrt.setmode(self.stdout.fileno(), os.O_TEXT)
-                    self.stdout.translate_newlines('r', encoding=self.encoding, errors=self.errors)
                 else:
                     self.stdout = FileObject(c2pread, 'rU', bufsize)
             else:
@@ -638,8 +634,8 @@ class Popen(object):
         if errread != -1:
             if universal_newlines or text_mode:
                 if PY3:
-                    self.stderr = FileObject(errread, 'rb', bufsize)
-                    self.stderr.translate_newlines(None, encoding=encoding, errors=errors)
+                    self.stderr = FileObject(errread, 'r', bufsize,
+                                             encoding=encoding, errors=errors)
                 else:
                     self.stderr = FileObject(errread, 'rU', bufsize)
             else:
@@ -756,7 +752,13 @@ class Popen(object):
             def _read():
                 try:
                     data = pipe.read()
-                except RuntimeError:
+                except (
+                        # io.Buffered* can raise RuntimeError: 'reentrant call'
+                        RuntimeError,
+                        # unbuffered Posix IO that we're already waiting on
+                        # can raise this. Closing the pipe will free those greenlets up.
+                        ConcurrentObjectUseError
+                ):
                     return
                 if not data:
                     return
