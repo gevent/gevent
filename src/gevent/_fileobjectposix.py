@@ -1,19 +1,20 @@
 from __future__ import absolute_import
+from __future__ import print_function
 import os
 import sys
-import io
-from io import BufferedReader
-from io import BufferedWriter
+
+
 from io import BytesIO
 from io import DEFAULT_BUFFER_SIZE
+from io import FileIO
 from io import RawIOBase
 from io import UnsupportedOperation
 
 from gevent._compat import reraise
-from gevent._compat import PY2
-from gevent._compat import PY3
 from gevent._fileobjectcommon import cancel_wait_ex
 from gevent._fileobjectcommon import FileObjectBase
+from gevent._fileobjectcommon import OpenDescriptor
+from gevent._hub_primitives import wait_on_watcher
 from gevent.hub import get_hub
 from gevent.os import _read
 from gevent.os import _write
@@ -22,34 +23,38 @@ from gevent.os import make_nonblocking
 
 
 class GreenFileDescriptorIO(RawIOBase):
+    # Internal, undocumented, class. All that's documented is that this
+    # is a IOBase object. Constructor is private.
 
     # Note that RawIOBase has a __del__ method that calls
     # self.close(). (In C implementations like CPython, this is
     # the type's tp_dealloc slot; prior to Python 3, the object doesn't
     # appear to have a __del__ method, even though it functionally does)
 
-    _read_event = None
-    _write_event = None
+    _read_watcher = None
+    _write_watcher = None
     _closed = False
     _seekable = None
+    _keep_alive = None # An object that needs to live as long as we do.
 
-    def __init__(self, fileno, mode='r', closefd=True):
-        RawIOBase.__init__(self) # Python 2: pylint:disable=no-member,non-parent-init-called
+    def __init__(self, fileno, open_descriptor, closefd=True):
+        RawIOBase.__init__(self)
 
         self._closefd = closefd
         self._fileno = fileno
+        self.mode = open_descriptor.fileio_mode
         make_nonblocking(fileno)
-        readable = 'r' in mode
-        writable = 'w' in mode
+        readable = open_descriptor.can_read
+        writable = open_descriptor.can_write
 
         self.hub = get_hub()
         io_watcher = self.hub.loop.io
         try:
             if readable:
-                self._read_event = io_watcher(fileno, 1)
+                self._read_watcher = io_watcher(fileno, 1)
 
             if writable:
-                self._write_event = io_watcher(fileno, 2)
+                self._write_watcher = io_watcher(fileno, 2)
         except:
             # If anything goes wrong, it's important to go ahead and
             # close these watchers *now*, especially under libuv, so
@@ -67,11 +72,19 @@ class GreenFileDescriptorIO(RawIOBase):
             self.close()
             raise
 
+    def isatty(self):
+        # TODO: Couldn't we just subclass FileIO?
+        f = FileIO(self._fileno, 'r', False)
+        try:
+            return f.isatty()
+        finally:
+            f.close()
+
     def readable(self):
-        return self._read_event is not None
+        return self._read_watcher is not None
 
     def writable(self):
-        return self._write_event is not None
+        return self._write_watcher is not None
 
     def seekable(self):
         if self._seekable is None:
@@ -91,10 +104,10 @@ class GreenFileDescriptorIO(RawIOBase):
         return self._closed
 
     def __destroy_events(self):
-        read_event = self._read_event
-        write_event = self._write_event
+        read_event = self._read_watcher
+        write_event = self._write_watcher
         hub = self.hub
-        self.hub = self._read_event = self._write_event = None
+        self.hub = self._read_watcher = self._write_watcher = None
 
         if read_event is not None:
             hub.cancel_wait(read_event, cancel_wait_ex, True)
@@ -110,9 +123,14 @@ class GreenFileDescriptorIO(RawIOBase):
         self._closed = True
         self.__destroy_events()
         fileno = self._fileno
-        if self._closefd:
-            self._fileno = None
-            os.close(fileno)
+        keep_alive = self._keep_alive
+        self._fileno = self._keep_alive = None
+        try:
+            if self._closefd:
+                os.close(fileno)
+        finally:
+            if hasattr(keep_alive, 'close'):
+                keep_alive.close()
 
     # RawIOBase provides a 'read' method that will call readall() if
     # the `size` was missing or -1 and otherwise call readinto(). We
@@ -122,20 +140,26 @@ class GreenFileDescriptorIO(RawIOBase):
     # this was fixed in Python 3.3, but we still need our workaround for 2.7. See
     # https://github.com/gevent/gevent/issues/675)
     def __read(self, n):
-        if self._read_event is None:
+        if self._read_watcher is None:
             raise UnsupportedOperation('read')
-        while True:
+        while 1:
             try:
                 return _read(self._fileno, n)
             except (IOError, OSError) as ex:
                 if ex.args[0] not in ignored_errors:
                     raise
-            self.hub.wait(self._read_event)
+            wait_on_watcher(self._read_watcher, None, None, self.hub)
 
     def readall(self):
         ret = BytesIO()
         while True:
-            data = self.__read(DEFAULT_BUFFER_SIZE)
+            try:
+                data = self.__read(DEFAULT_BUFFER_SIZE)
+            except cancel_wait_ex:
+                # We were closed while reading. A buffered reader
+                # just returns what it has handy at that point,
+                # so we do to.
+                data = None
             if not data:
                 break
             ret.write(data)
@@ -154,7 +178,7 @@ class GreenFileDescriptorIO(RawIOBase):
         return n
 
     def write(self, b):
-        if self._write_event is None:
+        if self._write_watcher is None:
             raise UnsupportedOperation('write')
         while True:
             try:
@@ -162,7 +186,7 @@ class GreenFileDescriptorIO(RawIOBase):
             except (IOError, OSError) as ex:
                 if ex.args[0] not in ignored_errors:
                     raise
-            self.hub.wait(self._write_event)
+            wait_on_watcher(self._write_watcher, None, None, self.hub)
 
     def seek(self, offset, whence=0):
         try:
@@ -176,19 +200,38 @@ class GreenFileDescriptorIO(RawIOBase):
             # See https://github.com/gevent/gevent/issues/1323
             reraise(IOError, IOError(*ex.args), sys.exc_info()[2])
 
-
-class FlushingBufferedWriter(BufferedWriter):
-
-    def write(self, b):
-        ret = BufferedWriter.write(self, b)
-        self.flush()
-        return ret
+    def __repr__(self):
+        return "<%s at 0x%x fileno=%s mode=%r>" % (
+            type(self).__name__, id(self), self._fileno, self.mode
+        )
 
 
-_marker = object()
+class GreenOpenDescriptor(OpenDescriptor):
+
+    def open_raw(self):
+        if self.is_fd():
+            fileio = GreenFileDescriptorIO(self.fobj, self, closefd=self.closefd)
+        else:
+            closefd = False
+            # Either an existing file object or a path string (which
+            # we open to get a file object). In either case, the other object
+            # owns the descriptor and we must not close it.
+            closefd = False
+            if hasattr(self.fobj, 'fileno'):
+                raw = self.fobj
+            else:
+                raw = OpenDescriptor.open_raw(self)
+
+            fileno = raw.fileno()
+            fileio = GreenFileDescriptorIO(fileno, self, closefd=closefd)
+            fileio._keep_alive = raw
+        return fileio
+
 
 class FileObjectPosix(FileObjectBase):
     """
+    FileObjectPosix()
+
     A file-like object that operates on non-blocking files but
     provides a synchronous, cooperative interface.
 
@@ -213,11 +256,6 @@ class FileObjectPosix(FileObjectBase):
          :func:`~gevent.os.tp_read` and :func:`~gevent.os.tp_write` to bypass this
          concern.
 
-    .. note::
-         Random read/write (e.g., ``mode='rwb'``) is not supported.
-         For that, use :class:`io.BufferedRWPair` around two instance of this
-         class.
-
     .. tip::
          Although this object provides a :meth:`fileno` method and so
          can itself be passed to :func:`fcntl.fcntl`, setting the
@@ -238,116 +276,35 @@ class FileObjectPosix(FileObjectBase):
        better file-like semantics (and portability to Python 3).
     .. versionchanged:: 1.2a1
        Document the ``fileio`` attribute for non-blocking reads.
+    .. versionchanged:: 1.2a1
+
+        A bufsize of 0 in write mode is no longer forced to be 1.
+        Instead, the underlying buffer is flushed after every write
+        operation to simulate a bufsize of 0. In gevent 1.0, a
+        bufsize of 0 was flushed when a newline was written, while
+        in gevent 1.1 it was flushed when more than one byte was
+        written. Note that this may have performance impacts.
+    .. versionchanged:: 1.3a1
+        On Python 2, enabling universal newlines no longer forces unicode
+        IO.
     .. versionchanged:: 1.5
-       The default value for *mode* was changed from ``rb`` to ``r``.
-    .. versionchanged:: 1.5
-       Support strings and ``PathLike`` objects for ``fobj`` on all versions
-       of Python. Note that caution above.
-    .. versionchanged:: 1.5
-       Add *encoding*, *errors* and *newline* argument.
+       The default value for *mode* was changed from ``rb`` to ``r``. This is consistent
+       with :func:`open`, :func:`io.open`, and :class:`~.FileObjectThread`, which is the
+       default ``FileObject`` on some platforms.
+     .. versionchanged:: 1.5
+       Stop forcing buffering. Previously, given a ``buffering=0`` argument,
+       *buffering* would be set to 1, and ``buffering=1`` would be forced to
+       the default buffer size. This was a workaround for a long-standing concurrency
+       issue. Now the *buffering* argument is interpreted as intended.
     """
 
-    #: platform specific default for the *bufsize* parameter
-    default_bufsize = io.DEFAULT_BUFFER_SIZE
+    default_bufsize = DEFAULT_BUFFER_SIZE
 
-    def __init__(self, fobj, mode='r', bufsize=-1, close=True,
-                 encoding=None, errors=None, newline=_marker):
-        # pylint:disable=too-many-locals
-        """
-        :param fobj: Either an integer fileno, or an object supporting the
-            usual :meth:`socket.fileno` method. The file *will* be
-            put in non-blocking mode using :func:`gevent.os.make_nonblocking`.
-        :keyword str mode: The manner of access to the file, one of "rb", "rU" or "wb"
-            (where the "b" or "U" can be omitted).
-            If "U" is part of the mode, universal newlines will be used. On Python 2,
-            if 't' is not in the mode, this will result in returning byte (native) strings;
-            putting 't'  in the mode will return text (unicode) strings. This may cause
-            :exc:`UnicodeDecodeError` to be raised.
-        :keyword int bufsize: If given, the size of the buffer to use. The default
-            value means to use a platform-specific default
-            Other values are interpreted as for the :mod:`io` package.
-            Buffering is ignored in text mode.
-
-        .. versionchanged:: 1.3a1
-
-           On Python 2, enabling universal newlines no longer forces unicode
-           IO.
-
-        .. versionchanged:: 1.2a1
-
-           A bufsize of 0 in write mode is no longer forced to be 1.
-           Instead, the underlying buffer is flushed after every write
-           operation to simulate a bufsize of 0. In gevent 1.0, a
-           bufsize of 0 was flushed when a newline was written, while
-           in gevent 1.1 it was flushed when more than one byte was
-           written. Note that this may have performance impacts.
-        """
-
-        if isinstance(fobj, int):
-            fileno = fobj
-            fobj = None
-        else:
-            # The underlying object, if we have to open it, should be
-            # in binary mode. We'll take care of any coding needed.
-            raw_mode = mode.replace('t', 'b')
-            raw_mode = raw_mode + 'b' if 'b' not in raw_mode else raw_mode
-            new_fobj = self._open_raw(fobj, raw_mode, bufsize, closefd=False)
-            if new_fobj is not fobj:
-                close = True
-                fobj = new_fobj
-            fileno = fobj.fileno()
-
-        self.__fobj = fobj
-        assert isinstance(fileno, int)
-
-        # We want text mode if:
-        # - We're on Python 3, and no 'b' is in the mode.
-        # - A 't' is in the mode on any version.
-        # - We're on Python 2 and no 'b' is in the mode, and an encoding or errors is
-        #   given.
-        text_mode = (
-            't' in mode
-            or (PY3 and 'b' not in mode)
-            or (PY2 and 'b' not in mode and (encoding, errors) != (None, None))
-        )
-        if text_mode:
-            self._translate = True
-            self._translate_newline = os.linesep if newline is _marker else newline
-            self._translate_encoding = encoding
-            self._transalate_errors = errors
-
-        if 'U' in mode:
-            self._translate = True
-            self._translate_newline = None
-
-            if PY2 and not text_mode:
-                self._translate_mode = 'byte_newlines'
-
-        self._orig_bufsize = bufsize
-        if bufsize < 0 or bufsize == 1:
-            bufsize = self.default_bufsize
-        elif bufsize == 0:
-            bufsize = 1
-
-        if mode[0] == 'r':
-            IOFamily = BufferedReader
-        else:
-            assert mode[0] == 'w'
-            IOFamily = BufferedWriter
-            if self._orig_bufsize == 0:
-                # We could also simply pass self.fileio as *io*, but this way
-                # we at least consistently expose a BufferedWriter in our *io*
-                # attribute.
-                IOFamily = FlushingBufferedWriter
-
-
-
+    def __init__(self, *args, **kwargs):
+        descriptor = GreenOpenDescriptor(*args, **kwargs)
         # This attribute is documented as available for non-blocking reads.
-        self.fileio = GreenFileDescriptorIO(fileno, mode, closefd=close)
-
-        buffered_fobj = IOFamily(self.fileio, bufsize)
-
-        super(FileObjectPosix, self).__init__(buffered_fobj, close)
+        self.fileio, buffered_fobj = descriptor.open_raw_and_wrapped()
+        super(FileObjectPosix, self).__init__(buffered_fobj, descriptor.closefd)
 
     def _do_close(self, fobj, closefd):
         try:
@@ -355,14 +312,5 @@ class FileObjectPosix(FileObjectBase):
             # self.fileio already knows whether or not to close the
             # file descriptor
             self.fileio.close()
-            if closefd and self.__fobj is not None:
-                try:
-                    self.__fobj.close()
-                except IOError:
-                    pass
         finally:
-            self.__fobj = None
             self.fileio = None
-
-    def __iter__(self):
-        return self._io

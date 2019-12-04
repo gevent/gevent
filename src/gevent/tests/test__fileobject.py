@@ -1,19 +1,23 @@
 from __future__ import print_function
+
+import functools
+import gc
+import io
 import os
 import sys
 import tempfile
-import gc
 import unittest
 
 import gevent
 from gevent import fileobject
+from gevent._fileobjectcommon import OpenDescriptor
+
 from gevent._compat import PY2
+from gevent._compat import PY3
+from gevent._compat import text_type
 
 import gevent.testing as greentest
-from gevent.testing.sysinfo import PY3
-from gevent.testing.flaky import reraiseFlakyTestRaceConditionLibuv
-from gevent.testing.skipping import skipOnLibuvOnCIOnPyPy
-from gevent.testing.skipping import skipOnLibuv
+from gevent.testing import sysinfo
 
 try:
     ResourceWarning
@@ -35,7 +39,17 @@ def close_fd_quietly(fd):
     except (IOError, OSError):
         pass
 
+def skipUnlessWorksWithRegularFiles(func):
+    @functools.wraps(func)
+    def f(self):
+        if not self.WORKS_WITH_REGULAR_FILES:
+            self.skipTest("Doesn't work with regular files")
+        func(self)
+    return f
+
 class TestFileObjectBlock(greentest.TestCase): # serves as a base for the concurrent tests too
+
+    WORKS_WITH_REGULAR_FILES = True
 
     def _getTargetClass(self):
         return fileobject.FileObjectBlock
@@ -86,8 +100,7 @@ class TestFileObjectBlock(greentest.TestCase): # serves as a base for the concur
     def test_del_close(self):
         self._test_del(close=True)
 
-    @skipOnLibuvOnCIOnPyPy("This appears to crash on libuv/pypy/travis.")
-    # No idea why, can't duplicate locally.
+    @skipUnlessWorksWithRegularFiles
     def test_seek(self):
         fileno, path = tempfile.mkstemp('.gevent.test__fileobject.test_seek')
         self.addCleanup(os.remove, path)
@@ -102,16 +115,7 @@ class TestFileObjectBlock(greentest.TestCase): # serves as a base for the concur
             native_data = f.read(1024)
 
         with open(path, 'rb') as f_raw:
-            try:
-                f = self._makeOne(f_raw, 'rb', close=False)
-            except ValueError:
-                # libuv on Travis can raise EPERM
-                # from FileObjectPosix. I can't produce it on mac os locally,
-                # don't know what the issue is. This started happening on Jan 19,
-                # in the branch that caused all watchers to be explicitly closed.
-                # That shouldn't have any effect on io watchers, though, which were
-                # already being explicitly closed.
-                reraiseFlakyTestRaceConditionLibuv()
+            f = self._makeOne(f_raw, 'rb', close=False)
 
             if PY3 or hasattr(f, 'seekable'):
                 # On Python 3, all objects should have seekable.
@@ -128,33 +132,66 @@ class TestFileObjectBlock(greentest.TestCase): # serves as a base for the concur
         self.assertEqual(native_data, s)
         self.assertEqual(native_data, fileobj_data)
 
-    def test_str_default_to_native(self):
-        # With no 'b' or 't' given, read and write native str.
-        fileno, path = tempfile.mkstemp('.gevent_test_str_default')
+    def __check_native_matches(self, byte_data, open_mode,
+                               meth='read', **open_kwargs):
+        fileno, path = tempfile.mkstemp('.gevent_test_' + open_mode)
         self.addCleanup(os.remove, path)
 
-        os.write(fileno, b'abcdefg')
+        os.write(fileno, byte_data)
         os.close(fileno)
 
-        with open(path, 'r') as f:
-            native_data = f.read()
+        with io.open(path, open_mode, **open_kwargs) as f:
+            native_data = getattr(f, meth)()
 
-        with self._makeOne(path, 'r') as f:
-            gevent_data = f.read()
+        with self._makeOne(path, open_mode, **open_kwargs) as f:
+            gevent_data = getattr(f, meth)()
 
         self.assertEqual(native_data, gevent_data)
+        return gevent_data
 
+    @skipUnlessWorksWithRegularFiles
+    def test_str_default_to_native(self):
+        # With no 'b' or 't' given, read and write native str.
+        gevent_data = self.__check_native_matches(b'abcdefg', 'r')
+        self.assertIsInstance(gevent_data, str)
+
+    @skipUnlessWorksWithRegularFiles
     def test_text_encoding(self):
-        fileno, path = tempfile.mkstemp('.gevent_test_str_default')
-        self.addCleanup(os.remove, path)
+        gevent_data = self.__check_native_matches(
+            u'\N{SNOWMAN}'.encode('utf-8'),
+            'r+',
+            buffering=5, encoding='utf-8'
+        )
+        self.assertIsInstance(gevent_data, text_type)
 
-        os.write(fileno, u'\N{SNOWMAN}'.encode('utf-8'))
-        os.close(fileno)
+    @skipUnlessWorksWithRegularFiles
+    def test_does_not_leak_on_exception(self):
+        # If an exception occurs during opening,
+        # everything still gets cleaned up.
+        pass
 
-        with self._makeOne(path, 'r+', bufsize=5, encoding='utf-8') as f:
-            gevent_data = f.read()
+    @skipUnlessWorksWithRegularFiles
+    def test_rbU_produces_bytes(self):
+        # Including U in rb still produces bytes.
+        # Note that the universal newline behaviour is
+        # essentially ignored in explicit bytes mode.
+        gevent_data = self.__check_native_matches(
+            b'line1\nline2\r\nline3\rlastline\n\n',
+            'rbU',
+            meth='readlines',
+        )
+        self.assertIsInstance(gevent_data[0], bytes)
+        self.assertEqual(len(gevent_data), 4)
 
-        self.assertEqual(u'\N{SNOWMAN}', gevent_data)
+    @skipUnlessWorksWithRegularFiles
+    def test_rU_produces_native(self):
+        gevent_data = self.__check_native_matches(
+            b'line1\nline2\r\nline3\rlastline\n\n',
+            'rU',
+            meth='readlines',
+        )
+        self.assertIsInstance(gevent_data[0], str)
+
 
     def test_close_pipe(self):
         # Issue #190, 203
@@ -264,6 +301,12 @@ class TestFileObjectThread(ConcurrentFileObjectMixin,
 class TestFileObjectPosix(ConcurrentFileObjectMixin,
                           TestFileObjectBlock):
 
+    if sysinfo.LIBUV and sysinfo.LINUX:
+        # On Linux, initializing the watcher for a regular
+        # file results in libuv raising EPERM. But that works
+        # fine on other platforms.
+        WORKS_WITH_REGULAR_FILES = False
+
     def _getTargetClass(self):
         return fileobject.FileObjectPosix
 
@@ -293,14 +336,6 @@ class TestFileObjectPosix(ConcurrentFileObjectMixin,
         self.assertEqual(io_ex.args, os_ex.args)
         self.assertEqual(str(io_ex), str(os_ex))
 
-    @skipOnLibuv("libuv on linux raises EPERM ") # but works fine on macOS
-    def test_str_default_to_native(self):
-        TestFileObjectBlock.test_str_default_to_native(self)
-
-    @skipOnLibuv("libuv in linux raises EPERM")
-    def test_text_encoding(self):
-        TestFileObjectBlock.test_text_encoding(self)
-
 class TestTextMode(unittest.TestCase):
 
     def test_default_mode_writes_linesep(self):
@@ -323,6 +358,39 @@ class TestTextMode(unittest.TestCase):
 
         self.assertEqual(data, os.linesep.encode('ascii'))
 
+class TestOpenDescriptor(greentest.TestCase):
+
+    def _makeOne(self, *args, **kwargs):
+        return OpenDescriptor(*args, **kwargs)
+
+    def _check(self, regex, kind, *args, **kwargs):
+        with self.assertRaisesRegex(kind, regex):
+            self._makeOne(*args, **kwargs)
+
+    case = lambda re, **kwargs: (re, TypeError, kwargs)
+    vase = lambda re, **kwargs: (re, ValueError, kwargs)
+    CASES = (
+        case('mode', mode=42),
+        case('buffering', buffering='nope'),
+        case('encoding', encoding=42),
+        case('errors', errors=42),
+        vase('mode', mode='aoeug'),
+        vase('mode U cannot be combined', mode='wU'),
+        vase('text and binary', mode='rtb'),
+        vase('append mode at once', mode='rw'),
+        vase('exactly one', mode='+'),
+        vase('take an encoding', mode='rb', encoding='ascii'),
+        vase('take an errors', mode='rb', errors='strict'),
+        vase('take a newline', mode='rb', newline='\n'),
+    )
+
+def pop():
+    for regex, kind, kwargs in TestOpenDescriptor.CASES:
+        setattr(
+            TestOpenDescriptor, 'test_' + regex,
+            lambda self, _re=regex, _kind=kind, _kw=kwargs: self._check(_re, _kind, 1, **_kw)
+        )
+pop()
 
 
 if __name__ == '__main__':

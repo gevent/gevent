@@ -24,9 +24,13 @@ import sys
 import gevent.core
 from gevent import _compat as gsysinfo
 
+VERBOSE = sys.argv.count('-v') > 1
+
+# Python implementations
 PYPY = gsysinfo.PYPY
 CPYTHON = not PYPY
-VERBOSE = sys.argv.count('-v') > 1
+
+# Platform/operating system
 WIN = gsysinfo.WIN
 LINUX = gsysinfo.LINUX
 OSX = gsysinfo.OSX

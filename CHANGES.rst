@@ -15,7 +15,8 @@
   consistently text and binary modes. If neither 'b' nor 't' is given
   in the mode, they will read and write native strings. If 't' is
   given, they will always work with unicode strings, and 'b' will
-  always work with byte strings. See :issue:`1441`.
+  always work with byte strings. (FileObjectPosix already worked this
+  way.) See :issue:`1441`.
 
 - The file objects accept *encoding*, *errors* and *newline*
   arguments. On Python 2, these are only used if 't' is in the mode.
@@ -23,6 +24,10 @@
 - The default mode for FileObjectPosix changed from ``rb`` to simply
   ``r``, for consistency with the other file objects and the standard
   ``open`` and ``io.open`` functions.
+
+- Fix ``FilObjectPosix`` improperly being used from multiple
+  greenlets. Previously this was hidden by forcing buffering, which
+  raised ``RuntimeError``.
 
 
 1.5a2 (2019-10-21)
