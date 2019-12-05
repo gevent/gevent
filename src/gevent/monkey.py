@@ -498,6 +498,16 @@ def patch_time():
 def _patch_existing_locks(threading):
     if len(list(threading.enumerate())) != 1:
         return
+    # This is used to protect internal data structures for enumerate.
+    # It's acquired when threads are started and when they're stopped.
+    # Stopping a thread checks a Condition, which on Python 2 wants to test
+    # _is_owned of its (patched) Lock. Since our LockType doesn't have
+    # _is_owned, it tries to acquire the lock non-blocking; that triggers a
+    # switch. If the next thing in the callback list was a thread that needed
+    # to start or end, we wouldn't be able to acquire this native lock
+    # because it was being held already; we couldn't switch either, so we'd
+    # block permanently.
+    threading._active_limbo_lock = threading._allocate_lock()
     try:
         tid = threading.get_ident()
     except AttributeError:
@@ -566,6 +576,7 @@ def patch_thread(threading=True, _threading_local=True, Event=True, logging=True
         instances that are currently locked can be properly unlocked. **Important**: This is a
         best-effort attempt and, on certain implementations, may not detect all
         locks. It is important to monkey-patch extremely early in the startup process.
+        Setting this to False is not recommended, especially on Python 2.
 
     .. caution::
         Monkey-patching :mod:`thread` and using

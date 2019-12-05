@@ -1,3 +1,6 @@
+"""
+Tests specifically for the monkey-patched threading module.
+"""
 from gevent import monkey; monkey.patch_all()
 import gevent.hub
 
@@ -14,7 +17,7 @@ def helper():
     gevent.sleep(0.2)
 
 
-class Test(greentest.TestCase):
+class TestCleanup(greentest.TestCase):
 
     def _do_test(self, spawn):
         before = len(threading._active)
@@ -45,6 +48,45 @@ class Test(greentest.TestCase):
     @greentest.skipOnPyPy("weakref is not cleaned up in a timely fashion")
     def test_cleanup_raw(self):
         self._do_test(gevent.spawn_raw)
+
+
+class TestLockThread(greentest.TestCase):
+
+    def _spawn(self, func):
+        t = threading.Thread(target=func)
+        t.start()
+        return t
+
+    def test_spin_lock_switches(self):
+        # https://github.com/gevent/gevent/issues/1464
+        lock = threading.Lock()
+        lock.acquire()
+        spawned = []
+
+        def background():
+            spawned.append(True)
+            while 1:
+                # blocking= in Py3, wait (no default, no name) in Py2
+                if lock.acquire(False):
+                    break
+
+        thread = threading.Thread(target=background)
+        # If lock.acquire(False) doesn't yield when it fails,
+        # then this never returns.
+        thread.start()
+        # Verify it tried to run
+        self.assertEqual(spawned, [True])
+        # We can attempt to join it, which won't work.
+        thread.join(0)
+        # We can release the lock and then it will acquire.
+        lock.release()
+        thread.join()
+
+
+class TestLockGreenlet(TestLockThread):
+
+    def _spawn(self, func):
+        return gevent.spawn(func)
 
 if __name__ == '__main__':
     greentest.main()
