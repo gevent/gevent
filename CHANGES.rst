@@ -25,7 +25,7 @@
   ``r``, for consistency with the other file objects and the standard
   ``open`` and ``io.open`` functions.
 
-- Fix ``FilObjectPosix`` improperly being used from multiple
+- Fix ``FileObjectPosix`` improperly being used from multiple
   greenlets. Previously this was hidden by forcing buffering, which
   raised ``RuntimeError``.
 
