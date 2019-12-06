@@ -82,7 +82,6 @@ class TestTrace(unittest.TestCase):
         else:
             old = None
 
-        PY3 = sys.version_info[0] > 2
         lst = []
         # we should be able to use unrelated locks from within the trace function
         l = allocate_lock()
@@ -90,7 +89,7 @@ class TestTrace(unittest.TestCase):
             def trace(frame, ev, _arg):
                 with l:
                     lst.append((frame.f_code.co_filename, frame.f_lineno, ev))
-                print("TRACE: %s:%s %s" % lst[-1])
+                # print("TRACE: %s:%s %s" % lst[-1])
                 return trace
 
             l2 = allocate_lock()
@@ -102,12 +101,8 @@ class TestTrace(unittest.TestCase):
         finally:
             sys.settrace(old)
 
-        if not PY3:
-            # Py3 overrides acquire in Python to do argument checking
-            self.assertEqual(lst, [], "trace not empty")
-        else:
-            # Have an assert so that we know if we miscompile
-            self.assertTrue(lst, "should not compile on pypy")
+        # Have an assert so that we know if we miscompile
+        self.assertTrue(lst, "should not compile on pypy")
 
     @greentest.skipOnPurePython("Locks can be traced in Pure Python")
     def test_untraceable_lock_uses_same_lock(self):
@@ -116,7 +111,7 @@ class TestTrace(unittest.TestCase):
             old = sys.gettrace()
         else:
             old = None
-        PY3 = sys.version_info[0] > 2
+
         lst = []
         e = None
         # we should not be able to use the same lock from within the trace function
@@ -137,13 +132,9 @@ class TestTrace(unittest.TestCase):
         finally:
             sys.settrace(old)
 
-        if not PY3:
-            # Py3 overrides acquire in Python to do argument checking
-            self.assertEqual(lst, [], "trace not empty")
-        else:
-            # Have an assert so that we know if we miscompile
-            self.assertTrue(lst, "should not compile on pypy")
-            self.assertTrue(isinstance(e, LoopExit))
+        # Have an assert so that we know if we miscompile
+        self.assertTrue(lst, "should not compile on pypy")
+        self.assertTrue(isinstance(e, LoopExit))
 
     def run_script(self, more_args=()):
         args = [sys.executable, "-c", script]

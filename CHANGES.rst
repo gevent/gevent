@@ -25,10 +25,16 @@
   ``r``, for consistency with the other file objects and the standard
   ``open`` and ``io.open`` functions.
 
-- Fix ``FilObjectPosix`` improperly being used from multiple
+- Fix ``FileObjectPosix`` improperly being used from multiple
   greenlets. Previously this was hidden by forcing buffering, which
   raised ``RuntimeError``.
 
+- Fix using monkey-patched ``threading.Lock`` and ``threading.RLock``
+  objects as spin locks by making them call ``sleep(0)`` if they
+  failed to acquire the lock in a non-blocking call. This lets other
+  callbacks run to release the lock, simulating preemptive threading.
+  Using spin locks is not recommended, but may have been done in code
+  written for threads, especially on Python 3. See :issue:`1464`.
 
 1.5a2 (2019-10-21)
 ==================
