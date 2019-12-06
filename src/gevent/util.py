@@ -427,7 +427,12 @@ class GreenletTree(object):
             tree.child_multidata(pprint.pformat(tree_locals))
 
         self.__render_locals(tree)
-        self.__render_children(tree)
+        try:
+            self.__render_children(tree)
+        except RuntimeError:
+            # If the tree is exceptionally deep, we can hit the recursion error.
+            # Usually it's several levels down so we can make a print call.
+            print("When rendering children", *sys.exc_info())
         return tree.lines
 
     def __render_children(self, tree):

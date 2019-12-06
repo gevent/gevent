@@ -166,6 +166,7 @@ class BaseServer(object):
             raise TypeError("'handle' must be provided")
 
     def _start_accepting_if_started(self, _event=None):
+        print("Begin accepting. Already started?", self.started)
         if self.started:
             self.start_accepting()
 
@@ -209,6 +210,8 @@ class BaseServer(object):
         for _ in xrange(self.max_accept):
             if self.full():
                 self.stop_accepting()
+                if self.pool is not None:
+                    self.pool._semaphore.rawlink(self._start_accepting_if_started)
                 return
             try:
                 args = self.do_read()

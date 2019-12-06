@@ -39,7 +39,7 @@ cdef class AbstractLinkable(object):
    cdef readonly SwitchOutGreenletWithLoop hub
 
    cdef _notifier
-   cdef set _links
+   cdef list _links
    cdef bint _notify_all
 
    cpdef rawlink(self, callback)
@@ -47,6 +47,7 @@ cdef class AbstractLinkable(object):
    cpdef unlink(self, callback)
 
    cdef _check_and_notify(self)
+   @cython.nonecheck(False)
    cpdef _notify_links(self)
    cdef _wait_core(self, timeout, catch=*)
    cdef _wait_return_value(self, waited, wait_success)

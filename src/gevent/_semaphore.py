@@ -36,6 +36,12 @@ class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
 
         The order in which waiters are awakened is not specified. It was not
         specified previously, but usually went in FIFO order.
+    .. versionchanged:: 1.5a3
+       Waiting greenlets are now awakened in the order in which they waited.
+
+    .. versionchanged:: 1.5a3
+       The low-level ``rawlink`` method (most users won't use this) now automatically
+       unlinks waiters before calling them.
     """
 
     def __init__(self, value=1):

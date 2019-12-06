@@ -449,13 +449,11 @@ else:
                 fn(future)
             except Exception: # pylint: disable=broad-except
                 future.hub.print_exception((fn, future), *sys.exc_info())
-        cbwrap.auto_unlink = True
         return cbwrap
 
     def _wrap(future, fn):
         def f(_):
             fn(future)
-        f.auto_unlink = True
         return f
 
     class _FutureProxy(object):
@@ -489,8 +487,6 @@ else:
                     w.add_result(self)
                 else:
                     w.add_exception(self)
-
-        __when_done.auto_unlink = True
 
         @property
         def _state(self):

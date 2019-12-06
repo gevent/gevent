@@ -1,8 +1,15 @@
-import gevent.testing as greentest
+from __future__ import print_function
+from __future__ import absolute_import
+
+import weakref
+
 import gevent
+import gevent.exceptions
 from gevent.lock import Semaphore
 from gevent.thread import allocate_lock
-import weakref
+
+import gevent.testing as greentest
+
 try:
     from _thread import allocate_lock as std_allocate_lock
 except ImportError: # Py2
@@ -34,6 +41,7 @@ class TestSemaphore(greentest.TestCase):
         r = weakref.ref(s)
         self.assertEqual(s, r())
 
+    @greentest.ignores_leakcheck
     def test_semaphore_in_class_with_del(self):
         # Issue #704. This used to crash the process
         # under PyPy through at least 4.0.1 if the Semaphore
@@ -50,7 +58,6 @@ class TestSemaphore(greentest.TestCase):
         gc.collect()
         gc.collect()
 
-    test_semaphore_in_class_with_del.ignore_leakcheck = True
 
     def test_rawlink_on_unacquired_runs_notifiers(self):
         # https://github.com/gevent/gevent/issues/1287
@@ -85,6 +92,82 @@ class TestCExt(greentest.TestCase):
     def test_c_extension(self):
         self.assertEqual(Semaphore.__module__,
                          'gevent.__semaphore')
+
+
+class SwitchWithFixedHash(object):
+    # Replaces greenlet.switch with a callable object
+    # with a hash code we control.
+
+    def __init__(self, greenlet, hashcode):
+        self.switch = greenlet.switch
+        self.hashcode = hashcode
+
+    def __hash__(self):
+        return self.hashcode
+
+    def __eq__(self, other):
+        return self is other
+
+    def __call__(self, *args, **kwargs):
+        return self.switch(*args, **kwargs)
+
+    def __repr__(self):
+        return repr(self.switch)
+
+class FirstG(gevent.Greenlet):
+    # A greenlet whose switch method will have a low hashcode.
+
+    hashcode = 10
+
+    def __init__(self, *args, **kwargs):
+        gevent.Greenlet.__init__(self, *args, **kwargs)
+        self.switch = SwitchWithFixedHash(self, self.hashcode)
+
+
+class LastG(FirstG):
+    # A greenlet whose switch method will have a high hashcode.
+    hashcode = 12
+
+
+def acquire_then_exit(sem, should_quit):
+    sem.acquire()
+    should_quit.append(True)
+
+
+def acquire_then_spawn(sem, should_quit):
+    if should_quit:
+        return
+    sem.acquire()
+    g = FirstG.spawn(release_then_spawn, sem, should_quit)
+    g.join()
+
+def release_then_spawn(sem, should_quit):
+    sem.release()
+    if should_quit:
+        return
+    g = FirstG.spawn(acquire_then_spawn, sem, should_quit)
+    g.join()
+
+class TestSemaphoreFair(greentest.TestCase):
+
+    @greentest.ignores_leakcheck
+    def test_fair_or_hangs(self):
+        # If the lock isn't fair, this hangs, spinning between
+        # the last two greenlets.
+        # See https://github.com/gevent/gevent/issues/1487
+        sem = Semaphore()
+        should_quit = []
+
+        keep_going1 = FirstG.spawn(acquire_then_spawn, sem, should_quit)
+        keep_going2 = FirstG.spawn(acquire_then_spawn, sem, should_quit)
+        exiting = LastG.spawn(acquire_then_exit, sem, should_quit)
+
+        with self.assertRaises(gevent.exceptions.LoopExit):
+            gevent.joinall([keep_going1, keep_going2, exiting])
+
+        self.assertTrue(exiting.dead, exiting)
+        self.assertTrue(keep_going2.dead, keep_going2)
+        self.assertFalse(keep_going1.dead, keep_going1)
 
 
 if __name__ == '__main__':
