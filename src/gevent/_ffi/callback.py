@@ -5,19 +5,13 @@ __all__ = [
 ]
 
 
-# For times when *args is captured but often not passed (empty),
-# we can avoid keeping the new tuple that was created for *args
-# around by using a constant.
-_NOARGS = ()
-
-
 class callback(object):
 
     __slots__ = ('callback', 'args')
 
     def __init__(self, cb, args):
         self.callback = cb
-        self.args = args or _NOARGS
+        self.args = args
 
     def stop(self):
         self.callback = None

@@ -36,6 +36,13 @@
   Using spin locks is not recommended, but may have been done in code
   written for threads, especially on Python 3. See :issue:`1464`.
 
+- Fix Semaphore (and monkey-patched threading locks) to be fair. This
+  eliminates the rare potential for starvation of greenlets. As part
+  of this change, the low-level method ``rawlink`` of Semaphore,
+  Event, and AsyncResult now always remove the link object when
+  calling it, so ``unlink`` can sometimes be optimized out. See
+  :issue:`1487`.
+
 1.5a2 (2019-10-21)
 ==================
 

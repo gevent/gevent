@@ -38,9 +38,15 @@ class Event(AbstractLinkable): # pylint:disable=undefined-variable
     .. note::
         The order and timing in which waiting greenlets are awakened is not determined.
         As an implementation note, in gevent 1.1 and 1.0, waiting greenlets are awakened in a
-        undetermined order sometime *after* the current greenlet yields to the event loop. Other greenlets
+        undetermined order sometime *after* the current greenlet yields to the event loop.  Other greenlets
         (those not waiting to be awakened) may run between the current greenlet yielding and
         the waiting greenlets being awakened. These details may change in the future.
+
+    .. versionchanged:: 1.5a3
+       Waiting greenlets are now awakened in the order in which they waited.
+    .. versionchanged:: 1.5a3
+       The low-level ``rawlink`` method (most users won't use this) now automatically
+       unlinks waiters before calling them.
     """
 
     __slots__ = ('_flag',)
@@ -181,6 +187,11 @@ class AsyncResult(AbstractLinkable): # pylint:disable=undefined-variable
     .. versionchanged:: 1.1
        Callbacks :meth:`linked <rawlink>` to this object are required to be hashable, and duplicates are
        merged.
+    .. versionchanged:: 1.5a3
+       Waiting greenlets are now awakened in the order in which they waited.
+    .. versionchanged:: 1.5a3
+       The low-level ``rawlink`` method (most users won't use this) now automatically
+       unlinks waiters before calling them.
     """
 
     __slots__ = ('_value', '_exc_info', '_imap_task_index')
