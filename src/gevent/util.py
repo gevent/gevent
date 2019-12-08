@@ -429,9 +429,11 @@ class GreenletTree(object):
         self.__render_locals(tree)
         try:
             self.__render_children(tree)
-        except RuntimeError:
+        except RuntimeError: # pragma: no cover
             # If the tree is exceptionally deep, we can hit the recursion error.
             # Usually it's several levels down so we can make a print call.
+            # This came up in test__semaphore before TestSemaphoreFair
+            # was fixed.
             print("When rendering children", *sys.exc_info())
         return tree.lines
 

@@ -96,17 +96,20 @@ class TestCExt(greentest.TestCase):
 
 class SwitchWithFixedHash(object):
     # Replaces greenlet.switch with a callable object
-    # with a hash code we control.
+    # with a hash code we control. This only matters if
+    # we're hashing this somewhere (which we used to), but
+    # that doesn't preserve order, so we don't do
+    # that anymore.
 
     def __init__(self, greenlet, hashcode):
         self.switch = greenlet.switch
         self.hashcode = hashcode
 
     def __hash__(self):
-        return self.hashcode
+        raise AssertionError
 
     def __eq__(self, other):
-        return self is other
+        raise AssertionError
 
     def __call__(self, *args, **kwargs):
         return self.switch(*args, **kwargs)
@@ -143,7 +146,7 @@ def acquire_then_spawn(sem, should_quit):
 
 def release_then_spawn(sem, should_quit):
     sem.release()
-    if should_quit:
+    if should_quit: # pragma: no cover
         return
     g = FirstG.spawn(acquire_then_spawn, sem, should_quit)
     g.join()

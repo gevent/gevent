@@ -141,14 +141,13 @@ class AbstractLinkable(object):
 
                 link = self._links.pop(0) # Cython optimizes using list internals
                 id_link = id(link)
-                if id_link in done:
-                    continue
-                done.add(id_link)
-                try:
-                    link(self)
-                except: # pylint:disable=bare-except
-                    # We're running in the hub, errors must not escape.
-                    self.hub.handle_error((link, self), *sys.exc_info())
+                if id_link not in done:
+                    done.add(id_link)
+                    try:
+                        link(self)
+                    except: # pylint:disable=bare-except
+                        # We're running in the hub, errors must not escape.
+                        self.hub.handle_error((link, self), *sys.exc_info())
 
                 if link is final_link:
                     break
