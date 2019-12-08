@@ -315,8 +315,13 @@ class TestCase(greentest.TestCase):
                 return read_http(fd, *args, **kwargs)
 
     HTTP_CLIENT_VERSION = '1.1'
+    DEFAULT_EXTRA_CLIENT_HEADERS = {}
 
     def format_request(self, method='GET', path='/', **headers):
+        def_headers = self.DEFAULT_EXTRA_CLIENT_HEADERS.copy()
+        def_headers.update(headers)
+        headers = def_headers
+
         headers = '\r\n'.join('%s: %s' % item for item in headers.items())
         headers = headers + '\r\n' if headers else headers
         result = (
@@ -335,19 +340,28 @@ class TestCase(greentest.TestCase):
 
 
 class CommonTestMixin(object):
-
+    PIPELINE_NOT_SUPPORTED_EXS = ()
+    EXPECT_CLOSE = False
+    EXPECT_KEEPALIVE = False
 
     def test_basic(self):
         with self.makefile() as fd:
             fd.write(self.format_request())
             response = read_http(fd, body='hello world')
             if response.headers.get('Connection') == 'close':
-                return
+                self.assertTrue(self.EXPECT_CLOSE, "Server closed connection, not expecting that")
+                return response, None
 
+            self.assertFalse(self.EXPECT_CLOSE)
+            if self.EXPECT_KEEPALIVE:
+                response.assertHeader('Connection', 'keep-alive')
             fd.write(self.format_request(path='/notexist'))
-            read_http(fd, code=404, reason='Not Found', body='not found')
+            dne_response = read_http(fd, code=404, reason='Not Found', body='not found')
             fd.write(self.format_request())
-            read_http(fd, body='hello world')
+            response = read_http(fd, body='hello world')
+            return response, dne_response
+
+
 
     def test_pipeline(self):
         exception = AssertionError('HTTP pipelining not supported; the second request is thrown away')
@@ -361,6 +375,8 @@ class CommonTestMixin(object):
                     read_http(fd, code=404, reason='Not Found', body='not found')
                 finally:
                     timeout.close()
+            except self.PIPELINE_NOT_SUPPORTED_EXS:
+                pass
             except AssertionError as ex:
                 if ex is not exception:
                     raise
@@ -370,7 +386,12 @@ class CommonTestMixin(object):
             fd.write(self.format_request())
             response = read_http(fd)
             if response.headers.get('Connection') == 'close':
+                self.assertTrue(self.EXPECT_CLOSE, "Server closed connection, not expecting that")
                 return
+            self.assertFalse(self.EXPECT_CLOSE)
+            if self.EXPECT_KEEPALIVE:
+                response.assertHeader('Connection', 'keep-alive')
+
             fd.write(self.format_request(Connection='close'))
             read_http(fd)
             fd.write(self.format_request())
@@ -416,19 +437,32 @@ class TestNoChunks(CommonTestMixin, TestCase):
         start_response('404 Not Found', [('Content-Type', 'text/plain')])
         return [b'not ', b'found']
 
-    def test(self):
+    def test_basic(self):
+        response, dne_response = super(TestNoChunks, self).test_basic()
+        self.assertFalse(response.chunks)
+        response.assertHeader('Content-Length', '11')
+        if dne_response is not None:
+            self.assertFalse(dne_response.chunks)
+            dne_response.assertHeader('Content-Length', '9')
+
+    def test_dne(self):
         with self.makefile() as fd:
-            fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
-            response = read_http(fd, body='hello world')
-
-            self.assertFalse(response.chunks)
-            response.assertHeader('Content-Length', '11')
-
-
-            fd.write('GET /not-found HTTP/1.1\r\nHost: localhost\r\n\r\n')
+            fd.write(self.format_request(path='/notexist'))
             response = read_http(fd, code=404, reason='Not Found', body='not found')
-            self.assertFalse(response.chunks)
-            response.assertHeader('Content-Length', '9')
+        self.assertFalse(response.chunks)
+        response.assertHeader('Content-Length', '9')
+
+class TestNoChunks10(TestNoChunks):
+    HTTP_CLIENT_VERSION = '1.0'
+    PIPELINE_NOT_SUPPORTED_EXS = (ConnectionClosed,)
+    EXPECT_CLOSE = True
+
+class TestNoChunks10KeepAlive(TestNoChunks10):
+    DEFAULT_EXTRA_CLIENT_HEADERS = {
+        'Connection': 'keep-alive',
+    }
+    EXPECT_CLOSE = False
+    EXPECT_KEEPALIVE = True
 
 
 class TestExplicitContentLength(TestNoChunks): # pylint:disable=too-many-ancestors

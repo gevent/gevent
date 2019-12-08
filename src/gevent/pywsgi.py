@@ -555,7 +555,11 @@ class WSGIHandler(object):
         if self.request_version == "HTTP/1.1":
             conntype = self.headers.get("Connection", "").lower()
             self.close_connection = (conntype == 'close')
+        elif self.request_version == 'HTTP/1.0':
+            conntype = self.headers.get("Connection", "close").lower()
+            self.close_connection = (conntype != 'keep-alive')
         else:
+            # XXX: HTTP 0.9. We should drop support
             self.close_connection = True
 
         return True
@@ -842,7 +846,7 @@ class WSGIHandler(object):
         self.response_headers = response_headers
         self.code = code
 
-        provided_connection = None
+        provided_connection = None # Did the wsgi app give us a Connection header?
         self.provided_date = None
         self.provided_content_length = None
 
@@ -856,8 +860,8 @@ class WSGIHandler(object):
                 self.provided_content_length = value
 
         if self.request_version == 'HTTP/1.0' and provided_connection is None:
-            response_headers.append((b'Connection', b'close'))
-            self.close_connection = True
+            conntype = b'close' if self.close_connection else b'keep-alive'
+            response_headers.append((b'Connection', conntype))
         elif provided_connection == 'close':
             self.close_connection = True
 

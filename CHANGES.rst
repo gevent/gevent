@@ -43,6 +43,9 @@
   calling it, so ``unlink`` can sometimes be optimized out. See
   :issue:`1487`.
 
+- Make ``gevent.pywsgi`` support ``Connection: keep-alive`` in
+  HTTP/1.0. Based on :pr:`1331` by tanchuhan.
+
 1.5a2 (2019-10-21)
 ==================
 
