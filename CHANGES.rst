@@ -46,6 +46,11 @@
 - Make ``gevent.pywsgi`` support ``Connection: keep-alive`` in
   HTTP/1.0. Based on :pr:`1331` by tanchuhan.
 
+- Fix a potential crash using ``gevent.idle()`` when using libuv. See
+  :issue:`1489`.
+
+- Fix some potential crashes using libuv async watchers.
+
 1.5a2 (2019-10-21)
 ==================
 

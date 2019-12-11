@@ -364,7 +364,6 @@ class watcher(object):
                 # may fail if __init__ did; will be harmlessly printed
                 self.close()
 
-
     def __repr__(self):
         formats = self._format()
         result = "<%s at 0x%x%s" % (self.__class__.__name__, id(self), formats)
@@ -398,7 +397,7 @@ class watcher(object):
         raise NotImplementedError()
 
     def _get_callback(self):
-        return self._callback
+        return self._callback if '_callback' in self.__dict__ else None
 
     def _set_callback(self, cb):
         if not callable(cb) and cb is not None:
@@ -435,15 +434,18 @@ class watcher(object):
         self._watcher_ffi_start_unref()
 
     def stop(self):
-        if self._callback is None:
+        if self.callback is None:
             assert self.loop is None or self not in self.loop._keepaliveset
             return
+        self.callback = None
+        # Only after setting the signal to make this idempotent do
+        # we move ahead.
         self._watcher_ffi_stop_ref()
         self._watcher_ffi_stop()
         self.loop._keepaliveset.discard(self)
         self._handle = None
         self._watcher_set_data(self._watcher, self._FFI.NULL) # pylint:disable=no-member
-        self.callback = None
+
         self.args = None
 
     def _get_priority(self):

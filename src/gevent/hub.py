@@ -171,10 +171,10 @@ def idle(priority=0):
     .. seealso:: :func:`sleep`
     """
     hub = _get_hub_noargs()
-    watcher = hub.loop.idle()
-    if priority:
-        watcher.priority = priority
-    hub.wait(watcher)
+    with hub.loop.idle() as watcher:
+        if priority:
+            watcher.priority = priority
+        hub.wait(watcher)
 
 
 def kill(greenlet, exception=GreenletExit):
