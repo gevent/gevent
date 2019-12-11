@@ -201,7 +201,10 @@ class ThreadPool(GroupMappingMixin):
         """
         Add a new task to the threadpool that will run ``func(*args, **kwargs)``.
 
-        Waits until a slot is available. Creates a new thread if necessary.
+        Waits until a slot is available. Creates a new native thread if necessary.
+
+        This must only be called from the native thread that owns this object's
+        hub.
 
         :return: A :class:`gevent.event.AsyncResult`.
         """
@@ -219,12 +222,13 @@ class ThreadPool(GroupMappingMixin):
             # we get LoopExit (why?). Previously it was done with a rawlink on the
             # AsyncResult and the comment that it is "competing for order with get(); this is not
             # good, just make ThreadResult release the semaphore before doing anything else"
+            assert self.hub == get_hub()
             thread_result = ThreadResult(result, self.hub, semaphore.release)
             task_queue.put((func, args, kwargs, thread_result))
             self.adjust()
         except:
             if thread_result is not None:
-                thread_result.destroy()
+                thread_result.destroy_in_main_thread()
             semaphore.release()
             raise
         return result
@@ -370,8 +374,14 @@ class ThreadResult(object):
         return self.exc_info[1] if self.exc_info else None
 
     def _on_async(self):
-        self.async_watcher.stop()
-        self.async_watcher.close()
+        # Called in the hub thread.
+
+        aw = self.async_watcher
+        self.async_watcher = _FakeAsync
+
+        aw.stop()
+        aw.close()
+
 
         # Typically this is pool.semaphore.release and we have to
         # call this in the Hub; if we don't we get the dreaded
@@ -393,7 +403,10 @@ class ThreadResult(object):
             if self.exc_info:
                 self.exc_info = (self.exc_info[0], self.exc_info[1], None)
 
-    def destroy(self):
+    def destroy_in_main_thread(self):
+        """
+        This must only be called from the thread running the hub.
+        """
         self.async_watcher.stop()
         self.async_watcher.close()
         self.async_watcher = _FakeAsync

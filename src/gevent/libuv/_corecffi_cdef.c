@@ -138,7 +138,6 @@ struct uv_async_s {
 	struct uv_loop_s* loop;
 	uv_handle_type type;
 	void *data;
-	void (*async_cb)(struct uv_async_s *);
 	GEVENT_STRUCT_DONE _;
 };
 

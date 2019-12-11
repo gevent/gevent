@@ -123,8 +123,8 @@ class AbstractCallbacks(object):
                 args = _NOARGS
             if args and args[0] == GEVENT_CORE_EVENTS:
                 args = (revents, ) + args[1:]
-            #print("Calling function", the_watcher.callback, args)
-            the_watcher.callback(*args)
+            #_dbg("Calling function", the_watcher.callback, args)
+            the_watcher.callback(*args) # None here means we weren't started
         except: # pylint:disable=bare-except
             _dbg("Got exception servicing watcher with handle", handle, sys.exc_info())
             # It's possible for ``the_watcher`` to be undefined (UnboundLocalError)

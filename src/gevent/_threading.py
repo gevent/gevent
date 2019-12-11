@@ -25,7 +25,6 @@ start_new_thread, Lock, get_thread_ident, = monkey.get_original(thread_mod_name,
 # pylint 2.0.dev2 things collections.dequeue.popleft() doesn't return
 # pylint:disable=assignment-from-no-return
 
-
 class _Condition(object):
     # pylint:disable=method-hidden
 
@@ -33,21 +32,9 @@ class _Condition(object):
         self.__lock = lock
         self.__waiters = []
 
-        # If the lock defines _release_save() and/or _acquire_restore(),
-        # these override the default implementations (which just call
-        # release() and acquire() on the lock).  Ditto for _is_owned().
-        try:
-            self._release_save = lock._release_save
-        except AttributeError:
-            pass
-        try:
-            self._acquire_restore = lock._acquire_restore
-        except AttributeError:
-            pass
-        try:
-            self._is_owned = lock._is_owned
-        except AttributeError:
-            pass
+        # No need to special case for _release_save and
+        # _acquire_restore; those are only used for RLock, and
+        # we don't use those.
 
     def __enter__(self):
         return self.__lock.__enter__()
@@ -58,36 +45,28 @@ class _Condition(object):
     def __repr__(self):
         return "<Condition(%s, %d)>" % (self.__lock, len(self.__waiters))
 
-    def _release_save(self):
-        self.__lock.release()           # No state to save
-
-    def _acquire_restore(self, x): # pylint:disable=unused-argument
-        self.__lock.acquire()           # Ignore saved state
-
-    def _is_owned(self):
-        # Return True if lock is owned by current_thread.
-        # This method is called only if __lock doesn't have _is_owned().
-        if self.__lock.acquire(0):
-            self.__lock.release()
-            return False
-        return True
-
     def wait(self):
-        # The condition MUST be owned, but we don't check that.
-        waiter = Lock()
-        waiter.acquire()
-        self.__waiters.append(waiter)
-        saved_state = self._release_save()
         # This variable is for the monitoring utils to know that
         # this is an idle frame and shouldn't be counted.
         gevent_threadpool_worker_idle = True # pylint:disable=unused-variable
-        try:    # restore state no matter what (e.g., KeyboardInterrupt)
+
+        # Our __lock MUST be owned, but we don't check that.
+        waiter = Lock()
+        waiter.acquire()
+        self.__waiters.append(waiter)
+        self.__lock.release()
+
+        try:
             waiter.acquire() # Block on the native lock
         finally:
-            self._acquire_restore(saved_state)
+            self.__lock.acquire()
+
+        # just good form to release the lock we're holding before it goes
+        # out of scope
+        waiter.release()
 
     def notify_one(self):
-        # The condition MUST be owned, but we don't check that.
+        # The lock SHOULD be owned, but we don't check that.
         try:
             waiter = self.__waiters.pop()
         except IndexError:
@@ -154,7 +133,7 @@ class Queue(object):
     def put(self, item):
         """Put an item into the queue.
         """
-        with self._not_empty:
+        with self._mutex:
             self._queue.append(item)
             self.unfinished_tasks += 1
             self._not_empty.notify_one()
@@ -162,7 +141,7 @@ class Queue(object):
     def get(self):
         """Remove and return an item from the queue.
         """
-        with self._not_empty:
+        with self._mutex:
             while not self._queue:
                 self._not_empty.wait()
             item = self._queue.popleft()
