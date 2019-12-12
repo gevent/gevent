@@ -23,7 +23,7 @@
        the `func` synchronously.
 
        .. note:: As implemented, attempting to use
-          :meth:`Threadpool.appy` from inside another function that
+          :meth:`Threadpool.apply` from inside another function that
           was itself spawned in a threadpool (any threadpool) will
           cause the function to be run immediately.
 

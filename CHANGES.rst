@@ -51,6 +51,16 @@
 
 - Fix some potential crashes using libuv async watchers.
 
+- Make ``ThreadPool`` consistently raise ``InvalidThreadUseError``
+  when ``spawn`` is called from a thread different than the thread
+  that created the threadpool. This has never been allowed, but was
+  inconsistently enforced. On gevent 1.3 and before, this would always
+  raise "greenlet error: invalid thread switch," or ``LoopExit``. On
+  gevent 1.4, it *could* raise ``LoopExit``, depending on the number
+  of tasks, but still, calling it from a different thread was likely
+  to corrupt libev or libuv internals.
+
+
 1.5a2 (2019-10-21)
 ==================
 

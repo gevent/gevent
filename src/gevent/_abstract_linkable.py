@@ -38,7 +38,7 @@ class AbstractLinkable(object):
         '__weakref__'
     )
 
-    def __init__(self):
+    def __init__(self, hub=None):
         # Before this implementation, AsyncResult and Semaphore
         # maintained the order of notifications, but Event did not.
 
@@ -71,7 +71,7 @@ class AbstractLinkable(object):
         self._notify_all = True
         # we don't want to do get_hub() here to allow defining module-level objects
         # without initializing the hub
-        self.hub = None
+        self.hub = hub
 
     def linkcount(self):
         # For testing: how many objects are linked to this one?
