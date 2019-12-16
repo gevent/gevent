@@ -77,3 +77,26 @@ class ConcurrentObjectUseError(AssertionError):
 
     .. seealso:: `gevent.socket.wait`
     """
+
+class InvalidThreadUseError(RuntimeError):
+    """
+    Raised when an object is used from a different thread than
+    the one it is bound to.
+
+    Some objects, such as gevent sockets, semaphores, and threadpools,
+    are tightly bound to their hub and its loop. The hub and loop
+    are not thread safe, with a few exceptions. Attempting to use
+    such objects from a different thread is an error, and may cause
+    problems ranging from incorrect results to memory corruption
+    and a crashed process.
+
+    In some cases, gevent catches this "accidentally", and the result is
+    a `LoopExit`. In some cases, gevent doesn't catch this at all.
+
+    In other cases (typically when the consequences are suspected to
+    be more on the more severe end of the scale, and when the operation in
+    question is already relatively heavyweight), gevent explicitly checks
+    for this usage and will raise this exception when it is detected.
+
+    .. versionadded:: 1.5a3
+    """

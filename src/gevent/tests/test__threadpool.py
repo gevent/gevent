@@ -6,11 +6,13 @@ import random
 import weakref
 import gc
 
-import gevent.testing as greentest
+
 import gevent.threadpool
 from gevent.threadpool import ThreadPool
 import gevent
+from gevent.exceptions import InvalidThreadUseError
 
+import gevent.testing as greentest
 from gevent.testing import ExpectedException
 from gevent.testing import PYPY
 
@@ -34,34 +36,36 @@ class TestCase(greentest.TestCase):
     # These generally need more time
     __timeout__ = greentest.LARGE_TIMEOUT
     pool = None
+    _all_pools = ()
 
     ClassUnderTest = ThreadPool
     def _FUT(self):
         return self.ClassUnderTest
 
-    def _makeOne(self, size, increase=greentest.RUN_LEAKCHECKS):
-        self.pool = pool = self._FUT()(size)
-        if increase:
+    def _makeOne(self, maxsize, create_all_worker_threads=greentest.RUN_LEAKCHECKS):
+        self.pool = pool = self._FUT()(maxsize)
+        self._all_pools += (pool,)
+        if create_all_worker_threads:
             # Max size to help eliminate false positives
-            self.pool.size = size
+            self.pool.size = maxsize
         return pool
 
     def cleanup(self):
-        pool = self.pool
-        if pool is not None:
+        self.pool = None
+        all_pools, self._all_pools = self._all_pools, ()
+        for pool in all_pools:
             kill = getattr(pool, 'kill', None) or getattr(pool, 'shutdown')
             kill()
             del kill
-            del self.pool
 
-            if greentest.RUN_LEAKCHECKS:
-                # Each worker thread created a greenlet object and switched to it.
-                # It's a custom subclass, but even if it's not, it appears that
-                # the root greenlet for the new thread sticks around until there's a
-                # gc. Simply calling 'getcurrent()' is enough to "leak" a greenlet.greenlet
-                # and a weakref.
-                for _ in range(3):
-                    gc.collect()
+        if greentest.RUN_LEAKCHECKS:
+            # Each worker thread created a greenlet object and switched to it.
+            # It's a custom subclass, but even if it's not, it appears that
+            # the root greenlet for the new thread sticks around until there's a
+            # gc. Simply calling 'getcurrent()' is enough to "leak" a greenlet.greenlet
+            # and a weakref.
+            for _ in range(3):
+                gc.collect()
 
 
 class PoolBasicTests(TestCase):
@@ -353,7 +357,7 @@ class TestSpawn(TestCase):
     switch_expected = True
 
     @greentest.ignores_leakcheck
-    def test(self):
+    def test_basics(self):
         pool = self._makeOne(1)
         self.assertEqual(len(pool), 0)
         log = []
@@ -371,6 +375,20 @@ class TestSpawn(TestCase):
         self.assertEqual(log, ['a', 'b'])
         self.assertEqual(len(pool), 0)
 
+    @greentest.ignores_leakcheck
+    def test_cannot_spawn_from_other_thread(self):
+        # Only the thread that owns a threadpool can spawn to it;
+        # this is because the threadpool uses the creating thread's hub,
+        # which is not threadsafe.
+        pool1 = self._makeOne(1)
+        pool2 = self._makeOne(2)
+
+        def func():
+            pool2.spawn(lambda: "Hi")
+
+        res = pool1.spawn(func)
+        with self.assertRaises(InvalidThreadUseError):
+            res.get()
 
 def error_iter():
     yield 1
@@ -430,7 +448,7 @@ class TestSize(TestCase):
 
     @greentest.reraises_flaky_race_condition()
     def test(self):
-        pool = self.pool = self._makeOne(2, increase=False)
+        pool = self.pool = self._makeOne(2, create_all_worker_threads=False)
         self.assertEqual(pool.size, 0)
         pool.size = 1
         self.assertEqual(pool.size, 1)

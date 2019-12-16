@@ -44,10 +44,10 @@ class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
        unlinks waiters before calling them.
     """
 
-    def __init__(self, value=1):
+    def __init__(self, value=1, hub=None):
         if value < 0:
             raise ValueError("semaphore initial value must be >= 0")
-        super(Semaphore, self).__init__()
+        super(Semaphore, self).__init__(hub)
         self.counter = value
         self._notify_all = False
 

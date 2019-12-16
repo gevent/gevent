@@ -40,6 +40,8 @@ class GroupMappingMixin(object):
     # Internal, non-public API class.
     # Provides mixin methods for implementing mapping pools. Subclasses must define:
 
+    __slots__ = ()
+
     def spawn(self, func, *args, **kwargs):
         """
         A function that runs *func* with *args* and *kwargs*, potentially

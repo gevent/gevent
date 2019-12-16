@@ -1,21 +1,23 @@
 # Copyright (c) 2012 Denis Bilenko. See LICENSE for details.
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import sys
 import os
-
-from weakref import ref as wref
 
 from greenlet import greenlet as RawGreenlet
 
 from gevent._compat import integer_types
+from gevent.event import AsyncResult
+from gevent.exceptions import InvalidThreadUseError
+from gevent.greenlet import Greenlet
+from gevent.hub import _get_hub
 from gevent.hub import _get_hub_noargs as get_hub
 from gevent.hub import getcurrent
 from gevent.hub import sleep
-from gevent.hub import _get_hub
-from gevent.event import AsyncResult
-from gevent.greenlet import Greenlet
-from gevent.pool import GroupMappingMixin
 from gevent.lock import Semaphore
+from gevent.pool import GroupMappingMixin
 
 from gevent._threading import Lock
 from gevent._threading import Queue
@@ -36,41 +38,115 @@ class _WorkerGreenlet(RawGreenlet):
     def __init__(self, threadpool):
         RawGreenlet.__init__(self, threadpool._worker)
         self.thread_ident = get_thread_ident()
-        self._threadpool_wref = wref(threadpool)
+        self._threadpool = threadpool
 
         # Inform the gevent.util.GreenletTree that this should be
         # considered the root (for printing purposes) and to
         # ignore the parent attribute. (We can't set parent to None.)
+
         self.greenlet_tree_is_root = True
         self.parent.greenlet_tree_is_ignored = True
+
+    @classmethod
+    def run_in_worker_thread(cls, threadpool):
+        # The root function of each new worker thread.
+        glet = cls(threadpool)
+        glet.switch()
 
     def __repr__(self):
         return "<ThreadPoolWorker at 0x%x thread_ident=0x%x %s>" % (
             id(self),
             self.thread_ident,
-            self._threadpool_wref())
+            self._threadpool
+        )
 
 class ThreadPool(GroupMappingMixin):
+    # TODO: Document thread safety restrictions.
     """
+    A pool of native worker threads.
+
+    This can be useful for CPU intensive functions, or those that
+    otherwise will not cooperate with gevent. The best functions to execute
+    in a thread pool are small functions with a single purpose; ideally they release
+    the CPython GIL. Such functions are extension functions implemented in C.
+
+    It implements the same operations as a :class:`gevent.pool.Pool`,
+    but using threads instead of greenlets.
+
     .. note:: The method :meth:`apply_async` will always return a new
        greenlet, bypassing the threadpool entirely.
+
+    Most users will not need to create instances of this class. Instead,
+    use the threadpool already associated with gevent's hub::
+
+        pool = gevent.get_hub().threadpool
+        result = pool.spawn(lambda: "Some func").get()
+
+    .. important:: It is only possible to use instances of this class from
+       the thread running their hub. Typically that means from the thread that
+       created them. Using the pattern shown above takes care of this.
+
+       There is no gevent-provided way to have a single process-wide limit on the
+       number of threads in various pools when doing that, however. The suggested
+       way to use gevent and threadpools is to have a single gevent hub
+       and its one threadpool (which is the default without doing any extra work).
+       Only dispatch minimal blocking functions to the threadpool, functions that
+       do not use the gevent hub.
+
+    The `len` of instances of this class is the number of enqueued
+    (unfinished) tasks.
+
     .. caution:: Instances of this class are only true if they have
        unfinished tasks.
+
+    .. versionchanged:: 1.5a3
+       The undocumented ``apply_e`` function, deprecated since 1.1,
+       was removed.
     """
+
+    __slots__ = (
+        'hub',
+        '_maxsize',
+        # A Greenlet that runs to adjust the number of worker
+        # threads.
+        'manager',
+        # The PID of the process we were created in.
+        # Used to help detect a fork and then re-create
+        # internal state.
+        'pid',
+        'fork_watcher',
+        # A semaphore initialized with ``maxsize`` counting the
+        # number of available worker threads we have. As a
+        # gevent.lock.Semaphore, this is only safe to use from a single
+        # native thread.
+        '_available_worker_threads_greenlet_sem',
+        # A native threading lock, used to protect internals
+        # that are safe to call across multiple threads.
+        '_native_thread_internal_lock',
+        # The number of running worker threads
+        '_num_worker_threads',
+        # The task queue is itself safe to use from multiple
+        # native threads.
+        'task_queue',
+    )
 
     def __init__(self, maxsize, hub=None):
         if hub is None:
             hub = get_hub()
         self.hub = hub
-        self._maxsize = 0
-        self.manager = None
         self.pid = os.getpid()
+        self.manager = None
+        self.task_queue = Queue()
+        self.fork_watcher = None
+
+        self._maxsize = 0
+        # Note that by starting with 1, we actually allow
+        # maxsize + 1 tasks in the queue.
+        self._available_worker_threads_greenlet_sem = Semaphore(1, hub)
+        self._native_thread_internal_lock = Lock()
+        self._num_worker_threads = 0
+        self._set_maxsize(maxsize)
         self.fork_watcher = hub.loop.fork(ref=False)
-        try:
-            self._init(maxsize)
-        except:
-            self.fork_watcher.close()
-            raise
 
     def _set_maxsize(self, maxsize):
         if not isinstance(maxsize, integer_types):
@@ -78,16 +154,23 @@ class ThreadPool(GroupMappingMixin):
         if maxsize < 0:
             raise ValueError('maxsize must not be negative: %r' % (maxsize, ))
         difference = maxsize - self._maxsize
-        self._semaphore.counter += difference
+        self._available_worker_threads_greenlet_sem.counter += difference
         self._maxsize = maxsize
         self.adjust()
         # make sure all currently blocking spawn() start unlocking if maxsize increased
-        self._semaphore._start_notify()
+        self._available_worker_threads_greenlet_sem._start_notify()
 
     def _get_maxsize(self):
         return self._maxsize
 
-    maxsize = property(_get_maxsize, _set_maxsize)
+    maxsize = property(_get_maxsize, _set_maxsize, doc="""\
+    The maximum allowed number of worker threads.
+
+    This is also (approximately) a limit on the number of tasks that
+    can be queued without blocking the waiting greenlet. If this many
+    tasks are already running, then the next greenlet that submits a task
+    will block waiting for a task to finish.
+    """)
 
     def __repr__(self):
         return '<%s at 0x%x %s/%s/%s hub=<%s at 0x%x thread_ident=0x%s>>' % (
@@ -103,7 +186,9 @@ class ThreadPool(GroupMappingMixin):
         return self.task_queue.unfinished_tasks
 
     def _get_size(self):
-        return self._size
+        # TODO: This probably needs to acquire the lock. We
+        # modify this from self._add_thread under a lock.
+        return self._num_worker_threads
 
     def _set_size(self, size):
         if size < 0:
@@ -112,29 +197,32 @@ class ThreadPool(GroupMappingMixin):
             raise ValueError('Size of the pool cannot be bigger than maxsize: %r > %r' % (size, self._maxsize))
         if self.manager:
             self.manager.kill()
-        while self._size < size:
+        while self._num_worker_threads < size:
             self._add_thread()
         delay = self.hub.loop.approx_timer_resolution
-        while self._size > size:
-            while self._size - size > self.task_queue.unfinished_tasks:
+        while self._num_worker_threads > size:
+            while self._num_worker_threads - size > self.task_queue.unfinished_tasks:
                 self.task_queue.put(None)
             if getcurrent() is self.hub:
                 break
             sleep(delay)
             delay = min(delay * 2, .05)
-        if self._size:
+        if self._num_worker_threads:
             self.fork_watcher.start(self._on_fork)
         else:
             self.fork_watcher.stop()
 
-    size = property(_get_size, _set_size)
+    size = property(_get_size, _set_size, doc="""\
+    The number of running pooled worker threads.
 
-    def _init(self, maxsize):
-        self._size = 0
-        self._semaphore = Semaphore(1)
-        self._lock = Lock()
-        self.task_queue = Queue()
-        self._set_maxsize(maxsize)
+    Setting this attribute will add or remove running
+    worker threads, up to `maxsize`.
+
+    Initially there are no pooled running worker threads, and
+    threads are created on demand to satisfy concurrent
+    requests up to `maxsize` threads.
+    """)
+
 
     def _on_fork(self):
         # fork() only leaves one thread; also screws up locks;
@@ -142,11 +230,9 @@ class ThreadPool(GroupMappingMixin):
         # NOTE: See comment in gevent.hub.reinit.
         pid = os.getpid()
         if pid != self.pid:
-            self.pid = pid
-            # Do not mix fork() and threads; since fork() only copies one thread
-            # all objects referenced by other threads has refcount that will never
-            # go down to 0.
-            self._init(self._maxsize)
+            # The OS threads have been destroyed, but the Python objects
+            # may live on, creating refcount "leaks"
+            self.__init__(self._maxsize)
 
     def join(self):
         """Waits until all outstanding tasks have been completed."""
@@ -161,68 +247,87 @@ class ThreadPool(GroupMappingMixin):
 
     def _adjust_step(self):
         # if there is a possibility & necessity for adding a thread, do it
-        while self._size < self._maxsize and self.task_queue.unfinished_tasks > self._size:
+        while (self._num_worker_threads < self._maxsize
+               and self.task_queue.unfinished_tasks > self._num_worker_threads):
             self._add_thread()
         # while the number of threads is more than maxsize, kill one
         # we do not check what's already in task_queue - it could be all Nones
-        while self._size - self._maxsize > self.task_queue.unfinished_tasks:
+        while self._num_worker_threads - self._maxsize > self.task_queue.unfinished_tasks:
             self.task_queue.put(None)
-        if self._size:
+        if self._num_worker_threads:
             self.fork_watcher.start(self._on_fork)
-        else:
+        elif self.fork_watcher is not None:
             self.fork_watcher.stop()
 
     def _adjust_wait(self):
         delay = 0.0001
         while True:
             self._adjust_step()
-            if self._size <= self._maxsize:
+            if self._num_worker_threads <= self._maxsize:
                 return
             sleep(delay)
             delay = min(delay * 2, .05)
 
     def adjust(self):
         self._adjust_step()
-        if not self.manager and self._size > self._maxsize:
-            # might need to feed more Nones into the pool
+        if not self.manager and self._num_worker_threads > self._maxsize:
+            # might need to feed more Nones into the pool to shutdown
+            # threads.
             self.manager = Greenlet.spawn(self._adjust_wait)
 
     def _add_thread(self):
-        with self._lock:
-            self._size += 1
+        with self._native_thread_internal_lock:
+            self._num_worker_threads += 1
         try:
-            start_new_thread(self.__trampoline, ())
+            start_new_thread(_WorkerGreenlet.run_in_worker_thread, (self,))
         except:
-            with self._lock:
-                self._size -= 1
+            with self._native_thread_internal_lock:
+                self._num_worker_threads -= 1
             raise
 
     def spawn(self, func, *args, **kwargs):
         """
-        Add a new task to the threadpool that will run ``func(*args, **kwargs)``.
+        Add a new task to the threadpool that will run ``func(*args,
+        **kwargs)``.
 
-        Waits until a slot is available. Creates a new native thread if necessary.
+        Waits until a slot is available. Creates a new native thread
+        if necessary.
 
-        This must only be called from the native thread that owns this object's
-        hub.
+        This must only be called from the native thread that owns this
+        object's hub. This is because creating the necessary data
+        structures to communicate back to this thread isn't thread
+        safe, so the hub must not be running something else. Also,
+        ensuring the pool size stays correct only works within a
+        single thread.
 
         :return: A :class:`gevent.event.AsyncResult`.
+        :raises InvalidThreadUseError: If called from a different thread.
+
+        .. versionchanged:: 1.5
+           Document the thread-safety requirements.
         """
+        if self.hub != get_hub():
+            raise InvalidThreadUseError
+
         while 1:
-            semaphore = self._semaphore
+            semaphore = self._available_worker_threads_greenlet_sem
             semaphore.acquire()
-            if semaphore is self._semaphore:
+            if semaphore is self._available_worker_threads_greenlet_sem:
+                # If we were asked to change size or re-init we could have changed
+                # semaphore objects.
                 break
 
+        # Returned; lets a greenlet in this thread wait
+        # for the pool thread. Signaled when the async watcher
+        # is fired from the pool thread back into this thread.
+        result = AsyncResult()
+        task_queue = self.task_queue
+        # Encapsulates the async watcher the worker thread uses to
+        # call back into this thread. Immediately allocates and starts the
+        # async watcher in this thread, because it uses this hub/loop,
+        # which is not thread safe.
         thread_result = None
         try:
-            task_queue = self.task_queue
-            result = AsyncResult()
-            # XXX We're calling the semaphore release function in the hub, otherwise
-            # we get LoopExit (why?). Previously it was done with a rawlink on the
-            # AsyncResult and the comment that it is "competing for order with get(); this is not
-            # good, just make ThreadResult release the semaphore before doing anything else"
-            assert self.hub == get_hub()
             thread_result = ThreadResult(result, self.hub, semaphore.release)
             task_queue.put((func, args, kwargs, thread_result))
             self.adjust()
@@ -236,33 +341,21 @@ class ThreadPool(GroupMappingMixin):
     def _decrease_size(self):
         if sys is None:
             return
-        _lock = getattr(self, '_lock', None)
-        if _lock is not None:
+        _lock = self._native_thread_internal_lock
+        if _lock is not None: # XXX: When would this be None?
             with _lock:
-                self._size -= 1
-
-    # XXX: This used to be false by default. It really seems like
-    # it should be true to avoid leaking resources.
-    _destroy_worker_hub = True
-
+                self._num_worker_threads -= 1
 
     def __ignore_current_greenlet_blocking(self, hub):
         if hub is not None and hub.periodic_monitoring_thread is not None:
             hub.periodic_monitoring_thread.ignore_current_greenlet_blocking()
-
-    def __trampoline(self):
-        # The target that we create new threads with. It exists
-        # solely to create the _WorkerGreenlet and switch to it.
-        # (the __class__ of a raw greenlet cannot be changed.)
-        g = _WorkerGreenlet(self)
-        g.switch()
 
     def _worker(self):
         # pylint:disable=too-many-branches
         need_decrease = True
         try:
             while 1: # tiny bit faster than True on Py2
-                h = _get_hub()
+                h = _get_hub() # Don't create one; only set if a worker function did it
                 if h is not None:
                     h.name = 'ThreadPool Worker Hub'
                 task_queue = self.task_queue
@@ -302,25 +395,11 @@ class ThreadPool(GroupMappingMixin):
         finally:
             if need_decrease:
                 self._decrease_size()
-            if sys is not None and self._destroy_worker_hub:
+            if sys is not None:
                 hub = _get_hub()
                 if hub is not None:
                     hub.destroy(True)
                 del hub
-
-    def apply_e(self, expected_errors, function, args=None, kwargs=None):
-        """
-        .. deprecated:: 1.1a2
-           Identical to :meth:`apply`; the ``expected_errors`` argument is ignored.
-        """
-        # pylint:disable=unused-argument
-        # Deprecated but never documented. In the past, before
-        # self.apply() allowed all errors to be raised to the caller,
-        # expected_errors allowed a caller to specify a set of errors
-        # they wanted to be raised, through the wrap_errors function.
-        # In practice, it always took the value Exception or
-        # BaseException.
-        return self.apply(function, args, kwargs)
 
     def _apply_immediately(self):
         # If we're being called from a different thread than the one that
@@ -354,6 +433,13 @@ class _FakeAsync(object):
 _FakeAsync = _FakeAsync()
 
 class ThreadResult(object):
+    """
+    A one-time event for cross-thread communication.
+
+    Uses a hub's "async" watcher capability; it must be constructed and
+    destroyed in the thread running the hub (because creating, starting, and
+    destroying async watchers isn't guaranteed to be thread safe).
+    """
 
     # Using slots here helps to debug reference cycles/leaks
     __slots__ = ('exc_info', 'async_watcher', '_call_when_ready', 'value',
@@ -429,16 +515,6 @@ class ThreadResult(object):
     def successful(self):
         return self.exception is None
 
-
-def wrap_errors(errors, function, args, kwargs):
-    """
-    .. deprecated:: 1.1a2
-       Previously used by ThreadPool.apply_e.
-    """
-    try:
-        return True, function(*args, **kwargs)
-    except errors as ex:
-        return False, ex
 
 try:
     import concurrent.futures
@@ -560,10 +636,16 @@ else:
            This is a provisional API.
         """
 
-        def __init__(self, max_workers):
-            super(ThreadPoolExecutor, self).__init__(max_workers)
-            self._threadpool = ThreadPool(max_workers)
-            self._threadpool._destroy_worker_hub = True
+        def __init__(self, *args, **kwargs):
+            """
+            Takes the same arguments as ``concurrent.futures.ThreadPoolExecuter``, which
+            vary between Python versions.
+
+            The first argument is always *max_workers*, the maximum number of
+            threads to use. Most other arguments, while accepted, are ignored.
+            """
+            super(ThreadPoolExecutor, self).__init__(*args, **kwargs)
+            self._threadpool = ThreadPool(self._max_workers)
 
         def submit(self, fn, *args, **kwargs): # pylint:disable=arguments-differ
             with self._shutdown_lock: # pylint:disable=not-context-manager
