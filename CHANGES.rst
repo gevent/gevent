@@ -60,6 +60,7 @@
   of tasks, but still, calling it from a different thread was likely
   to corrupt libev or libuv internals.
 
+- Remove some undocumented, deprecated functions from the threadpool module.
 
 1.5a2 (2019-10-21)
 ==================
