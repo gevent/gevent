@@ -599,7 +599,12 @@ class AbstractLoop(object):
         self.update_now()
 
     def __repr__(self):
-        return '<%s at 0x%x %s>' % (self.__class__.__name__, id(self), self._format())
+        return '<%s.%s at 0x%x %s>' % (
+            self.__class__.__module__,
+            self.__class__.__name__,
+            id(self),
+            self._format()
+        )
 
     @property
     def default(self):
