@@ -119,6 +119,7 @@ For details, see the :func:`main` function.
 from __future__ import absolute_import
 from __future__ import print_function
 import sys
+from importlib import import_module
 
 __all__ = [
     'patch_all',
@@ -255,11 +256,18 @@ def get_original(mod_name, item_name):
 _NONE = object()
 
 
-def patch_item(module, attr, newitem):
+def patch_item(module, attr, newitem, _patch_module=False):
     olditem = getattr(module, attr, _NONE)
     if olditem is not _NONE:
         saved.setdefault(module.__name__, {}).setdefault(attr, olditem)
     setattr(module, attr, newitem)
+    if _patch_module:
+        if olditem is not None and newitem is not None:
+            try:
+                newitem.__module__ = olditem.__module__
+            except (TypeError, AttributeError):
+                # We will let this fail quietly
+                pass
 
 
 def remove_item(module, attr):
@@ -290,7 +298,8 @@ def patch_module(target_module, source_module, items=None,
                  _warnings=None,
                  _notify_will_subscribers=True,
                  _notify_did_subscribers=True,
-                 _call_hooks=True):
+                 _call_hooks=True,
+                 _patch_module=False):
     """
     patch_module(target_module, source_module, items=None)
 
@@ -336,7 +345,8 @@ def patch_module(target_module, source_module, items=None,
         return False
 
     for attr in items:
-        patch_item(target_module, attr, getattr(source_module, attr))
+        patch_item(target_module, attr, getattr(source_module, attr),
+                   _patch_module=_patch_module)
 
     if _call_hooks:
         __call_module_hook(source_module, 'did', target_module, items, _warnings)
@@ -357,11 +367,13 @@ def _patch_module(name,
                   _warnings=None,
                   _notify_will_subscribers=True,
                   _notify_did_subscribers=True,
-                  _call_hooks=True):
+                  _call_hooks=True,
+                  _patch_module=False,
+                  _package_prefix='gevent.'):
 
-    gevent_module = getattr(__import__('gevent.' + name), name)
+    gevent_module = import_module(_package_prefix + name)
     module_name = getattr(gevent_module, '__target__', name)
-    target_module = __import__(module_name)
+    target_module = import_module(module_name)
 
     patch_module(target_module, gevent_module, items=items,
                  _warnings=_warnings,
@@ -386,7 +398,8 @@ def _patch_module(name,
                          _warnings=_warnings,
                          _notify_will_subscribers=False,
                          _notify_did_subscribers=False,
-                         _call_hooks=False)
+                         _call_hooks=False,
+                         _patch_module=_patch_module)
             saved[alternate_name] = saved[module_name]
 
     return gevent_module, target_module
@@ -1029,9 +1042,15 @@ def patch_signal():
     _patch_module("signal")
 
 
+def _get_patch_all_state():
+    key = '_gevent_saved_patch_all'
+    return saved.get(key)
+
+
 def _check_repatching(**module_settings):
     _warnings = []
     key = '_gevent_saved_patch_all'
+    module_settings.update(module_settings['kwargs'])
     del module_settings['kwargs']
     if saved.get(key, module_settings) != module_settings:
         _queue_warning("Patching more than once will result in the union of all True"
