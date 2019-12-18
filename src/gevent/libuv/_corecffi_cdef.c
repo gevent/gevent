@@ -354,22 +354,20 @@ void* memset(void *b, int c, size_t len);
 // call them
 typedef void* GeventWatcherObject;
 extern "Python" {
-	// Standard gevent._ffi.loop callbacks.
-	int python_callback(GeventWatcherObject handle, int revents);
-	void python_handle_error(GeventWatcherObject handle, int revents);
-	void python_stop(GeventWatcherObject handle);
+    // Standard gevent._ffi.loop callbacks.
+    int python_callback(GeventWatcherObject handle, int revents);
+    void python_handle_error(GeventWatcherObject handle, int revents);
+    void python_stop(GeventWatcherObject handle);
 
-	void python_check_callback(uv_check_t* handle);
-	void python_prepare_callback(uv_prepare_t* handle);
-	void python_timer0_callback(uv_check_t* handle);
+    void python_check_callback(uv_check_t* handle);
+    void python_prepare_callback(uv_prepare_t* handle);
+    void python_timer0_callback(uv_check_t* handle);
 
-	// libuv specific callback
-	void _uv_close_callback(uv_handle_t* handle);
-	void python_sigchld_callback(uv_signal_t* handle, int signum);
-	void python_queue_callback(uv_handle_t* handle, int revents);
+    // libuv specific callback
+    void _uv_close_callback(uv_handle_t* handle);
+    void python_sigchld_callback(uv_signal_t* handle, int signum);
+    void python_queue_callback(uv_handle_t* handle, int revents);
 }
-// A variable we fill in.
-static void (*gevent_noop)(void* handle);
 
 static void _gevent_signal_callback1(uv_signal_t* handle, int arg);
 static void _gevent_async_callback0(uv_async_t* handle);

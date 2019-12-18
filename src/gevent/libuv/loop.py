@@ -43,12 +43,19 @@ class _Callbacks(AbstractCallbacks):
 
         the_watcher.loop._queue_callback(watcher_ptr, revents)
 
+    def __loop_from_loop_ptr(self, loop_ptr):
+        loop_handle = loop_ptr.data
+        return self.from_handle(loop_handle)
+
 
 _callbacks = assign_standard_callbacks(
     ffi, libuv, _Callbacks,
-    [('python_sigchld_callback', None),
-     ('python_timer0_callback', None),
-     ('python_queue_callback', None)])
+    [
+        'python_sigchld_callback',
+        'python_timer0_callback',
+        'python_queue_callback',
+    ]
+)
 
 from gevent._ffi.loop import EVENTS
 GEVENT_CORE_EVENTS = EVENTS # export
@@ -83,6 +90,14 @@ class loop(AbstractLoop):
     # practice, looping on gevent.sleep(0.001) takes about 0.00138 s
     # (+- 0.000036s)
     approx_timer_resolution = 0.001 # 1ms
+
+    # It's relatively more expensive to break from the callback loop
+    # because we don't do it "inline" from C, we're looping in Python
+    CALLBACK_CHECK_COUNT = max(AbstractLoop.CALLBACK_CHECK_COUNT, 100)
+
+    # Defines the maximum amount of time the loop will sleep waiting for IO,
+    # which is also the interval at which signals are checked and handled.
+    SIGNAL_CHECK_INTERVAL_MS = 300
 
     error_handler = None
 
@@ -126,7 +141,7 @@ class loop(AbstractLoop):
 
         # Track whether or not any object has destroyed
         # this loop. See _can_destroy_default_loop
-        ptr.data = ptr
+        ptr.data = self._handle_to_self
         return ptr
 
     _signal_idle = None
@@ -155,8 +170,8 @@ class loop(AbstractLoop):
         sig_cb = ffi.cast('void(*)(uv_timer_t*)', libuv.python_check_callback)
         libuv.uv_timer_start(self._signal_idle,
                              sig_cb,
-                             300,
-                             300)
+                             self.SIGNAL_CHECK_INTERVAL_MS,
+                             self.SIGNAL_CHECK_INTERVAL_MS)
         libuv.uv_unref(self._signal_idle)
 
     def _run_callbacks(self):
@@ -464,13 +479,34 @@ class loop(AbstractLoop):
 
         if mode == libuv.UV_RUN_DEFAULT:
             while self._ptr and self._ptr.data:
-                # This is here to better preserve order guarantees. See _run_callbacks
-                # for details.
-                # It may get run again from the prepare watcher, so potentially we
-                # could take twice as long as the switch interval.
+                # This is here to better preserve order guarantees.
+                # See _run_callbacks for details.
+
+                # It may get run again from the prepare watcher, so
+                # potentially we could take twice as long as the
+                # switch interval.
+                # If we have *lots* of callbacks to run, we may not actually
+                # get through them all before we're requested to poll for IO;
+                # so in that case, just spin the loop once (UV_RUN_NOWAIT) and
+                # go again.
                 self._run_callbacks()
                 self._prepare_ran_callbacks = False
-                ran_status = libuv.uv_run(self._ptr, libuv.UV_RUN_ONCE)
+
+                # UV_RUN_ONCE will poll for IO, blocking for up to the time needed
+                # for the next timer to expire. Worst case, that's our _signal_idle
+                # timer, about 1/3 second. UV_RUN_ONCE guarantees that some forward progress
+                # is made, either by an IO watcher or a timer.
+                #
+                # In contrast, UV_RUN_NOWAIT makes no such guarantee, it only polls for IO once and
+                # immediately returns; it does not update the loop time or timers after
+                # polling for IO.
+                run_mode = (
+                    libuv.UV_RUN_ONCE
+                    if not self._callbacks and not self._queued_callbacks
+                    else libuv.UV_RUN_NOWAIT
+                )
+
+                ran_status = libuv.uv_run(self._ptr, run_mode)
                 # Note that we run queued callbacks when the prepare watcher runs,
                 # thus accounting for timers that expired before polling for IO,
                 # and idle watchers. This next call should get IO callbacks and

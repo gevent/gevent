@@ -285,6 +285,7 @@ class AbstractCallbacks(object):
 def assign_standard_callbacks(ffi, lib, callbacks_class, extras=()): # pylint:disable=unused-argument
     # callbacks keeps these cdata objects alive at the python level
     callbacks = callbacks_class(ffi)
+    extras = [extra if len(extra) == 2 else (extra, None) for extra in extras]
     extras = tuple([(getattr(callbacks, name), error) for name, error in extras])
     for (func, error_func) in ((callbacks.python_callback, None),
                                (callbacks.python_handle_error, None),
@@ -321,10 +322,13 @@ else:
 
 _NOARGS = ()
 
-CALLBACK_CHECK_COUNT = 50
 
 class AbstractLoop(object):
     # pylint:disable=too-many-public-methods,too-many-instance-attributes
+
+    # How many callbacks we should run between checking against the
+    # switch interval.
+    CALLBACK_CHECK_COUNT = 50
 
     error_handler = None
 
@@ -428,7 +432,7 @@ class AbstractLoop(object):
         # moment there.
         self.starting_timer_may_update_loop_time = True
         try:
-            count = CALLBACK_CHECK_COUNT
+            count = self.CALLBACK_CHECK_COUNT
             now = self.now()
             expiration = now + getswitchinterval()
             self._stop_callback_timer()
@@ -479,7 +483,7 @@ class AbstractLoop(object):
                 # but we may have more, so before looping check our
                 # switch interval.
                 if count == 0 and self._callbacks:
-                    count = CALLBACK_CHECK_COUNT
+                    count = self.CALLBACK_CHECK_COUNT
                     self.update_now()
                     if self.now() >= expiration:
                         now = 0
