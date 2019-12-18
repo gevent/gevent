@@ -62,6 +62,16 @@
 
 - Remove some undocumented, deprecated functions from the threadpool module.
 
+- libuv: Fix a perceived slowness spawning many greenlets at the same time
+  without yielding to the event loop while having no active IO
+  watchers or timers. If the time spent launching greenlets exceeded
+  the switch interval and there were no other active watchers, then
+  the default IO poll time of about .3s would elapse between spawning
+  batches. This could theoretically apply for any non-switching
+  callbacks. This can be produced in synthetic benchmarks and other
+  special circumstances, but real applications are unlikely to be
+  affected. See :issue:`1493`.
+
 1.5a2 (2019-10-21)
 ==================
 

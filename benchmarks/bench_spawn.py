@@ -106,7 +106,7 @@ def bench_none(options):
 
 
 def bench_gevent(options):
-    from gevent import spawn, sleep, get_hub
+    from gevent import spawn, sleep
     return test(spawn, sleep, options)
 
 
@@ -224,6 +224,7 @@ def main(argv=None):
                                globals()['bench_' + name],
                                Options(sleep=False, join=False, foo=1, bar='hello'),
                                inner_loops=N)
+
 
 if __name__ == '__main__':
     main()
