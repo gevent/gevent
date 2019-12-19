@@ -46,7 +46,9 @@ class TestRun(unittest.TestCase):
         p = Popen(args, stdout=PIPE, stderr=PIPE)
 
         std_out, std_err = p.communicate()
-        self.assertEqual(0, p.returncode, (std_out, std_err))
+        if b'sys.excepthook' in std_err:
+            self.skipTest("Standard library version raised.")
+        self.assertEqual(0, p.returncode, (p.returncode, std_out, std_err))
 
         monkey_out_lines = monkey_out.decode("utf-8").splitlines()
         std_out_lines = std_out.decode('utf-8').splitlines()

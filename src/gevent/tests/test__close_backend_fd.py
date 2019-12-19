@@ -33,7 +33,9 @@ class Test(unittest.TestCase):
                 raise unittest.SkipTest("backend %s lacks fileno" % (backend,))
 
             os.close(fileno)
-            if backend != 'kqueue':
+            if backend not in ('kqueue', 'epoll'):
+                # That's actually all the libev backends that use a file descriptor,
+                # right?
                 with self.assertRaisesRegex(SystemError, "(libev)"):
                     gevent.sleep(0.001)
 

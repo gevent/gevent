@@ -4,14 +4,17 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+import sys
 
 from greenlet import greenlet as RawGreenlet
 
+from gevent import monkey
 from gevent._compat import integer_types
 from gevent.event import AsyncResult
 from gevent.exceptions import InvalidThreadUseError
 from gevent.greenlet import Greenlet
 
+from gevent._hub_local import get_hub_if_exists
 from gevent.hub import _get_hub_noargs as get_hub
 from gevent.hub import getcurrent
 from gevent.hub import sleep
@@ -46,6 +49,15 @@ class _WorkerGreenlet(RawGreenlet):
         self.greenlet_tree_is_root = True
         self.parent.greenlet_tree_is_ignored = True
 
+        self.exc_info = sys.exc_info
+        self.get_hub_if_exists = get_hub_if_exists
+        if monkey.is_module_patched('sys'):
+            self.stderr = monkey.get_original('sys', 'stderr')
+        else:
+            # Avoid doing any imports in the background thread if it's not
+            # necessary. This can hang Python 2.
+            self.stderr = sys.stderr
+
     @classmethod
     def add_thread(cls, threadpool):
         threadpool._num_worker_threads += 1
@@ -61,20 +73,16 @@ class _WorkerGreenlet(RawGreenlet):
         glet = cls(threadpool)
         glet.switch()
 
-    def __run_one(self, exc_info, func, args, kwargs, thread_result):
+    def __run_one(self, func, args, kwargs, thread_result):
         try:
             thread_result.set(func(*args, **kwargs))
         except: # pylint:disable=bare-except
-            thread_result.handle_error((self, func), exc_info())
+            thread_result.handle_error((self, func), self.exc_info())
         finally:
             del func, args, kwargs, thread_result
 
     def run(self):
         # pylint:disable=too-many-branches
-        from sys import exc_info
-        from gevent._hub_local import get_hub_if_exists
-        from gevent import monkey
-        stderr = monkey.get_original('sys', 'stderr')
 
         # We can capture the task_queue; even though it can change if the threadpool
         # is re-innitted, we won't be running in that case
@@ -82,7 +90,7 @@ class _WorkerGreenlet(RawGreenlet):
         decrease_on_exit_by = 1
         try:
             while 1: # tiny bit faster than True on Py2
-                hub = get_hub_if_exists() # Don't create one; only set if a worker function did it
+                hub = self.get_hub_if_exists() # Don't create one; only set if a worker function did it
                 if hub is not None:
                     hub.name = 'ThreadPool Worker Hub'
                     # While we block, don't let the monitoring thread, if any,
@@ -92,7 +100,6 @@ class _WorkerGreenlet(RawGreenlet):
                     if hub is not None and hub.periodic_monitoring_thread is not None:
                         hub.periodic_monitoring_thread.ignore_current_greenlet_blocking()
                     del hub
-
                 task = task_queue.get()
                 try:
                     if task is None:
@@ -103,16 +110,16 @@ class _WorkerGreenlet(RawGreenlet):
                         self._threadpool._num_worker_threads -= 1
                         return
 
-                    self.__run_one(exc_info, *task)
+                    self.__run_one(*task)
                 finally:
                     task = None
                     task_queue.task_done()
         except Exception as e: # pylint:disable=broad-except
-            print("Failed to run worker thread", e, file=stderr)
+            print("Failed to run worker thread", e, file=self.stderr)
         finally:
-            self.__cleanup(decrease_on_exit_by, get_hub_if_exists)
+            self.__cleanup(decrease_on_exit_by)
 
-    def __cleanup(self, decrease_on_exit_by, get_hub_if_exists):
+    def __cleanup(self, decrease_on_exit_by):
         pool = self._threadpool
         if pool is None:
             return
@@ -120,7 +127,7 @@ class _WorkerGreenlet(RawGreenlet):
         self._threadpool = None
         try:
             pool._num_worker_threads -= decrease_on_exit_by
-            hub = get_hub_if_exists()
+            hub = self.get_hub_if_exists()
             if hub is not None:
                 hub.destroy(True)
             del hub
@@ -604,7 +611,6 @@ else:
 
         @Lazy
         def _condition(self):
-            from gevent import monkey
             if monkey.is_module_patched('threading') or self.done():
                 import threading
                 return threading.Condition()
