@@ -29,6 +29,9 @@ class QuietHub(Hub):
     EXPECTED_TEST_ERROR = (ExpectedException,)
 
     def handle_error(self, context, type, value, tb):
+        if (type, value, tb) == (None, None, None):
+            import sys
+            type, value, tb = sys.exc_info()
         if issubclass(type, self.EXPECTED_TEST_ERROR):
             # Don't print these to cut down on the noise in the test logs
             return

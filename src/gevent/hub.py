@@ -486,10 +486,14 @@ class Hub(WaitOperationsGreenlet):
             that should generally result in exiting the loop and being
             thrown to the parent greenlet.
         """
+        if (type, value, tb) == (None, None, None):
+            type, value, tb = sys.exc_info()
+
         if isinstance(value, str):
             # Cython can raise errors where the value is a plain string
             # e.g., AttributeError, "_semaphore.Semaphore has no attr", <traceback>
             value = type(value)
+
         if not issubclass(type, self.NOT_ERROR):
             self.print_exception(context, type, value, tb)
         if context is None or issubclass(type, self.SYSTEM_ERROR):

@@ -3,7 +3,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import sys
 import os
 
 from greenlet import greenlet as RawGreenlet
@@ -12,14 +11,14 @@ from gevent._compat import integer_types
 from gevent.event import AsyncResult
 from gevent.exceptions import InvalidThreadUseError
 from gevent.greenlet import Greenlet
-from gevent.hub import _get_hub
+
 from gevent.hub import _get_hub_noargs as get_hub
 from gevent.hub import getcurrent
 from gevent.hub import sleep
 from gevent.lock import Semaphore
 from gevent.pool import GroupMappingMixin
 
-from gevent._threading import Lock
+from gevent._threading import Lock as NativeThreadLock
 from gevent._threading import Queue
 from gevent._threading import start_new_thread
 from gevent._threading import get_thread_ident
@@ -36,7 +35,7 @@ class _WorkerGreenlet(RawGreenlet):
     # threads/greenlets.
 
     def __init__(self, threadpool):
-        RawGreenlet.__init__(self, threadpool._worker)
+        RawGreenlet.__init__(self)
         self.thread_ident = get_thread_ident()
         self._threadpool = threadpool
 
@@ -48,10 +47,85 @@ class _WorkerGreenlet(RawGreenlet):
         self.parent.greenlet_tree_is_ignored = True
 
     @classmethod
-    def run_in_worker_thread(cls, threadpool):
+    def add_thread(cls, threadpool):
+        threadpool._num_worker_threads += 1
+        try:
+            start_new_thread(cls._run_in_worker_thread, (threadpool,))
+        except:
+            threadpool._num_worker_threads -= 1
+            raise
+
+    @classmethod
+    def _run_in_worker_thread(cls, threadpool):
         # The root function of each new worker thread.
         glet = cls(threadpool)
         glet.switch()
+
+    def __run_one(self, exc_info, func, args, kwargs, thread_result):
+        try:
+            thread_result.set(func(*args, **kwargs))
+        except: # pylint:disable=bare-except
+            thread_result.handle_error((self, func), exc_info())
+        finally:
+            del func, args, kwargs, thread_result
+
+    def run(self):
+        # pylint:disable=too-many-branches
+        from sys import exc_info
+        from gevent._hub_local import get_hub_if_exists
+        from gevent import monkey
+        stderr = monkey.get_original('sys', 'stderr')
+
+        # We can capture the task_queue; even though it can change if the threadpool
+        # is re-innitted, we won't be running in that case
+        task_queue = self._threadpool.task_queue
+        decrease_on_exit_by = 1
+        try:
+            while 1: # tiny bit faster than True on Py2
+                hub = get_hub_if_exists() # Don't create one; only set if a worker function did it
+                if hub is not None:
+                    hub.name = 'ThreadPool Worker Hub'
+                    # While we block, don't let the monitoring thread, if any,
+                    # report us as blocked. Indeed, so long as we never
+                    # try to switch greenlets, don't report us as blocked---
+                    # the threadpool is *meant* to run blocking tasks
+                    if hub is not None and hub.periodic_monitoring_thread is not None:
+                        hub.periodic_monitoring_thread.ignore_current_greenlet_blocking()
+                    del hub
+
+                task = task_queue.get()
+                try:
+                    if task is None:
+                        # we want first to decrease size, then decrease unfinished_tasks
+                        # otherwise, _adjust might think there's one more idle thread that
+                        # needs to be killed
+                        decrease_on_exit_by = 0
+                        self._threadpool._num_worker_threads -= 1
+                        return
+
+                    self.__run_one(exc_info, *task)
+                finally:
+                    task = None
+                    task_queue.task_done()
+        except Exception as e: # pylint:disable=broad-except
+            print("Failed to run worker thread", e, file=stderr)
+        finally:
+            self.__cleanup(decrease_on_exit_by, get_hub_if_exists)
+
+    def __cleanup(self, decrease_on_exit_by, get_hub_if_exists):
+        pool = self._threadpool
+        if pool is None:
+            return
+
+        self._threadpool = None
+        try:
+            pool._num_worker_threads -= decrease_on_exit_by
+            hub = get_hub_if_exists()
+            if hub is not None:
+                hub.destroy(True)
+            del hub
+        except Exception: # pylint:disable=broad-except
+            pass
 
     def __repr__(self):
         return "<ThreadPoolWorker at 0x%x thread_ident=0x%x %s>" % (
@@ -59,6 +133,60 @@ class _WorkerGreenlet(RawGreenlet):
             self.thread_ident,
             self._threadpool
         )
+
+
+class _AtomicInteger(object):
+
+    def __init__(self):
+        self._lock = NativeThreadLock()
+        self._value = 0
+
+    def __str__(self):
+        return str(self._value)
+
+    def __repr__(self):
+        return '<%s value=%r lock=%r>' % (
+            type(self).__name__,
+            self._value,
+            self._lock
+        )
+
+    @property
+    def value(self):
+        with self._lock:
+            return self._value
+
+    def __lt__(self, num):
+        with self._lock:
+            return self._value < num
+
+    def __le__(self, num):
+        with self._lock:
+            return self._value <= num
+
+    def __gt__(self, num):
+        with self._lock:
+            return self._value > num
+
+    def __sub__(self, num):
+        with self._lock:
+            return self._value - num
+
+    def __bool__(self):
+        with self._lock:
+            return bool(self._value)
+
+    __nonzero__ = __bool__
+
+    def __iadd__(self, num):
+        with self._lock:
+            self._value += num
+        return self
+
+    def __isub__(self, num):
+        with self._lock:
+            self._value -= num
+        return self
 
 class ThreadPool(GroupMappingMixin):
     # TODO: Document thread safety restrictions.
@@ -120,9 +248,6 @@ class ThreadPool(GroupMappingMixin):
         # gevent.lock.Semaphore, this is only safe to use from a single
         # native thread.
         '_available_worker_threads_greenlet_sem',
-        # A native threading lock, used to protect internals
-        # that are safe to call across multiple threads.
-        '_native_thread_internal_lock',
         # The number of running worker threads
         '_num_worker_threads',
         # The task queue is itself safe to use from multiple
@@ -139,12 +264,11 @@ class ThreadPool(GroupMappingMixin):
         self.task_queue = Queue()
         self.fork_watcher = None
 
+        self._num_worker_threads = _AtomicInteger()
         self._maxsize = 0
         # Note that by starting with 1, we actually allow
         # maxsize + 1 tasks in the queue.
         self._available_worker_threads_greenlet_sem = Semaphore(1, hub)
-        self._native_thread_internal_lock = Lock()
-        self._num_worker_threads = 0
         self._set_maxsize(maxsize)
         self.fork_watcher = hub.loop.fork(ref=False)
 
@@ -186,9 +310,7 @@ class ThreadPool(GroupMappingMixin):
         return self.task_queue.unfinished_tasks
 
     def _get_size(self):
-        # TODO: This probably needs to acquire the lock. We
-        # modify this from self._add_thread under a lock.
-        return self._num_worker_threads
+        return self._num_worker_threads.value
 
     def _set_size(self, size):
         if size < 0:
@@ -276,14 +398,7 @@ class ThreadPool(GroupMappingMixin):
             self.manager = Greenlet.spawn(self._adjust_wait)
 
     def _add_thread(self):
-        with self._native_thread_internal_lock:
-            self._num_worker_threads += 1
-        try:
-            start_new_thread(_WorkerGreenlet.run_in_worker_thread, (self,))
-        except:
-            with self._native_thread_internal_lock:
-                self._num_worker_threads -= 1
-            raise
+        _WorkerGreenlet.add_thread(self)
 
     def spawn(self, func, *args, **kwargs):
         """
@@ -337,69 +452,6 @@ class ThreadPool(GroupMappingMixin):
             semaphore.release()
             raise
         return result
-
-    def _decrease_size(self):
-        if sys is None:
-            return
-        _lock = self._native_thread_internal_lock
-        if _lock is not None: # XXX: When would this be None?
-            with _lock:
-                self._num_worker_threads -= 1
-
-    def __ignore_current_greenlet_blocking(self, hub):
-        if hub is not None and hub.periodic_monitoring_thread is not None:
-            hub.periodic_monitoring_thread.ignore_current_greenlet_blocking()
-
-    def _worker(self):
-        # pylint:disable=too-many-branches
-        need_decrease = True
-        try:
-            while 1: # tiny bit faster than True on Py2
-                h = _get_hub() # Don't create one; only set if a worker function did it
-                if h is not None:
-                    h.name = 'ThreadPool Worker Hub'
-                task_queue = self.task_queue
-                # While we block, don't let the monitoring thread, if any,
-                # report us as blocked. Indeed, so long as we never
-                # try to switch greenlets, don't report us as blocked---
-                # the threadpool is *meant* to run blocking tasks
-                self.__ignore_current_greenlet_blocking(h)
-                task = task_queue.get()
-                try:
-                    if task is None:
-                        need_decrease = False
-                        self._decrease_size()
-                        # we want first to decrease size, then decrease unfinished_tasks
-                        # otherwise, _adjust might think there's one more idle thread that
-                        # needs to be killed
-                        return
-                    func, args, kwargs, thread_result = task
-                    try:
-                        value = func(*args, **kwargs)
-                    except: # pylint:disable=bare-except
-                        exc_info = getattr(sys, 'exc_info', None)
-                        if exc_info is None:
-                            return
-                        thread_result.handle_error((self, func), exc_info())
-                    else:
-                        if sys is None:
-                            return
-                        thread_result.set(value)
-                        del value
-                    finally:
-                        del func, args, kwargs, thread_result, task
-                finally:
-                    if sys is None:
-                        return # pylint:disable=lost-exception
-                    task_queue.task_done()
-        finally:
-            if need_decrease:
-                self._decrease_size()
-            if sys is not None:
-                hub = _get_hub()
-                if hub is not None:
-                    hub.destroy(True)
-                del hub
 
     def _apply_immediately(self):
         # If we're being called from a different thread than the one that
@@ -537,7 +589,7 @@ else:
             try:
                 fn(future)
             except Exception: # pylint: disable=broad-except
-                future.hub.print_exception((fn, future), *sys.exc_info())
+                future.hub.handle_error((fn, future), None, None, None)
         return cbwrap
 
     def _wrap(future, fn):

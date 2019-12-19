@@ -1,4 +1,7 @@
 from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
+
 import sys
 
 if not sys.argv[1:]:
@@ -27,6 +30,7 @@ elif sys.argv[1:] == ['subprocess']: # pragma: no cover
         except NameError:
             line = input()
         print('%s chars.' % len(line))
+        sys.stdout.flush()
 
     gevent.spawn(printline).join()
 
