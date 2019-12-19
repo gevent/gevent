@@ -13,12 +13,12 @@ import os
 import os.path
 import sys
 
-import unittest
-
 from subprocess import Popen
 from subprocess import PIPE
 
-class TestRun(unittest.TestCase):
+from gevent import testing as greentest
+
+class TestRun(greentest.TestCase):
     maxDiff = None
 
     def setUp(self):
@@ -46,8 +46,6 @@ class TestRun(unittest.TestCase):
         p = Popen(args, stdout=PIPE, stderr=PIPE)
 
         std_out, std_err = p.communicate()
-        if b'sys.excepthook' in std_err:
-            self.skipTest("Standard library version raised.")
         self.assertEqual(0, p.returncode, (p.returncode, std_out, std_err))
 
         monkey_out_lines = monkey_out.decode("utf-8").splitlines()
@@ -82,6 +80,18 @@ class TestRun(unittest.TestCase):
         self.assertEqual(lines[1], 'monkey_package/issue302monkey.py')
         self.assertEqual(lines[2], 'True', lines)
 
+    # These three tests all sometimes fail on Py2 on CI, writing
+    # to stderr:
+    #   Unhandled exception in thread started by \n
+    #   sys.excepthook is missing\n
+    #   lost sys.stderr\n
+    #   Fatal Python error: PyImport_GetModuleDict: no module dictionary!\n'
+    # I haven't been able to produce this locally on macOS or Linux.
+    # The last line seems new with 2.7.17?
+    # Also, occasionally, they get '3' instead of '2' for the number of threads.
+    # That could have something to do with...? Most commonly that's PyPy, but
+    # sometimes CPython. Again, haven't reproduced.
+    @greentest.skipOnPy2("lost sys.stderr sometimes")
     def test_threadpool_in_patched_after_patch(self):
         # Issue 1484
         # If we don't have this correct, then we get exceptions
@@ -89,6 +99,7 @@ class TestRun(unittest.TestCase):
         self.assertEqual(out, ['False', '2'])
         self.assertEqual(err, b'')
 
+    @greentest.skipOnPy2("lost sys.stderr sometimes")
     def test_threadpool_in_patched_after_patch_module(self):
         # Issue 1484
         # If we don't have this correct, then we get exceptions
@@ -96,6 +107,7 @@ class TestRun(unittest.TestCase):
         self.assertEqual(out, ['False', '2'])
         self.assertEqual(err, b'')
 
+    @greentest.skipOnPy2("lost sys.stderr sometimes")
     def test_threadpool_not_patched_after_patch_module(self):
         # Issue 1484
         # If we don't have this correct, then we get exceptions
@@ -104,4 +116,4 @@ class TestRun(unittest.TestCase):
         self.assertEqual(err, b'')
 
 if __name__ == '__main__':
-    unittest.main()
+    greentest.main()

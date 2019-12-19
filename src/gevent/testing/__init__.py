@@ -87,6 +87,7 @@ from .skipping import skipOnLibuvOnTravisOnCPython27
 from .skipping import skipOnPy37
 from .skipping import skipWithoutResource
 from .skipping import skipWithoutExternalNetwork
+from .skipping import skipOnPy2
 
 from .exception import ExpectedException
 
