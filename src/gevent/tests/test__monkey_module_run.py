@@ -37,7 +37,7 @@ class TestRun(unittest.TestCase):
         args += [script, 'patched']
         p = Popen(args, stdout=PIPE, stderr=PIPE, env=env)
         monkey_out, monkey_err = p.communicate()
-        self.assertEqual(0, p.returncode, (monkey_out, monkey_err))
+        self.assertEqual(0, p.returncode, (p.returncode, monkey_out, monkey_err))
 
         if module:
             args = [sys.executable, "-m", script, 'stdlib']

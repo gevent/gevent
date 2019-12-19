@@ -142,9 +142,11 @@ class OpenDescriptor(object): # pylint:disable=too-many-instance-attributes
         if universal:
             if can_write:
                 raise ValueError("mode U cannot be combined with 'x', 'w', 'a', or '+'")
-            import warnings
-            warnings.warn("'U' mode is deprecated",
-                          DeprecationWarning, 4)
+            # Just because the stdlib deprecates this, no need for us to do so as well.
+            # Especially not while we still support Python 2.
+            # import warnings
+            # warnings.warn("'U' mode is deprecated",
+            #               DeprecationWarning, 4)
             reading = True
         if text and binary:
             raise ValueError("can't have text and binary mode at once")

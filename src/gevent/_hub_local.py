@@ -51,7 +51,7 @@ def set_default_hub_class(hubtype):
     global Hub
     Hub = hubtype
 
-def get_hub(*args, **kwargs):
+def get_hub(*args, **kwargs): # pylint:disable=unused-argument
     """
     Return the hub for the current thread.
 
@@ -63,12 +63,12 @@ def get_hub(*args, **kwargs):
        only used when the hub was created, and so were non-deterministic---to be
        sure they were used, *all* callers had to pass them, or they were order-dependent.
        Use ``set_hub`` instead.
+
+    .. versionchanged:: 1.5a3
+       The *args* and *kwargs* arguments are now completely ignored.
     """
-    hub = _threadlocal.hub
-    if hub is None:
-        hubtype = get_hub_class()
-        hub = _threadlocal.hub = hubtype(*args, **kwargs)
-    return hub
+
+    return get_hub_noargs()
 
 def get_hub_noargs():
     # Just like get_hub, but cheaper to call because it

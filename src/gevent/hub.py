@@ -460,6 +460,19 @@ class Hub(WaitOperationsGreenlet):
         result += ' thread_ident=%s' % (hex(self.thread_ident), )
         return result + '>'
 
+    def _normalize_exception(self, t, v, tb):
+        # Allow passing in all None if the caller doesn't have
+        # easy access to sys.exc_info()
+        if (t, v, tb) == (None, None, None):
+            t, v, tb = sys.exc_info()
+
+        if isinstance(v, str):
+            # Cython can raise errors where the value is a plain string
+            # e.g., AttributeError, "_semaphore.Semaphore has no attr", <traceback>
+            v = t(v)
+
+        return t, v, tb
+
     def handle_error(self, context, type, value, tb):
         """
         Called by the event loop when an error occurs. The default
@@ -486,13 +499,7 @@ class Hub(WaitOperationsGreenlet):
             that should generally result in exiting the loop and being
             thrown to the parent greenlet.
         """
-        if (type, value, tb) == (None, None, None):
-            type, value, tb = sys.exc_info()
-
-        if isinstance(value, str):
-            # Cython can raise errors where the value is a plain string
-            # e.g., AttributeError, "_semaphore.Semaphore has no attr", <traceback>
-            value = type(value)
+        type, value, tb = self._normalize_exception(type, value, tb)
 
         if not issubclass(type, self.NOT_ERROR):
             self.print_exception(context, type, value, tb)
@@ -543,7 +550,7 @@ class Hub(WaitOperationsGreenlet):
             stderr = stderr.io # pylint:disable=no-member
         return stderr
 
-    def print_exception(self, context, type, value, tb):
+    def print_exception(self, context, t, v, tb):
         # Python 3 does not gracefully handle None value or tb in
         # traceback.print_exception() as previous versions did.
         # pylint:disable=no-member
@@ -555,10 +562,12 @@ class Hub(WaitOperationsGreenlet):
             # See https://github.com/gevent/gevent/issues/1295
             return
 
-        if value is None:
-            errstream.write('%s\n' % type.__name__)
+        t, v, tb = self._normalize_exception(t, v, tb)
+
+        if v is None:
+            errstream.write('%s\n' % t.__name__)
         else:
-            traceback.print_exception(type, value, tb, file=errstream)
+            traceback.print_exception(t, v, tb, file=errstream)
         del tb
 
         try:
@@ -576,7 +585,7 @@ class Hub(WaitOperationsGreenlet):
                 except: # pylint:disable=bare-except
                     traceback.print_exc(file=self.exception_stream)
                     context = repr(context)
-            errstream.write('%s failed with %s\n\n' % (context, getattr(type, '__name__', 'exception'), ))
+            errstream.write('%s failed with %s\n\n' % (context, getattr(t, '__name__', 'exception'), ))
 
 
     def run(self):

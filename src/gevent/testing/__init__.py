@@ -25,6 +25,13 @@ import unittest
 
 # pylint:disable=unused-import
 
+# It's important to do this ASAP, because if we're monkey patched,
+# then importing things like the standard library test.support can
+# need to construct the hub (to check for IPv6 support using a socket).
+from .hub import QuietHub
+import gevent.hub
+gevent.hub.set_default_hub_class(QuietHub)
+
 from .sysinfo import VERBOSE
 from .sysinfo import WIN
 from .sysinfo import LINUX
@@ -87,9 +94,7 @@ from .exception import ExpectedException
 from .leakcheck import ignores_leakcheck
 
 
-
 from .params import LARGE_TIMEOUT
-
 from .params import DEFAULT_LOCAL_HOST_ADDR
 from .params import DEFAULT_LOCAL_HOST_ADDR6
 from .params import DEFAULT_BIND_ADDR
@@ -103,10 +108,6 @@ from .params import DEFAULT_XPC_SOCKET_TIMEOUT
 main = unittest.main
 SkipTest = unittest.SkipTest
 
-from .hub import QuietHub
-
-import gevent.hub
-gevent.hub.set_default_hub_class(QuietHub)
 
 
 

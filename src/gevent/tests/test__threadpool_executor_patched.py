@@ -1,18 +1,17 @@
 from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
+
 from gevent import monkey; monkey.patch_all()
 
 import gevent.testing as greentest
-import gevent.threadpool
+
+from . import test__threadpool
 
 
-if hasattr(gevent.threadpool, 'ThreadPoolExecutor'):
+class TestPatchedTPE(test__threadpool.TestTPE):
+    MONKEY_PATCHED = True
 
-    from test__threadpool import TestTPE as _Base
-
-    class TestPatchedTPE(_Base):
-        MONKEY_PATCHED = True
-
-    del _Base
 
 if __name__ == '__main__':
     greentest.main()

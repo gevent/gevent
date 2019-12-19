@@ -26,3 +26,5 @@ def thread_is_greenlet():
 is_greenlet = get_hub().threadpool.apply(thread_is_greenlet)
 print(is_greenlet)
 print(len(sys._current_frames()))
+sys.stdout.flush()
+sys.stderr.flush()

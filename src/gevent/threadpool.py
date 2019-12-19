@@ -579,22 +579,21 @@ else:
     from gevent._util import Lazy
     from concurrent.futures import _base as cfb
 
-    def _wrap_error(future, fn):
+    def _ignore_error(future_proxy, fn):
         def cbwrap(_):
             del _
-            # we're called with the async result, but
-            # be sure to pass in ourself. Also automatically
-            # unlink ourself so that we don't get called multiple
-            # times.
+            # We're called with the async result (from the threadpool), but
+            # be sure to pass in the user-visible _FutureProxy object..
             try:
-                fn(future)
+                fn(future_proxy)
             except Exception: # pylint: disable=broad-except
-                future.hub.handle_error((fn, future), None, None, None)
+                # Just print, don't raise to the hub's parent.
+                future_proxy.hub.print_exception((fn, future_proxy), None, None, None)
         return cbwrap
 
-    def _wrap(future, fn):
+    def _wrap(future_proxy, fn):
         def f(_):
-            fn(future)
+            fn(future_proxy)
         return f
 
     class _FutureProxy(object):
@@ -656,10 +655,11 @@ else:
                 raise concurrent.futures.TimeoutError()
 
         def add_done_callback(self, fn):
+            """Exceptions raised by *fn* are ignored."""
             if self.done():
                 fn(self)
             else:
-                self.asyncresult.rawlink(_wrap_error(self, fn))
+                self.asyncresult.rawlink(_ignore_error(self, fn))
 
         def rawlink(self, fn):
             self.asyncresult.rawlink(_wrap(self, fn))
