@@ -167,6 +167,10 @@ class SubscriberCleanupMixin(object):
         from gevent import events
         self.__old_subscribers = events.subscribers[:]
 
+    def addSubscriber(self, sub):
+        from gevent import events
+        events.subscribers.append(sub)
+
     def tearDown(self):
         from gevent import events
         events.subscribers[:] = self.__old_subscribers

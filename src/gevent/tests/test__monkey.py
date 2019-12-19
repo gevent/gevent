@@ -11,6 +11,22 @@ class TestMonkey(SubscriberCleanupMixin, unittest.TestCase):
 
     maxDiff = None
 
+    def setUp(self):
+        super(TestMonkey, self).setUp()
+
+        self.all_events = []
+        self.addSubscriber(self.all_events.append)
+        self.orig_saved = orig_saved = {}
+        for k, v in monkey.saved.items():
+            orig_saved[k] = v.copy()
+
+
+    def tearDown(self):
+        monkey.saved = self.orig_saved
+        del self.orig_saved
+        del self.all_events
+        super(TestMonkey, self).tearDown()
+
     def test_time(self):
         import time
         from gevent import time as gtime
@@ -70,49 +86,51 @@ class TestMonkey(SubscriberCleanupMixin, unittest.TestCase):
 
     def test_patch_twice_warnings_events(self):
         import warnings
-        from gevent.testing import verify
 
-        orig_saved = {}
-        for k, v in monkey.saved.items():
-            orig_saved[k] = v.copy()
-
-        from gevent import events
-        all_events = []
-        events.subscribers.append(all_events.append)
-
-        def veto(event):
-            if isinstance(event, events.GeventWillPatchModuleEvent) and event.module_name == 'ssl':
-                raise events.DoNotPatch
-
-        events.subscribers.append(veto)
+        all_events = self.all_events
 
         with warnings.catch_warnings(record=True) as issued_warnings:
-            # Patch again, triggering three warnings, one for os=False/signal=True,
-            # one for repeated monkey-patching, one for patching after ssl (on python >= 2.7.9)
+            # Patch again, triggering just one warning, for
+            # a different set of arguments. Because we're going to False instead of
+            # turning something on, nothing is actually done, no events are issued.
             monkey.patch_all(os=False, extra_kwarg=42)
-            self.assertGreaterEqual(len(issued_warnings), 2)
-            self.assertIn('SIGCHLD', str(issued_warnings[-1].message))
+            self.assertEqual(len(issued_warnings), 1)
             self.assertIn('more than once', str(issued_warnings[0].message))
+            self.assertEqual(all_events, [])
 
-            # Patching with the exact same argument doesn't issue a second warning.
-            # in fact, it doesn't do anything
+            # Same warning again, but still nothing is done.
             del issued_warnings[:]
             monkey.patch_all(os=False)
-            orig_saved['_gevent_saved_patch_all'] = monkey.saved['_gevent_saved_patch_all']
-
-            self.assertFalse(issued_warnings)
+            self.assertEqual(len(issued_warnings), 1)
+            self.assertIn('more than once', str(issued_warnings[0].message))
+            self.assertEqual(all_events, [])
+            self.orig_saved['_gevent_saved_patch_all_module_settings'] = monkey.saved[
+                '_gevent_saved_patch_all_module_settings']
 
         # Make sure that re-patching did not change the monkey.saved
         # attribute, overwriting the original functions.
-        if 'logging' in monkey.saved and 'logging' not in orig_saved:
+        if 'logging' in monkey.saved and 'logging' not in self.orig_saved:
             # some part of the warning or unittest machinery imports logging
-            orig_saved['logging'] = monkey.saved['logging']
-        self.assertEqual(orig_saved, monkey.saved)
+            self.orig_saved['logging'] = monkey.saved['logging']
+        self.assertEqual(self.orig_saved, monkey.saved)
 
         # Make sure some problematic attributes stayed correct.
         # NOTE: This was only a problem if threading was not previously imported.
         for k, v in monkey.saved['threading'].items():
-            self.assertNotIn('gevent', str(v))
+            self.assertNotIn('gevent', str(v), (k, v))
+
+    def test_patch_events(self):
+        from gevent import events
+        from gevent.testing import verify
+        all_events = self.all_events
+
+        def veto(event):
+            if isinstance(event, events.GeventWillPatchModuleEvent) and event.module_name == 'ssl':
+                raise events.DoNotPatch
+        self.addSubscriber(veto)
+
+        monkey.saved = {} # Reset
+        monkey.patch_all(thread=False, select=False, extra_kwarg=42) # Go again
 
         self.assertIsInstance(all_events[0], events.GeventWillPatchAllEvent)
         self.assertEqual({'extra_kwarg': 42}, all_events[0].patch_all_kwargs)
