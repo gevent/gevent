@@ -1,8 +1,9 @@
 from __future__ import print_function
-import gevent.monkey
-gevent.monkey.patch_all()
+from gevent import monkey
+monkey.patch_all()
 
 import os
+import unittest
 import multiprocessing
 
 import gevent
@@ -20,29 +21,42 @@ fork_watcher = hub.loop.fork(ref=False)
 fork_watcher.start(on_fork)
 
 
-def run(q):
+def in_child(q):
     # libev only calls fork callbacks at the beginning of
     # the loop; we use callbacks extensively so it takes *two*
     # calls to sleep (with a timer) to actually get wrapped
     # around to the beginning of the loop.
-    gevent.sleep(0.01)
-    gevent.sleep(0.01)
+    gevent.sleep(0.001)
+    gevent.sleep(0.001)
     q.put(newpid)
 
 
-def test():
-    # Use a thread to make us multi-threaded
-    hub.threadpool.apply(lambda: None)
-    # If the Queue is global, q.get() hangs on Windows; must pass as
-    # an argument.
-    q = multiprocessing.Queue()
-    p = multiprocessing.Process(target=run, args=(q,))
-    p.start()
-    p.join()
-    p_val = q.get()
+class Test(unittest.TestCase):
 
-    assert p_val is not None, "The fork watcher didn't run"
-    assert p_val != pid
+    def test(self):
+        self.assertEqual(hub.threadpool.size, 0)
+        # Use a thread to make us multi-threaded
+        hub.threadpool.apply(lambda: None)
+        self.assertEqual(hub.threadpool.size, 1)
+
+        # If the Queue is global, q.get() hangs on Windows; must pass as
+        # an argument.
+        q = multiprocessing.Queue()
+        p = multiprocessing.Process(target=in_child, args=(q,))
+        p.start()
+        p.join()
+        p_val = q.get()
+
+        self.assertIsNone(
+            newpid,
+            "The fork watcher ran in the parent for some reason."
+        )
+        self.assertIsNotNone(
+            p_val,
+            "The child process returned nothing, meaning the fork watcher didn't run in the child."
+        )
+        self.assertNotEqual(p_val, pid)
+        assert p_val != pid
 
 if __name__ == '__main__':
     # Must call for Windows to fork properly; the fork can't be in the top-level
@@ -57,4 +71,4 @@ if __name__ == '__main__':
     # to create a whole new process that has no relation to the current process;
     # that process then calls multiprocessing.forking.main() to do its work.
     # Since no state is shared, a fork watcher cannot exist in that process.
-    test()
+    unittest.main()

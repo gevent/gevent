@@ -146,3 +146,15 @@ class Queue(object):
                 self._not_empty.wait()
             item = self._queue.popleft()
             return item
+
+    def kill(self):
+        """
+        Call to destroy this object.
+
+        Use this when it's not possible to safely drain the queue, e.g.,
+        after a fork when the locks are in an uncertain state.
+        """
+        self._queue = None
+        self._mutex = None
+        self._not_empty = None
+        self.unfinished_tasks = None

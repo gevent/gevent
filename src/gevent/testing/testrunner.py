@@ -33,9 +33,9 @@ except (ImportError, OSError, IOError):
     pass
 
 TIMEOUT = 100
-NWORKERS = int(os.environ.get('NWORKERS') or max(cpu_count() - 1, 4))
-if NWORKERS > 10:
-    NWORKERS = 10
+DEFAULT_NWORKERS = int(os.environ.get('NWORKERS') or max(cpu_count() - 1, 4))
+if DEFAULT_NWORKERS > 10:
+    DEFAULT_NWORKERS = 10
 
 if RUN_LEAKCHECKS:
     # Capturing the stats takes time, and we run each
@@ -49,9 +49,7 @@ DEFAULT_RUN_OPTIONS = {
 
 if RUNNING_ON_CI:
     # Too many and we get spurious timeouts
-    NWORKERS = 4
-
-
+    DEFAULT_NWORKERS = 4
 
 
 def _package_relative_filename(filename, package):
@@ -96,7 +94,8 @@ class Runner(object):
                  configured_failing_tests=(),
                  failfast=False,
                  quiet=False,
-                 configured_run_alone_tests=()):
+                 configured_run_alone_tests=(),
+                 worker_count=DEFAULT_NWORKERS):
         """
         :keyword quiet: Set to True or False to explicitly choose. Set to
             `None` to use the default, which may come from the environment variable
@@ -112,7 +111,7 @@ class Runner(object):
         self.results.total = len(self._tests)
         self._running_jobs = []
 
-        self._worker_count = min(len(tests), NWORKERS) or 1
+        self._worker_count = min(len(tests), worker_count) or 1
 
     def _run_one(self, cmd, **kwargs):
         if self._quiet is not None:
@@ -516,6 +515,11 @@ def main():
     parser.add_argument("--verbose", action="store_false", dest='quiet')
     parser.add_argument("--debug", action="store_true", default=False)
     parser.add_argument("--package", default="gevent.tests")
+    parser.add_argument(
+        "--processes", "-j", default=DEFAULT_NWORKERS, type=int,
+        help="Use up to the given number of parallel processes to execute tests. "
+        "Defaults to %(default)s."
+    )
     parser.add_argument('-u', '--use', metavar='RES1,RES2,...',
                         action='store', type=parse_resources,
                         help='specify which special resource intensive tests '
@@ -614,6 +618,7 @@ def main():
             failfast=options.failfast,
             quiet=options.quiet,
             configured_run_alone_tests=RUN_ALONE,
+            worker_count=options.processes,
         )
 
         if options.travis_fold:

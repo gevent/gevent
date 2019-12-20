@@ -94,4 +94,7 @@ except SkipTest as e:
     print("Ran 0 tests in 0.0s")
     print('OK (skipped=0)')
 finally:
-    os.remove(temp_path)
+    try:
+        os.remove(temp_path)
+    except OSError:
+        pass
