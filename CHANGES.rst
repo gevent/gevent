@@ -76,6 +76,11 @@
   -m gevent.monkey``. Previously it would use greenlets instead of
   native threads. See :issue:`1484`.
 
+- Fix potential crashes in the FFI backends if a watcher was closed
+  and stopped in the middle of a callback from the event loop and then
+  raised an exception. This could happen if the hub's ``handle_error``
+  function was poorly customized, for example. See :issue:`1482`
+
 1.5a2 (2019-10-21)
 ==================
 
