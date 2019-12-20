@@ -17,7 +17,11 @@ from gevent._compat import string_types
 from gevent._compat import integer_types
 
 # Nothing public here.
-__all__ = []
+__all__ = ()
+
+# trigger import of encodings.idna to avoid https://github.com/gevent/gevent/issues/349
+u'foo'.encode('idna')
+
 
 def _lookup_port(port, socktype):
     # pylint:disable=too-many-branches

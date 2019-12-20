@@ -154,6 +154,10 @@ def format_run_info(thread_stacks=True,
     return lines
 
 
+def is_idle_threadpool_worker(frame):
+    return frame.f_locals and frame.f_locals.get('gevent_threadpool_worker_idle')
+
+
 def _format_thread_info(lines, thread_stacks, limit, current_thread_ident):
     import threading
 
@@ -172,7 +176,7 @@ def _format_thread_info(lines, thread_stacks, limit, current_thread_ident):
         if not thread:
             # Is it an idle threadpool thread? thread pool threads
             # don't have a Thread object, they're low-level
-            if frame.f_locals and frame.f_locals.get('gevent_threadpool_worker_idle'):
+            if is_idle_threadpool_worker(frame):
                 name = 'idle threadpool worker'
                 do_stacks = False
         else:
@@ -633,3 +637,15 @@ class assert_switches(object):
             message += '\n'
             message += '\n'.join(report_lines)
             raise _FailedToSwitch(message)
+
+
+def clear_stack_frames(frame):
+    """Do our best to clear local variables in all frames in a stack."""
+    # On Python 3, frames have a .clear() method that can raise a RuntimeError.
+    while frame is not None:
+        try:
+            frame.clear()
+        except (RuntimeError, AttributeError):
+            pass
+        frame.f_locals.clear()
+        frame = frame.f_back

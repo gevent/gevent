@@ -10,10 +10,6 @@ from gevent.hub import get_hub
 __all__ = ['Resolver']
 
 
-# trigger import of encodings.idna to avoid https://github.com/gevent/gevent/issues/349
-u'foo'.encode('idna')
-
-
 class Resolver(object):
     """
     Implementation of the resolver API using native threads and native resolution

@@ -1031,16 +1031,26 @@ def patch_signal():
 
 def _check_repatching(**module_settings):
     _warnings = []
-    key = '_gevent_saved_patch_all'
+    key = '_gevent_saved_patch_all_module_settings'
+
     del module_settings['kwargs']
-    if saved.get(key, module_settings) != module_settings:
+    currently_patched = saved.setdefault(key, {})
+    first_time = not currently_patched
+    if not first_time and currently_patched != module_settings:
         _queue_warning("Patching more than once will result in the union of all True"
                        " parameters being patched",
                        _warnings)
 
-    first_time = key not in saved
-    saved[key] = module_settings
-    return _warnings, first_time, module_settings
+    to_patch = {}
+    for k, v in module_settings.items():
+        # If we haven't seen the setting at all, record it and echo it.
+        # If we have seen the setting, but it became true, record it and echo it.
+        if k not in currently_patched:
+            to_patch[k] = currently_patched[k] = v
+        elif v and not currently_patched[k]:
+            to_patch[k] = currently_patched[k] = True
+
+    return _warnings, first_time, to_patch
 
 
 def _subscribe_signal_os(will_patch_all):
@@ -1053,7 +1063,6 @@ def _subscribe_signal_os(will_patch_all):
                        warnings)
 
 def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=True, ssl=True,
-              httplib=False, # Deprecated, to be removed.
               subprocess=True, sys=False, aggressive=True, Event=True,
               builtins=True, signal=True,
               queue=True,
@@ -1083,15 +1092,25 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
        for kwarg values to be interpreted by plugins, for example, `patch_all(mylib_futures=True)`.
     .. versionchanged:: 1.3.5
        Add *queue*, defaulting to True, for Python 3.7.
+    .. versionchanged:: 1.5
+       Remove the ``httplib`` argument. Previously, setting it raised a ``ValueError``.
+    .. versionchanged:: 1.5
+       Better handling of patching more than once.
     """
     # pylint:disable=too-many-locals,too-many-branches
 
     # Check to see if they're changing the patched list
     _warnings, first_time, modules_to_patch = _check_repatching(**locals())
-    if not _warnings and not first_time:
-        # Nothing to do, identical args to what we just
-        # did
+
+    if not modules_to_patch:
+        # Nothing to do. Either the arguments were identical to what
+        # we previously did, or they specified false values
+        # for things we had previously patched.
+        _process_warnings(_warnings)
         return
+
+    for k, v in modules_to_patch.items():
+        locals()[k] = v
 
     from gevent import events
     try:
@@ -1116,8 +1135,6 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
         patch_select(aggressive=aggressive)
     if ssl:
         patch_ssl(_warnings=_warnings, _first_time=first_time)
-    if httplib:
-        raise ValueError('gevent.httplib is no longer provided, httplib must be False')
     if subprocess:
         patch_subprocess()
     if builtins:
@@ -1143,7 +1160,7 @@ def main():
     while argv and argv[0].startswith('--'):
         option = argv[0][2:]
         if option == 'verbose':
-            verbose = True
+            verbose += 1
         elif option == 'module':
             run_fn = "run_module"
         elif option.startswith('no-') and option.replace('no-', '') in patch_all_args:
@@ -1166,18 +1183,40 @@ def main():
         print('sys.modules=%s' % pprint.pformat(sorted(sys.modules.keys())))
         print('cwd=%s' % os.getcwd())
 
-    patch_all(**args)
-    if argv:
-        import runpy
-        sys.argv = argv
-        # Use runpy.run_path to closely (exactly) match what the
-        # interpreter does given 'python <path>'. This includes allowing
-        # passing .pyc/.pyo files and packages with a __main__ and
-        # potentially even zip files. Previously we used exec, which only
-        # worked if we directly read a python source file.
-        getattr(runpy, run_fn)(sys.argv[0], run_name='__main__')
-    else:
+    if not argv:
         print(script_help)
+        return
+
+    sys.argv[:] = argv
+    # Make sure that we don't get imported again under a different
+    # name (usually it's ``__main__`` here) because that could lead to
+    # double-patching, and making monkey.get_original() not work.
+    try:
+        mod_name = __spec__.name
+    except NameError:
+        # Py2: __spec__ is not defined as standard
+        mod_name = 'gevent.monkey'
+    sys.modules[mod_name] = sys.modules[__name__]
+    # On Python 2, we have to set the gevent.monkey attribute
+    # manually; putting gevent.monkey into sys.modules stops the
+    # import machinery from making that connection, and ``from gevent
+    # import monkey`` is broken. On Python 3 (.8 at least) that's not
+    # necessary.
+    if 'gevent' in sys.modules:
+        sys.modules['gevent'].monkey = sys.modules[mod_name]
+    # Running ``patch_all()`` will load pkg_resources entry point plugins
+    # which may attempt to import ``gevent.monkey``, so it is critical that
+    # we have established the correct saved module name first.
+    patch_all(**args)
+
+    import runpy
+    # Use runpy.run_path to closely (exactly) match what the
+    # interpreter does given 'python <path>'. This includes allowing
+    # passing .pyc/.pyo files and packages with a __main__ and
+    # potentially even zip files. Previously we used exec, which only
+    # worked if we directly read a python source file.
+    run_meth = getattr(runpy, run_fn)
+    return run_meth(sys.argv[0], run_name='__main__')
 
 
 def _get_script_help():
@@ -1193,12 +1232,12 @@ def _get_script_help():
 
 USAGE: ``python -m gevent.monkey [MONKEY OPTIONS] [--module] (script|module) [SCRIPT OPTIONS]``
 
-If no OPTIONS present, monkey patches all the modules it can patch.
+If no MONKEY OPTIONS are present, monkey patches all the modules as if by calling ``patch_all()``.
 You can exclude a module with --no-<module>, e.g. --no-thread. You can
 specify a module to patch with --<module>, e.g. --socket. In the latter
 case only the modules specified on the command line will be patched.
 
-The default behavior is to execute the script passed as argument. If you with
+The default behavior is to execute the script passed as argument. If you wish
 to run a module instead, pass the `--module` argument before the module name.
 
 .. versionchanged:: 1.3b1

@@ -72,6 +72,10 @@
   special circumstances, but real applications are unlikely to be
   affected. See :issue:`1493`.
 
+- Fix using the threadpool inside a script or module run with ``python
+  -m gevent.monkey``. Previously it would use greenlets instead of
+  native threads. See :issue:`1484`.
+
 1.5a2 (2019-10-21)
 ==================
 

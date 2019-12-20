@@ -4,7 +4,7 @@ import unittest
 
 import gevent
 from gevent import core
-
+from gevent.hub import Hub
 
 @unittest.skipUnless(
     getattr(core, 'LIBEV_EMBED', False),
@@ -23,7 +23,7 @@ class Test(unittest.TestCase):
                                 getattr(unittest.TestCase, 'assertRaisesRegexp'))
 
     def _check_backend(self, backend):
-        hub = gevent.get_hub(backend, default=False)
+        hub = Hub(backend, default=False)
         try:
             self.assertEqual(hub.loop.backend, backend)
 
@@ -33,8 +33,11 @@ class Test(unittest.TestCase):
                 raise unittest.SkipTest("backend %s lacks fileno" % (backend,))
 
             os.close(fileno)
-            with self.assertRaisesRegex(SystemError, "(libev)"):
-                gevent.sleep(0.001)
+            if backend not in ('kqueue', 'epoll'):
+                # That's actually all the libev backends that use a file descriptor,
+                # right?
+                with self.assertRaisesRegex(SystemError, "(libev)"):
+                    gevent.sleep(0.001)
 
             hub.destroy()
             self.assertIn('destroyed', repr(hub))

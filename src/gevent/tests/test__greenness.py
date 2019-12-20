@@ -19,57 +19,68 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-"""Test that modules in gevent.green package are indeed green.
-To do that spawn a green server and then access it using a green socket.
-If either operation blocked the whole script would block and timeout.
 """
+Trivial test that a single process (and single thread) can both read
+and write from green sockets (when monkey patched).
+"""
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
+
 from gevent import monkey
 monkey.patch_all()
+
 
 import gevent.testing as greentest
 
 try:
     from urllib import request as urllib2
-    from http import server as BaseHTTPServer
+    from http.server import HTTPServer
     from http.server import SimpleHTTPRequestHandler
 except ImportError:
     # Python 2
     import urllib2
-    import BaseHTTPServer
+    from BaseHTTPServer import HTTPServer
     from SimpleHTTPServer import SimpleHTTPRequestHandler
 
 
 import gevent
 from gevent.testing import params
 
+class QuietHandler(SimpleHTTPRequestHandler, object):
+
+    def log_message(self, *args): # pylint:disable=arguments-differ
+        self.server.messages += ((args,),)
+
+class Server(HTTPServer, object):
+
+    messages = ()
+    requests_handled = 0
+
+    def __init__(self):
+        HTTPServer.__init__(self,
+                            params.DEFAULT_BIND_ADDR_TUPLE,
+                            QuietHandler)
+
+    def handle_request(self):
+        HTTPServer.handle_request(self)
+        self.requests_handled += 1
+
 
 class TestGreenness(greentest.TestCase):
     check_totalrefcount = False
 
-    def setUp(self):
-        server_address = params.DEFAULT_BIND_ADDR_TUPLE
-        BaseHTTPServer.BaseHTTPRequestHandler.protocol_version = "HTTP/1.0"
-        self.httpd = BaseHTTPServer.HTTPServer(server_address,
-                                               SimpleHTTPRequestHandler)
-        self.httpd.request_count = 0
-
-    def tearDown(self):
-        self.httpd.server_close()
-        self.httpd = None
-
-    def serve(self):
-        self.httpd.handle_request()
-        self.httpd.request_count += 1
-
     def test_urllib2(self):
-        server = gevent.spawn(self.serve)
+        httpd = Server()
+        server_greenlet = gevent.spawn(httpd.handle_request)
 
-        port = self.httpd.socket.getsockname()[1]
+        port = httpd.socket.getsockname()[1]
         rsp = urllib2.urlopen('http://127.0.0.1:%s' % port)
         rsp.read()
         rsp.close()
-        server.join()
-        self.assertEqual(self.httpd.request_count, 1)
+        server_greenlet.join()
+        self.assertEqual(httpd.requests_handled, 1)
+        httpd.server_close()
 
 
 if __name__ == '__main__':

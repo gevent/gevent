@@ -29,7 +29,16 @@ class QuietHub(Hub):
     EXPECTED_TEST_ERROR = (ExpectedException,)
 
     def handle_error(self, context, type, value, tb):
+        type, value, tb = self._normalize_exception(type, value, tb)
+
         if issubclass(type, self.EXPECTED_TEST_ERROR):
             # Don't print these to cut down on the noise in the test logs
             return
         return Hub.handle_error(self, context, type, value, tb)
+
+    def print_exception(self, context, t, v, tb):
+        t, v, tb = self._normalize_exception(t, v, tb)
+        if issubclass(t, self.EXPECTED_TEST_ERROR):
+            # see handle_error
+            return
+        return Hub.print_exception(self, context, t, v, tb)
