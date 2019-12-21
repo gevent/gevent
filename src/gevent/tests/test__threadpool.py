@@ -683,5 +683,42 @@ class TestTPE(_AbstractPoolTest):
         del self.pool
 
 
+class TestThreadResult(greentest.TestCase):
+
+    def test_exception_in_on_async_doesnt_crash(self):
+        # Issue 1482. An FFI-based loop could crash the whole process
+        # by dereferencing a handle after it was closed.
+        called = []
+        class MyException(Exception):
+            pass
+
+        def bad_when_ready():
+            called.append(1)
+            raise MyException
+
+        tr = gevent.threadpool.ThreadResult(None, gevent.get_hub(), bad_when_ready)
+
+        def wake():
+            called.append(1)
+            tr.set(42)
+
+        gevent.spawn(wake).get()
+        # Spin the loop a few times to make sure we run the callbacks.
+        # If we neglect to spin, we don't trigger the bug.
+        # If error handling is correct, the exception raised from the callback
+        # will be surfaced in the main greenlet. On windows, it can sometimes take
+        # more than one spin for some reason; if we don't catch it here, then
+        # some other test is likely to die unexpectedly with MyException.
+        with self.assertRaises(MyException):
+            for _ in range(5):
+                gevent.sleep(0.001)
+
+
+        self.assertEqual(called, [1, 1])
+        # But value was cleared in a finally block
+        self.assertIsNone(tr.value)
+        self.assertIsNotNone(tr.receiver)
+
+
 if __name__ == '__main__':
     greentest.main()

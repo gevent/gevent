@@ -218,7 +218,7 @@ class async_(_base.AsyncMixin, watcher):
 
     @property
     def pending(self):
-        return bool(libev.ev_async_pending(self._watcher))
+        return self._watcher is not None and bool(libev.ev_async_pending(self._watcher))
 
 # Provide BWC for those that have async
 locals()['async'] = async_

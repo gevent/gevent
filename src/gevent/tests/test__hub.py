@@ -337,5 +337,30 @@ class TestLoopInterface(unittest.TestCase):
         verify.verifyObject(ILoop, loop)
 
 
+class TestHandleError(unittest.TestCase):
+
+    def tearDown(self):
+        try:
+            del get_hub().handle_error
+        except AttributeError:
+            pass
+
+    def test_exception_in_custom_handle_error_does_not_crash(self):
+
+        def bad_handle_error(*args):
+            raise AttributeError
+
+        hub = get_hub().handle_error = bad_handle_error
+
+        class MyException(Exception):
+            pass
+
+        def raises():
+            raise MyException
+
+        with self.assertRaises(MyException):
+            gevent.spawn(raises).get()
+
+
 if __name__ == '__main__':
     greentest.main()

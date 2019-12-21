@@ -100,6 +100,7 @@ class AbstractCallbacks(object):
         """
         #_dbg("Running callback", handle)
         orig_ffi_watcher = None
+        orig_loop = None
         try:
             # Even dereferencing the handle needs to be inside the try/except;
             # if we don't return normally (e.g., a signal) then we wind up going
@@ -115,18 +116,16 @@ class AbstractCallbacks(object):
                 return 1
             the_watcher = self.from_handle(handle)
             orig_ffi_watcher = the_watcher._watcher
+            orig_loop = the_watcher.loop
             args = the_watcher.args
-            #_dbg("Running callback", the_watcher, orig_ffi_watcher, args)
             if args is None:
                 # Legacy behaviour from corecext: convert None into ()
                 # See test__core_watcher.py
                 args = _NOARGS
             if args and args[0] == GEVENT_CORE_EVENTS:
                 args = (revents, ) + args[1:]
-            #_dbg("Calling function", the_watcher.callback, args)
             the_watcher.callback(*args) # None here means we weren't started
         except: # pylint:disable=bare-except
-            _dbg("Got exception servicing watcher with handle", handle, sys.exc_info())
             # It's possible for ``the_watcher`` to be undefined (UnboundLocalError)
             # if we threw an exception (signal) on the line that created that variable.
             # This is typically the case with a signal under libuv
@@ -134,15 +133,43 @@ class AbstractCallbacks(object):
                 the_watcher
             except UnboundLocalError:
                 the_watcher = self.from_handle(handle)
+
+            # It may not be safe to do anything with `handle` or `orig_ffi_watcher`
+            # anymore. If the watcher closed or stopped itself *before* throwing the exception,
+            # then the `handle` and `orig_ffi_watcher` may no longer be valid. Attempting to
+            # e.g., dereference the handle is likely to crash the process.
             the_watcher._exc_info = sys.exc_info()
-            # Depending on when the exception happened, the watcher
-            # may or may not have been stopped. We need to make sure its
-            # memory stays valid so we can stop it at the ev level if needed.
+
+
+            # If it hasn't been stopped, we need to make sure its
+            # memory stays valid so we can stop it at the native level if needed.
             # If its loop is gone, it has already been stopped,
             # see https://github.com/gevent/gevent/issues/1295 for a case where
-            # that happened
-            if the_watcher.loop is not None:
-                the_watcher.loop._keepaliveset.add(the_watcher)
+            # that happened, as well as issue #1482
+            if (
+                    # The last thing it does. Full successful close.
+                    the_watcher.loop is None
+                    # Only a partial close. We could leak memory and even crash later.
+                    or the_watcher._handle is None
+            ):
+                # Prevent unhandled_onerror from using the invalid handle
+                handle = None
+                exc_info = the_watcher._exc_info
+                del the_watcher._exc_info
+                try:
+                    if orig_loop is not None:
+                        orig_loop.handle_error(the_watcher, *exc_info)
+                    else:
+                        self.unhandled_onerror(*exc_info)
+                except:
+                    print("WARNING: gevent: Error when handling error",
+                          file=sys.stderr)
+                    traceback.print_exc()
+                # Signal that we're closed, no need to do more.
+                return 2
+
+            # Keep it around so we can close it later.
+            the_watcher.loop._keepaliveset.add(the_watcher)
             return -1
         else:
             if (the_watcher.loop is not None

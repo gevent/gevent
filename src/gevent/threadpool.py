@@ -521,13 +521,11 @@ class ThreadResult(object):
         aw.stop()
         aw.close()
 
-
         # Typically this is pool.semaphore.release and we have to
         # call this in the Hub; if we don't we get the dreaded
         # LoopExit (XXX: Why?)
-        self._call_when_ready()
-
         try:
+            self._call_when_ready()
             if self.exc_info:
                 self.hub.handle_error(self.context, *self.exc_info)
             self.context = None
