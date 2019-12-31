@@ -65,7 +65,8 @@ class TestSwitch(greentest.TestCase):
             self.caught = e
 
     def test_kill_exception(self):
-        # Killing with gevent.kill gets the right exception
+        # Killing with gevent.kill gets the right exception,
+        # and we can pass exception objects, not just exception classes.
 
         g = gevent.spawn(self.catcher)
         g.start()

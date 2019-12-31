@@ -159,6 +159,7 @@ class TestPeriodicMonitoringThread(greentest.TestCase):
         gevent.config.monitor_thread = self.monitor_thread
         self.monitored_hubs = None
         self._reset_hub()
+        super(TestPeriodicMonitoringThread, self).tearDown()
 
     def _monitor(self, hub):
         self.monitor_fired += 1

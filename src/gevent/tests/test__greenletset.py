@@ -138,7 +138,7 @@ class Test(greentest.TestCase):
         for g in s:
             assert g.dead
 
-    def test_killall_iterable_argument_timeout(self):
+    def test_killall_iterable_argument_timeout_not_started(self):
         def f():
             try:
                 gevent.sleep(1.5)
@@ -149,6 +149,25 @@ class Test(greentest.TestCase):
         s = set()
         s.add(p1)
         s.add(p2)
+        gevent.killall(s, timeout=0.5)
+
+        for g in s:
+            self.assertTrue(g.dead, g)
+
+    def test_killall_iterable_argument_timeout_started(self):
+        def f():
+            try:
+                gevent.sleep(1.5)
+            except: # pylint:disable=bare-except
+                gevent.sleep(1)
+        p1 = GreenletSubclass.spawn(f)
+        p2 = GreenletSubclass.spawn(f)
+
+        s = set()
+        s.add(p1)
+        s.add(p2)
+        # Get them both running.
+        gevent.sleep(timing.SMALLEST_RELIABLE_DELAY)
         with self.assertRaises(Timeout):
             gevent.killall(s, timeout=0.5)
 

@@ -17,7 +17,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-# pylint: disable=too-many-lines,unused-argument
+# pylint: disable=too-many-lines,unused-argument,too-many-ancestors
 from __future__ import print_function
 
 from gevent import monkey

@@ -119,7 +119,9 @@ class Lazy(object):
     A non-data descriptor used just like @property. The
     difference is the function value is assigned to the instance
     dict the first time it is accessed and then the function is never
-    called agoin.
+    called again.
+
+    Contrast with `readproperty`.
     """
     def __init__(self, func):
         self.data = (func, func.__name__)
@@ -136,9 +138,16 @@ class Lazy(object):
 
 class readproperty(object):
     """
-    A non-data descriptor like @property. The difference is that
-    when the property is assigned to, it is cached in the instance
-    and the function is not called on that instance again.
+    A non-data descriptor similar to :class:`property`.
+
+    The difference is that the property can be assigned to directly,
+    without invoking a setter function. When the property is assigned
+    to, it is cached in the instance and the function is not called on
+    that instance again.
+
+    Contrast with `Lazy`, which caches the result of the function in the
+    instance the first time it is called and never calls the function on that
+    instance again.
     """
 
     def __init__(self, func):
@@ -150,6 +159,35 @@ class readproperty(object):
             return self
 
         return self.func(inst)
+
+class LazyOnClass(object):
+    """
+    Similar to `Lazy`, but stores the value in the class.
+
+    This is useful when the getter is expensive and conceptually
+    a shared class value, but we don't want import-time side-effects
+    such as expensive imports because it may not always be used.
+
+    Probably doesn't mix well with inheritance?
+    """
+
+    @classmethod
+    def lazy(cls, cls_dict, func):
+        "Put a LazyOnClass object in *cls_dict* with the same name as *func*"
+        cls_dict[func.__name__] = cls(func)
+
+    def __init__(self, func, name=None):
+        self.name = name or func.__name__
+        self.func = func
+
+    def __get__(self, inst, klass):
+        if inst is None: # pragma: no cover
+            return self
+
+        val = self.func(inst)
+        setattr(klass, self.name, val)
+        return val
+
 
 def gmctime():
     """

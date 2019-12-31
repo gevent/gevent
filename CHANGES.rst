@@ -81,6 +81,19 @@
   raised an exception. This could happen if the hub's ``handle_error``
   function was poorly customized, for example. See :issue:`1482`
 
+- Make ``gevent.killall`` stop greenlets from running that hadn't been
+  run yet. This make it consistent with ``Greenlet.kill()``. See
+  :issue:`1473` reported by kochelmonster.
+
+- Make ``gevent.spawn_raw`` set the ``loop`` attribute on returned
+  greenlets. This lets them work with more gevent APIs, notably
+  ``gevent.killall()``. They already had dictionaries, but this may
+  make them slightly larger, depending on platform (on CPython 2.7
+  through 3.6 there is no apparent difference for one attribute but on
+  CPython 3.7 and 3.8 dictionaries are initially empty and only
+  allocate space once an attribute is added; they're still smaller
+  than on earlier versions though).
+
 1.5a2 (2019-10-21)
 ==================
 

@@ -133,6 +133,9 @@ cdef class Greenlet(greenlet):
     cpdef rawlink(self, object callback)
     cpdef str _formatinfo(self)
 
+    # Helper for killall()
+    cpdef bint _maybe_kill_before_start(self, exception)
+
     # This is a helper function for a @property getter;
     # defining locals() for a @property doesn't seem to work.
     @cython.locals(reg=IdentRegistry)
@@ -144,11 +147,13 @@ cdef class Greenlet(greenlet):
     cdef bint __never_started_or_killed(self)
     cdef bint __start_completed(self)
     cdef __handle_death_before_start(self, tuple args)
+    @cython.final
+    cdef inline void __free(self)
 
     cdef __cancel_start(self)
 
-    cdef _report_result(self, object result)
-    cdef _report_error(self, tuple exc_info)
+    cdef inline __report_result(self, object result)
+    cdef inline __report_error(self, tuple exc_info)
     # This is used as the target of a callback
     # from the loop, and so needs to be a cpdef
     cpdef _notify_links(self)

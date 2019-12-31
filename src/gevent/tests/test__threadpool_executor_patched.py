@@ -9,7 +9,7 @@ import gevent.testing as greentest
 from . import test__threadpool
 
 
-class TestPatchedTPE(test__threadpool.TestTPE):
+class TestPatchedTPE(test__threadpool.TestTPE): # pylint:disable=too-many-ancestors
     MONKEY_PATCHED = True
 
 

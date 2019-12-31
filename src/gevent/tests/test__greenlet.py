@@ -18,7 +18,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-import re
+import functools
 import unittest
 
 import gevent.testing as greentest
@@ -32,6 +32,7 @@ from gevent.queue import Queue, Channel
 from gevent.testing.timing import AbstractGenericWaitTestCase
 from gevent.testing.timing import AbstractGenericGetTestCase
 from gevent.testing import timing
+from gevent.testing import ignores_leakcheck
 
 DELAY = timing.SMALL_TICK
 greentest.TestCase.error_fatal = False
@@ -90,7 +91,7 @@ class TestLink(greentest.TestCase):
         p2.link(q.put)
         p3.link(q.put)
         results = [q.get().get(), q.get().get(), q.get().get()]
-        assert sorted(results) == [101, 102, 103], results
+        self.assertEqual(sorted(results), [101, 102, 103], results)
 
 
 class TestUnlink(greentest.TestCase):
@@ -157,8 +158,10 @@ class LinksTestCase(greentest.TestCase):
         return event, queue
 
     def check_timed_out(self, event, queue):
-        assert with_timeout(DELAY, event.get, timeout_value=X) is X, repr(event.get())
-        assert with_timeout(DELAY, queue.get, timeout_value=X) is X, queue.get()
+        got = with_timeout(DELAY, event.get, timeout_value=X)
+        self.assertIs(got, X)
+        got = with_timeout(DELAY, queue.get, timeout_value=X)
+        self.assertIs(got, X)
 
 
 def return25():
@@ -233,12 +236,12 @@ class TestRaise_link(LinksTestCase):
         xxxxx = self.set_links_timeout(p.link_value)
 
         sleep(DELAY)
-        assert not p, p
+        self.assertFalse(p, p)
 
         self.assertRaises(ExpectedError, event.get)
         self.assertEqual(queue.get(), p)
         sleep(DELAY)
-        assert not callback_flag, callback_flag
+        self.assertFalse(callback_flag, callback_flag)
 
         self.check_timed_out(*xxxxx)
 
@@ -274,6 +277,7 @@ class TestStuff(greentest.TestCase):
         x.link(e)
         self.assertEqual(e.get(), 1)
 
+    @ignores_leakcheck
     def test_wait_error(self):
 
         def x():
@@ -284,8 +288,8 @@ class TestStuff(greentest.TestCase):
         self.assertRaises(ExpectedError, gevent.joinall, [x, y], raise_error=True)
         self.assertRaises(ExpectedError, gevent.joinall, [y], raise_error=True)
         x.join()
-    test_wait_error.ignore_leakcheck = True
 
+    @ignores_leakcheck
     def test_joinall_exception_order(self):
         # if there're several exceptions raised, the earliest one must be raised by joinall
         def first():
@@ -293,12 +297,10 @@ class TestStuff(greentest.TestCase):
             raise ExpectedError('first')
         a = gevent.spawn(first)
         b = gevent.spawn(lambda: getcurrent().throw(ExpectedError('second')))
-        try:
+        with self.assertRaisesRegex(ExpectedError, 'second'):
             gevent.joinall([a, b], raise_error=True)
-        except ExpectedError as ex:
-            assert 'second' in str(ex), repr(str(ex))
+
         gevent.joinall([a, b])
-    test_joinall_exception_order.ignore_leakcheck = True
 
     def test_joinall_count_raise_error(self):
         # When joinall is asked not to raise an error, the 'count' param still
@@ -314,12 +316,12 @@ class TestStuff(greentest.TestCase):
         raiser = gevent.spawn(raises_but_ignored)
 
         gevent.joinall([sleeper, raiser], raise_error=False, count=1)
-        assert_ready(raiser)
-        assert_not_ready(sleeper)
+        self.assert_greenlet_ready(raiser)
+        self.assert_greenlet_not_ready(sleeper)
 
         # Clean up our mess
         sleeper.kill()
-        assert_ready(sleeper)
+        self.assert_greenlet_ready(sleeper)
 
     def test_multiple_listeners_error(self):
         # if there was an error while calling a callback
@@ -408,8 +410,6 @@ class A(object):
     def method(self):
         pass
 
-hexobj = re.compile('-?0x[0123456789abcdef]+L?', re.I)
-
 class Subclass(gevent.Greenlet):
     pass
 
@@ -417,47 +417,38 @@ class TestStr(greentest.TestCase):
 
     def test_function(self):
         g = gevent.Greenlet.spawn(dummy_test_func)
-        self.assertTrue(hexobj.sub('X', str(g)).endswith('at X: dummy_test_func>'))
-        assert_not_ready(g)
+        self.assert_nstr_endswith(g, 'at X: dummy_test_func>')
+        self.assert_greenlet_not_ready(g)
         g.join()
-        assert_ready(g)
-        self.assertTrue(hexobj.sub('X', str(g)).endswith(' at X: dummy_test_func>'), str(g))
+        self.assert_greenlet_ready(g)
+        self.assert_nstr_endswith(g, 'at X: dummy_test_func>')
+
 
     def test_method(self):
         g = gevent.Greenlet.spawn(A().method)
-        str_g = hexobj.sub('X', str(g))
-        str_g = str_g.replace(__name__, 'module')
-        self.assertTrue(str_g.startswith('<Greenlet at X:'), str_g)
+        self.assert_nstr_startswith(g, '<Greenlet at X:')
+
         # Accessing the name to generate a minimal_ident will cause it to be included.
         getattr(g, 'name')
-        str_g = hexobj.sub('X', str(g))
-        str_g = str_g.replace(__name__, 'module')
-        self.assertTrue(str_g.startswith('<Greenlet "Greenlet-'), str_g)
+        self.assert_nstr_startswith(g, '<Greenlet "Greenlet-')
+
         # Assigning to the name changes it
         g.name = 'Foo'
-        str_g = hexobj.sub('X', str(g))
-        str_g = str_g.replace(__name__, 'module')
-        self.assertTrue(str_g.startswith('<Greenlet "Foo"'), str_g)
+        self.assert_nstr_startswith(g, '<Greenlet "Foo"')
 
-        self.assertTrue(str_g.endswith('at X: <bound method A.method of <module.A object at X>>>'))
-        assert_not_ready(g)
+        self.assert_nstr_endswith(g, 'at X: <bound method A.method of <module.A object at X>>>')
+        self.assert_greenlet_not_ready(g)
         g.join()
-        assert_ready(g)
-        str_g = hexobj.sub('X', str(g))
-        str_g = str_g.replace(__name__, 'module')
-        self.assertTrue(str_g.endswith('at X: <bound method A.method of <module.A object at X>>>'))
+        self.assert_greenlet_ready(g)
+        self.assert_nstr_endswith(g, 'at X: <bound method A.method of <module.A object at X>>>')
 
     def test_subclass(self):
         g = Subclass()
-        str_g = hexobj.sub('X', str(g))
-        str_g = str_g.replace(__name__, 'module')
-        self.assertTrue(str_g.startswith('<Subclass '), str_g)
-        self.assertTrue(str_g.endswith('at X: _run>'))
+        self.assert_nstr_startswith(g, '<Subclass ')
+        self.assert_nstr_endswith(g, 'at X: _run>')
 
         g = Subclass(None, 'question', answer=42)
-        str_g = hexobj.sub('X', str(g))
-        str_g = str_g.replace(__name__, 'module')
-        self.assertTrue(str_g.endswith(" at X: _run('question', answer=42)>"))
+        self.assert_nstr_endswith(g, " at X: _run('question', answer=42)>")
 
 
 class TestJoin(AbstractGenericWaitTestCase):
@@ -518,7 +509,7 @@ class TestBasic(greentest.TestCase):
 
         g = gevent.spawn_raw(f, 1, name='value')
         gevent.sleep(0.01)
-        assert not g
+        self.assertFalse(g)
         self.assertEqual(value[0], (1,))
         self.assertEqual(value[1], {'name': 'value'})
 
@@ -567,7 +558,13 @@ class TestBasic(greentest.TestCase):
         self.assertEqual(g.value, 5) # changed
         self.assertIsNone(g.exception, g)
 
-        self.assertTrue(link_test == [g] or greentest.RUNNING_ON_CI, link_test)  # changed
+        self._check_flaky_eq(link_test, g)
+
+    def _check_flaky_eq(self, link_test, g):
+        if not greentest.RUNNING_ON_CI:
+            # TODO: Change this to assertEqualFlakyRaceCondition and figure
+            # out what the CI issue is.
+            self.assertEqual(link_test, [g]) # changed
 
     def test_error_exit(self):
         link_test = []
@@ -591,91 +588,7 @@ class TestBasic(greentest.TestCase):
         self.assertFalse(g.successful())
         self.assertIsNone(g.value) # not changed
         self.assertEqual(g.exception.myattr, 5)
-
-        assert link_test == [g] or greentest.RUNNING_ON_APPVEYOR, link_test
-
-    def _assertKilled(self, g):
-        assert not g
-        assert g.dead
-        assert not g.started
-        assert g.ready()
-        assert g.successful(), (repr(g), g.value, g.exception)
-        assert isinstance(g.value, gevent.GreenletExit), (repr(g), g.value, g.exception)
-        assert g.exception is None
-
-    def assertKilled(self, g):
-        self._assertKilled(g)
-        gevent.sleep(0.01)
-        self._assertKilled(g)
-
-    def _test_kill(self, g, block):
-        g.kill(block=block)
-        if not block:
-            gevent.sleep(0.01)
-        self.assertKilled(g)
-        # kill second time must not hurt
-        g.kill(block=block)
-        self.assertKilled(g)
-
-    def _test_kill_not_started(self, block):
-        link_test = []
-        result = []
-        g = gevent.Greenlet(lambda: result.append(1))
-        g.link(link_test.append)
-        self._test_kill(g, block=block)
-        assert not result
-        assert link_test == [g]
-
-    def test_kill_not_started_block(self):
-        self._test_kill_not_started(block=True)
-
-    def test_kill_not_started_noblock(self):
-        self._test_kill_not_started(block=False)
-
-    def _test_kill_just_started(self, block):
-        result = []
-        link_test = []
-        g = gevent.Greenlet(lambda: result.append(1))
-        g.link(link_test.append)
-        g.start()
-        self._test_kill(g, block=block)
-        assert not result, result
-        assert link_test == [g]
-
-    def test_kill_just_started_block(self):
-        self._test_kill_just_started(block=True)
-
-    def test_kill_just_started_noblock(self):
-        self._test_kill_just_started(block=False)
-
-    def _test_kill_just_started_later(self, block):
-        result = []
-        link_test = []
-        g = gevent.Greenlet(lambda: result.append(1))
-        g.link(link_test.append)
-        g.start_later(1)
-        self._test_kill(g, block=block)
-        assert not result
-
-    def test_kill_just_started_later_block(self):
-        self._test_kill_just_started_later(block=True)
-
-    def test_kill_just_started_later_noblock(self):
-        self._test_kill_just_started_later(block=False)
-
-    def _test_kill_running(self, block):
-        link_test = []
-        g = gevent.spawn(gevent.sleep, 10)
-        g.link(link_test.append)
-        self._test_kill(g, block=block)
-        gevent.sleep(0.01)
-        assert link_test == [g]
-
-    def test_kill_running_block(self):
-        self._test_kill_running(block=True)
-
-    def test_kill_running_noblock(self):
-        self._test_kill_running(block=False)
+        self._check_flaky_eq(link_test, g)
 
     def test_exc_info_no_error(self):
         # Before running
@@ -776,34 +689,120 @@ class TestBasic(greentest.TestCase):
             g.kill()
 
 
+class TestKill(greentest.TestCase):
 
+    def __assertKilled(self, g):
+        self.assertFalse(g)
+        self.assertTrue(g.dead)
+        self.assertFalse(g.started)
+        self.assertTrue(g.ready())
+        self.assertTrue(g.successful(), (repr(g), g.value, g.exception))
+        self.assertIsInstance(g.value, gevent.GreenletExit)
+        self.assertIsNone(g.exception)
+
+    def assertKilled(self, g):
+        self.__assertKilled(g)
+        gevent.sleep(0.01) # spin the loop to make sure it doesn't run.
+        self.__assertKilled(g)
+
+    def __kill_greenlet(self, g, block, killall):
+        if killall:
+            killer = functools.partial(gevent.killall, [g], block=block)
+        else:
+            killer = functools.partial(g.kill, block=block)
+        killer()
+        if not block:
+            # Must spin the loop to take effect (if it was scheduled)
+            gevent.sleep(timing.SMALLEST_RELIABLE_DELAY)
+        self.assertKilled(g)
+        # kill second time must not hurt
+        killer()
+        self.assertKilled(g)
+
+    @staticmethod
+    def _run_in_greenlet(result_collector):
+        result_collector.append(1)
+
+    def _start_greenlet(self, g):
+        """
+        Subclasses should override. This doesn't actually start a greenlet.
+        """
+
+    _after_kill_greenlet = _start_greenlet
+
+
+    def _do_test(self, block, killall):
+        link_test = []
+        result = []
+        g = gevent.Greenlet(self._run_in_greenlet, result)
+        g.link(link_test.append)
+
+        self._start_greenlet(g)
+
+        self.__kill_greenlet(g, block, killall)
+
+        self._after_kill_greenlet(g)
+
+        self.assertFalse(result)
+        self.assertEqual(link_test, [g])
+
+    def test_block(self):
+        self._do_test(block=True, killall=False)
+
+    def test_non_block(self):
+        self._do_test(block=False, killall=False)
+
+    def test_block_killal(self):
+        self._do_test(block=True, killall=True)
+
+    def test_non_block_killal(self):
+        self._do_test(block=False, killall=True)
+
+
+class TestKillAfterStart(TestKill):
+
+    def _start_greenlet(self, g):
+        g.start()
+
+class TestKillAfterStartLater(TestKill):
+
+    def _start_greenlet(self, g):
+        g.start_later(timing.LARGE_TICK)
+
+class TestKillWhileRunning(TestKill):
+
+    @staticmethod
+    def _run_in_greenlet(result_collector):
+        gevent.sleep(10)
+        # The above should die with the GreenletExit exception,
+        # so this should never run
+        TestKill._run_in_greenlet(result_collector)
+
+    def _after_kill_greenlet(self, g):
+        TestKill._after_kill_greenlet(self, g)
+        gevent.sleep(0.01)
+
+class TestKillallRawGreenlet(greentest.TestCase):
+
+    def test_killall_raw(self):
+        g = gevent.spawn_raw(lambda: 1)
+        gevent.killall([g])
 
 class TestStart(greentest.TestCase):
 
-    def test(self):
-        g = gevent.spawn(gevent.sleep, 0.01)
-        assert g.started
-        assert not g.dead
+    def test_start(self):
+        g = gevent.spawn(gevent.sleep, timing.SMALL_TICK)
+        self.assert_greenlet_spawned(g)
+
         g.start()
-        assert g.started
-        assert not g.dead
+        self.assert_greenlet_started(g)
+
         g.join()
-        assert not g.started
-        assert g.dead
+        self.assert_greenlet_finished(g)
+
+        # cannot start again
         g.start()
-        assert not g.started
-        assert g.dead
-
-
-def assert_ready(g):
-    assert g.dead, g
-    assert g.ready(), g
-    assert not bool(g), g
-
-
-def assert_not_ready(g):
-    assert not g.dead, g
-    assert not g.ready(), g
+        self.assert_greenlet_finished(g)
 
 
 class TestRef(greentest.TestCase):
@@ -814,12 +813,12 @@ class TestRef(greentest.TestCase):
         gevent.Greenlet()
 
     def test_kill_scheduled(self):
-        gevent.spawn(gevent.sleep, 10).kill()
+        gevent.spawn(gevent.sleep, timing.LARGE_TICK).kill()
 
     def test_kill_started(self):
-        g = gevent.spawn(gevent.sleep, 10)
+        g = gevent.spawn(gevent.sleep, timing.LARGE_TICK)
         try:
-            gevent.sleep(0.001)
+            gevent.sleep(timing.SMALLEST_RELIABLE_DELAY)
         finally:
             g.kill()
 

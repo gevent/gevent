@@ -1,6 +1,6 @@
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
 # cython: auto_pickle=False,embedsignature=True,always_allow_keywords=False
-
+# pylint:disable=too-many-lines
 from __future__ import absolute_import, print_function, division
 
 from sys import _getframe as sys_getframe
@@ -260,8 +260,10 @@ class Greenlet(greenlet):
         #: start() and start_later() as those two objects, respectively.
         #: Once this becomes non-None, the Greenlet cannot be started again. Conversely,
         #: kill() and throw() check for non-None to determine if this object has ever been
-        #: scheduled for starting. A placeholder _dummy_event is assigned by them to prevent
+        #: scheduled for starting. A placeholder _cancelled_start_event is assigned by them to prevent
         #: the greenlet from being started in the future, if necessary.
+        #: In the usual case, this transitions as follows: None -> event -> _start_completed_event.
+        #: A value of None means we've never been started.
         self._start_event = None
 
         self._notifier = None
@@ -393,15 +395,31 @@ class Greenlet(greenlet):
     else:
         @property
         def dead(self):
-            "Boolean indicating that the greenlet is dead and will not run again."
-            return self.__start_cancelled_by_kill() or self.__started_but_aborted() or greenlet.dead.__get__(self)
+            """
+            Boolean indicating that the greenlet is dead and will not run again.
+
+            This is true if:
+
+            1. We were never started, but were :meth:`killed <kill>`
+               immediately after creation (not possible with :meth:`spawn`); OR
+            2. We were started, but were killed before running; OR
+            3. We have run and terminated (by raising an exception out of the
+               started function or by reaching the end of the started function).
+            """
+            return (
+                self.__start_cancelled_by_kill()
+                or self.__started_but_aborted()
+                or greenlet.dead.__get__(self)
+            )
 
     def __never_started_or_killed(self):
         return self._start_event is None
 
     def __start_pending(self):
-        return (self._start_event is not None
-                and (self._start_event.pending or getattr(self._start_event, 'active', False)))
+        return (
+            self._start_event is not None
+            and (self._start_event.pending or getattr(self._start_event, 'active', False))
+        )
 
     def __start_cancelled_by_kill(self):
         return self._start_event is _cancelled_start_event
@@ -410,10 +428,12 @@ class Greenlet(greenlet):
         return self._start_event is _start_completed_event
 
     def __started_but_aborted(self):
-        return (not self.__never_started_or_killed() # we have been started or killed
-                and not self.__start_cancelled_by_kill() # we weren't killed, so we must have been started
-                and not self.__start_completed() # the start never completed
-                and not self.__start_pending()) # and we're not pending, so we must have been aborted
+        return (
+            not self.__never_started_or_killed() # we have been started or killed
+            and not self.__start_cancelled_by_kill() # we weren't killed, so we must have been started
+            and not self.__start_completed() # the start never completed
+            and not self.__start_pending() # and we're not pending, so we must have been aborted
+        )
 
     def __cancel_start(self):
         if self._start_event is None:
@@ -431,20 +451,25 @@ class Greenlet(greenlet):
     def __handle_death_before_start(self, args):
         # args is (t, v, tb) or simply t or v
         if self._exc_info is None and self.dead:
-            # the greenlet was never switched to before and it will never be, _report_error was not called
-            # the result was not set and the links weren't notified. let's do it here.
-            # checking that self.dead is true is essential, because throw() does not necessarily kill the greenlet
-            # (if the exception raised by throw() is caught somewhere inside the greenlet).
+            # the greenlet was never switched to before and it will
+            # never be; _report_error was not called, the result was
+            # not set, and the links weren't notified. Let's do it
+            # here.
+            #
+            # checking that self.dead is true is essential, because
+            # throw() does not necessarily kill the greenlet (if the
+            # exception raised by throw() is caught somewhere inside
+            # the greenlet).
             if len(args) == 1:
                 arg = args[0]
-                #if isinstance(arg, type):
-                if type(arg) is type(Exception):
+                if issubclass(arg, BaseException):
                     args = (arg, arg(), None)
                 else:
                     args = (type(arg), arg, None)
             elif not args:
                 args = (GreenletExit, GreenletExit(), None)
-            self._report_error(args)
+            assert issubclass(args[0], BaseException)
+            self.__report_error(args)
 
     @property
     def started(self):
@@ -661,14 +686,27 @@ class Greenlet(greenlet):
         g.start_later(seconds)
         return g
 
+    def _maybe_kill_before_start(self, exception):
+        # Helper for Greenlet.kill(), and also for killall()
+        self.__cancel_start()
+        self.__free()
+        dead = self.dead
+        if dead:
+            self.__handle_death_before_start((exception,))
+        return dead
+
     def kill(self, exception=GreenletExit, block=True, timeout=None):
         """
         Raise the ``exception`` in the greenlet.
 
-        If ``block`` is ``True`` (the default), wait until the greenlet dies or the optional timeout expires.
+        If ``block`` is ``True`` (the default), wait until the greenlet
+        dies or the optional timeout expires; this may require switching
+        greenlets.
         If block is ``False``, the current greenlet is not unscheduled.
 
-        The function always returns ``None`` and never raises an error.
+        This function always returns ``None`` and never raises an error. It
+        may be called multpile times on the same greenlet object, and may be
+        called on an unstarted or dead greenlet.
 
         .. note::
 
@@ -687,7 +725,9 @@ class Greenlet(greenlet):
 
             Use care when killing greenlets. If the code executing is not
             exception safe (e.g., makes proper use of ``finally``) then an
-            unexpected exception could result in corrupted state.
+            unexpected exception could result in corrupted state. Using
+            a :meth:`link` or :meth:`rawlink` (cheaper) may be a safer way to
+            clean up resources.
 
         See also :func:`gevent.kill`.
 
@@ -698,21 +738,17 @@ class Greenlet(greenlet):
         .. versionchanged:: 0.13.0
             *block* is now ``True`` by default.
         .. versionchanged:: 1.1a2
-            If this greenlet had never been switched to, killing it will prevent it from ever being switched to.
+            If this greenlet had never been switched to, killing it will
+            prevent it from *ever* being switched to. Links (:meth:`rawlink`)
+            will still be executed, though.
         """
-        self.__cancel_start()
-
-        if self.dead:
-            self.__handle_death_before_start((exception,))
-        else:
+        if not self._maybe_kill_before_start(exception):
             waiter = Waiter() if block else None # pylint:disable=undefined-variable
             hub = get_my_hub(self) # pylint:disable=undefined-variable
             hub.loop.run_callback(_kill, self, exception, waiter)
             if waiter is not None:
                 waiter.get()
                 self.join(timeout)
-        # it should be OK to use kill() in finally or kill a greenlet from more than one place;
-        # thus it should not raise when the greenlet is already killed (= not started)
 
     def get(self, block=True, timeout=None):
         """
@@ -786,16 +822,16 @@ class Greenlet(greenlet):
             self.unlink(switch)
             raise
 
-    def _report_result(self, result):
+    def __report_result(self, result):
         self._exc_info = (None, None, None)
         self.value = result
         if self._links and not self._notifier:
             hub = get_my_hub(self) # pylint:disable=undefined-variable
             self._notifier = hub.loop.run_callback(self._notify_links)
 
-    def _report_error(self, exc_info):
+    def __report_error(self, exc_info):
         if isinstance(exc_info[1], GreenletExit):
-            self._report_result(exc_info[1])
+            self.__report_result(exc_info[1])
             return
 
         self._exc_info = exc_info[0], exc_info[1], dump_traceback(exc_info[2])
@@ -817,13 +853,23 @@ class Greenlet(greenlet):
             try:
                 result = self._run(*self.args, **self.kwargs)
             except: # pylint:disable=bare-except
-                self._report_error(sys_exc_info())
-                return
-            self._report_result(result)
+                self.__report_error(sys_exc_info())
+            else:
+                self.__report_result(result)
         finally:
-            self.__dict__.pop('_run', None)
-            self.args = ()
-            self.kwargs.clear()
+            self.__free()
+
+    def __free(self):
+        try:
+            # It seems that Cython 0.29.13 sometimes miscompiles
+            # self.__dict__.pop('_run', None) ? When we moved this out of the
+            # inline finally: block in run(), we started getting strange
+            # exceptions from places that subclassed Greenlet.
+            del self._run
+        except AttributeError:
+            pass
+        self.args = ()
+        self.kwargs.clear()
 
     def _run(self):
         """
@@ -850,7 +896,9 @@ class Greenlet(greenlet):
         The *callback* will be called with this instance as an
         argument.
 
-        .. caution:: The callable will be called in the HUB greenlet.
+        .. caution::
+            The *callback* will be called in the hub and
+            **MUST NOT** raise an exception.
         """
         if not callable(callback):
             raise TypeError('Expected callable: %r' % (callback, ))
@@ -1007,15 +1055,16 @@ _spawn_callbacks = None
 
 def killall(greenlets, exception=GreenletExit, block=True, timeout=None):
     """
-    Forceably terminate all the ``greenlets`` by causing them to raise ``exception``.
+    Forceably terminate all the *greenlets* by causing them to raise *exception*.
 
     .. caution:: Use care when killing greenlets. If they are not prepared for exceptions,
        this could result in corrupted state.
 
     :param greenlets: A **bounded** iterable of the non-None greenlets to terminate.
        *All* the items in this iterable must be greenlets that belong to the same hub,
-       which should be the hub for this current thread.
-    :keyword exception: The exception to raise in the greenlets. By default this is
+       which should be the hub for this current thread. If this is a generator or iterator
+       that switches greenlets, the results are undefined.
+    :keyword exception: The type of exception to raise in the greenlets. By default this is
         :class:`GreenletExit`.
     :keyword bool block: If True (the default) then this function only returns when all the
         greenlets are dead; the current greenlet is unscheduled during that process.
@@ -1031,15 +1080,38 @@ def killall(greenlets, exception=GreenletExit, block=True, timeout=None):
     .. versionchanged:: 1.1a2
         *greenlets* can be any iterable of greenlets, like an iterator or a set.
         Previously it had to be a list or tuple.
+    .. versionchanged:: 1.5a3
+        Any :class:`Greenlet` in the *greenlets* list that hadn't been switched to before
+        calling this method will never be switched to. This makes this function
+        behave like :meth:`Greenlet.kill`. This does not apply to raw greenlets.
+    .. versionchanged:: 1.5a3
+       Now accepts raw greenlets created by :func:`gevent.spawn_raw`.
     """
-    # support non-indexable containers like iterators or set objects
-    greenlets = list(greenlets)
-    if not greenlets:
+
+    need_killed = [] # type: list
+    for glet in greenlets:
+        # Quick pass through to prevent any greenlet from
+        # actually being switched to if it hasn't already.
+        # (Previously we called ``list(greenlets)`` so we're still
+        # linear.)
+        #
+        # We don't use glet.kill() here because we don't want to schedule
+        # any callbacks in the loop; we're about to handle that more directly.
+        try:
+            cancel = glet._maybe_kill_before_start
+        except AttributeError:
+            need_killed.append(glet)
+        else:
+            if not cancel(exception):
+                need_killed.append(glet)
+
+    if not need_killed:
         return
-    loop = greenlets[0].loop
+
+    loop = glet.loop # pylint:disable=undefined-loop-variable
     if block:
         waiter = Waiter() # pylint:disable=undefined-variable
-        loop.run_callback(_killall3, greenlets, exception, waiter)
+        loop.run_callback(_killall3, need_killed, exception, waiter)
         t = Timeout._start_new_or_dummy(timeout)
         try:
             alive = waiter.get()
@@ -1048,7 +1120,7 @@ def killall(greenlets, exception=GreenletExit, block=True, timeout=None):
         finally:
             t.cancel()
     else:
-        loop.run_callback(_killall, greenlets, exception)
+        loop.run_callback(_killall, need_killed, exception)
 
 def _init():
     greenlet_init() # pylint:disable=undefined-variable

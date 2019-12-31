@@ -10,6 +10,7 @@ import functools
 import warnings
 
 from gevent._config import config
+from gevent._util import LazyOnClass
 
 try:
     from tracemalloc import get_object_traceback
@@ -106,26 +107,6 @@ def only_if_watcher(func):
             return func(self)
         return _NoWatcherResult
     return if_w
-
-
-class LazyOnClass(object):
-
-    @classmethod
-    def lazy(cls, cls_dict, func):
-        "Put a LazyOnClass object in *cls_dict* with the same name as *func*"
-        cls_dict[func.__name__] = cls(func)
-
-    def __init__(self, func, name=None):
-        self.name = name or func.__name__
-        self.func = func
-
-    def __get__(self, inst, klass):
-        if inst is None: # pragma: no cover
-            return self
-
-        val = self.func(inst)
-        setattr(klass, self.name, val)
-        return val
 
 
 class AbstractWatcherType(type):

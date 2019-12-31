@@ -96,12 +96,16 @@ def spawn_raw(function, *args, **kwargs):
        if ``GEVENT_TRACK_GREENLET_TREE`` is enabled (the default). If not enabled,
        those attributes will not be set.
 
+    .. versionchanged:: 1.5a3
+       The returned greenlet always has a *loop* attribute matching the
+       current hub's loop. This helps it work better with more gevent APIs.
     """
     if not callable(function):
         raise TypeError("function must be callable")
 
     # The hub is always the parent.
     hub = _get_hub_noargs()
+    loop = hub.loop
 
     factory = TrackedRawGreenlet if GEVENT_CONFIG.track_greenlet_tree else RawGreenlet
 
@@ -111,11 +115,11 @@ def spawn_raw(function, *args, **kwargs):
     if kwargs:
         function = _functools_partial(function, *args, **kwargs)
         g = factory(function, hub)
-        hub.loop.run_callback(g.switch)
+        loop.run_callback(g.switch)
     else:
         g = factory(function, hub)
-        hub.loop.run_callback(g.switch, *args)
-
+        loop.run_callback(g.switch, *args)
+    g.loop = hub.loop
     return g
 
 

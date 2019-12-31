@@ -101,9 +101,10 @@ dummy-variables-rgx=_.*
 generated-members=exc_clear
 
 # List of classes names for which member attributes should not be checked
-# (useful for classes with attributes dynamically set). This supports can work
+# (useful for classes with attributes dynamically set). This can work
 # with qualified names.
 #ignored-classes=SSLContext, SSLSocket, greenlet, Greenlet, parent, dead
+
 
 # List of module names for which member attributes should not be checked
 # (useful for modules/projects where namespaces are manipulated during runtime

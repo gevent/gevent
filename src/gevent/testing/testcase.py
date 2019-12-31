@@ -27,6 +27,7 @@ from unittest import TestCase as BaseTestCase
 from functools import wraps
 
 import gevent
+from gevent._util import LazyOnClass
 
 from . import sysinfo
 from . import params
@@ -76,6 +77,66 @@ class TimeAssertMixin(object):
             self,
             fuzzy=(0.01 if not sysinfo.EXPECT_POOR_TIMER_RESOLUTION and not sysinfo.LIBUV else 1.0)):
         return self.runs_in_given_time(0.0, fuzzy)
+
+
+class GreenletAssertMixin(object):
+    """Assertions related to greenlets."""
+
+    def assert_greenlet_ready(self, g):
+        self.assertTrue(g.dead, g)
+        self.assertTrue(g.ready(), g)
+        self.assertFalse(g, g)
+
+    def assert_greenlet_not_ready(self, g):
+        self.assertFalse(g.dead, g)
+        self.assertFalse(g.ready(), g)
+
+    def assert_greenlet_spawned(self, g):
+        self.assertTrue(g.started, g)
+        self.assertFalse(g.dead, g)
+
+    # No difference between spawned and switched-to once
+    assert_greenlet_started = assert_greenlet_spawned
+
+    def assert_greenlet_finished(self, g):
+        self.assertFalse(g.started, g)
+        self.assertTrue(g.dead, g)
+
+
+class StringAssertMixin(object):
+    """
+    Assertions dealing with strings.
+    """
+
+    @LazyOnClass
+    def HEX_NUM_RE(self):
+        import re
+        return re.compile('-?0x[0123456789abcdef]+L?', re.I)
+
+    def normalize_addr(self, s, replace='X'):
+        # https://github.com/PyCQA/pylint/issues/1127
+        return self.HEX_NUM_RE.sub(replace, s) # pylint:disable=no-member
+
+    def normalize_module(self, s, module=None, replace='module'):
+        if module is None:
+            module = type(self).__module__
+
+        return s.replace(module, replace)
+
+    def normalize(self, s):
+        return self.normalize_module(self.normalize_addr(s))
+
+    def assert_nstr_endswith(self, o, val):
+        s = str(o)
+        n = self.normalize(s)
+        self.assertTrue(n.endswith(val), (s, n))
+
+    def assert_nstr_startswith(self, o, val):
+        s = str(o)
+        n = self.normalize(s)
+        self.assertTrue(n.startswith(val), (s, n))
+
+
 
 class TestTimeout(gevent.Timeout):
     _expire_info = ''
@@ -178,7 +239,11 @@ class SubscriberCleanupMixin(object):
 
 
 class TestCase(TestCaseMetaClass("NewBase",
-                                 (SubscriberCleanupMixin, TimeAssertMixin, BaseTestCase,),
+                                 (SubscriberCleanupMixin,
+                                  TimeAssertMixin,
+                                  GreenletAssertMixin,
+                                  StringAssertMixin,
+                                  BaseTestCase,),
                                  {})):
     __timeout__ = params.LOCAL_TIMEOUT if not sysinfo.RUNNING_ON_CI else params.CI_TIMEOUT
 

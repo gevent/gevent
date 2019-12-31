@@ -93,13 +93,13 @@ class TestDefaultSpawn(test__server.TestDefaultSpawn):
 class TestSSLSocketNotAllowed(test__server.TestSSLSocketNotAllowed):
     Settings = Settings
 
-class TestRawSpawn(test__server.TestRawSpawn):
+class TestRawSpawn(test__server.TestRawSpawn): # pylint:disable=too-many-ancestors
     Settings = Settings
 
 class TestSSLGetCertificate(test__server.TestSSLGetCertificate):
     Settings = Settings
 
-class TestPoolSpawn(test__server.TestPoolSpawn):
+class TestPoolSpawn(test__server.TestPoolSpawn): # pylint:disable=too-many-ancestors
     Settings = Settings
 
 if __name__ == '__main__':
