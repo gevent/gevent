@@ -166,7 +166,6 @@ class BaseServer(object):
             raise TypeError("'handle' must be provided")
 
     def _start_accepting_if_started(self, _event=None):
-        print("Begin accepting. Already started?", self.started)
         if self.started:
             self.start_accepting()
 

@@ -140,8 +140,12 @@ class AbstractLinkable(object):
                     break
 
                 link = self._links.pop(0) # Cython optimizes using list internals
+
                 id_link = id(link)
                 if id_link not in done:
+                    # XXX: JAM: What was I thinking? This doesn't make much sense,
+                    # there's a good chance `link` will be deallocated, and its id() will
+                    # be free to be reused.
                     done.add(id_link)
                     try:
                         link(self)
