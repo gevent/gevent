@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 Use the AppVeyor API to download Windows artifacts.
 
@@ -11,15 +12,20 @@ import zipfile
 
 import requests
 
+# To delete:
+# DELETE https://ci.appveyor.com/api/projects/{accountName}/{projectSlug}/buildcache
+# requests.delete(make_url('/projects/denik/gevent/buildcache'), headers=make_auth_headers)
 
-def make_auth_headers():
+def make_auth_headers(fname=".appveyor.token"):
     """Make the authentication headers needed to use the Appveyor API."""
-    if not os.path.exists(".appveyor.token"):
+    if not os.path.exists(fname):
+        fname = os.path.expanduser("~/bin/appveyor-token")
+    if not os.path.exists(fname):
         raise RuntimeError(
             "Please create a file named `.appveyor.token` in the current directory. "
             "You can get the token from https://ci.appveyor.com/api-token"
         )
-    with open(".appveyor.token") as f:
+    with open(fname) as f:
         token = f.read().strip()
 
     headers = {
@@ -33,16 +39,21 @@ def make_url(url, **kwargs):
     return "https://ci.appveyor.com/api" + url.format(**kwargs)
 
 
-def get_project_build(account_project):
+def get_project_build(account_project, build_num):
     """Get the details of the latest Appveyor build."""
-    url = make_url("/projects/{account_project}", account_project=account_project)
+    url = '/projects/{account_project}'
+    url_args = {'account_project': account_project}
+    if build_num:
+        url += '/build/{buildVersion}'
+        url_args['buildVersion'] = build_num
+    url = make_url(url, **url_args)
     response = requests.get(url, headers=make_auth_headers())
     return response.json()
 
 
-def download_latest_artifacts(account_project):
+def download_latest_artifacts(account_project, build_num):
     """Download all the artifacts from the latest build."""
-    build = get_project_build(account_project)
+    build = get_project_build(account_project, build_num)
     jobs = build['build']['jobs']
     print("Build {0[build][version]}, {1} jobs: {0[build][message]}".format(build, len(jobs)))
     for job in jobs:
@@ -96,13 +107,30 @@ def unpack_zipfile(filename):
             ensure_dirs(name)
             z.extract(name)
 
-parser = argparse.ArgumentParser(description='Download artifacts from AppVeyor.')
-parser.add_argument('name',
-                    metavar='ID',
-                    help='Project ID in AppVeyor. Example: ionelmc/python-nameless')
+def main(argv=None):
+    import sys
+    argv = argv or sys.argv[1:]
+
+    parser = argparse.ArgumentParser(description='Download artifacts from AppVeyor.')
+    parser.add_argument(
+        'name',
+        metavar='ID',
+        help='Project ID in AppVeyor. Example: ionelmc/python-nameless'
+    )
+    parser.add_argument(
+        'build',
+        default=None,
+        nargs='?',
+        help=(
+            'The project build version. If not given, discovers the latest. '
+            'Note that this is not the build number. '
+            'Example: 1.0.2420'
+        )
+    )
+
+    args = parser.parse_args(argv)
+    download_latest_artifacts(args.name, args.build)
+
 
 if __name__ == "__main__":
-    # import logging
-    # logging.basicConfig(level="DEBUG")
-    args = parser.parse_args()
-    download_latest_artifacts(args.name)
+    main()
