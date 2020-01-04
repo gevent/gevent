@@ -7,7 +7,12 @@
 1.5a4 (unreleased)
 ==================
 
-- Nothing changed yet.
+Platform and Packaging Updates
+------------------------------
+
+- Python version updates: gevent is now tested with CPython 3.6.10,
+  3.7.6 and 3.8.1. It is also tested with PyPy2 7.3 and PyPy 3.6
+  7.3.
 
 
 1.5a3 (2020-01-01)
