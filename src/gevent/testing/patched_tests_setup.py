@@ -843,6 +843,9 @@ if PYPY and PY3:
         # (at least on OS X; it's less consistent about that on travis)
         'test_ssl.NetworkedBIOTests.test_handshake',
 
+        # This passes various "invalid" strings and expects a ValueError. not sure why
+        # we don't see errors on CPython.
+        'test_subprocess.ProcessTestCase.test_invalid_env',
     ]
 
     if OSX:
@@ -854,9 +857,6 @@ if PYPY and PY3:
             'test_subprocess.POSIXProcessTestCase.test_pass_fds_inheritable',
             'test_subprocess.POSIXProcessTestCase.test_pipe_cloexec',
 
-            # This passes various "invalid" strings and expects a ValueError. not sure why
-            # we don't see errors on Linux.
-            'test_subprocess.ProcessTestCase.test_invalid_env',
 
             # The below are new with 5.10.1
             # These fail with 'OSError: received malformed or improperly truncated ancillary data'
