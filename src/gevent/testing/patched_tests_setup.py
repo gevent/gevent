@@ -854,6 +854,10 @@ if PYPY and PY3:
             'test_subprocess.POSIXProcessTestCase.test_pass_fds_inheritable',
             'test_subprocess.POSIXProcessTestCase.test_pipe_cloexec',
 
+            # This passes various "invalid" strings and expects a ValueError. not sure why
+            # we don't see errors on Linux.
+            'test_subprocess.ProcessTestCase.test_invalid_env',
+
             # The below are new with 5.10.1
             # These fail with 'OSError: received malformed or improperly truncated ancillary data'
             'test_socket.RecvmsgSCMRightsStreamTest.testCmsgTruncLen0',
@@ -872,12 +876,16 @@ if PYPY and PY3:
             'test_ssl.ThreadedTests.test_protocol_sslv3',
             'test_ssl.ThreadedTests.test_protocol_tlsv1',
             'test_ssl.ThreadedTests.test_protocol_tlsv1_1',
+            # Similar, they fail without monkey-patching.
+            'test_ssl.TestPostHandshakeAuth.test_pha_no_pha_client',
+            'test_ssl.TestPostHandshakeAuth.test_pha_optional',
+            'test_ssl.TestPostHandshakeAuth.test_pha_required',
 
             # This gets None instead of http1.1, even without gevent
             'test_ssl.ThreadedTests.test_npn_protocols',
 
             # This fails to decode a filename even without gevent,
-            # at least on High Sierarr.
+            # at least on High Sierra. Newer versions of the tests actually skip this.
             'test_httpservers.SimpleHTTPServerTestCase.test_undecodable_filename',
         ]
 
