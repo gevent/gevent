@@ -1151,6 +1151,13 @@ if PY37:
         'test_ssl.ThreadedTests.test_wrong_cert_tls13',
     ]
 
+    if sys.version_info < (3, 7, 6):
+        disabled_tests += [
+            # Earlier versions parse differently so the newer test breaks
+            'test_ssl.BasicSocketTests.test_parse_all_sans',
+            'test_ssl.BasicSocketTests.test_parse_cert_CVE_2013_4238',
+        ]
+
     if APPVEYOR:
         disabled_tests += [
 
@@ -1170,6 +1177,14 @@ if PY38:
         # output doesn't match.
         'test_threading.ExceptHookTests.test_excepthook_thread_None',
     ]
+
+    if sys.version_info < (3, 8, 1):
+        disabled_tests += [
+            # Earlier versions parse differently so the newer test breaks
+            'test_ssl.BasicSocketTests.test_parse_all_sans',
+            'test_ssl.BasicSocketTests.test_parse_cert_CVE_2013_4238',
+        ]
+
 
 # if 'signalfd' in os.environ.get('GEVENT_BACKEND', ''):
 #     # tests that don't interact well with signalfd
