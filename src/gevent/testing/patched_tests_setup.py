@@ -591,6 +591,19 @@ if PY2:
             'test_ssl.ContextTests.test_options',
         ]
 
+if PYPY and sys.pypy_version_info[:3] == (7, 3, 0): # pylint:disable=no-member
+
+    if OSX:
+        disabled_tests += [
+            # This is expected to produce an SSLError, but instead it appears to
+            # actually work. See above for when it started failing the same on
+            # Travis.
+            'test_ssl.ThreadedTests.test_alpn_protocols',
+            # This fails, presumably due to the OpenSSL it's compiled with.
+            'test_ssl.ThreadedTests.test_default_ecdh_curve',
+        ]
+
+
 def _make_run_with_original(mod_name, func_name):
     @contextlib.contextmanager
     def with_orig():
