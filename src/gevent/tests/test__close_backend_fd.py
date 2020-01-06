@@ -6,6 +6,8 @@ import gevent
 from gevent import core
 from gevent.hub import Hub
 
+from gevent.testing import sysinfo
+
 @unittest.skipUnless(
     getattr(core, 'LIBEV_EMBED', False),
     "Needs embedded libev. "
@@ -29,15 +31,26 @@ class Test(unittest.TestCase):
         'linux_iouring',
     )
 
+    BACKENDS_THAT_WILL_FAIL_TO_CREATE_AT_RUNTIME = (
+        # This can be compiled on any (?) version of
+        # linux, but there's a runtime check that you're
+        # running at least kernel 4.19, so we can fail to create
+        # the hub. When we updated to libev 4.31 from 4.25, Travis Ci
+        # was still on kernel 1.15 (Ubunto 16.04).
+        'linux_aio',
+    ) if not sysinfo.libev_supports_linux_aio() else (
+    )
+
     def _check_backend(self, backend):
         hub = Hub(backend, default=False)
+
         try:
             self.assertEqual(hub.loop.backend, backend)
 
             gevent.sleep(0.001)
             fileno = hub.loop.fileno()
             if fileno is None:
-                raise unittest.SkipTest("backend %s lacks fileno" % (backend,))
+                return # nothing to close, test implicitly passes.
 
             os.close(fileno)
 
@@ -53,23 +66,29 @@ class Test(unittest.TestCase):
             if hub.loop is not None:
                 hub.destroy()
 
-    def _make_test(count, backend): # pylint:disable=no-self-argument
-        def test(self):
-            self._check_backend(backend)
+    @classmethod
+    def _make_test(cls, count, backend): # pylint:disable=no-self-argument
+        if backend in cls.BACKENDS_THAT_WILL_FAIL_TO_CREATE_AT_RUNTIME:
+            def test(self):
+                with self.assertRaisesRegex(SystemError, 'ev_loop_new'):
+                    Hub(backend, default=False)
+        else:
+            def test(self):
+                self._check_backend(backend)
         test.__name__ = 'test_' + backend + '_' + str(count)
         return test.__name__, test
 
-    count = backend = None
+    @classmethod
+    def _make_tests(cls):
+        count = backend = None
 
-    for count in range(2):
-        for backend in core.supported_backends():
-            name, func = _make_test(count, backend)
-            locals()[name] = func
-            name = func = None
+        for count in range(2):
+            for backend in core.supported_backends():
+                name, func = cls._make_test(count, backend)
+                setattr(cls, name, func)
+                name = func = None
 
-    del count
-    del backend
-    del _make_test
+Test._make_tests()
 
 if __name__ == '__main__':
     unittest.main()

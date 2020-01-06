@@ -154,3 +154,13 @@ def get_python_version():
         version += 'b%s' % sys.version_info[4]
 
     return version
+
+def libev_supports_linux_aio():
+    # libev requires kernel 4.19 or above to be able to support
+    # linux AIO. It can still be compiled in, but will fail to create
+    # the loop at runtime.
+    from distutils.version import LooseVersion
+    from platform import system
+    from platform import release
+
+    return system == 'Linux' and LooseVersion(release() or '0') >= LooseVersion('4.19')
