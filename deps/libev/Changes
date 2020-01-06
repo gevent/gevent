@@ -1,9 +1,71 @@
 Revision history for libev, a high-performance and full-featured event loop.
 
+TODO: revisit 59.x timer in the light of modern powersaving
+TODO: document EV_TSTAMP_T
+
+4.31 Fri Dec 20 21:58:29 CET 2019
+	- handle backends with minimum wait time a bit better by not
+          waiting in the presence of already-expired timers
+          (behaviour reported by Felipe Gasper).
+        - new feature: use timerfd to detect timejumps quickly,
+          can be disabled with the new EVFLAG_NOTIMERFD loop flag.
+        - document EV_USE_SIGNALFD feature macro.
+
+4.30 (EV only)
+	- change non-autoconf test for __kernel_rwf_t by testing
+          LINUX_VERSION_CODE, the most direct test I could find.
+        - fix a bug in the io_uring backend that polled the wrong
+          backend fd, causing it to not work in many cases.
+
+4.29 (EV only)
+	- add io uring autoconf and non-autoconf detection.
+        - disable io_uring when some header files are too old.
+
+4.28 (EV only)
+	- linuxaio backend resulted in random memory corruption
+          when loop is forked.
+        - linuxaio backend might have tried to cancel an iocb
+          multiple times (was unable to trigger this).
+        - linuxaio backend now employs a generation counter to
+          avoid handling spurious events from cancelled requests.
+	- io_cancel can return EINTR, deal with it. also, assume
+          io_submit also returns EINTR.
+        - fix some other minor bugs in linuxaio backend.
+        - ev_tstamp type can now be overriden by defining EV_TSTAMP_T.
+        - cleanup: replace expect_true/false and noinline by their
+          libecb counterparts.
+        - move syscall infrastructure from ev_linuxaio.c to ev.c.
+        - prepare io_uring integration.
+        - tweak ev_floor.
+        - epoll, poll, win32 Sleep and other places that use millisecond
+          reslution now all try to round up times.
+        - solaris port backend didn't compile.
+        - abstract time constants into their macros, for more flexibility.
+
+4.27 Thu Jun 27 22:43:44 CEST 2019
+	- linux aio backend almost completely rewritten to work around its
+          limitations.
+        - linux aio backend now requires linux 4.19+.
+        - epoll backend now mandatory for linux aio backend.
+        - fail assertions more aggressively on invalid fd's detected
+          in the event loop, do not just silently fd_kill in case of
+          user error.
+        - ev_io_start/ev_io_stop now verify the watcher fd using
+          a syscall when EV_VERIFY is 2 or higher.
+
+4.26 (EV only)
+	- update to libecb 0x00010006.
+	- new experimental linux aio backend (linux 4.18+).
+	- removed redundant 0-ptr check in ev_once.
+        - updated/extended ev_set_allocator documentation.
+        - replaced EMPTY2 macro by array_needsize_noinit.
+        - minor code cleanups.
+        - epoll backend now uses epoll_create1 also after fork.
+
 4.25 Fri Dec 21 07:49:20 CET 2018
         - INCOMPATIBLE CHANGE: EV_THROW was renamed to EV_NOEXCEPT
-          (EV_THROW sitll provided) and now uses noexcept on C++11 or newer.
-	- move the darwin select workaround highe rin ev.c, as newer versions of
+          (EV_THROW still provided) and now uses noexcept on C++11 or newer.
+	- move the darwin select workaround higher in ev.c, as newer versions of
           darwin managed to break their broken select even more.
 	- ANDROID => __ANDROID__ (reported by enh@google.com).
         - disable epoll_create1 on android because it has broken header files

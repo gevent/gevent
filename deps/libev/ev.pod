@@ -107,10 +107,10 @@ watcher.
 
 =head2 FEATURES
 
-Libev supports C<select>, C<poll>, the Linux-specific C<epoll>, the
-BSD-specific C<kqueue> and the Solaris-specific event port mechanisms
-for file descriptor events (C<ev_io>), the Linux C<inotify> interface
-(for C<ev_stat>), Linux eventfd/signalfd (for faster and cleaner
+Libev supports C<select>, C<poll>, the Linux-specific aio and C<epoll>
+interfaces, the BSD-specific C<kqueue> and the Solaris-specific event port
+mechanisms for file descriptor events (C<ev_io>), the Linux C<inotify>
+interface (for C<ev_stat>), Linux eventfd/signalfd (for faster and cleaner
 inter-thread wakeup (C<ev_async>)/signal handling (C<ev_signal>)) relative
 timers (C<ev_timer>), absolute timers with customised rescheduling
 (C<ev_periodic>), synchronous signals (C<ev_signal>), process status
@@ -161,9 +161,13 @@ it will print a diagnostic message and abort (via the C<assert> mechanism,
 so C<NDEBUG> will disable this checking): these are programming errors in
 the libev caller and need to be fixed there.
 
-Libev also has a few internal error-checking C<assert>ions, and also has
-extensive consistency checking code. These do not trigger under normal
-circumstances, as they indicate either a bug in libev or worse.
+Via the C<EV_FREQUENT> macro you can compile in and/or enable extensive
+consistency checking code inside libev that can be used to check for
+internal inconsistencies, suually caused by application bugs.
+
+Libev also has a few internal error-checking C<assert>ions. These do not
+trigger under normal circumstances, as they indicate either a bug in libev
+or worse.
 
 
 =head1 GLOBAL FUNCTIONS
@@ -267,12 +271,32 @@ You could override this function in high-availability programs to, say,
 free some memory if it cannot allocate memory, to use a special allocator,
 or even to sleep a while and retry until some memory is available.
 
+Example: The following is the C<realloc> function that libev itself uses
+which should work with C<realloc> and C<free> functions of all kinds and
+is probably a good basis for your own implementation.
+
+   static void *
+   ev_realloc_emul (void *ptr, long size) EV_NOEXCEPT
+   {
+     if (size)
+       return realloc (ptr, size);
+
+     free (ptr);
+     return 0;
+   }
+
 Example: Replace the libev allocator with one that waits a bit and then
-retries (example requires a standards-compliant C<realloc>).
+retries.
 
    static void *
    persistent_realloc (void *ptr, size_t size)
    {
+     if (!size)
+       {
+         free (ptr);
+         return 0;
+       }
+
      for (;;)
        {
          void *newptr = realloc (ptr, size);
@@ -458,7 +482,16 @@ unblocking the signals.
 It's also required by POSIX in a threaded program, as libev calls
 C<sigprocmask>, whose behaviour is officially unspecified.
 
-This flag's behaviour will become the default in future versions of libev.
+=item C<EVFLAG_NOTIMERFD>
+
+When this flag is specified, the libev will avoid using a C<timerfd> to
+detect time jumps. It will still be able to detect time jumps, but takes
+longer and has a lower accuracy in doing so, but saves a file descriptor
+per loop.
+
+The current implementation only tries to use a C<timerfd> when the first
+C<ev_periodic> watcher is started and falls back on other methods if it
+cannot be created, but this behaviour might change in the future.
 
 =item C<EVBACKEND_SELECT>  (value 1, portable select backend)
 
@@ -493,7 +526,7 @@ C<EV_WRITE> to C<POLLOUT | POLLERR | POLLHUP>.
 
 =item C<EVBACKEND_EPOLL>   (value 4, Linux)
 
-Use the linux-specific epoll(7) interface (for both pre- and post-2.6.9
+Use the Linux-specific epoll(7) interface (for both pre- and post-2.6.9
 kernels).
 
 For few fds, this backend is a bit little slower than poll and select, but
@@ -549,22 +582,66 @@ faster than epoll for maybe up to a hundred file descriptors, depending on
 the usage. So sad.
 
 While nominally embeddable in other event loops, this feature is broken in
-all kernel versions tested so far.
+a lot of kernel revisions, but probably(!) works in current versions.
+
+This backend maps C<EV_READ> and C<EV_WRITE> in the same way as
+C<EVBACKEND_POLL>.
+
+=item C<EVBACKEND_LINUXAIO>   (value 64, Linux)
+
+Use the Linux-specific Linux AIO (I<not> C<< aio(7) >> but C<<
+io_submit(2) >>) event interface available in post-4.18 kernels (but libev
+only tries to use it in 4.19+).
+
+This is another Linux train wreck of an event interface.
+
+If this backend works for you (as of this writing, it was very
+experimental), it is the best event interface available on Linux and might
+be well worth enabling it - if it isn't available in your kernel this will
+be detected and this backend will be skipped.
+
+This backend can batch oneshot requests and supports a user-space ring
+buffer to receive events. It also doesn't suffer from most of the design
+problems of epoll (such as not being able to remove event sources from
+the epoll set), and generally sounds too good to be true. Because, this
+being the Linux kernel, of course it suffers from a whole new set of
+limitations, forcing you to fall back to epoll, inheriting all its design
+issues.
+
+For one, it is not easily embeddable (but probably could be done using
+an event fd at some extra overhead). It also is subject to a system wide
+limit that can be configured in F</proc/sys/fs/aio-max-nr>. If no AIO
+requests are left, this backend will be skipped during initialisation, and
+will switch to epoll when the loop is active.
+
+Most problematic in practice, however, is that not all file descriptors
+work with it. For example, in Linux 5.1, TCP sockets, pipes, event fds,
+files, F</dev/null> and many others are supported, but ttys do not work
+properly (a known bug that the kernel developers don't care about, see
+L<https://lore.kernel.org/patchwork/patch/1047453/>), so this is not
+(yet?) a generic event polling interface.
+
+Overall, it seems the Linux developers just don't want it to have a
+generic event handling mechanism other than C<select> or C<poll>.
+
+To work around all these problem, the current version of libev uses its
+epoll backend as a fallback for file descriptor types that do not work. Or
+falls back completely to epoll if the kernel acts up.
 
 This backend maps C<EV_READ> and C<EV_WRITE> in the same way as
 C<EVBACKEND_POLL>.
 
 =item C<EVBACKEND_KQUEUE>  (value 8, most BSD clones)
 
-Kqueue deserves special mention, as at the time of this writing, it
-was broken on all BSDs except NetBSD (usually it doesn't work reliably
-with anything but sockets and pipes, except on Darwin, where of course
-it's completely useless). Unlike epoll, however, whose brokenness
-is by design, these kqueue bugs can (and eventually will) be fixed
-without API changes to existing programs. For this reason it's not being
-"auto-detected" unless you explicitly specify it in the flags (i.e. using
-C<EVBACKEND_KQUEUE>) or libev was compiled on a known-to-be-good (-enough)
-system like NetBSD.
+Kqueue deserves special mention, as at the time this backend was
+implemented, it was broken on all BSDs except NetBSD (usually it doesn't
+work reliably with anything but sockets and pipes, except on Darwin,
+where of course it's completely useless). Unlike epoll, however, whose
+brokenness is by design, these kqueue bugs can be (and mostly have been)
+fixed without API changes to existing programs. For this reason it's not
+being "auto-detected" on all platforms unless you explicitly specify it
+in the flags (i.e. using C<EVBACKEND_KQUEUE>) or libev was compiled on a
+known-to-be-good (-enough) system like NetBSD.
 
 You still can embed kqueue into a normal poll or select backend and use it
 only for sockets (after having made sure that sockets work with kqueue on
@@ -575,7 +652,7 @@ kernel is more efficient (which says nothing about its actual speed, of
 course). While stopping, setting and starting an I/O watcher does never
 cause an extra system call as with C<EVBACKEND_EPOLL>, it still adds up to
 two event changes per incident. Support for C<fork ()> is very bad (you
-might have to leak fd's on fork, but it's more sane than epoll) and it
+might have to leak fds on fork, but it's more sane than epoll) and it
 drops fds silently in similarly hard-to-detect cases.
 
 This backend usually performs well under most conditions.
@@ -659,6 +736,12 @@ Example: Use whatever libev has to offer, but make sure that kqueue is
 used if available.
 
    struct ev_loop *loop = ev_loop_new (ev_recommended_backends () | EVBACKEND_KQUEUE);
+
+Example: Similarly, on linux, you mgiht want to take advantage of the
+linux aio backend if possible, but fall back to something else if that
+isn't available.
+
+   struct ev_loop *loop = ev_loop_new (ev_recommended_backends () | EVBACKEND_LINUXAIO);
 
 =item ev_loop_destroy (loop)
 
@@ -1463,7 +1546,7 @@ Many event loops support I<watcher priorities>, which are usually small
 integers that influence the ordering of event callback invocation
 between watchers in some way, all else being equal.
 
-In libev, Watcher priorities can be set using C<ev_set_priority>. See its
+In libev, watcher priorities can be set using C<ev_set_priority>. See its
 description for the more technical details such as the actual priority
 range.
 
@@ -1612,13 +1695,13 @@ But really, best use non-blocking mode.
 
 =head3 The special problem of disappearing file descriptors
 
-Some backends (e.g. kqueue, epoll) need to be told about closing a file
-descriptor (either due to calling C<close> explicitly or any other means,
-such as C<dup2>). The reason is that you register interest in some file
-descriptor, but when it goes away, the operating system will silently drop
-this interest. If another file descriptor with the same number then is
-registered with libev, there is no efficient way to see that this is, in
-fact, a different file descriptor.
+Some backends (e.g. kqueue, epoll, linuxaio) need to be told about closing
+a file descriptor (either due to calling C<close> explicitly or any other
+means, such as C<dup2>). The reason is that you register interest in some
+file descriptor, but when it goes away, the operating system will silently
+drop this interest. If another file descriptor with the same number then
+is registered with libev, there is no efficient way to see that this is,
+in fact, a different file descriptor.
 
 To avoid having to explicitly tell libev about such cases, libev follows
 the following policy:  Each time C<ev_io_set> is being called, libev
@@ -1677,9 +1760,10 @@ reuse the same code path.
 
 =head3 The special problem of fork
 
-Some backends (epoll, kqueue) do not support C<fork ()> at all or exhibit
-useless behaviour. Libev fully supports fork, but needs to be told about
-it in the child if you want to continue to use it in the child.
+Some backends (epoll, kqueue, linuxaio, iouring) do not support C<fork ()>
+at all or exhibit useless behaviour. Libev fully supports fork, but needs
+to be told about it in the child if you want to continue to use it in the
+child.
 
 To support fork in your child processes, you have to call C<ev_loop_fork
 ()> after a fork in the child, enable C<EVFLAG_FORKCHECK>, or resort to
@@ -4410,6 +4494,8 @@ in your include path (e.g. in libev/ when using -Ilibev):
    ev_select.c     only when select backend is enabled
    ev_poll.c       only when poll backend is enabled
    ev_epoll.c      only when the epoll backend is enabled
+   ev_linuxaio.c   only when the linux aio backend is enabled
+   ev_iouring.c    only when the linux io_uring backend is enabled
    ev_kqueue.c     only when the kqueue backend is enabled
    ev_port.c       only when the solaris port backend is enabled
 
@@ -4540,6 +4626,30 @@ C<ev_signal> and C<ev_async> performance and reduce resource consumption.
 If undefined, it will be enabled if the headers indicate GNU/Linux + Glibc
 2.7 or newer, otherwise disabled.
 
+=item EV_USE_SIGNALFD
+
+If defined to be C<1>, then libev will assume that C<signalfd ()> is
+available and will probe for kernel support at runtime. This enables
+the use of EVFLAG_SIGNALFD for faster and simpler signal handling. If
+undefined, it will be enabled if the headers indicate GNU/Linux + Glibc
+2.7 or newer, otherwise disabled.
+
+=item EV_USE_TIMERFD
+
+If defined to be C<1>, then libev will assume that C<timerfd ()> is
+available and will probe for kernel support at runtime. This allows
+libev to detect time jumps accurately. If undefined, it will be enabled
+if the headers indicate GNU/Linux + Glibc 2.8 or newer and define
+C<TFD_TIMER_CANCEL_ON_SET>, otherwise disabled.
+
+=item EV_USE_EVENTFD
+
+If defined to be C<1>, then libev will assume that C<eventfd ()> is
+available and will probe for kernel support at runtime. This will improve
+C<ev_signal> and C<ev_async> performance and reduce resource consumption.
+If undefined, it will be enabled if the headers indicate GNU/Linux + Glibc
+2.7 or newer, otherwise disabled.
+
 =item EV_USE_SELECT
 
 If undefined or defined to be C<1>, libev will compile in support for the
@@ -4609,6 +4719,19 @@ C<epoll>(7) backend. Its availability will be detected at runtime,
 otherwise another method will be used as fallback. This is the preferred
 backend for GNU/Linux systems. If undefined, it will be enabled if the
 headers indicate GNU/Linux + Glibc 2.4 or newer, otherwise disabled.
+
+=item EV_USE_LINUXAIO
+
+If defined to be C<1>, libev will compile in support for the Linux aio
+backend (C<EV_USE_EPOLL> must also be enabled). If undefined, it will be
+enabled on linux, otherwise disabled.
+
+=item EV_USE_IOURING
+
+If defined to be C<1>, libev will compile in support for the Linux
+io_uring backend (C<EV_USE_EPOLL> must also be enabled). Due to it's
+current limitations it has to be requested explicitly. If undefined, it
+will be enabled on linux, otherwise disabled.
 
 =item EV_USE_KQUEUE
 
@@ -4895,6 +5018,9 @@ called. If set to C<2>, then the internal verification code will be
 called once per loop, which can slow down libev. If set to C<3>, then the
 verification code will be called very frequently, which will slow down
 libev considerably.
+
+Verification errors are reported via C's C<assert> mechanism, so if you
+disable that (e.g. by defining C<NDEBUG>) then no errors will be reported.
 
 The default is C<1>, unless C<EV_FEATURES> overrides it, in which case it
 will be C<0>.

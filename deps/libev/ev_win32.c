@@ -154,8 +154,8 @@ ev_time (void)
   ui.u.LowPart  = ft.dwLowDateTime;
   ui.u.HighPart = ft.dwHighDateTime;
 
-  /* msvc cannot convert ulonglong to double... yes, it is that sucky */
-  return (LONGLONG)(ui.QuadPart - 116444736000000000) * 1e-7;
+  /* also, msvc cannot convert ulonglong to double... yes, it is that sucky */
+  return EV_TS_FROM_USEC (((LONGLONG)(ui.QuadPart - 116444736000000000) * 1e-1));
 }
 
 #endif

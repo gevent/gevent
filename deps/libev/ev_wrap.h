@@ -44,12 +44,47 @@
 #define invoke_cb ((loop)->invoke_cb)
 #define io_blocktime ((loop)->io_blocktime)
 #define iocp ((loop)->iocp)
+#define iouring_cq_cqes ((loop)->iouring_cq_cqes)
+#define iouring_cq_head ((loop)->iouring_cq_head)
+#define iouring_cq_overflow ((loop)->iouring_cq_overflow)
+#define iouring_cq_ring ((loop)->iouring_cq_ring)
+#define iouring_cq_ring_entries ((loop)->iouring_cq_ring_entries)
+#define iouring_cq_ring_mask ((loop)->iouring_cq_ring_mask)
+#define iouring_cq_ring_size ((loop)->iouring_cq_ring_size)
+#define iouring_cq_tail ((loop)->iouring_cq_tail)
+#define iouring_entries ((loop)->iouring_entries)
+#define iouring_epoll_w ((loop)->iouring_epoll_w)
+#define iouring_fd ((loop)->iouring_fd)
+#define iouring_max_entries ((loop)->iouring_max_entries)
+#define iouring_sq_array ((loop)->iouring_sq_array)
+#define iouring_sq_dropped ((loop)->iouring_sq_dropped)
+#define iouring_sq_flags ((loop)->iouring_sq_flags)
+#define iouring_sq_head ((loop)->iouring_sq_head)
+#define iouring_sq_ring ((loop)->iouring_sq_ring)
+#define iouring_sq_ring_entries ((loop)->iouring_sq_ring_entries)
+#define iouring_sq_ring_mask ((loop)->iouring_sq_ring_mask)
+#define iouring_sq_ring_size ((loop)->iouring_sq_ring_size)
+#define iouring_sq_tail ((loop)->iouring_sq_tail)
+#define iouring_sqes ((loop)->iouring_sqes)
+#define iouring_sqes_size ((loop)->iouring_sqes_size)
+#define iouring_tfd ((loop)->iouring_tfd)
+#define iouring_tfd_to ((loop)->iouring_tfd_to)
+#define iouring_tfd_w ((loop)->iouring_tfd_w)
+#define iouring_to_submit ((loop)->iouring_to_submit)
 #define kqueue_changecnt ((loop)->kqueue_changecnt)
 #define kqueue_changemax ((loop)->kqueue_changemax)
 #define kqueue_changes ((loop)->kqueue_changes)
 #define kqueue_eventmax ((loop)->kqueue_eventmax)
 #define kqueue_events ((loop)->kqueue_events)
 #define kqueue_fd_pid ((loop)->kqueue_fd_pid)
+#define linuxaio_ctx ((loop)->linuxaio_ctx)
+#define linuxaio_epoll_w ((loop)->linuxaio_epoll_w)
+#define linuxaio_iocbpmax ((loop)->linuxaio_iocbpmax)
+#define linuxaio_iocbps ((loop)->linuxaio_iocbps)
+#define linuxaio_iteration ((loop)->linuxaio_iteration)
+#define linuxaio_submitcnt ((loop)->linuxaio_submitcnt)
+#define linuxaio_submitmax ((loop)->linuxaio_submitmax)
+#define linuxaio_submits ((loop)->linuxaio_submits)
 #define loop_count ((loop)->loop_count)
 #define loop_depth ((loop)->loop_depth)
 #define loop_done ((loop)->loop_done)
@@ -89,6 +124,8 @@
 #define sigfd_w ((loop)->sigfd_w)
 #define timeout_blocktime ((loop)->timeout_blocktime)
 #define timercnt ((loop)->timercnt)
+#define timerfd ((loop)->timerfd)
+#define timerfd_w ((loop)->timerfd_w)
 #define timermax ((loop)->timermax)
 #define timers ((loop)->timers)
 #define userdata ((loop)->userdata)
@@ -143,12 +180,47 @@
 #undef invoke_cb
 #undef io_blocktime
 #undef iocp
+#undef iouring_cq_cqes
+#undef iouring_cq_head
+#undef iouring_cq_overflow
+#undef iouring_cq_ring
+#undef iouring_cq_ring_entries
+#undef iouring_cq_ring_mask
+#undef iouring_cq_ring_size
+#undef iouring_cq_tail
+#undef iouring_entries
+#undef iouring_epoll_w
+#undef iouring_fd
+#undef iouring_max_entries
+#undef iouring_sq_array
+#undef iouring_sq_dropped
+#undef iouring_sq_flags
+#undef iouring_sq_head
+#undef iouring_sq_ring
+#undef iouring_sq_ring_entries
+#undef iouring_sq_ring_mask
+#undef iouring_sq_ring_size
+#undef iouring_sq_tail
+#undef iouring_sqes
+#undef iouring_sqes_size
+#undef iouring_tfd
+#undef iouring_tfd_to
+#undef iouring_tfd_w
+#undef iouring_to_submit
 #undef kqueue_changecnt
 #undef kqueue_changemax
 #undef kqueue_changes
 #undef kqueue_eventmax
 #undef kqueue_events
 #undef kqueue_fd_pid
+#undef linuxaio_ctx
+#undef linuxaio_epoll_w
+#undef linuxaio_iocbpmax
+#undef linuxaio_iocbps
+#undef linuxaio_iteration
+#undef linuxaio_submitcnt
+#undef linuxaio_submitmax
+#undef linuxaio_submits
 #undef loop_count
 #undef loop_depth
 #undef loop_done
@@ -188,6 +260,8 @@
 #undef sigfd_w
 #undef timeout_blocktime
 #undef timercnt
+#undef timerfd
+#undef timerfd_w
 #undef timermax
 #undef timers
 #undef userdata

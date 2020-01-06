@@ -1,7 +1,7 @@
 /*
  * libev native API header
  *
- * Copyright (c) 2007-2018 Marc Alexander Lehmann <libev@schmorp.de>
+ * Copyright (c) 2007-2019 Marc Alexander Lehmann <libev@schmorp.de>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modifica-
@@ -151,7 +151,10 @@ EV_CPP(extern "C" {)
 
 /*****************************************************************************/
 
-typedef double ev_tstamp;
+#ifndef EV_TSTAMP_T
+# define EV_TSTAMP_T double
+#endif
+typedef EV_TSTAMP_T ev_tstamp;
 
 #include <string.h> /* for memmove */
 
@@ -212,7 +215,7 @@ struct ev_loop;
 /*****************************************************************************/
 
 #define EV_VERSION_MAJOR 4
-#define EV_VERSION_MINOR 25
+#define EV_VERSION_MINOR 31
 
 /* eventmask, revents, events... */
 enum {
@@ -501,29 +504,32 @@ union ev_any_watcher
 /* flag bits for ev_default_loop and ev_loop_new */
 enum {
   /* the default */
-  EVFLAG_AUTO      = 0x00000000U, /* not quite a mask */
+  EVFLAG_AUTO       = 0x00000000U, /* not quite a mask */
   /* flag bits */
-  EVFLAG_NOENV     = 0x01000000U, /* do NOT consult environment */
-  EVFLAG_FORKCHECK = 0x02000000U, /* check for a fork in each iteration */
+  EVFLAG_NOENV      = 0x01000000U, /* do NOT consult environment */
+  EVFLAG_FORKCHECK  = 0x02000000U, /* check for a fork in each iteration */
   /* debugging/feature disable */
-  EVFLAG_NOINOTIFY = 0x00100000U, /* do not attempt to use inotify */
+  EVFLAG_NOINOTIFY  = 0x00100000U, /* do not attempt to use inotify */
 #if EV_COMPAT3
-  EVFLAG_NOSIGFD   = 0, /* compatibility to pre-3.9 */
+  EVFLAG_NOSIGFD    = 0, /* compatibility to pre-3.9 */
 #endif
-  EVFLAG_SIGNALFD  = 0x00200000U, /* attempt to use signalfd */
-  EVFLAG_NOSIGMASK = 0x00400000U  /* avoid modifying the signal mask */
+  EVFLAG_SIGNALFD   = 0x00200000U, /* attempt to use signalfd */
+  EVFLAG_NOSIGMASK  = 0x00400000U, /* avoid modifying the signal mask */
+  EVFLAG_NOTIMERFD  = 0x00800000U  /* avoid creating a timerfd */
 };
 
 /* method bits to be ored together */
 enum {
-  EVBACKEND_SELECT  = 0x00000001U, /* available just about anywhere */
-  EVBACKEND_POLL    = 0x00000002U, /* !win, !aix, broken on osx */
-  EVBACKEND_EPOLL   = 0x00000004U, /* linux */
-  EVBACKEND_KQUEUE  = 0x00000008U, /* bsd, broken on osx */
-  EVBACKEND_DEVPOLL = 0x00000010U, /* solaris 8 */ /* NYI */
-  EVBACKEND_PORT    = 0x00000020U, /* solaris 10 */
-  EVBACKEND_ALL     = 0x0000003FU, /* all known backends */
-  EVBACKEND_MASK    = 0x0000FFFFU  /* all future backends */
+  EVBACKEND_SELECT   = 0x00000001U, /* available just about anywhere */
+  EVBACKEND_POLL     = 0x00000002U, /* !win, !aix, broken on osx */
+  EVBACKEND_EPOLL    = 0x00000004U, /* linux */
+  EVBACKEND_KQUEUE   = 0x00000008U, /* bsd, broken on osx */
+  EVBACKEND_DEVPOLL  = 0x00000010U, /* solaris 8 */ /* NYI */
+  EVBACKEND_PORT     = 0x00000020U, /* solaris 10 */
+  EVBACKEND_LINUXAIO = 0x00000040U, /* linuix AIO, 4.19+ */
+  EVBACKEND_IOURING  = 0x00000080U, /* linux io_uring, 5.1+ */
+  EVBACKEND_ALL      = 0x000000FFU, /* all known backends */
+  EVBACKEND_MASK     = 0x0000FFFFU  /* all future backends */
 };
 
 #if EV_PROTOTYPES

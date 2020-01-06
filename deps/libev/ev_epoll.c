@@ -1,7 +1,7 @@
 /*
  * libev epoll fd activity backend
  *
- * Copyright (c) 2007,2008,2009,2010,2011 Marc Alexander Lehmann <libev@schmorp.de>
+ * Copyright (c) 2007,2008,2009,2010,2011,2016,2017,2019 Marc Alexander Lehmann <libev@schmorp.de>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modifica-
@@ -93,10 +93,10 @@ epoll_modify (EV_P_ int fd, int oev, int nev)
   ev.events   = (nev & EV_READ  ? EPOLLIN  : 0)
               | (nev & EV_WRITE ? EPOLLOUT : 0);
 
-  if (expect_true (!epoll_ctl (backend_fd, oev && oldmask != nev ? EPOLL_CTL_MOD : EPOLL_CTL_ADD, fd, &ev)))
+  if (ecb_expect_true (!epoll_ctl (backend_fd, oev && oldmask != nev ? EPOLL_CTL_MOD : EPOLL_CTL_ADD, fd, &ev)))
     return;
 
-  if (expect_true (errno == ENOENT))
+  if (ecb_expect_true (errno == ENOENT))
     {
       /* if ENOENT then the fd went away, so try to do the right thing */
       if (!nev)
@@ -105,7 +105,7 @@ epoll_modify (EV_P_ int fd, int oev, int nev)
       if (!epoll_ctl (backend_fd, EPOLL_CTL_ADD, fd, &ev))
         return;
     }
-  else if (expect_true (errno == EEXIST))
+  else if (ecb_expect_true (errno == EEXIST))
     {
       /* EEXIST means we ignored a previous DEL, but the fd is still active */
       /* if the kernel mask is the same as the new mask, we assume it hasn't changed */
@@ -115,7 +115,7 @@ epoll_modify (EV_P_ int fd, int oev, int nev)
       if (!epoll_ctl (backend_fd, EPOLL_CTL_MOD, fd, &ev))
         return;
     }
-  else if (expect_true (errno == EPERM))
+  else if (ecb_expect_true (errno == EPERM))
     {
       /* EPERM means the fd is always ready, but epoll is too snobbish */
       /* to handle it, unlike select or poll. */
@@ -124,12 +124,14 @@ epoll_modify (EV_P_ int fd, int oev, int nev)
       /* add fd to epoll_eperms, if not already inside */
       if (!(oldmask & EV_EMASK_EPERM))
         {
-          array_needsize (int, epoll_eperms, epoll_epermmax, epoll_epermcnt + 1, EMPTY2);
+          array_needsize (int, epoll_eperms, epoll_epermmax, epoll_epermcnt + 1, array_needsize_noinit);
           epoll_eperms [epoll_epermcnt++] = fd;
         }
 
       return;
     }
+  else
+    assert (("libev: I/O watcher with invalid fd found in epoll_ctl", errno != EBADF && errno != ELOOP && errno != EINVAL));
 
   fd_kill (EV_A_ fd);
 
@@ -144,16 +146,16 @@ epoll_poll (EV_P_ ev_tstamp timeout)
   int i;
   int eventcnt;
 
-  if (expect_false (epoll_epermcnt))
-    timeout = 0.;
+  if (ecb_expect_false (epoll_epermcnt))
+    timeout = EV_TS_CONST (0.);
 
   /* epoll wait times cannot be larger than (LONG_MAX - 999UL) / HZ msecs, which is below */
   /* the default libev max wait time, however. */
   EV_RELEASE_CB;
-  eventcnt = epoll_wait (backend_fd, epoll_events, epoll_eventmax, timeout * 1e3);
+  eventcnt = epoll_wait (backend_fd, epoll_events, epoll_eventmax, EV_TS_TO_MSEC (timeout));
   EV_ACQUIRE_CB;
 
-  if (expect_false (eventcnt < 0))
+  if (ecb_expect_false (eventcnt < 0))
     {
       if (errno != EINTR)
         ev_syserr ("(libev) epoll_wait");
@@ -176,14 +178,14 @@ epoll_poll (EV_P_ ev_tstamp timeout)
        * other spurious notifications will be found by epoll_ctl, below
        * we assume that fd is always in range, as we never shrink the anfds array
        */
-      if (expect_false ((uint32_t)anfds [fd].egen != (uint32_t)(ev->data.u64 >> 32)))
+      if (ecb_expect_false ((uint32_t)anfds [fd].egen != (uint32_t)(ev->data.u64 >> 32)))
         {
           /* recreate kernel state */
           postfork |= 2;
           continue;
         }
 
-      if (expect_false (got & ~want))
+      if (ecb_expect_false (got & ~want))
         {
           anfds [fd].emask = want;
 
@@ -195,6 +197,8 @@ epoll_poll (EV_P_ ev_tstamp timeout)
            * above with the gencounter check (== our fd is not the event fd), and
            * partially here, when epoll_ctl returns an error (== a child has the fd
            * but we closed it).
+           * note: for events such as POLLHUP, where we can't know whether it refers
+           * to EV_READ or EV_WRITE, we might issue redundant EPOLL_CTL_MOD calls.
            */
           ev->events = (want & EV_READ  ? EPOLLIN  : 0)
                      | (want & EV_WRITE ? EPOLLOUT : 0);
@@ -212,7 +216,7 @@ epoll_poll (EV_P_ ev_tstamp timeout)
     }
 
   /* if the receive array was full, increase its size */
-  if (expect_false (eventcnt == epoll_eventmax))
+  if (ecb_expect_false (eventcnt == epoll_eventmax))
     {
       ev_free (epoll_events);
       epoll_eventmax = array_nextsize (sizeof (struct epoll_event), epoll_eventmax, epoll_eventmax + 1);
@@ -235,23 +239,34 @@ epoll_poll (EV_P_ ev_tstamp timeout)
     }
 }
 
+static int
+epoll_epoll_create (void)
+{
+  int fd;
+
+#if defined EPOLL_CLOEXEC && !defined __ANDROID__
+  fd = epoll_create1 (EPOLL_CLOEXEC);
+
+  if (fd < 0 && (errno == EINVAL || errno == ENOSYS))
+#endif
+    {
+      fd = epoll_create (256);
+
+      if (fd >= 0)
+        fcntl (fd, F_SETFD, FD_CLOEXEC);
+    }
+
+  return fd;
+}
+
 inline_size
 int
 epoll_init (EV_P_ int flags)
 {
-#if defined EPOLL_CLOEXEC && !defined __ANDROID__
-  backend_fd = epoll_create1 (EPOLL_CLOEXEC);
-
-  if (backend_fd < 0 && (errno == EINVAL || errno == ENOSYS))
-#endif
-    backend_fd = epoll_create (256);
-
-  if (backend_fd < 0)
+  if ((backend_fd = epoll_epoll_create ()) < 0)
     return 0;
 
-  fcntl (backend_fd, F_SETFD, FD_CLOEXEC);
-
-  backend_mintime = 1e-3; /* epoll does sometimes return early, this is just to avoid the worst */
+  backend_mintime = EV_TS_CONST (1e-3); /* epoll does sometimes return early, this is just to avoid the worst */
   backend_modify  = epoll_modify;
   backend_poll    = epoll_poll;
 
@@ -269,16 +284,14 @@ epoll_destroy (EV_P)
   array_free (epoll_eperm, EMPTY);
 }
 
-inline_size
-void
+ecb_cold
+static void
 epoll_fork (EV_P)
 {
   close (backend_fd);
 
-  while ((backend_fd = epoll_create (256)) < 0)
+  while ((backend_fd = epoll_epoll_create ()) < 0)
     ev_syserr ("(libev) epoll_create");
-
-  fcntl (backend_fd, F_SETFD, FD_CLOEXEC);
 
   fd_rearm_all (EV_A);
 }

@@ -1,7 +1,7 @@
 /*
  * libev solaris event port backend
  *
- * Copyright (c) 2007,2008,2009,2010,2011 Marc Alexander Lehmann <libev@schmorp.de>
+ * Copyright (c) 2007,2008,2009,2010,2011,2019 Marc Alexander Lehmann <libev@schmorp.de>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modifica-
@@ -69,7 +69,10 @@ port_associate_and_check (EV_P_ int fd, int ev)
   )
     {
       if (errno == EBADFD)
-        fd_kill (EV_A_ fd);
+        {
+          assert (("libev: port_associate found invalid fd", errno != EBADFD));
+          fd_kill (EV_A_ fd);
+        }
       else
         ev_syserr ("(libev) port_associate");
     }
@@ -129,7 +132,7 @@ port_poll (EV_P_ ev_tstamp timeout)
         }
     }
 
-  if (expect_false (nget == port_eventmax))
+  if (ecb_expect_false (nget == port_eventmax))
     {
       ev_free (port_events);
       port_eventmax = array_nextsize (sizeof (port_event_t), port_eventmax, port_eventmax + 1);
@@ -151,11 +154,11 @@ port_init (EV_P_ int flags)
 
   /* if my reading of the opensolaris kernel sources are correct, then
    * opensolaris does something very stupid: it checks if the time has already
-   * elapsed and doesn't round up if that is the case,m otherwise it DOES round
+   * elapsed and doesn't round up if that is the case, otherwise it DOES round
    * up. Since we can't know what the case is, we need to guess by using a
    * "large enough" timeout. Normally, 1e-9 would be correct.
    */
-  backend_mintime = 1e-3; /* needed to compensate for port_getn returning early */
+  backend_mintime = EV_TS_CONST (1e-3); /* needed to compensate for port_getn returning early */
   backend_modify  = port_modify;
   backend_poll    = port_poll;
 

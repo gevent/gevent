@@ -24,11 +24,20 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
+/* Define to 1 if linux/fs.h defined kernel_rwf_t */
+#undef HAVE_KERNEL_RWF_T
+
 /* Define to 1 if you have the `kqueue' function. */
 #undef HAVE_KQUEUE
 
 /* Define to 1 if you have the `rt' library (-lrt). */
 #undef HAVE_LIBRT
+
+/* Define to 1 if you have the <linux/aio_abi.h> header file. */
+#undef HAVE_LINUX_AIO_ABI_H
+
+/* Define to 1 if you have the <linux/fs.h> header file. */
+#undef HAVE_LINUX_FS_H
 
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
@@ -86,6 +95,9 @@
 
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #undef HAVE_SYS_STAT_H
+
+/* Define to 1 if you have the <sys/timerfd.h> header file. */
+#undef HAVE_SYS_TIMERFD_H
 
 /* Define to 1 if you have the <sys/types.h> header file. */
 #undef HAVE_SYS_TYPES_H

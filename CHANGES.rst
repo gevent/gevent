@@ -14,6 +14,11 @@ Platform and Packaging Updates
   3.7.6 and 3.8.1. It is also tested with PyPy2 7.3 and PyPy 3.6
   7.3.
 
+Library and Dependency Updates
+------------------------------
+
+- Upgrade libev from 4.25 to 4.31 and update its embedded
+  ``config.guess`` to the latest.
 
 1.5a3 (2020-01-01)
 ==================

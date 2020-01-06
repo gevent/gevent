@@ -18,7 +18,8 @@ ABOUT
    - extensive and detailed, readable documentation (not doxygen garbage).
    - fully supports fork, can detect fork in various ways and automatically
      re-arms kernel mechanisms that do not support fork.
-   - highly optimised select, poll, epoll, kqueue and event ports backends.
+   - highly optimised select, poll, linux epoll, linux aio, bsd kqueue
+     and solaris event ports backends.
    - filesystem object (path) watching (with optional linux inotify support).
    - wallclock-based times (using absolute time, cron-like).
    - relative timers/timeouts (handle time jumps).

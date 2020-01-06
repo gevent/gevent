@@ -1,7 +1,7 @@
 /*
  * libev kqueue backend
  *
- * Copyright (c) 2007,2008,2009,2010,2011,2012,2013 Marc Alexander Lehmann <libev@schmorp.de>
+ * Copyright (c) 2007,2008,2009,2010,2011,2012,2013,2016,2019 Marc Alexander Lehmann <libev@schmorp.de>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modifica-
@@ -48,7 +48,7 @@ void
 kqueue_change (EV_P_ int fd, int filter, int flags, int fflags)
 {
   ++kqueue_changecnt;
-  array_needsize (struct kevent, kqueue_changes, kqueue_changemax, kqueue_changecnt, EMPTY2);
+  array_needsize (struct kevent, kqueue_changes, kqueue_changemax, kqueue_changecnt, array_needsize_noinit);
 
   EV_SET (&kqueue_changes [kqueue_changecnt - 1], fd, filter, flags, fflags, 0, 0);
 }
@@ -103,10 +103,10 @@ kqueue_poll (EV_P_ ev_tstamp timeout)
   EV_ACQUIRE_CB;
   kqueue_changecnt = 0;
 
-  if (expect_false (res < 0))
+  if (ecb_expect_false (res < 0))
     {
       if (errno != EINTR)
-        ev_syserr ("(libev) kevent");
+        ev_syserr ("(libev) kqueue kevent");
 
       return;
     }
@@ -115,7 +115,7 @@ kqueue_poll (EV_P_ ev_tstamp timeout)
     {
       int fd = kqueue_events [i].ident;
 
-      if (expect_false (kqueue_events [i].flags & EV_ERROR))
+      if (ecb_expect_false (kqueue_events [i].flags & EV_ERROR))
         {
           int err = kqueue_events [i].data;
 
@@ -129,10 +129,16 @@ kqueue_poll (EV_P_ ev_tstamp timeout)
                   if (fd_valid (fd))
                     kqueue_modify (EV_A_ fd, 0, anfds [fd].events);
                   else
-                    fd_kill (EV_A_ fd);
+                    {
+                      assert (("libev: kqueue found invalid fd", 0));
+                      fd_kill (EV_A_ fd);
+                    }
                 }
               else /* on all other errors, we error out on the fd */
-                fd_kill (EV_A_ fd);
+                {
+                  assert (("libev: kqueue found invalid fd", 0));
+                  fd_kill (EV_A_ fd);
+                }
             }
         }
       else
@@ -145,7 +151,7 @@ kqueue_poll (EV_P_ ev_tstamp timeout)
         );
     }
 
-  if (expect_false (res == kqueue_eventmax))
+  if (ecb_expect_false (res == kqueue_eventmax))
     {
       ev_free (kqueue_events);
       kqueue_eventmax = array_nextsize (sizeof (struct kevent), kqueue_eventmax, kqueue_eventmax + 1);
@@ -164,7 +170,7 @@ kqueue_init (EV_P_ int flags)
 
   fcntl (backend_fd, F_SETFD, FD_CLOEXEC); /* not sure if necessary, hopefully doesn't hurt */
 
-  backend_mintime = 1e-9; /* apparently, they did the right thing in freebsd */
+  backend_mintime = EV_TS_CONST (1e-9); /* apparently, they did the right thing in freebsd */
   backend_modify  = kqueue_modify;
   backend_poll    = kqueue_poll;
 
