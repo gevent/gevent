@@ -22,6 +22,13 @@ class Test(unittest.TestCase):
     assertRaisesRegex = getattr(unittest.TestCase, 'assertRaisesRegex',
                                 getattr(unittest.TestCase, 'assertRaisesRegexp'))
 
+    BACKENDS_THAT_SUCCEED_WHEN_FD_CLOSED = (
+        'kqueue',
+        'epoll',
+        'linux_aio',
+        'linux_iouring',
+    )
+
     def _check_backend(self, backend):
         hub = Hub(backend, default=False)
         try:
@@ -33,9 +40,10 @@ class Test(unittest.TestCase):
                 raise unittest.SkipTest("backend %s lacks fileno" % (backend,))
 
             os.close(fileno)
-            if backend not in ('kqueue', 'epoll'):
-                # That's actually all the libev backends that use a file descriptor,
-                # right?
+
+            if backend in self.BACKENDS_THAT_SUCCEED_WHEN_FD_CLOSED:
+                gevent.sleep(0.001)
+            else:
                 with self.assertRaisesRegex(SystemError, "(libev)"):
                     gevent.sleep(0.001)
 
@@ -52,6 +60,7 @@ class Test(unittest.TestCase):
         return test.__name__, test
 
     count = backend = None
+
     for count in range(2):
         for backend in core.supported_backends():
             name, func = _make_test(count, backend)

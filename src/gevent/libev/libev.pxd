@@ -74,6 +74,8 @@ cdef extern from "libev.h" nogil:
     int EVBACKEND_DEVPOLL
     int EVBACKEND_PORT
     int EVBACKEND_IOCP
+    int EVBACKEND_IOURING
+    int EVBACKEND_LINUXAIO
     int EVBACKEND_ALL
     int EVBACKEND_MASK
 

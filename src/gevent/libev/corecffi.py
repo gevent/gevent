@@ -110,15 +110,23 @@ def get_version():
 def get_header_version():
     return 'libev-%d.%02d' % (libev.EV_VERSION_MAJOR, libev.EV_VERSION_MINOR)
 
-_flags = [(libev.EVBACKEND_PORT, 'port'),
-          (libev.EVBACKEND_KQUEUE, 'kqueue'),
-          (libev.EVBACKEND_EPOLL, 'epoll'),
-          (libev.EVBACKEND_POLL, 'poll'),
-          (libev.EVBACKEND_SELECT, 'select'),
-          (libev.EVFLAG_NOENV, 'noenv'),
-          (libev.EVFLAG_FORKCHECK, 'forkcheck'),
-          (libev.EVFLAG_SIGNALFD, 'signalfd'),
-          (libev.EVFLAG_NOSIGMASK, 'nosigmask')]
+# This list backends in the order they are actually tried by libev,
+# as defined in loop_init. The names must be lower case.
+_flags = [
+    # IOCP --- not supported/used.
+    (libev.EVBACKEND_PORT, 'port'),
+    (libev.EVBACKEND_KQUEUE, 'kqueue'),
+    (libev.EVBACKEND_IOURING, 'linux_iouring'),
+    (libev.EVBACKEND_LINUXAIO, "linux_aio"),
+    (libev.EVBACKEND_EPOLL, 'epoll'),
+    (libev.EVBACKEND_POLL, 'poll'),
+    (libev.EVBACKEND_SELECT, 'select'),
+
+    (libev.EVFLAG_NOENV, 'noenv'),
+    (libev.EVFLAG_FORKCHECK, 'forkcheck'),
+    (libev.EVFLAG_SIGNALFD, 'signalfd'),
+    (libev.EVFLAG_NOSIGMASK, 'nosigmask')
+]
 
 _flags_str2int = dict((string, flag) for (flag, string) in _flags)
 

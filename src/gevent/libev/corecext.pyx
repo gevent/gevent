@@ -103,11 +103,16 @@ READWRITE = libev.EV_READ | libev.EV_WRITE
 MINPRI = libev.EV_MINPRI
 MAXPRI = libev.EV_MAXPRI
 
-BACKEND_PORT = libev.EVBACKEND_PORT
-BACKEND_KQUEUE = libev.EVBACKEND_KQUEUE
-BACKEND_EPOLL = libev.EVBACKEND_EPOLL
-BACKEND_POLL = libev.EVBACKEND_POLL
 BACKEND_SELECT = libev.EVBACKEND_SELECT
+BACKEND_POLL = libev.EVBACKEND_POLL
+BACKEND_EPOLL = libev.EVBACKEND_EPOLL
+BACKEND_KQUEUE = libev.EVBACKEND_KQUEUE
+BACKEND_DEVPOLL = libev.EVBACKEND_DEVPOLL
+BACKEND_PORT = libev.EVBACKEND_PORT
+BACKEND_LINUXAIO = libev.EVBACKEND_LINUXAIO
+BACKEND_IOURING = libev.EVBACKEND_IOURING
+
+
 FORKCHECK = libev.EVFLAG_FORKCHECK
 NOINOTIFY = libev.EVFLAG_NOINOTIFY
 SIGNALFD = libev.EVFLAG_SIGNALFD
@@ -133,17 +138,24 @@ def get_header_version():
     return 'libev-%d.%02d' % (libev.EV_VERSION_MAJOR, libev.EV_VERSION_MINOR)
 
 
-# This list backends in the order they are actually tried by libev
-_flags = [(libev.EVBACKEND_PORT, 'port'),
-          (libev.EVBACKEND_KQUEUE, 'kqueue'),
-          (libev.EVBACKEND_EPOLL, 'epoll'),
-          (libev.EVBACKEND_POLL, 'poll'),
-          (libev.EVBACKEND_SELECT, 'select'),
-          (libev.EVFLAG_NOENV, 'noenv'),
-          (libev.EVFLAG_FORKCHECK, 'forkcheck'),
-          (libev.EVFLAG_NOINOTIFY, 'noinotify'),
-          (libev.EVFLAG_SIGNALFD, 'signalfd'),
-          (libev.EVFLAG_NOSIGMASK, 'nosigmask')]
+# This list backends in the order they are actually tried by libev,
+# as defined in loop_init. The names must be lower case.
+_flags = [
+    # IOCP
+    (libev.EVBACKEND_PORT, 'port'),
+    (libev.EVBACKEND_KQUEUE, 'kqueue'),
+    (libev.EVBACKEND_IOURING, 'linux_iouring'),
+    (libev.EVBACKEND_LINUXAIO, "linux_aio"),
+    (libev.EVBACKEND_EPOLL, 'epoll'),
+    (libev.EVBACKEND_POLL, 'poll'),
+    (libev.EVBACKEND_SELECT, 'select'),
+
+    (libev.EVFLAG_NOENV, 'noenv'),
+    (libev.EVFLAG_FORKCHECK, 'forkcheck'),
+    (libev.EVFLAG_NOINOTIFY, 'noinotify'),
+    (libev.EVFLAG_SIGNALFD, 'signalfd'),
+    (libev.EVFLAG_NOSIGMASK, 'nosigmask')
+]
 
 
 _flags_str2int = dict((string, flag) for (flag, string) in _flags)
