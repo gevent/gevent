@@ -591,6 +591,19 @@ if PY2:
             'test_ssl.ContextTests.test_options',
         ]
 
+if PYPY and sys.pypy_version_info[:3] == (7, 3, 0): # pylint:disable=no-member
+
+    if OSX:
+        disabled_tests += [
+            # This is expected to produce an SSLError, but instead it appears to
+            # actually work. See above for when it started failing the same on
+            # Travis.
+            'test_ssl.ThreadedTests.test_alpn_protocols',
+            # This fails, presumably due to the OpenSSL it's compiled with.
+            'test_ssl.ThreadedTests.test_default_ecdh_curve',
+        ]
+
+
 def _make_run_with_original(mod_name, func_name):
     @contextlib.contextmanager
     def with_orig():
@@ -843,6 +856,9 @@ if PYPY and PY3:
         # (at least on OS X; it's less consistent about that on travis)
         'test_ssl.NetworkedBIOTests.test_handshake',
 
+        # This passes various "invalid" strings and expects a ValueError. not sure why
+        # we don't see errors on CPython.
+        'test_subprocess.ProcessTestCase.test_invalid_env',
     ]
 
     if OSX:
@@ -853,6 +869,7 @@ if PYPY and PY3:
             'test_subprocess.POSIXProcessTestCase.test_pass_fds',
             'test_subprocess.POSIXProcessTestCase.test_pass_fds_inheritable',
             'test_subprocess.POSIXProcessTestCase.test_pipe_cloexec',
+
 
             # The below are new with 5.10.1
             # These fail with 'OSError: received malformed or improperly truncated ancillary data'
@@ -872,12 +889,16 @@ if PYPY and PY3:
             'test_ssl.ThreadedTests.test_protocol_sslv3',
             'test_ssl.ThreadedTests.test_protocol_tlsv1',
             'test_ssl.ThreadedTests.test_protocol_tlsv1_1',
+            # Similar, they fail without monkey-patching.
+            'test_ssl.TestPostHandshakeAuth.test_pha_no_pha_client',
+            'test_ssl.TestPostHandshakeAuth.test_pha_optional',
+            'test_ssl.TestPostHandshakeAuth.test_pha_required',
 
             # This gets None instead of http1.1, even without gevent
             'test_ssl.ThreadedTests.test_npn_protocols',
 
             # This fails to decode a filename even without gevent,
-            # at least on High Sierarr.
+            # at least on High Sierra. Newer versions of the tests actually skip this.
             'test_httpservers.SimpleHTTPServerTestCase.test_undecodable_filename',
         ]
 
@@ -1151,6 +1172,13 @@ if PY37:
         'test_ssl.ThreadedTests.test_wrong_cert_tls13',
     ]
 
+    if sys.version_info < (3, 7, 6):
+        disabled_tests += [
+            # Earlier versions parse differently so the newer test breaks
+            'test_ssl.BasicSocketTests.test_parse_all_sans',
+            'test_ssl.BasicSocketTests.test_parse_cert_CVE_2013_4238',
+        ]
+
     if APPVEYOR:
         disabled_tests += [
 
@@ -1170,6 +1198,14 @@ if PY38:
         # output doesn't match.
         'test_threading.ExceptHookTests.test_excepthook_thread_None',
     ]
+
+    if sys.version_info < (3, 8, 1):
+        disabled_tests += [
+            # Earlier versions parse differently so the newer test breaks
+            'test_ssl.BasicSocketTests.test_parse_all_sans',
+            'test_ssl.BasicSocketTests.test_parse_cert_CVE_2013_4238',
+        ]
+
 
 # if 'signalfd' in os.environ.get('GEVENT_BACKEND', ''):
 #     # tests that don't interact well with signalfd

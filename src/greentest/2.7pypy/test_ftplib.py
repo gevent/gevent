@@ -234,11 +234,17 @@ class DummyFTPServer(asyncore.dispatcher, threading.Thread):
     def run(self):
         self.active = True
         self.__flag.set()
-        while self.active and asyncore.socket_map:
-            self.active_lock.acquire()
-            asyncore.loop(timeout=0.1, count=1)
-            self.active_lock.release()
-        asyncore.close_all(ignore_all=True)
+        try:
+            while self.active and asyncore.socket_map:
+                self.active_lock.acquire()
+                try:
+                    asyncore.loop(timeout=0.1, count=1)
+                except:
+                    self.active_lock.release()
+                    raise
+                self.active_lock.release()
+        finally:
+            asyncore.close_all(ignore_all=True)
 
     def stop(self):
         assert self.active

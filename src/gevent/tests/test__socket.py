@@ -128,16 +128,13 @@ class TestTCP(greentest.TestCase):
             log("accepting", self.listener)
             conn, _ = self.listener.accept()
             try:
-                r = conn.makefile(mode='rb')
-                try:
+                with conn.makefile(mode='rb') as r:
                     log("accepted on server", conn)
                     accepted_event.set()
                     log("reading")
                     read_data.append(r.read())
                     log("done reading")
-                finally:
-                    r.close()
-                    del r
+                del r
             finally:
                 conn.close()
                 del conn
@@ -155,8 +152,9 @@ class TestTCP(greentest.TestCase):
             # The implicit reference-based nastiness of Python 2
             # sockets interferes, especially when using SSL sockets.
             # The best way to get a decent FIN to the server is to shutdown
-            # the output. Doing that on Python 3, OTOH, is contraindicated.
-            should_shutdown = greentest.PY2
+            # the output. Doing that on Python 3, OTOH, is contraindicated
+            # except on PyPy.
+            should_shutdown = greentest.PY2 or greentest.PYPY
 
             # It's important to wait for the server to fully accept before
             # we shutdown and close the socket. In SSL mode, the number
@@ -204,7 +202,7 @@ class TestTCP(greentest.TestCase):
                 log("closing")
                 client.close()
         finally:
-            server.join(4)
+            server.join(10)
             assert not server.is_alive()
 
         if server.terminal_exc:

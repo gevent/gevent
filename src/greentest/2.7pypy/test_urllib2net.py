@@ -80,11 +80,11 @@ class CloseSocketTest(unittest.TestCase):
         # delve deep into response to fetch socket._socketobject
         response = _urlopen_with_retry("http://www.example.com/")
         abused_fileobject = response.fp
-        # self.assertIs(abused_fileobject.__class__, socket._fileobject) # gevent: disable
+        # self.assertIs(abused_fileobject.__class__, socket._fileobject) # gevent: disabled
         httpresponse = abused_fileobject._sock
         self.assertIs(httpresponse.__class__, httplib.HTTPResponse)
         fileobject = httpresponse.fp
-        # self.assertIs(fileobject.__class__, socket._fileobject) # gevent: disable
+        # self.assertIs(fileobject.__class__, socket._fileobject) # gevent: disabled
 
         self.assertTrue(not fileobject.closed)
         response.close()
@@ -286,7 +286,7 @@ class TimeoutTest(unittest.TestCase):
             self.assertEqual(u.fp._sock.fp._sock.gettimeout(), 120)
             u.close()
 
-    FTP_HOST = 'ftp://ftp.debian.org/debian/'
+    FTP_HOST = 'ftp://www.pythontest.net/'
 
     def test_ftp_basic(self):
         self.assertIsNone(socket.getdefaulttimeout())

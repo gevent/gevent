@@ -17,25 +17,27 @@ PYENV=$BASE/pyenv
 echo $BASE
 mkdir -p $BASE
 
+update_pyenv () {
+    VERSION="$1"
+    if [ ! -d "$PYENV/.git" ]; then
+        rm -rf $PYENV
+        git clone https://github.com/pyenv/pyenv.git $BASE/pyenv
+    else
+        if [ ! -f "$PYENV/plugins/python-build/share/python-build/$VERSION" ]; then
+            echo "Updating $PYENV for $VERSION"
+            back=$PWD
+            cd $PYENV
 
-if [ ! -d "$PYENV/.git" ]; then
-    rm -rf $PYENV
-    git clone https://github.com/pyenv/pyenv.git $BASE/pyenv
-else
-    back=$PWD
-    cd $PYENV
-    # We don't fetch or reset after the initial creation;
-    # doing so causes the Travis cache to need re-packed and uploaded,
-    # and it's pretty large.
-    # So if we need to incorporate changes from pyenv, either temporarily
-    # turn this back on, or remove the Travis caches.
-    # git fetch || echo "Fetch failed to complete. Ignoring"
-    # git reset --hard origin/master
-    cd $back
-fi
+            git fetch || echo "Fetch failed to complete. Ignoring"
+            git reset --hard origin/master
+            cd $back
+        fi
+    fi
+}
 
 
 SNAKEPIT=$BASE/snakepit
+
 
 ##
 # install(exact-version, bin-alias, dir-alias)
@@ -60,6 +62,7 @@ install () {
     if [ ! -e "$DESTINATION" ]; then
         mkdir -p $SNAKEPIT
         mkdir -p $BASE/versions
+        update_pyenv $VERSION
         $BASE/pyenv/plugins/python-build/bin/python-build $VERSION $DESTINATION
     fi
 
@@ -102,19 +105,19 @@ for var in "$@"; do
             install 3.5.9 python3.5 3.5.d
             ;;
         3.6)
-            install 3.6.9 python3.6 3.6.d
+            install 3.6.10 python3.6 3.6.d
             ;;
         3.7)
-            install 3.7.5 python3.7 3.7.d
+            install 3.7.6 python3.7 3.7.d
             ;;
         3.8)
-            install 3.8.0 python3.8 3.8.d
+            install 3.8.1 python3.8 3.8.d
             ;;
         pypy2.7)
-            install pypy2.7-7.2.0 pypy2.7 pypy2.7.d
+            install pypy2.7-7.3.0 pypy2.7 pypy2.7.d
             ;;
         pypy3.6)
-            install pypy3.6-7.2.0 pypy3.6 pypy3.6.d
+            install pypy3.6-7.3.0 pypy3.6 pypy3.6.d
             ;;
     esac
 done
