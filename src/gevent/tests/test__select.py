@@ -71,10 +71,11 @@ class TestPollRead(gevent.testing.timing.AbstractGenericWaitTestCase):
         poll = select.poll()
         self.assertRaises(KeyError, poll.unregister, 5)
 
-    @unittest.skipIf(hasattr(gevent.core, 'libuv'),
-                     "Depending on whether the fileno is reused or not this either crashes or does nothing."
-                     "libuv won't open a watcher for a closed file on linux.")
     def test_poll_invalid(self):
+        self.skipTest(
+            "libev >= 4.27 aborts the process if built with EV_VERIFY >= 2. "
+            "For libuv, depending on whether the fileno is reused or not "
+            "this either crashes or does nothing.")
         with open(__file__, 'rb') as fp:
             fd = fp.fileno()
 

@@ -206,7 +206,7 @@ done:
 /*
  * If libev on win32 is not embedded in gevent, then
  * the only way to map vfds is to use the default of
- * using runtime fds in libev. Note that it will leak
+ * using C runtime fds in libev. Note that it will leak
  * fds, because there's no way of closing them safely
  */
 #define vfd_get(fd) _get_osfhandle((fd))

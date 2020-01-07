@@ -635,7 +635,7 @@ class SSLSocket(socket):
         SSL channel, and the address of the remote client."""
 
         newsock, addr = socket.accept(self)
-        newsock._drop_events()
+        newsock._drop_events_and_close(closefd=False) # Why, again?
         newsock = self._context.wrap_socket(newsock,
                                             do_handshake_on_connect=self.do_handshake_on_connect,
                                             suppress_ragged_eofs=self.suppress_ragged_eofs,

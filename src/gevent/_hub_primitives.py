@@ -66,6 +66,25 @@ class WaitOperationsGreenlet(SwitchOutGreenletWithLoop): # pylint:disable=undefi
         finally:
             watcher.stop()
 
+    def cancel_waits_close_and_then(self, watchers, exc_kind, then, *then_args):
+        deferred = []
+        for watcher in watchers:
+            if watcher is None:
+                continue
+            if watcher.callback is None:
+                watcher.close()
+            else:
+                deferred.append(watcher)
+        if deferred:
+            self.loop.run_callback(self._cancel_waits_then, deferred, exc_kind, then, then_args)
+        else:
+            then(*then_args)
+
+    def _cancel_waits_then(self, watchers, exc_kind, then, then_args):
+        for watcher in watchers:
+            self._cancel_wait(watcher, exc_kind, True)
+        then(*then_args)
+
     def cancel_wait(self, watcher, error, close_watcher=False):
         """
         Cancel an in-progress call to :meth:`wait` by throwing the given *error*
@@ -77,17 +96,25 @@ class WaitOperationsGreenlet(SwitchOutGreenletWithLoop): # pylint:disable=undefi
            be discarded. Closing the watcher is important to release native resources.
         .. versionchanged:: 1.3a2
            Allow the *watcher* to be ``None``. No action is taken in that case.
+
         """
         if watcher is None:
             # Presumably already closed.
             # See https://github.com/gevent/gevent/issues/1089
             return
+
         if watcher.callback is not None:
             self.loop.run_callback(self._cancel_wait, watcher, error, close_watcher)
-        elif close_watcher:
+            return
+
+        if close_watcher:
             watcher.close()
 
     def _cancel_wait(self, watcher, error, close_watcher):
+        # Running in the hub. Switches to the waiting greenlet to raise
+        # the error; assuming the waiting greenlet dies, switches back
+        # to this  (because the waiting greenlet's parent is the hub.)
+
         # We have to check again to see if it was still active by the time
         # our callback actually runs.
         active = watcher.active

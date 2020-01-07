@@ -98,7 +98,7 @@ class _wrefsocket(_socket.socket):
 
 from gevent._hub_primitives import wait_on_socket as _wait_on_socket
 
-class socket(object):
+class socket(_socketcommon.SocketMixin):
     """
     gevent `socket.socket <https://docs.python.org/3/library/socket.html#socket-objects>`_
     for Python 3.
@@ -306,22 +306,12 @@ class socket(object):
         if self._closed:
             self.close()
 
-    def _drop_events(self, cancel_wait_ex=cancel_wait_ex):
-        if self._read_event is not None:
-            self.hub.cancel_wait(self._read_event, cancel_wait_ex, True)
-            self._read_event = None
-        if self._write_event is not None:
-            self.hub.cancel_wait(self._write_event, cancel_wait_ex, True)
-            self._write_event = None
+    def _drop_ref_on_close(self, sock):
+        sock.close()
 
     def _detach_socket(self, reason):
         if not self._sock:
             return
-
-        # Break any reference to the loop.io objects. Our fileno,
-        # which they were tied to, is about to be free to be reused, so these
-        # objects are no longer functional.
-        self._drop_events()
 
         # Break any references to the underlying socket object. Tested
         # by test__refcount. (Why does this matter?). Be sure to
@@ -341,6 +331,10 @@ class socket(object):
             fileno = sock.fileno()
         except OSError:
             pass
+        # Break any reference to the loop.io objects. Our fileno,
+        # which they were tied to, is about to be free to be reused, so these
+        # objects are no longer functional.
+        self._drop_events_and_close(closefd=(reason == 'closed'))
 
         self._sock = _closedsocket(family, type, proto, fileno, reason)
 
@@ -349,11 +343,8 @@ class socket(object):
         if not self._sock:
             return
 
-        sock = self._sock
-        try:
-            self._detach_socket('closed')
-        finally:
-            sock.close()
+        self._detach_socket('closed')
+
 
     def close(self):
         # This function should not reference any globals. See Python issue #808164.

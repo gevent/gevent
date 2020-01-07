@@ -109,10 +109,14 @@ class GreenFileDescriptorIO(RawIOBase):
         hub = self.hub
         self.hub = self._read_watcher = self._write_watcher = None
 
-        if read_event is not None:
-            hub.cancel_wait(read_event, cancel_wait_ex, True)
-        if write_event is not None:
-            hub.cancel_wait(write_event, cancel_wait_ex, True)
+        hub.cancel_waits_close_and_then(
+            (read_event, write_event),
+            cancel_wait_ex,
+            self.__finish_close,
+            self._closefd,
+            self._fileno,
+            self._keep_alive
+        )
 
     def close(self):
         if self._closed:
@@ -121,12 +125,15 @@ class GreenFileDescriptorIO(RawIOBase):
         # TODO: Can we use 'read_event is not None and write_event is
         # not None' to mean _closed?
         self._closed = True
-        self.__destroy_events()
-        fileno = self._fileno
-        keep_alive = self._keep_alive
-        self._fileno = self._keep_alive = None
         try:
-            if self._closefd:
+            self.__destroy_events()
+        finally:
+            self._fileno = self._keep_alive = None
+
+    @staticmethod
+    def __finish_close(closefd, fileno, keep_alive):
+        try:
+            if closefd:
                 os.close(fileno)
         finally:
             if hasattr(keep_alive, 'close'):

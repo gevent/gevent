@@ -106,7 +106,7 @@ class TestCase(greentest.TestCase):
         return server_host, self.server.server_port, family
 
     @contextmanager
-    def makefile(self, timeout=_DEFAULT_SOCKET_TIMEOUT, bufsize=1):
+    def makefile(self, timeout=_DEFAULT_SOCKET_TIMEOUT, bufsize=1, include_raw_socket=False):
         server_host, server_port, family = self.get_server_host_port_family()
         bufarg = 'buffering' if PY3 else 'bufsize'
         makefile_kwargs = {bufarg: bufsize}
@@ -117,20 +117,14 @@ class TestCase(greentest.TestCase):
 
         with socket.socket(family=family) as sock:
             rconn = None
+            # We want the socket to be accessible from the fileobject
+            # we return. On Python 2, natively this is available as
+            # _sock, but Python 3 doesn't have that.
             sock.connect((server_host, server_port))
             sock.settimeout(timeout)
             with sock.makefile(**makefile_kwargs) as rconn:
-                # We want the socket to be accessible from the fileobject
-                # we return. On Python 2, natively this is available as
-                # _sock, but Python 3 doesn't have that.
-                # We emulate it by assigning to a new attribute; note that this
-                # (probably) introduces a cycle on Python 3, so we are careful
-                # to clear it.
-                rconn.gevent_sock = sock
-                try:
-                    yield rconn
-                finally:
-                    del rconn.gevent_sock
+                result = rconn if not include_raw_socket else (rconn, sock)
+                yield result
 
     def send_request(self, url='/', timeout=_DEFAULT_SOCKET_TIMEOUT, bufsize=1):
         with self.makefile(timeout=timeout, bufsize=bufsize) as conn:
@@ -161,13 +155,13 @@ class TestCase(greentest.TestCase):
         self.Settings.assertPoolFull(self)
 
     def assertNotAccepted(self):
-        with self.makefile() as conn:
+        with self.makefile(include_raw_socket=True) as (conn, sock):
             conn.write(b'GET / HTTP/1.0\r\n\r\n')
             conn.flush()
             result = b''
             try:
                 while True:
-                    data = conn.gevent_sock.recv(1)
+                    data = sock.recv(1)
                     if not data:
                         break
                     result += data

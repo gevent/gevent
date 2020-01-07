@@ -57,6 +57,9 @@ else:
     # very ugly and fragile.
 
     class _fileobject(_fileobject): # pylint:disable=function-redefined
+        __slots__ = (
+            '__weakref__',
+        )
 
         def __enter__(self):
             return self
@@ -67,14 +70,14 @@ else:
 
         def close(self):
             if self._sock is not None:
-                self._sock._drop_events()
+                self._sock._drop_events_and_close(closefd=False)
             super(_fileobject, self).close()
 
 
 from gevent._greenlet_primitives import get_memory as _get_memory
 
 class _closedsocket(object):
-    __slots__ = []
+    __slots__ = ()
 
     def _dummy(*args, **kwargs): # pylint:disable=no-method-argument,unused-argument
         raise error(EBADF, 'Bad file descriptor')
@@ -102,7 +105,7 @@ gtype = type
 
 from gevent._hub_primitives import wait_on_socket as _wait_on_socket
 
-class socket(object):
+class socket(_socketcommon.SocketMixin):
     """
     gevent `socket.socket <https://docs.python.org/2/library/socket.html#socket-objects>`_
     for Python 2.
@@ -116,6 +119,8 @@ class socket(object):
     """
 
     # pylint:disable=too-many-public-methods
+
+    # TODO: Define __slots__.
 
     def __init__(self, family=AF_INET, type=SOCK_STREAM, proto=0, _sock=None):
         timeout = _socket.getdefaulttimeout()
@@ -205,14 +210,10 @@ class socket(object):
             client_socket._drop()
         return sockobj, address
 
-    def _drop_events(self, cancel_wait_ex=cancel_wait_ex):
-        if self._read_event is not None:
-            self.hub.cancel_wait(self._read_event, cancel_wait_ex, True)
-            self._read_event = None
-        if self._write_event is not None:
-            self.hub.cancel_wait(self._write_event, cancel_wait_ex, True)
-            self._write_event = None
 
+    def _drop_ref_on_close(self, sock):
+        if PYPY:
+            sock._drop()
 
     def close(self, _closedsocket=_closedsocket):
         if not self._sock:
@@ -220,7 +221,12 @@ class socket(object):
 
         # This function should not reference any globals. See Python issue #808164.
 
-        # First, change self._sock. On CPython, this drops a
+        # First, break any reference to the loop.io objects. Our
+        # fileno, which they were tied to, is about to be free to be
+        # reused, so these objects are no longer functional.
+        self._drop_events_and_close()
+
+        # Next, change self._sock. On CPython, this drops a
         # reference, and if it was the last reference, __del__ will
         # close it. (We cannot close it, makefile() relies on
         # reference counting like this, and it may be shared among
@@ -229,18 +235,7 @@ class socket(object):
         # self._write_event/self._read_event, or they will be out of
         # sync and we may get inappropriate errors. (See
         # test__hub:TestCloseSocketWhilePolling for an example).
-        s = self._sock
         self._sock = _closedsocket()
-
-        # On PyPy we have to manually tell it to drop a ref.
-        if PYPY:
-            s._drop()
-
-        # Finally, break any reference to the loop.io objects. Our
-        # fileno, which they were tied to, is about to be free to be
-        # reused, so these objects are no longer functional.
-        self._drop_events()
-
 
     @property
     def closed(self):

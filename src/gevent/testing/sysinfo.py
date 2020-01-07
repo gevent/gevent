@@ -163,4 +163,4 @@ def libev_supports_linux_aio():
     from platform import system
     from platform import release
 
-    return system == 'Linux' and LooseVersion(release() or '0') >= LooseVersion('4.19')
+    return system() == 'Linux' and LooseVersion(release() or '0') >= LooseVersion('4.19')

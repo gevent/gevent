@@ -405,3 +405,27 @@ def _resolve_addr(sock, address):
     else:
         address = (address[0], port, address[2], address[3])
     return address
+
+class SocketMixin(object):
+    __slots__ = (
+        '_read_event',
+        '_write_event',
+        '_sock',
+    )
+
+    def _drop_events_and_close(self, closefd=True, _cancel_wait_ex=cancel_wait_ex):
+        hub = self.hub
+        read_event = self._read_event
+        write_event = self._write_event
+        self._read_event = self._write_event = None
+        hub.cancel_waits_close_and_then(
+            (read_event, write_event),
+            _cancel_wait_ex,
+            # Pass the socket to keep it alive until such time as
+            # the waiters are guaranteed to be closed.
+            self._drop_ref_on_close if closefd else id,
+            self._sock
+        )
+
+    def _drop_ref_on_close(self, sock):
+        raise NotImplementedError

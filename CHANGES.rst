@@ -20,6 +20,21 @@ Library and Dependency Updates
 - Upgrade libev from 4.25 to 4.31 and update its embedded
   ``config.guess`` to the latest.
 
+  .. important::
+
+     libev, when built with ``EV_VERIFY >= 2``, now performs
+     verification of file descriptors when IO watchers are started
+     *and* when they are stopped. If you first close a file descriptor
+     and only then stop an associated watcher, libev will abort the
+     process.
+
+     Using the standard gevent socket and file objects handles this
+     automatically, but if you're using the IO watchers directly,
+     you'll need to watch out for this.
+
+     The binary wheels gevent distributes *do not* set ``EV_VERIFY``
+     and don't have this issue.
+
 1.5a3 (2020-01-01)
 ==================
 
