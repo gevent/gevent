@@ -307,7 +307,18 @@ class socket(_socketcommon.SocketMixin):
             self.close()
 
     def _drop_ref_on_close(self, sock):
-        sock.close()
+        # Send the close event to wake up any watchers we don't know about
+        # so that (hopefully) they can be closed before we destroy
+        # the FD and invalidate them. We may be in the hub running pending
+        # callbacks now, or this may take until the next iteration.
+        scheduled_new = self.hub.loop.closing_fd(sock.fileno())
+        # Schedule the actual close to happen after that, but only if needed.
+        # (If we always defer, we wind up closing things much later than expected.)
+        if scheduled_new:
+            self.hub.loop.run_callback(sock.close)
+        else:
+            sock.close()
+
 
     def _detach_socket(self, reason):
         if not self._sock:

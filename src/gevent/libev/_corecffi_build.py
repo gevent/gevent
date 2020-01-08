@@ -90,6 +90,7 @@ ffi.set_source(
     _source,
     include_dirs=distutils_ext.include_dirs + [thisdir], # "libev.h"
     define_macros=macros,
+    undef_macros=distutils_ext.undef_macros,
     libraries=distutils_ext.libraries,
 )
 

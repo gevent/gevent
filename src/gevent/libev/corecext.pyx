@@ -649,6 +649,13 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
     def io(self, libev.vfd_socket_t fd, int events, ref=True, priority=None):
         return io(self, fd, events, ref, priority)
 
+    def closing_fd(self, libev.vfd_socket_t fd):
+        _check_loop(self)
+        cdef int pending_before = libev.ev_pending_count(self._ptr)
+        libev.ev_feed_fd_event(self._ptr, fd, 0xFFFF)
+        cdef int pending_after = libev.ev_pending_count(self._ptr)
+        return pending_after > pending_before
+
     def timer(self, double after, double repeat=0.0, ref=True, priority=None):
         return timer(self, after, repeat, ref, priority)
 
@@ -963,7 +970,12 @@ cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Ty
             return "<...>"
         try:
             format = self._format()
-            result = "<%s at 0x%x%s" % (self.__class__.__name__, id(self), format)
+            result = "<%s at 0x%x native=0x%x%s" % (
+                self.__class__.__name__,
+                id(self),
+                <unsigned long>self.__watcher,
+                format
+            )
             if self.active:
                 result += " active"
             if self.pending:

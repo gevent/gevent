@@ -19,6 +19,7 @@ env:
         - CCACHE_SLOPPINESS=file_macro,time_macros,include_file_ctime,include_file_mtime
         - CCACHE_NOHASHDIR=true
         - BUILD_LIBS=$HOME/.libs
+        - GEVENTSETUP_EV_VERIFY=2
         # Disable some warnings produced by libev especially and also some Cython generated code.
         # Note that changing the value of these variables invalidates configure caches
         - CFLAGS="-g -pipe -Wno-strict-aliasing -Wno-comment"
@@ -46,7 +47,7 @@ env:
       - TRAVIS_PYTHON_VERSION=3.8
       - TRAVIS_PYTHON_VERSION=pypy2.7
       - TRAVIS_PYTHON_VERSION=pypy3.6
-      - TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0
+      - TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0 GEVENTSETUP_EV_VERIFY=3
 
 matrix:
   fast_finish: true
@@ -159,7 +160,7 @@ jobs:
     - <<: *build-gevent
       env: TRAVIS_PYTHON_VERSION=pypy3.6
     - <<: *build-gevent
-      env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0
+      env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0 GEVENTSETUP_EV_VERIFY=3
       install:
         # Install the Python runtime
         - *build-gevent-python
@@ -246,25 +247,18 @@ jobs:
 
     # For the CPython interpreters, unless we have reason to expect
     # different behaviour across the versions (e.g., as measured by coverage)
-    # it's sufficient to test the alternate backends for non-current versions;
+    # it's sufficient to test the alternate backend library for non-current versions;
     # run the full suite on the current version.
 
     # 3.5.
     - <<: *test-libuv-jobs
       env: TRAVIS_PYTHON_VERSION=3.5
       name: libuv35
-    - <<: *test-libev-jobs
-      env: TRAVIS_PYTHON_VERSION=3.5
-      name: libev-cffi35
-
 
     # 3.6
     - <<: *test-libuv-jobs
       env: TRAVIS_PYTHON_VERSION=3.6
       name: libuv36
-    - <<: *test-libev-jobs
-      env: TRAVIS_PYTHON_VERSION=3.6
-      name: libev-cffi36
 
     # 3.7
     - <<: *test-ares-jobs
@@ -276,9 +270,6 @@ jobs:
     - <<: *test-libuv-jobs
       env: TRAVIS_PYTHON_VERSION=3.7
       name: libuv37
-    - <<: *test-libev-jobs
-      env: TRAVIS_PYTHON_VERSION=3.7
-      name: libev-cffi37
     - <<: *test-pure-jobs
       env: TRAVIS_PYTHON_VERSION=3.7
       name: pure37
@@ -297,14 +288,14 @@ jobs:
     - <<: *test-ares-jobs
       # This job exercises both the non-embedded ares resolver
       # and the non-embedded Cython libev loop.
-      env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0
+      env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0 GEVENTSETUP_EV_VERIFY=3
       name: ares27-noembed
     # These exercise the CFFI versions.
     - <<: *test-libuv-jobs
-      env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0
+      env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0 GEVENTSETUP_EV_VERIFY=3
       name: libuv27-noembed
     - <<: *test-libev-jobs
-      env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0
+      env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0 GEVENTSETUP_EV_VERIFY=3
       name: libev27-noembed
 
     # PyPy 2.7

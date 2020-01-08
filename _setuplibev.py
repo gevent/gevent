@@ -80,17 +80,25 @@ def build_extension():
     # QQQ libev can also use -lm, however it seems to be added implicitly
 
     if LIBEV_EMBED:
-        CORE.define_macros += [('LIBEV_EMBED', '1'),
-                               # we don't use void* data in the cython implementation;
-                               # the CFFI implementation does and removes this line.
-                               ('EV_COMMON', ''),
-                               # libev watchers that we don't use currently:
-                               ('EV_CLEANUP_ENABLE', '0'),
-                               ('EV_EMBED_ENABLE', '0'),
-                               ("EV_PERIODIC_ENABLE", '0')]
+        CORE.define_macros += [
+            ('LIBEV_EMBED', '1'),
+            # we don't use void* data in the cython implementation;
+            # the CFFI implementation does and removes this line.
+            ('EV_COMMON', ''),
+            # libev watchers that we don't use currently:
+            ('EV_CLEANUP_ENABLE', '0'),
+            ('EV_EMBED_ENABLE', '0'),
+            ("EV_PERIODIC_ENABLE", '0')
+        ]
         CORE.configure = configure_libev
         if os.environ.get('GEVENTSETUP_EV_VERIFY') is not None:
-            CORE.define_macros.append(('EV_VERIFY', os.environ['GEVENTSETUP_EV_VERIFY']))
+            CORE.define_macros.append(
+                ('EV_VERIFY', os.environ['GEVENTSETUP_EV_VERIFY']))
+            # EV_VERIFY is implemented using assert(), which only works if
+            # NDEBUG is *not* defined. distutils likes to define NDEBUG by default,
+            # meaning that we get no verification in embedded mode. Since that's the
+            # most common testing configuration, that's not good.
+            CORE.undef_macros.append('NDEBUG')
     else:
         CORE.define_macros += [('LIBEV_EMBED', '0')]
         CORE.libraries.append('ev')

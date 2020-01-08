@@ -74,6 +74,8 @@ class BaseServer(object):
        When the *handle* function returns from processing a connection,
        the client socket will be closed. This resolves the non-deterministic
        closing of the socket, fixing ResourceWarnings under Python 3 and PyPy.
+    .. versionchanged:: 1.5
+       Now a context manager that returns itself and calls :meth:`stop` on exit.
 
     """
     # pylint: disable=too-many-instance-attributes,bare-except,broad-except
@@ -127,6 +129,12 @@ class BaseServer(object):
         except:
             self.close()
             raise
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.stop()
 
     def set_listener(self, listener):
         if hasattr(listener, 'accept'):

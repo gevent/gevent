@@ -388,6 +388,12 @@ class loop(AbstractLoop):
     def pendingcnt(self):
         return libev.ev_pending_count(self._ptr)
 
+    def closing_fd(self, fd):
+        pending_before = libev.ev_pending_count(self._ptr)
+        libev.ev_feed_fd_event(self._ptr, fd, 0xFFFF)
+        pending_after = libev.ev_pending_count(self._ptr)
+        return pending_after > pending_before
+
     if sys.platform != "win32":
 
         def install_sigchld(self):

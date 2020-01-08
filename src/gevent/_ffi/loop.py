@@ -664,6 +664,9 @@ class AbstractLoop(object):
     def io(self, fd, events, ref=True, priority=None):
         return self._watchers.io(self, fd, events, ref, priority)
 
+    def closing_fd(self, fd): # pylint:disable=unused-argument
+        return False
+
     def timer(self, after, repeat=0.0, ref=True, priority=None):
         return self._watchers.timer(self, after, repeat, ref, priority)
 

@@ -154,6 +154,7 @@ void ev_io_init(struct ev_io*, void* callback, int fd, int events);
 void ev_io_start(struct ev_loop*, struct ev_io*);
 void ev_io_stop(struct ev_loop*, struct ev_io*);
 void ev_feed_event(struct ev_loop*, void*, int);
+void ev_feed_fd_event(struct ev_loop*, int fd, int events);
 
 void ev_timer_init(struct ev_timer*, void *callback, double, double);
 void ev_timer_start(struct ev_loop*, struct ev_timer*);

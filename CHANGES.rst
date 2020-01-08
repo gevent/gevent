@@ -18,7 +18,7 @@ Library and Dependency Updates
 ------------------------------
 
 - Upgrade libev from 4.25 to 4.31 and update its embedded
-  ``config.guess`` to the latest.
+  ``config.guess`` to the latest. See :issue:`1504`.
 
   .. important::
 

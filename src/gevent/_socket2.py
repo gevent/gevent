@@ -212,8 +212,17 @@ class socket(_socketcommon.SocketMixin):
 
 
     def _drop_ref_on_close(self, sock):
+        # See the same method in _socket3.py. We just can't be as deterministic
+        # as we can on Python 3.
+        scheduled_new = self.hub.loop.closing_fd(sock.fileno())
         if PYPY:
-            sock._drop()
+            meth = sock._drop
+        else:
+            meth = sock.fileno # Still keep it alive if we need to
+        if scheduled_new:
+            self.hub.loop.run_callback(meth)
+        else:
+            meth()
 
     def close(self, _closedsocket=_closedsocket):
         if not self._sock:

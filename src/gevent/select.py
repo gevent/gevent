@@ -18,7 +18,7 @@ from errno import EINTR
 from select import select as _real_original_select
 if sys.platform.startswith('win32'):
     def _original_select(r, w, x, t):
-        # windows cant handle three empty lists, but we've always
+        # windows can't handle three empty lists, but we've always
         # accepted that
         if not r and not w and not x:
             return ((), (), ())
@@ -60,44 +60,35 @@ def get_fileno(obj):
 
 
 class SelectResult(object):
-    __slots__ = ('read', 'write', 'event')
+    __slots__ = ()
 
-    def __init__(self):
-        self.read = []
-        self.write = []
-        self.event = Event()
+    @staticmethod
+    def _make_callback(ready_collection, event, mask):
+        def cb(fd, watcher):
+            ready_collection.append(fd)
+            watcher.close()
+            event.set()
+        cb.mask = mask
+        return cb
 
-    def add_read(self, socket):
-        self.read.append(socket)
-        self.event.set()
-
-    add_read.event = _EV_READ
-
-    def add_write(self, socket):
-        self.write.append(socket)
-        self.event.set()
-
-    add_write.event = _EV_WRITE
-
-    def __add_watchers(self, watchers, fdlist, callback, io, pri):
-        for fd in fdlist:
-            watcher = io(get_fileno(fd), callback.event)
-            watcher.priority = pri
-            watchers.append(watcher)
-            watcher.start(callback, fd)
-
-    def _make_watchers(self, watchers, rlist, wlist):
+    @classmethod
+    def _make_watchers(cls, watchers, *fd_cb):
         loop = get_hub().loop
         io = loop.io
         MAXPRI = loop.MAXPRI
 
-        try:
-            self.__add_watchers(watchers, rlist, self.add_read, io, MAXPRI)
-            self.__add_watchers(watchers, wlist, self.add_write, io, MAXPRI)
-        except IOError as ex:
-            raise error(*ex.args)
+        for fdlist, callback in fd_cb:
+            try:
+                for fd in fdlist:
+                    watcher = io(get_fileno(fd), callback.mask)
+                    watcher.priority = MAXPRI
+                    watchers.append(watcher)
+                    watcher.start(callback, fd, watcher)
+            except IOError as ex:
+                raise error(*ex.args)
 
-    def _closeall(self, watchers):
+    @staticmethod
+    def _closeall(watchers):
         for watcher in watchers:
             watcher.stop()
             watcher.close()
@@ -105,10 +96,30 @@ class SelectResult(object):
 
     def select(self, rlist, wlist, timeout):
         watchers = []
+        # read and write are the collected ready objects, accumulated
+        # by the callback. Note that we could get spurious callbacks
+        # if the socket is closed while we're blocked. We can't easily
+        # detect that (libev filters the events passed so we can't
+        # pass arbitrary events). After an iteration of polling for
+        # IO, libev will invoke all the pending IO watchers, and then
+        # any newly added (fed) events, and then we will invoke added
+        # callbacks. With libev 4.27+ and EV_VERIFY, it's critical to
+        # close our watcher immediately once we get an event. That
+        # could be the close event (coming just before the actual
+        # close happens), and once the FD is closed, libev will abort
+        # the process if we stop the watcher.
+        read = []
+        write = []
+        event = Event()
+        add_read = self._make_callback(read, event, _EV_READ)
+        add_write = self._make_callback(write, event, _EV_WRITE)
+
         try:
-            self._make_watchers(watchers, rlist, wlist)
-            self.event.wait(timeout=timeout)
-            return self.read, self.write, []
+            self._make_watchers(watchers,
+                                (rlist, add_read),
+                                (wlist, add_write))
+            event.wait(timeout=timeout)
+            return read, write, []
         finally:
             self._closeall(watchers)
 
@@ -134,12 +145,16 @@ def select(rlist, wlist, xlist, timeout=None): # pylint:disable=unused-argument
         # forward compatible
         raise ValueError("timeout must be non-negative")
 
-    # First, do a poll with the original select system call. This
-    # is the most efficient way to check to see if any of the file descriptors
-    # have previously been closed and raise the correct corresponding exception.
-    # (Because libev tends to just return them as ready...)
-    # We accept the *xlist* here even though we can't below because this is all about
-    # error handling.
+    # First, do a poll with the original select system call. This is
+    # the most efficient way to check to see if any of the file
+    # descriptors have previously been closed and raise the correct
+    # corresponding exception. (Because libev tends to just return
+    # them as ready, or, if built with EV_VERIFY >= 2 and libev >=
+    # 4.27, crash the process. And libuv also tends to crash the
+    # process.)
+    #
+    # We accept the *xlist* here even though we can't
+    # below because this is all about error handling.
     sel_results = ((), (), ())
     try:
         sel_results = _original_select(rlist, wlist, xlist, 0)

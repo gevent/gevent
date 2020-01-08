@@ -108,6 +108,19 @@ class ILoop(Interface):
         for. 1 means read, and 2 means write.
         """
 
+    def closing_fd(fd):
+        """
+        Inform the loop that the file descriptor *fd* is about to be closed.
+
+        The loop may choose to schedule events to be delivered to any active
+        IO watchers for the fd. libev does this so that the active watchers
+        can be closed.
+
+        :return: A boolean value that's true if active IO watchers were
+           queued to run. Closing the FD should be deferred until the next
+           run of the eventloop with a callback.
+        """
+
     def timer(after, repeat=0.0, ref=True, priority=None):
         """
         Create and return a timer watcher that will fire after *after* seconds.

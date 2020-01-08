@@ -162,6 +162,7 @@ cdef extern from "libev.h" nogil:
     void ev_io_start(ev_loop*, ev_io*)
     void ev_io_stop(ev_loop*, ev_io*)
     void ev_feed_event(ev_loop*, void*, int)
+    void ev_feed_fd_event(ev_loop*, vfd_socket_t, int)
 
     void ev_timer_init(ev_timer*, void* callback, double, double)
     void ev_timer_start(ev_loop*, ev_timer*)
