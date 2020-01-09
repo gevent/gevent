@@ -81,7 +81,7 @@ Updating libuv
     rm -rf libuv/test/*.[ch] libuv/test/test.gyp # must leave the fixtures/ dir
     rm -rf libuv/tools
     rm -f libuv/android-configure*
-    git apply libuv-win-binary.patch
+
 
 At this point there might be new files in libuv that need added to git
 and the build process. Evaluate those and add them to git and to

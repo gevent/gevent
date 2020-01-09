@@ -159,7 +159,6 @@ if sys.platform.startswith('linux'):
         _libuv_source('unix/procfs-exepath.c'),
         _libuv_source('unix/proctitle.c'),
         _libuv_source('unix/sysinfo-loadavg.c'),
-        _libuv_source('unix/sysinfo-memory.c'),
     ]
 elif sys.platform == 'darwin':
     LIBUV_SOURCES += [

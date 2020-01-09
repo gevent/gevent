@@ -383,6 +383,26 @@ if APPVEYOR or TRAVIS:
                 'test__pywsgi.py',
             ]
 
+if APPVEYOR:
+    IGNORED_TESTS += [
+        # This sometimes times out. It appears to happen when the
+        # times take too long and a test raises a FlakyTestTimeout error,
+        # aka a unittest.SkipTest error. This probably indicates that we're
+        # not cleaning something up correctly:
+        #
+        # .....ss
+        # GEVENTTEST_USE_RESOURCES=-network C:\Python38-x64\python.exe -u \
+        #    -mgevent.tests.test__hub_join_timeout [code TIMEOUT] [took 100.4s]
+        'test__hub_join_timeout.py',
+    ]
+    if sys.version_info[:3] == (3, 8, 0):
+        # For some reason this takes *way* too long, about 100s, which
+        # often goes just over the default timeout of 100s. This makes no sense.
+        # But it also takes nearly that long in 3.7. 3.6 and earlier are much faster.
+        IGNORED_TESTS += [
+            'test__pywsgi.py',
+        ]
+
 # tests that can't be run when coverage is enabled
 IGNORE_COVERAGE = [
     # Hangs forever
