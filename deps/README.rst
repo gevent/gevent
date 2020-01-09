@@ -81,9 +81,7 @@ Updating libuv
     rm -rf libuv/test/*.[ch] libuv/test/test.gyp # must leave the fixtures/ dir
     rm -rf libuv/tools
     rm -f libuv/android-configure*
-    rm -f libuv/src/unix/haiku.c # We don't support Haiku
-    rm -f libuv/src/unix/random-*.c # We don't use the uv_random interfaces
-    rm -f libuv/src/random.c
+
 
 At this point there might be new files in libuv that need added to git
 and the build process. Evaluate those and add them to git and to
