@@ -34,6 +34,7 @@
 # include <malloc.h> /* malloc */
 #else
 # include <net/if.h> /* if_nametoindex */
+# include <sys/un.h> /* AF_UNIX, sockaddr_un */
 #endif
 
 
@@ -210,6 +211,9 @@ int uv_ip4_addr(const char* ip, int port, struct sockaddr_in* addr) {
   memset(addr, 0, sizeof(*addr));
   addr->sin_family = AF_INET;
   addr->sin_port = htons(port);
+#ifdef SIN6_LEN
+  addr->sin_len = sizeof(*addr);
+#endif
   return uv_inet_pton(AF_INET, ip, &(addr->sin_addr.s_addr));
 }
 
@@ -376,6 +380,10 @@ int uv__udp_check_before_send(uv_udp_t* handle, const struct sockaddr* addr) {
       addrlen = sizeof(struct sockaddr_in);
     else if (addr->sa_family == AF_INET6)
       addrlen = sizeof(struct sockaddr_in6);
+#if defined(AF_UNIX) && !defined(_WIN32)
+    else if (addr->sa_family == AF_UNIX)
+      addrlen = sizeof(struct sockaddr_un);
+#endif
     else
       return UV_EINVAL;
   } else {
@@ -631,37 +639,66 @@ int uv_fs_scandir_next(uv_fs_t* req, uv_dirent_t* ent) {
   dent = dents[(*nbufs)++];
 
   ent->name = dent->d_name;
+  ent->type = uv__fs_get_dirent_type(dent);
+
+  return 0;
+}
+
+uv_dirent_type_t uv__fs_get_dirent_type(uv__dirent_t* dent) {
+  uv_dirent_type_t type;
+
 #ifdef HAVE_DIRENT_TYPES
   switch (dent->d_type) {
     case UV__DT_DIR:
-      ent->type = UV_DIRENT_DIR;
+      type = UV_DIRENT_DIR;
       break;
     case UV__DT_FILE:
-      ent->type = UV_DIRENT_FILE;
+      type = UV_DIRENT_FILE;
       break;
     case UV__DT_LINK:
-      ent->type = UV_DIRENT_LINK;
+      type = UV_DIRENT_LINK;
       break;
     case UV__DT_FIFO:
-      ent->type = UV_DIRENT_FIFO;
+      type = UV_DIRENT_FIFO;
       break;
     case UV__DT_SOCKET:
-      ent->type = UV_DIRENT_SOCKET;
+      type = UV_DIRENT_SOCKET;
       break;
     case UV__DT_CHAR:
-      ent->type = UV_DIRENT_CHAR;
+      type = UV_DIRENT_CHAR;
       break;
     case UV__DT_BLOCK:
-      ent->type = UV_DIRENT_BLOCK;
+      type = UV_DIRENT_BLOCK;
       break;
     default:
-      ent->type = UV_DIRENT_UNKNOWN;
+      type = UV_DIRENT_UNKNOWN;
   }
 #else
-  ent->type = UV_DIRENT_UNKNOWN;
+  type = UV_DIRENT_UNKNOWN;
 #endif
 
-  return 0;
+  return type;
+}
+
+void uv__fs_readdir_cleanup(uv_fs_t* req) {
+  uv_dir_t* dir;
+  uv_dirent_t* dirents;
+  int i;
+
+  if (req->ptr == NULL)
+    return;
+
+  dir = req->ptr;
+  dirents = dir->dirents;
+  req->ptr = NULL;
+
+  if (dirents == NULL)
+    return;
+
+  for (i = 0; i < req->result; ++i) {
+    uv__free((char*) dirents[i].name);
+    dirents[i].name = NULL;
+  }
 }
 
 
@@ -751,4 +788,25 @@ void uv_loop_delete(uv_loop_t* loop) {
   assert(err == 0);
   if (loop != default_loop)
     uv__free(loop);
+}
+
+
+void uv_os_free_environ(uv_env_item_t* envitems, int count) {
+  int i;
+
+  for (i = 0; i < count; i++) {
+    uv__free(envitems[i].name);
+  }
+
+  uv__free(envitems);
+}
+
+
+void uv_free_cpu_info(uv_cpu_info_t* cpu_infos, int count) {
+  int i;
+
+  for (i = 0; i < count; i++)
+    uv__free(cpu_infos[i].model);
+
+  uv__free(cpu_infos);
 }
