@@ -383,6 +383,15 @@ if APPVEYOR or TRAVIS:
                 'test__pywsgi.py',
             ]
 
+if APPVEYOR:
+    if sys.version_info[:3] == (3, 8, 0):
+        # For some reason this takes *way* too long, about 100s, which
+        # often goes just over the default timeout of 100s. This makes no sense.
+        # But it also takes nearly that long in 3.7. 3.6 and earlier are much faster.
+        IGNORED_TESTS += [
+            'test__pywsgi.py',
+        ]
+
 # tests that can't be run when coverage is enabled
 IGNORE_COVERAGE = [
     # Hangs forever

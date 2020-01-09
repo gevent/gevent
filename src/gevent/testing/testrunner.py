@@ -32,7 +32,7 @@ except (ImportError, OSError, IOError):
     # This can raise a wide variety of errors
     pass
 
-TIMEOUT = 100
+TIMEOUT = 100 # seconds
 DEFAULT_NWORKERS = int(os.environ.get('NWORKERS') or max(cpu_count() - 1, 4))
 if DEFAULT_NWORKERS > 10:
     DEFAULT_NWORKERS = 10

@@ -142,7 +142,7 @@ install:
 
   # Upgrade to the latest version of pip to avoid it displaying warnings
   # about it being out of date.
-  - "%CMD_IN_ENV% %PYEXE% -m pip install --disable-pip-version-check --user --upgrade \"pip<19.1\""
+  - "%CMD_IN_ENV% %PYEXE% -m pip install --disable-pip-version-check --user --upgrade pip"
 
   - ps: "if(Test-Path(\"${env:PYTHON}\\bin\")) {ls ${env:PYTHON}\\bin;}"
   - ps: "if(Test-Path(\"${env:PYTHON}\\Scripts\")) {ls ${env:PYTHON}\\Scripts;}"
