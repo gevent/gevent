@@ -39,16 +39,11 @@ static CYTHON_INLINE void gevent_check_signals(struct PyGeventLoopObject* loop) 
     ((struct PY_TYPE *)(((char *)EV_PTR) - offsetof(struct PY_TYPE, MEMBER)))
 
 
-#ifdef WITH_THREAD
-#define GIL_DECLARE  PyGILState_STATE ___save
-#define GIL_ENSURE  ___save = PyGILState_Ensure();
-#define GIL_RELEASE  PyGILState_Release(___save);
-#else
-#define GIL_DECLARE
-#define GIL_ENSURE
-#define GIL_RELEASE
-#endif
+/* define gevent_realloc with libev semantics */
 
+#include "../_ffi/alloc.c"
+
+void gevent_noop(struct ev_loop* loop, void* watcher, int revents) {}
 
 static void gevent_stop(PyObject* watcher, struct PyGeventLoopObject* loop) {
     PyObject *result, *method;
@@ -211,6 +206,5 @@ void gevent_periodic_signal_check(struct ev_loop *_loop, void *watcher, int reve
     gevent_check_signals(GET_OBJECT(PyGeventLoopObject, watcher, _periodic_signal_checker));
     GIL_RELEASE;
 }
-
 
 #endif  /* Py_PYTHON_H */

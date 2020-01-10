@@ -21,6 +21,7 @@ except ImportError:
     raise
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
+parentdir = os.path.abspath(os.path.join(thisdir, '..'))
 setup_dir = os.path.abspath(os.path.join(thisdir, '..', '..', '..'))
 
 
@@ -88,7 +89,10 @@ ffi.cdef(_cdef)
 ffi.set_source(
     'gevent.libev._corecffi',
     _source,
-    include_dirs=distutils_ext.include_dirs + [thisdir], # "libev.h"
+    include_dirs=distutils_ext.include_dirs + [
+        thisdir, # "libev.h"
+        parentdir, # _ffi/alloc.c
+    ],
     define_macros=macros,
     undef_macros=distutils_ext.undef_macros,
     libraries=distutils_ext.libraries,

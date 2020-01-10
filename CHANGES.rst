@@ -35,6 +35,12 @@ Library and Dependency Updates
      The binary wheels gevent distributes *do not* set ``EV_VERIFY``
      and don't have this issue.
 
+- Make libuv and libev use the Python memory allocators. This assists
+  with debugging. The event libraries allocate small amounts of memory
+  at startup. The allocation functions have to take the GIL, but
+  because of the limited amount of actual allocation that gets done
+  this is not expected to be a concern.
+
 1.5a3 (2020-01-01)
 ==================
 

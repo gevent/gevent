@@ -27,12 +27,18 @@ DEFINE_CALLBACKS
 
 void gevent_run_callbacks(struct ev_loop *, void *, int);
 
-
-
 void gevent_call(struct PyGeventLoopObject* loop, struct PyGeventCallbackObject* cb);
 
-static void gevent_noop(struct ev_loop *_loop, void *watcher, int revents) {
-}
+void* gevent_realloc(void* ptr, size_t size);
+void gevent_noop(struct ev_loop*, void* watcher, int revents);
 
 /* Only used on Win32 */
 void gevent_periodic_signal_check(struct ev_loop *, void *, int);
+
+// We're included in corecext.c. Disable a bunch of annoying warnings
+// that are in the generated code that we can't do anything about.
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#pragma clang diagnostic ignored "-Wunreachable-code"
+#endif

@@ -388,7 +388,10 @@ static void _gevent_fs_poll_callback3(uv_fs_poll_t* handle, int status, const uv
 
 static void gevent_uv_walk_callback_close(uv_handle_t* handle, void* arg);
 static void gevent_close_all_handles(uv_loop_t* loop);
+
+/* gevent utility functions */
 static void gevent_zero_timer(uv_timer_t* handle);
 static void gevent_zero_prepare(uv_prepare_t* handle);
 static void gevent_zero_check(uv_check_t* handle);
 static void gevent_zero_loop(uv_loop_t* handle);
+static void gevent_set_uv_alloc();

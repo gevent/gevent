@@ -74,6 +74,7 @@ cdef extern from "callbacks.h":
     void gevent_periodic_signal_check(libev.ev_loop, void*, int)
     void gevent_call(loop, callback)
     void gevent_noop(libev.ev_loop, void*, int)
+    void* gevent_realloc(void*, long size)
 
 cdef extern from "stathelper.c":
     object _pystat_fromstructstat(void*)
@@ -1303,12 +1304,12 @@ cpdef set_syserr_cb(callback):
         libev.ev_set_syserr_cb(NULL)
         __SYSERR_CALLBACK = None
     elif callable(callback):
-        libev.ev_set_syserr_cb(<void *>_syserr_cb)
+        libev.ev_set_syserr_cb(<void*>_syserr_cb)
         __SYSERR_CALLBACK = callback
     else:
         raise TypeError('Expected callable or None, got %r' % (callback, ))
 
-
+libev.ev_set_allocator(<void*>gevent_realloc)
 
 LIBEV_EMBED = bool(libev.LIBEV_EMBED)
 EV_USE_FLOOR = libev.EV_USE_FLOOR
