@@ -1,5 +1,15 @@
 #if defined(LIBEV_EMBED) && LIBEV_EMBED
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcomment"
+#pragma clang diagnostic ignored "-Wsign-compare"
+#pragma clang diagnostic ignored "-Wextern-initializer"
+#pragma clang diagnostic ignored "-Wbitwise-op-parentheses"
+#endif
   #include "ev.c"
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
   #undef LIBEV_EMBED
   #define LIBEV_EMBED 1
   #define gevent_ev_loop_origflags(loop) ((loop)->origflags)

@@ -1,6 +1,7 @@
 #include <string.h>
 #include <assert.h>
 #include "uv.h"
+#include "Python.h"
 
 typedef void* GeventWatcherObject;
 #ifdef __clang__
@@ -130,8 +131,47 @@ static void gevent_zero_loop(uv_loop_t* handle)
     memset(handle, 0, sizeof(uv_loop_t));
 }
 
+#include "_ffi/alloc.c"
+
+static void* _gevent_uv_malloc(size_t size)
+{
+    return gevent_realloc(NULL, size);
+}
+
+static void* _gevent_uv_realloc(void* ptr, size_t size)
+{
+    return gevent_realloc(ptr, size);
+}
+
+static void _gevent_uv_free(void* ptr)
+{
+    gevent_realloc(ptr, 0);
+}
+
+static void* _gevent_uv_calloc(size_t count, size_t size)
+{
+    // We assume no overflows. Not using PyObject_Calloc because
+    // it's not available prior to 3.5 and isn't in PyPy.
+    void* result;
+    result = _gevent_uv_malloc(count * size);
+    if(result) {
+	memset(result, 0, count * size);
+    }
+    return result;
+}
+
+static void gevent_set_uv_alloc()
+{
+    uv_replace_allocator(_gevent_uv_malloc,
+			 _gevent_uv_realloc,
+			 _gevent_uv_calloc,
+			 _gevent_uv_free);
+}
+
 #ifdef __clang__
 #pragma clang diagnostic pop
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunreachable-code"
 #endif
 
 /* Local Variables: */

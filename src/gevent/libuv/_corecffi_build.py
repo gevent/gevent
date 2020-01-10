@@ -31,6 +31,7 @@ LIBUV_EMBED = _setuputils.should_embed('libuv')
 ffi = FFI()
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
+parentdir = os.path.abspath(os.path.join(thisdir, '..'))
 setup_py_dir = os.path.abspath(os.path.join(thisdir, '..', '..', '..'))
 libuv_dir = os.path.abspath(os.path.join(setup_py_dir, 'deps', 'libuv'))
 
@@ -255,6 +256,8 @@ if not LIBUV_EMBED:
     del LIBUV_INCLUDE_DIRS[:]
     _add_library('uv')
 
+LIBUV_INCLUDE_DIRS.append(parentdir)
+
 ffi.cdef(_cdef)
 ffi.set_source('gevent.libuv._corecffi',
                _source,
@@ -269,5 +272,5 @@ if __name__ == '__main__':
     #
     # Other than the obvious directory changes, the changes are:
     #
-    # CPPFLAGS=-Ideps/libuv/include/
+    # CPPFLAGS=-Ideps/libuv/include/ -Isrc/gevent/
     ffi.compile(verbose=True)

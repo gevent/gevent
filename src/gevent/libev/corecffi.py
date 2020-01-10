@@ -31,6 +31,8 @@ if hasattr(libev, 'vfd_open'):
 else:
     vfd_open = vfd_free = vfd_get = lambda fd: fd
 
+libev.gevent_set_ev_alloc()
+
 #####
 ## NOTE on Windows:
 # The C implementation does several things specially for Windows;

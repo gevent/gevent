@@ -151,7 +151,8 @@ cdef extern from "libev.h" nogil:
     ctypedef double ev_tstamp
 
     ev_tstamp ev_time()
-    void ev_set_syserr_cb(void *)
+    void ev_set_syserr_cb(void*)
+    void ev_set_allocator(void*)
 
     int ev_priority(void*)
     void ev_set_priority(void*, int)

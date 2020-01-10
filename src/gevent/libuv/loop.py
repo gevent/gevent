@@ -12,11 +12,11 @@ import signal
 
 from gevent._ffi import _dbg # pylint: disable=unused-import
 from gevent._ffi.loop import AbstractLoop
-from gevent.libuv import _corecffi # pylint:disable=no-name-in-module,import-error
 from gevent._ffi.loop import assign_standard_callbacks
 from gevent._ffi.loop import AbstractCallbacks
 from gevent._util import implementer
 from gevent._interfaces import ILoop
+from gevent.libuv import _corecffi # pylint:disable=no-name-in-module,import-error
 
 ffi = _corecffi.ffi
 libuv = _corecffi.lib
@@ -82,6 +82,8 @@ def get_header_version():
 
 def supported_backends():
     return ['default']
+
+libuv.gevent_set_uv_alloc()
 
 @implementer(ILoop)
 class loop(AbstractLoop):

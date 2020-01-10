@@ -217,7 +217,7 @@ struct ev_loop* gevent_ev_default_loop(unsigned int flags);
 void gevent_install_sigchld_handler();
 void gevent_reset_sigchld_handler();
 
-void (*gevent_noop)(struct ev_loop *_loop, struct ev_timer *w, int revents);
+extern void (*gevent_noop)(struct ev_loop *_loop, struct ev_timer *w, int revents);
 void ev_sleep (ev_tstamp delay); /* sleep for a while */
 
 /* gevent callbacks */
@@ -246,3 +246,4 @@ static void _gevent_generic_callback(struct ev_loop* loop, struct ev_watcher* wa
 static void gevent_zero_check(struct ev_check* handle);
 static void gevent_zero_timer(struct ev_timer* handle);
 static void gevent_zero_prepare(struct ev_prepare* handle);
+static void gevent_set_ev_alloc();

@@ -71,3 +71,15 @@ static void gevent_zero_prepare(struct ev_prepare* handle)
 {
 	memset(handle, 0, sizeof(struct ev_prepare));
 }
+
+#include "_ffi/alloc.c"
+
+static void gevent_set_ev_alloc()
+{
+    ev_set_allocator(gevent_realloc);
+}
+
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunreachable-code"
+#endif
