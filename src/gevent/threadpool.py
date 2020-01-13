@@ -86,11 +86,13 @@ class _WorkerGreenlet(RawGreenlet):
             self._unregister_worker(self)
             raise
 
-    def _begin(self):
+    def _begin(self, _get_c=getcurrent, _get_ti=get_thread_ident):
+        # Pass arguments to avoid accessing globals during module shutdown.
+
         # we're in the new thread (but its root greenlet). Establish invariants and get going
         # by making this the current greenlet.
-        self.parent = getcurrent() # pylint:disable=attribute-defined-outside-init
-        self._thread_ident = get_thread_ident()
+        self.parent = _get_c() # pylint:disable=attribute-defined-outside-init
+        self._thread_ident = _get_ti()
         # ignore the parent attribute. (We can't set parent to None.)
         self.parent.greenlet_tree_is_ignored = True
         try:

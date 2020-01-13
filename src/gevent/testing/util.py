@@ -339,6 +339,7 @@ def _should_show_warning_output(out):
         out = out.replace('ImportWarning: Not importing directory', 'NADA')
         # Testing that U mode does the same thing
         out = out.replace("DeprecationWarning: 'U' mode is deprecated", 'NADA')
+        out = out.replace("DeprecationWarning: dns.hash module", 'NADA')
     return 'Warning' in out
 
 output_lock = threading.Lock()

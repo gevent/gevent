@@ -66,13 +66,13 @@ class TestRun(greentest.TestCase):
         self.assertEqual(monkey_out_lines, std_out_lines)
         self.assertEqual(monkey_result.error, std_result.error)
 
-        return monkey_out_lines, monkey_result.error
+        return monkey_out_lines
 
     def test_run_simple(self):
         self._run(os.path.join('monkey_package', 'script.py'))
 
     def _run_package(self, module):
-        lines, _ = self._run('monkey_package', module=module)
+        lines = self._run('monkey_package', module=module)
 
         self.assertTrue(lines[0].endswith(u'__main__.py'), lines[0])
         self.assertEqual(lines[1].strip(), u'__main__')
@@ -86,7 +86,7 @@ class TestRun(greentest.TestCase):
         self._run_package(module=True)
 
     def test_issue_302(self):
-        lines, _ = self._run(os.path.join('monkey_package', 'issue302monkey.py'))
+        lines = self._run(os.path.join('monkey_package', 'issue302monkey.py'))
 
         self.assertEqual(lines[0].strip(), u'True')
         lines[1] = lines[1].replace(u'\\', u'/') # windows path
@@ -108,25 +108,22 @@ class TestRun(greentest.TestCase):
     def test_threadpool_in_patched_after_patch(self):
         # Issue 1484
         # If we don't have this correct, then we get exceptions
-        out, err = self._run(os.path.join('monkey_package', 'threadpool_monkey_patches.py'))
+        out = self._run(os.path.join('monkey_package', 'threadpool_monkey_patches.py'))
         self.assertEqual(out, ['False', '2'])
-        self.assertEqual(err, b'')
 
     @greentest.skipOnPy2("lost sys.stderr sometimes")
     def test_threadpool_in_patched_after_patch_module(self):
         # Issue 1484
         # If we don't have this correct, then we get exceptions
-        out, err = self._run('monkey_package.threadpool_monkey_patches', module=True)
+        out = self._run('monkey_package.threadpool_monkey_patches', module=True)
         self.assertEqual(out, ['False', '2'])
-        self.assertEqual(err, b'')
 
     @greentest.skipOnPy2("lost sys.stderr sometimes")
     def test_threadpool_not_patched_after_patch_module(self):
         # Issue 1484
         # If we don't have this correct, then we get exceptions
-        out, err = self._run('monkey_package.threadpool_no_monkey', module=True)
+        out = self._run('monkey_package.threadpool_no_monkey', module=True)
         self.assertEqual(out, ['False', 'False', '2'])
-        self.assertEqual(err, b'')
 
 if __name__ == '__main__':
     greentest.main()
