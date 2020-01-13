@@ -117,7 +117,10 @@ class BaseServer(object):
         # XXX: FIXME: Subclasses rely on the presence or absence of the
         # `socket` attribute to determine whether we are open/should be opened.
         # Instead, have it be None.
-        self.pool = None
+        # XXX: In general, the state management here is confusing. Lots of stuff is
+        # deferred until the various ``set_`` methods are called, and it's not documented
+        # when it's safe to call those
+        self.pool = None # can be set from ``spawn``; overrides self.full()
         try:
             self.set_listener(listener)
             self.set_spawn(spawn)
@@ -250,9 +253,9 @@ class BaseServer(object):
                         self.delay = min(self.max_delay, self.delay * 2)
                     break
 
-    def full(self):
-        # copied from self.pool
-        # pylint: disable=method-hidden
+    def full(self): # pylint: disable=method-hidden
+        # If a Pool is given for to ``set_spawn`` (the *spawn* argument
+        # of the constructor) it will replace this method.
         return False
 
     def __repr__(self):

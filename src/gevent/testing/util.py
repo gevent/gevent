@@ -101,26 +101,27 @@ def log(message, *args, **kwargs):
 
     :keyword str color: One of the values from _colorscheme
     """
-    color = kwargs.pop('color', 'normal')
-    try:
-        if args:
-            string = message % args
-        else:
-            string = message
-    except Exception:
-        traceback.print_exc()
+    with output_lock: # pylint:disable=not-context-manager
+        color = kwargs.pop('color', 'normal')
         try:
-            string = '%r %% %r\n\n' % (message, args)
-        except Exception:
-            pass
-        try:
-            string = _colorize('exception', string)
-            sys.stderr.write(string)
+            if args:
+                string = message % args
+            else:
+                string = message
         except Exception:
             traceback.print_exc()
-    else:
-        string = _colorize(color, string)
-        sys.stderr.write(string + '\n')
+            try:
+                string = '%r %% %r\n\n' % (message, args)
+            except Exception:
+                pass
+            try:
+                string = _colorize('exception', string)
+                sys.stderr.write(string)
+            except Exception:
+                traceback.print_exc()
+        else:
+            string = _colorize(color, string)
+            sys.stderr.write(string + '\n')
 
 def debug(message, *args, **kwargs):
     """
@@ -192,6 +193,8 @@ def kill(popen):
 IGNORED_GEVENT_ENV_KEYS = {
     'GEVENTTEST_QUIET',
     'GEVENT_DEBUG',
+    'GEVENTSETUP_EV_VERIFY',
+    'GEVENTSETUP_EMBED',
 }
 
 # A set of (name, value) pairs we ignore for printing purposes.
@@ -236,10 +239,7 @@ def start(command, quiet=False, **kwargs):
     if preexec_fn is not None:
         setenv['DO_NOT_SETPGRP'] = '1'
     if setenv:
-        if env:
-            env = env.copy()
-        else:
-            env = os.environ.copy()
+        env = env.copy() if env else os.environ.copy()
         env.update(setenv)
 
     if not quiet:
@@ -272,16 +272,22 @@ class RunResult(object):
                  command,
                  run_kwargs,
                  code,
-                 output=None, name=None,
+                 output=None, # type: str
+                 error=None, # type: str
+                 name=None,
                  run_count=0, skipped_count=0):
         self.command = command
         self.run_kwargs = run_kwargs
         self.code = code
         self.output = output
+        self.error = error
         self.name = name
         self.run_count = run_count
         self.skipped_count = skipped_count
 
+    @property
+    def output_lines(self):
+        return self.output.splitlines()
 
     def __bool__(self):
         return not bool(self.code)
@@ -290,6 +296,27 @@ class RunResult(object):
 
     def __int__(self):
         return self.code
+
+    def __repr__(self):
+        return (
+            "RunResult of: %r\n"
+            "Code: %s\n"
+            "kwargs: %r\n"
+            "Output:\n"
+            "----\n"
+            "%s"
+            "----\n"
+            "Error:\n"
+            "----\n"
+            "%s"
+            "----\n"
+        ) % (
+            self.command,
+            self.code,
+            self.run_kwargs,
+            self.output,
+            self.error
+        )
 
 
 def _should_show_warning_output(out):
@@ -310,6 +337,8 @@ def _should_show_warning_output(out):
         out = out.replace('UserWarning: libuv only supports', 'NADA')
         # Packages on Python 2
         out = out.replace('ImportWarning: Not importing directory', 'NADA')
+        # Testing that U mode does the same thing
+        out = out.replace("DeprecationWarning: 'U' mode is deprecated", 'NADA')
     return 'Warning' in out
 
 output_lock = threading.Lock()
@@ -337,7 +366,11 @@ def _find_test_status(took, out):
 
 
 def run(command, **kwargs): # pylint:disable=too-many-locals
-    "Execute *command*, returning a `RunResult`"
+    """
+    Execute *command*, returning a `RunResult`.
+
+    This blocks until *command* finishes or until it times out.
+    """
     buffer_output = kwargs.pop('buffer_output', BUFFER_OUTPUT)
     quiet = kwargs.pop('quiet', QUIET)
     verbose = not quiet
@@ -348,6 +381,7 @@ def run(command, **kwargs): # pylint:disable=too-many-locals
         kwargs['stdout'] = subprocess.PIPE
     popen = start(command, quiet=nested, **kwargs)
     name = popen.name
+
     try:
         time_start = time.time()
         out, err = popen.communicate()
@@ -358,27 +392,31 @@ def run(command, **kwargs): # pylint:disable=too-many-locals
             result = popen.poll()
     finally:
         kill(popen)
-    assert not err
-    with output_lock: # pylint:disable=not-context-manager
-        failed = bool(result)
-        if out:
-            out = out.strip()
-            out = out if isinstance(out, str) else out.decode('utf-8', 'ignore')
-        if out and (failed or verbose or _should_show_warning_output(out)):
-            if out:
-                out = '  ' + out.replace('\n', '\n  ')
-                out = out.rstrip()
-                out += '\n'
-                log('| %s\n%s', name, out)
-        status, run_count, skipped_count = _find_test_status(took, out)
-        if result:
-            log('! %s [code %s] %s', name, result, status, color='error')
-        elif not nested:
-            log('- %s %s', name, status)
+
+
+    failed = bool(result)
+    if out:
+        out = out.strip()
+        out = out if isinstance(out, str) else out.decode('utf-8', 'ignore')
+    if out and (failed or verbose or _should_show_warning_output(out)):
+        out = '  ' + out.replace('\n', '\n  ')
+        out = out.rstrip()
+        out += '\n'
+        log('| %s\n%s', name, out)
+    status, run_count, skipped_count = _find_test_status(took, out)
+    if result:
+        log('! %s [code %s] %s', name, result, status, color='error')
+    elif not nested:
+        log('- %s %s', name, status)
     if took >= MIN_RUNTIME:
         runtimelog.append((-took, name))
-    return RunResult(command, kwargs, result,
-                     output=out, name=name, run_count=run_count, skipped_count=skipped_count)
+    return RunResult(
+        command, kwargs, result,
+        output=out, error=err,
+        name=name,
+        run_count=run_count,
+        skipped_count=skipped_count
+    )
 
 
 class NoSetupPyFound(Exception):
@@ -453,8 +491,33 @@ def find_stdlib_tests():
 
     return directory, full_directory
 
+def absolute_pythonpath():
+    """
+    Return the PYTHONPATH environment variable (if set) with each
+    entry being an absolute path. If not set, returns None.
+    """
+    if 'PYTHONPATH' not in os.environ:
+        return None
+
+    path = os.environ['PYTHONPATH']
+    path = [os.path.abspath(p) for p in path.split(os.path.pathsep)]
+    return os.path.pathsep.join(path)
+
 class ExampleMixin(object):
-    "Something that uses the examples/ directory"
+    """
+    Something that uses the ``examples/`` directory
+    from the root of the gevent distribution.
+
+    The `cwd` property is set to the root of the gevent distribution.
+    """
+    #: Arguments to pass to the example file.
+    example_args = []
+    before_delay = 3
+    after_delay = 0.5
+    #: Path of the example Python file, relative to `cwd`
+    example = None # subclasses define this to be the path to the server.py
+    #: Keyword arguments to pass to the start or run method.
+    start_kwargs = None
 
     def find_setup_py(self):
         "Return the directory containing setup.py"
@@ -469,31 +532,64 @@ class ExampleMixin(object):
             root = self.find_setup_py()
         except NoSetupPyFound as e:
             raise unittest.SkipTest("Unable to locate file/dir to run: %s" % (e,))
-
         return os.path.join(root, 'examples')
+
+    @property
+    def setenv(self):
+        """
+        Returns a dictionary of environment variables to set for the
+        child in addition to (or replacing) the ones already in the
+        environment.
+
+        Since the child is run in `cwd`, relative paths in ``PYTHONPATH``
+        need to be converted to absolute paths.
+        """
+        abs_pythonpath = absolute_pythonpath()
+        return {'PYTHONPATH': abs_pythonpath} if abs_pythonpath else None
+
+    def _start(self, meth):
+        if getattr(self, 'args', None):
+            raise AssertionError("Invalid test", self, self.args)
+        if getattr(self, 'server', None):
+            raise AssertionError("Invalid test", self, self.server)
+
+        try:
+            # These could be or are properties that can raise
+            server = self.example
+            server_dir = self.cwd
+        except NoSetupPyFound as e:
+            raise unittest.SkipTest("Unable to locate file/dir to run: %s" % (e,))
+
+        kwargs = self.start_kwargs or {}
+        setenv = self.setenv
+        if setenv:
+            if 'setenv' in kwargs:
+                kwargs['setenv'].update(setenv)
+            else:
+                kwargs['setenv'] = setenv
+        return meth(
+            [sys.executable, '-W', 'ignore', '-u', server] + self.example_args,
+            cwd=server_dir,
+            **kwargs
+        )
+
+    def start_example(self):
+        return self._start(meth=start)
+
+    def run_example(self):# run() is a unittest method.
+        return self._start(meth=run)
+
 
 class TestServer(ExampleMixin,
                  unittest.TestCase):
-    args = []
-    before_delay = 3
-    after_delay = 0.5
     popen = None
-    server = None # subclasses define this to be the path to the server.py
-    start_kwargs = None
-
-    def start(self):
-        try:
-            kwargs = self.start_kwargs or {}
-            return start([sys.executable, '-u', self.server] + self.args, cwd=self.cwd, **kwargs)
-        except NoSetupPyFound as e:
-            raise unittest.SkipTest("Unable to locate file/dir to run: %s" % (e,))
 
     def running_server(self):
         from contextlib import contextmanager
 
         @contextmanager
         def running_server():
-            with self.start() as popen:
+            with self.start_example() as popen:
                 self.popen = popen
                 self.before()
                 yield
@@ -507,12 +603,18 @@ class TestServer(ExampleMixin,
     def before(self):
         if self.before_delay is not None:
             time.sleep(self.before_delay)
-        assert self.popen.poll() is None, '%s died with code %s' % (self.server, self.popen.poll(), )
+        self.assertIsNone(self.popen.poll(),
+                          '%s died with code %s' % (
+                              self.example, self.popen.poll(),
+                          ))
 
     def after(self):
         if self.after_delay is not None:
             time.sleep(self.after_delay)
-            assert self.popen.poll() is None, '%s died with code %s' % (self.server, self.popen.poll(), )
+        self.assertIsNone(self.popen.poll(),
+                          '%s died with code %s' % (
+                              self.example, self.popen.poll(),
+                          ))
 
     def _run_all_tests(self):
         ran = False

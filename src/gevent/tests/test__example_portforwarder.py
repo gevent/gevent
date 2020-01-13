@@ -13,9 +13,9 @@ from gevent.testing import util
 
 @greentest.skipOnLibuvOnCIOnPyPy("Timing issues sometimes lead to connection refused")
 class Test(util.TestServer):
-    server = 'portforwarder.py'
+    example = 'portforwarder.py'
     # [listen on, forward to]
-    args = ['127.0.0.1:10011', '127.0.0.1:10012']
+    example_args = ['127.0.0.1:10011', '127.0.0.1:10012']
 
     if greentest.WIN:
         from subprocess import CREATE_NEW_PROCESS_GROUP
@@ -40,7 +40,7 @@ class Test(util.TestServer):
                     break
                 log.append(data)
 
-        server = StreamServer(self.args[1], handle)
+        server = StreamServer(self.example_args[1], handle)
         server.start()
         try:
             conn = socket.create_connection(('127.0.0.1', 10011))

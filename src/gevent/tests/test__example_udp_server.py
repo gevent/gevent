@@ -5,7 +5,7 @@ from gevent.testing import main
 
 
 class Test(util.TestServer):
-    server = 'udp_server.py'
+    example = 'udp_server.py'
 
     def _run_all_tests(self):
         sock = socket.socket(type=socket.SOCK_DGRAM)

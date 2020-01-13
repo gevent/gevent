@@ -13,15 +13,15 @@ import os
 import os.path
 import sys
 
-from subprocess import Popen
-from subprocess import PIPE
-
 from gevent import testing as greentest
+from gevent.testing.util import absolute_pythonpath
+from gevent.testing.util import run
 
 class TestRun(greentest.TestCase):
     maxDiff = None
 
     def setUp(self):
+        self.abs_pythonpath = absolute_pythonpath() # before we cd
         self.cwd = os.getcwd()
         os.chdir(os.path.dirname(__file__))
 
@@ -31,29 +31,42 @@ class TestRun(greentest.TestCase):
     def _run(self, script, module=False):
         env = os.environ.copy()
         env['PYTHONWARNINGS'] = 'ignore'
+        if self.abs_pythonpath:
+            env['PYTHONPATH'] = self.abs_pythonpath
+        run_kwargs = dict(
+            buffer_output=True,
+            quiet=True,
+            nested=True,
+            env=env,
+            timeout=10,
+        )
+
         args = [sys.executable, '-m', 'gevent.monkey']
         if module:
             args.append('--module')
         args += [script, 'patched']
-        p = Popen(args, stdout=PIPE, stderr=PIPE, env=env)
-        monkey_out, monkey_err = p.communicate()
-        self.assertEqual(0, p.returncode, (p.returncode, monkey_out, monkey_err))
+        monkey_result = run(
+            args,
+            **run_kwargs
+        )
+        self.assertTrue(monkey_result)
 
         if module:
             args = [sys.executable, "-m", script, 'stdlib']
         else:
             args = [sys.executable, script, 'stdlib']
-        p = Popen(args, stdout=PIPE, stderr=PIPE)
+        std_result = run(
+            args,
+            **run_kwargs
+        )
+        self.assertTrue(std_result)
 
-        std_out, std_err = p.communicate()
-        self.assertEqual(0, p.returncode, (p.returncode, std_out, std_err))
-
-        monkey_out_lines = monkey_out.decode("utf-8").splitlines()
-        std_out_lines = std_out.decode('utf-8').splitlines()
+        monkey_out_lines = monkey_result.output_lines
+        std_out_lines = std_result.output_lines
         self.assertEqual(monkey_out_lines, std_out_lines)
-        self.assertEqual(monkey_err, std_err)
+        self.assertEqual(monkey_result.error, std_result.error)
 
-        return monkey_out_lines, monkey_err
+        return monkey_out_lines, monkey_result.error
 
     def test_run_simple(self):
         self._run(os.path.join('monkey_package', 'script.py'))
@@ -61,8 +74,8 @@ class TestRun(greentest.TestCase):
     def _run_package(self, module):
         lines, _ = self._run('monkey_package', module=module)
 
-        self.assertTrue(lines[0].endswith('__main__.py'), lines[0])
-        self.assertEqual(lines[1], '__main__')
+        self.assertTrue(lines[0].endswith(u'__main__.py'), lines[0])
+        self.assertEqual(lines[1].strip(), u'__main__')
 
     def test_run_package(self):
         # Run a __main__ inside a package, even without specifying -m
@@ -75,10 +88,10 @@ class TestRun(greentest.TestCase):
     def test_issue_302(self):
         lines, _ = self._run(os.path.join('monkey_package', 'issue302monkey.py'))
 
-        self.assertEqual(lines[0], 'True')
-        lines[1] = lines[1].replace('\\', '/') # windows path
-        self.assertEqual(lines[1], 'monkey_package/issue302monkey.py')
-        self.assertEqual(lines[2], 'True', lines)
+        self.assertEqual(lines[0].strip(), u'True')
+        lines[1] = lines[1].replace(u'\\', u'/') # windows path
+        self.assertEqual(lines[1].strip(), u'monkey_package/issue302monkey.py')
+        self.assertEqual(lines[2].strip(), u'True', lines)
 
     # These three tests all sometimes fail on Py2 on CI, writing
     # to stderr:

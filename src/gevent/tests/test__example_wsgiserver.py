@@ -16,7 +16,7 @@ from gevent.testing import params
 
 @greentest.skipOnCI("Timing issues sometimes lead to a connection refused")
 class Test_wsgiserver(util.TestServer):
-    server = 'wsgiserver.py'
+    example = 'wsgiserver.py'
     URL = 'http://%s:8088' % (params.DEFAULT_LOCAL_HOST_ADDR,)
     PORT = 8088
     not_found_message = b'<h1>Not Found</h1>'

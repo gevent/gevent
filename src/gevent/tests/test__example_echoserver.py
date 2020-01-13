@@ -6,7 +6,7 @@ from gevent.testing import util
 from gevent.testing import params
 
 class Test(util.TestServer):
-    server = 'echoserver.py'
+    example = 'echoserver.py'
 
     def _run_all_tests(self):
         def test_client(message):

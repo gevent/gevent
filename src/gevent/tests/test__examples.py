@@ -11,7 +11,6 @@ most commonly the resource will be ``network``. You can use this technique to sp
 non-existant resources for things that should never be tested.
 """
 import re
-import sys
 import os
 import glob
 import time
@@ -45,12 +44,12 @@ time_ranges = {
 
 class _AbstractTestMixin(util.ExampleMixin):
     time_range = default_time_range
-    filename = None
+    example = None
 
     def _check_resources(self):
         from gevent.testing import resources
 
-        with open(os.path.join(self.cwd, self.filename), 'r') as f:
+        with open(os.path.join(self.cwd, self.example), 'r') as f:
             contents = f.read()
 
         pattern = re.compile('^# gevent-test-requires-resource: (.*)$', re.MULTILINE)
@@ -64,14 +63,15 @@ class _AbstractTestMixin(util.ExampleMixin):
 
         start = time.time()
         min_time, max_time = self.time_range
-        if not util.run([sys.executable, '-u', self.filename],
-                        timeout=max_time,
-                        cwd=self.cwd,
-                        quiet=True,
-                        buffer_output=True,
-                        nested=True,
-                        setenv={'GEVENT_DEBUG': 'error'}):
-            self.fail("Failed example: " + self.filename)
+        self.start_kwargs = {
+            'timeout': max_time,
+            'quiet': True,
+            'buffer_output': True,
+            'nested': True,
+            'setenv': {'GEVENT_DEBUG': 'error'}
+        }
+        if not self.run_example():
+            self.fail("Failed example: " + self.example)
         else:
             took = time.time() - start
             self.assertGreaterEqual(took, min_time)
@@ -94,7 +94,7 @@ def _build_test_classes():
             'Test_' + bn,
             (_AbstractTestMixin, greentest.TestCase),
             {
-                'filename': bn,
+                'example': bn,
                 'time_range': time_ranges.get(bn, _AbstractTestMixin.time_range)
             }
         )

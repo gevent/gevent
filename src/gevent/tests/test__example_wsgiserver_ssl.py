@@ -9,7 +9,7 @@ from . import test__example_wsgiserver
 
 @greentest.skipOnCI("Timing issues sometimes lead to a connection refused")
 class Test_wsgiserver_ssl(test__example_wsgiserver.Test_wsgiserver):
-    server = 'wsgiserver_ssl.py'
+    example = 'wsgiserver_ssl.py'
     URL = 'https://%s:8443' % (params.DEFAULT_LOCAL_HOST_ADDR,)
     PORT = 8443
     _use_ssl = True

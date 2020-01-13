@@ -9,7 +9,7 @@ from . import test__example_wsgiserver
 @greentest.skipOnCI("Timing issues sometimes lead to a connection refused")
 @greentest.skipWithoutExternalNetwork("Tries to reach google.com")
 class Test_webproxy(test__example_wsgiserver.Test_wsgiserver):
-    server = 'webproxy.py'
+    example = 'webproxy.py'
 
     def _run_all_tests(self):
         status, data = self.read('/')

@@ -1,14 +1,17 @@
 from gevent import monkey
 monkey.patch_all(subprocess=True)
 
-import sys
+
 from gevent.server import DatagramServer
 
-from gevent.testing.util import run
 from gevent.testing import util
 from gevent.testing import main
 
 class Test_udp_client(util.TestServer):
+
+    start_kwargs = {'timeout': 10}
+    example = 'udp_client.py'
+    example_args = ['Test_udp_client']
 
     def test(self):
         log = []
@@ -20,8 +23,7 @@ class Test_udp_client(util.TestServer):
         server = DatagramServer('127.0.0.1:9001', handle)
         server.start()
         try:
-            run([sys.executable, '-W', 'ignore', '-u', 'udp_client.py', 'Test_udp_client'],
-                timeout=10, cwd=self.cwd)
+            self.run_example()
         finally:
             server.close()
         self.assertEqual(log, [b'Test_udp_client'])
