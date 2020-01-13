@@ -10,6 +10,7 @@ import time
 
 from . import six
 from gevent._config import validate_bool
+from gevent.monkey import get_original
 
 # pylint: disable=broad-except,attribute-defined-outside-init
 
@@ -22,6 +23,11 @@ QUIET = validate_bool(os.environ.get('GEVENTTEST_QUIET', '0'))
 
 
 class Popen(subprocess.Popen):
+    """
+    Depending on when we're imported and if the process has been monkey-patched,
+    this could use cooperative or native Popen.
+    """
+    timer = None # a threading.Timer instance
 
     def __enter__(self):
         return self
@@ -145,7 +151,7 @@ def killpg(pid):
 
 def kill_processtree(pid):
     ignore_msg = 'ERROR: The process "%s" not found.' % pid
-    err = subprocess.Popen('taskkill /F /PID %s /T' % pid, stderr=subprocess.PIPE).communicate()[1]
+    err = Popen('taskkill /F /PID %s /T' % pid, stderr=subprocess.PIPE).communicate()[1]
     if err and err.strip() not in [ignore_msg, '']:
         log('%r', err)
 
@@ -170,6 +176,7 @@ def _kill(popen):
 def kill(popen):
     if popen.timer is not None:
         popen.timer.cancel()
+        popen.timer = None
     if popen.poll() is not None:
         return
     popen.was_killed = True
@@ -248,9 +255,9 @@ def start(command, quiet=False, **kwargs):
     popen.name = name
     popen.setpgrp_enabled = preexec_fn is not None
     popen.was_killed = False
-    popen.timer = None
     if timeout is not None:
-        t = threading.Timer(timeout, kill, args=(popen, ))
+        t = get_original('threading', 'Timer')(timeout, kill, args=(popen, ))
+        popen.timer = t
         t.setDaemon(True)
         t.start()
         popen.timer = t
@@ -393,6 +400,7 @@ def run(command, **kwargs): # pylint:disable=too-many-locals
             result = popen.poll()
     finally:
         kill(popen)
+        assert popen.timer is None
 
 
     failed = bool(result)

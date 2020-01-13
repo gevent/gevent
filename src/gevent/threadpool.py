@@ -127,6 +127,7 @@ class _WorkerGreenlet(RawGreenlet):
 
     def run(self):
         # pylint:disable=too-many-branches
+        task = None
         try:
             while 1: # tiny bit faster than True on Py2
                 self.__fixup_hub_before_block()
@@ -141,7 +142,11 @@ class _WorkerGreenlet(RawGreenlet):
                     task = None
                     self._task_queue.task_done()
         except Exception as e: # pylint:disable=broad-except
-            print("Failed to run worker thread", e, file=self._stderr)
+            print(
+                "Failed to run worker thread. Task=%r Exception=%s%r" % (
+                    task, e, e
+                ),
+                file=self._stderr)
         finally:
             # Re-check for the hub in case the task created it but then
             # failed.

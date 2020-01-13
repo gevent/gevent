@@ -23,13 +23,15 @@ from gevent.lock import Semaphore, DummySemaphore
 class cancel_wait_ex(IOError):
 
     def __init__(self):
-        super(cancel_wait_ex, self).__init__(
+        IOError.__init__(
+            self,
             EBADF, 'File descriptor was closed in another greenlet')
 
 class FileObjectClosed(IOError):
 
     def __init__(self):
-        super(FileObjectClosed, self).__init__(
+        IOError.__init__(
+            self,
             EBADF, 'Bad file descriptor (FileObject was closed)')
 
 class UniversalNewlineBytesWrapper(io.TextIOWrapper):
@@ -408,7 +410,7 @@ class FileObjectBlock(FileObjectBase):
 
     def __init__(self, fobj, *args, **kwargs):
         descriptor = OpenDescriptor(fobj, *args, **kwargs)
-        super(FileObjectBlock, self).__init__(descriptor.open(), descriptor.closefd)
+        FileObjectBase.__init__(self, descriptor.open(), descriptor.closefd)
 
     def _do_close(self, fobj, closefd):
         fobj.close()
@@ -457,7 +459,7 @@ class FileObjectThread(FileObjectBase):
             raise TypeError('Expected a Semaphore or boolean, got %r' % type(self.lock))
 
         self.__io_holder = [descriptor.open()] # signal for _wrap_method
-        super(FileObjectThread, self).__init__(self.__io_holder[0], descriptor.closefd)
+        FileObjectBase.__init__(self, self.__io_holder[0], descriptor.closefd)
 
     def _do_close(self, fobj, closefd):
         self.__io_holder[0] = None # for _wrap_method
@@ -489,7 +491,7 @@ class FileObjectThread(FileObjectBase):
                     reraise(*exc_info)
 
     def _do_delegate_methods(self):
-        super(FileObjectThread, self)._do_delegate_methods()
+        FileObjectBase._do_delegate_methods(self)
         # if not hasattr(self, 'read1') and 'r' in getattr(self._io, 'mode', ''):
         #     self.read1 = self.read
         self.__io_holder[0] = self._io
