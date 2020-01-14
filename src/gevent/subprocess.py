@@ -39,7 +39,6 @@ import sys
 import traceback
 
 from gevent.event import AsyncResult
-from gevent.exceptions import ConcurrentObjectUseError
 from gevent.hub import _get_hub_noargs as get_hub
 from gevent.hub import linkproxy
 from gevent.hub import sleep
@@ -264,6 +263,13 @@ else:
     fork = monkey.get_original('os', 'fork')
     from gevent.os import fork_and_watch
 
+try:
+    BrokenPipeError
+except NameError: # Python 2
+    class BrokenPipeError(Exception):
+        "Never raised, never caught."
+
+
 def call(*popenargs, **kwargs):
     """
     call(args, *, stdin=None, stdout=None, stderr=None, shell=False, timeout=None) -> returncode
@@ -436,6 +442,95 @@ def FileObject(*args, **kwargs):
     from gevent.fileobject import FileObject as _FileObject
     globals()['FileObject'] = _FileObject
     return _FileObject(*args)
+
+
+class _CommunicatingGreenlets(object):
+    # At most, exactly one of these objects may be created
+    # for a given Popen object. This ensures that only one background
+    # greenlet at a time will be reading from the file object. This matters because
+    # if a timeout exception is raised, the user may call back into communicate() to
+    # get the output (usually after killing the process; see run()). We must not
+    # lose output in that case (Python 3 specifically documents that raising a timeout
+    # doesn't lose output). Also, attempting to read from a pipe while it's already
+    # being read from results in `RuntimeError: reentrant call in io.BufferedReader`;
+    # the same thing happens if you attempt to close() it while that's in progress.
+    __slots__ = (
+        'stdin',
+        'stdout',
+        'stderr',
+        '_all_greenlets',
+    )
+
+    def __init__(self, popen, input_data):
+        self.stdin = self.stdout = self.stderr = None
+        if popen.stdin: # Even if no data, we need to close
+            self.stdin = spawn(self._write_and_close, popen.stdin, input_data)
+
+        # If the timeout parameter is used, and the caller calls back after
+        # getting a TimeoutExpired exception, we can wind up with multiple
+        # greenlets trying to run and read from and close stdout/stderr.
+        # That's bad because it can lead to 'RuntimeError: reentrant call in io.BufferedReader'.
+        # We can't just kill the previous greenlets when a timeout happens,
+        # though, because we risk losing the output collected by that greenlet
+        # (and Python 3, where timeout is an official parameter, explicitly says
+        # that no output should be lost in the event of a timeout.) Instead, we're
+        # watching for the exception and ignoring it. It's not elegant,
+        # but it works
+        if popen.stdout:
+            self.stdout = spawn(self._read_and_close, popen.stdout)
+
+        if popen.stderr:
+            self.stderr = spawn(self._read_and_close, popen.stderr)
+
+        all_greenlets = []
+        for g in self.stdin, self.stdout, self.stderr:
+            if g is not None:
+                all_greenlets.append(g)
+        self._all_greenlets = tuple(all_greenlets)
+
+    def __iter__(self):
+        return iter(self._all_greenlets)
+
+    def __bool__(self):
+        return bool(self._all_greenlets)
+
+    __nonzero__ = __bool__
+
+    def __len__(self):
+        return len(self._all_greenlets)
+
+    @staticmethod
+    def _write_and_close(fobj, data):
+        try:
+            if data:
+                fobj.write(data)
+                if hasattr(fobj, 'flush'):
+                    # 3.6 started expecting flush to be called.
+                    fobj.flush()
+        except (OSError, IOError, BrokenPipeError) as ex:
+            # Test cases from the stdlib can raise BrokenPipeError
+            # without setting an errno value. This matters because
+            # Python 2 doesn't have a BrokenPipeError.
+            if isinstance(ex, BrokenPipeError) and ex.errno is None:
+                ex.errno = errno.EPIPE
+            if ex.errno != errno.EPIPE and ex.errno != errno.EINVAL:
+                raise
+        finally:
+            try:
+                fobj.close()
+            except EnvironmentError:
+                pass
+
+    @staticmethod
+    def _read_and_close(fobj):
+        try:
+            return fobj.read()
+        finally:
+            try:
+                fobj.close()
+            except EnvironmentError:
+                pass
+
 
 class Popen(object):
     """
@@ -706,13 +801,17 @@ class Popen(object):
             self._devnull = os.open(os.devnull, os.O_RDWR)
         return self._devnull
 
-    _stdout_buffer = None
-    _stderr_buffer = None
+    _communicating_greenlets = None
 
     def communicate(self, input=None, timeout=None):
-        """Interact with process: Send data to stdin.  Read data from
-        stdout and stderr, until end-of-file is reached.  Wait for
-        process to terminate.  The optional input argument should be a
+        """
+        Interact with process and return its output and error.
+
+        - Send *input* data to stdin.
+        - Read data from stdout and stderr, until end-of-file is reached.
+        - Wait for process to terminate.
+
+        The optional *input* argument should be a
         string to be sent to the child process, or None, if no data
         should be sent to the child.
 
@@ -731,57 +830,9 @@ class Popen(object):
            Honor a *timeout* even if there's no way to communicate with the child
            (stdin, stdout, and stderr are not pipes).
         """
-        greenlets = []
-        if self.stdin:
-            greenlets.append(spawn(write_and_close, self.stdin, input))
-
-        # If the timeout parameter is used, and the caller calls back after
-        # getting a TimeoutExpired exception, we can wind up with multiple
-        # greenlets trying to run and read from and close stdout/stderr.
-        # That's bad because it can lead to 'RuntimeError: reentrant call in io.BufferedReader'.
-        # We can't just kill the previous greenlets when a timeout happens,
-        # though, because we risk losing the output collected by that greenlet
-        # (and Python 3, where timeout is an official parameter, explicitly says
-        # that no output should be lost in the event of a timeout.) Instead, we're
-        # watching for the exception and ignoring it. It's not elegant,
-        # but it works
-        def _make_pipe_reader(pipe_name):
-            pipe = getattr(self, pipe_name)
-            buf_name = '_' + pipe_name + '_buffer'
-
-            def _read():
-                try:
-                    data = pipe.read()
-                except (
-                        # io.Buffered* can raise RuntimeError: 'reentrant call'
-                        RuntimeError,
-                        # unbuffered Posix IO that we're already waiting on
-                        # can raise this. Closing the pipe will free those greenlets up.
-                        ConcurrentObjectUseError
-                ):
-                    return
-                if not data:
-                    return
-                the_buffer = getattr(self, buf_name)
-                if the_buffer:
-                    the_buffer.append(data)
-                else:
-                    setattr(self, buf_name, [data])
-            return _read
-
-        if self.stdout:
-            _read_out = _make_pipe_reader('stdout')
-            stdout = spawn(_read_out)
-            greenlets.append(stdout)
-        else:
-            stdout = None
-
-        if self.stderr:
-            _read_err = _make_pipe_reader('stderr')
-            stderr = spawn(_read_err)
-            greenlets.append(stderr)
-        else:
-            stderr = None
+        if self._communicating_greenlets is None:
+            self._communicating_greenlets = _CommunicatingGreenlets(self, input)
+        greenlets = self._communicating_greenlets
 
         # If we were given stdin=stdout=stderr=None, we have no way to
         # communicate with the child, and thus no greenlets to wait
@@ -793,9 +844,18 @@ class Popen(object):
             self.wait(timeout=timeout, _raise_exc=True)
 
         done = joinall(greenlets, timeout=timeout)
-        if timeout is not None and len(done) != len(greenlets):
+        # Allow finished greenlets, if any, to raise. This takes priority over
+        # the timeout exception.
+        for greenlet in done:
+            greenlet.get()
+        if timeout is not None and len(done) != len(self._communicating_greenlets):
             raise TimeoutExpired(self.args, timeout)
 
+        # Close only after we're sure that everything is done
+        # (there was no timeout, or there was, but everything finished).
+        # There should be no greenlets still running, even from a prior
+        # attempt. If there are, then this can raise RuntimeError: 'reentrant call'.
+        # So we ensure that previous greenlets are dead.
         for pipe in (self.stdout, self.stderr):
             if pipe:
                 try:
@@ -805,21 +865,8 @@ class Popen(object):
 
         self.wait()
 
-        def _get_output_value(pipe_name):
-            buf_name = '_' + pipe_name + '_buffer'
-            buf_value = getattr(self, buf_name)
-            setattr(self, buf_name, None)
-            if buf_value:
-                buf_value = self._communicate_empty_value.join(buf_value)
-            else:
-                buf_value = self._communicate_empty_value
-            return buf_value
-
-        stdout_value = _get_output_value('stdout')
-        stderr_value = _get_output_value('stderr')
-
-        return (None if stdout is None else stdout_value,
-                None if stderr is None else stderr_value)
+        return (None if greenlets.stdout is None else greenlets.stdout.get(),
+                None if greenlets.stderr is None else greenlets.stderr.get())
 
     def poll(self):
         """Check if child process has terminated. Set and return :attr:`returncode` attribute."""
@@ -1647,22 +1694,6 @@ class Popen(object):
             """
             self.send_signal(signal.SIGKILL)
 
-
-def write_and_close(fobj, data):
-    try:
-        if data:
-            fobj.write(data)
-            if hasattr(fobj, 'flush'):
-                # 3.6 started expecting flush to be called.
-                fobj.flush()
-    except (OSError, IOError) as ex:
-        if ex.errno != errno.EPIPE and ex.errno != errno.EINVAL:
-            raise
-    finally:
-        try:
-            fobj.close()
-        except EnvironmentError:
-            pass
 
 def _with_stdout_stderr(exc, stderr):
     # Prior to Python 3.5, most exceptions didn't have stdout

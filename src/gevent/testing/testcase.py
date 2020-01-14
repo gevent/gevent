@@ -248,6 +248,11 @@ class TestCase(TestCaseMetaClass("NewBase",
     __timeout__ = params.LOCAL_TIMEOUT if not sysinfo.RUNNING_ON_CI else params.CI_TIMEOUT
 
     switch_expected = 'default'
+    #: Set this to true to cause errors that get reported to the hub to
+    #: always get propagated to the main greenlet. This can be done at the
+    #: class or method level.
+    #: .. caution:: This can hide errors and make it look like exceptions
+    #:    are propagated even if they're not.
     error_fatal = True
     uses_handle_error = True
     close_on_teardown = ()
@@ -257,7 +262,7 @@ class TestCase(TestCaseMetaClass("NewBase",
         # pylint:disable=arguments-differ
         if self.switch_expected == 'default':
             self.switch_expected = get_switch_expected(self.fullname)
-        return BaseTestCase.run(self, *args, **kwargs)
+        return super(TestCase, self).run(*args, **kwargs)
 
     def setUp(self):
         super(TestCase, self).setUp()

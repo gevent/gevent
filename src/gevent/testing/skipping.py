@@ -43,6 +43,7 @@ skipOnPyPy3 = _do_not_skip
 skipOnPyPyOnWindows = _do_not_skip
 
 skipOnPy2 = unittest.skip if sysinfo.PY2 else _do_not_skip
+skipOnPy3 = unittest.skip if sysinfo.PY3 else _do_not_skip
 skipOnPy37 = unittest.skip if sysinfo.PY37 else _do_not_skip
 
 skipOnPurePython = unittest.skip if sysinfo.PURE_PYTHON else _do_not_skip

@@ -4,7 +4,6 @@ import errno
 import unittest
 
 import time
-import gc
 import tempfile
 
 import gevent.testing as greentest
@@ -34,12 +33,11 @@ python_universal_newlines = hasattr(sys.stdout, 'newlines')
 python_universal_newlines_broken = PY3 and subprocess.mswindows
 
 @greentest.skipWithoutResource('subprocess')
-class Test(greentest.TestCase):
+class TestPopen(greentest.TestCase):
 
-    def setUp(self):
-        greentest.TestCase.setUp(self)
-        gc.collect()
-        gc.collect()
+    # Use the normal error handling. Make sure that any background greenlets
+    # subprocess spawns propagate errors as expected.
+    error_fatal = False
 
     def test_exit(self):
         popen = subprocess.Popen([sys.executable, '-c', 'import sys; sys.exit(10)'])
@@ -51,12 +49,10 @@ class Test(greentest.TestCase):
         self.assertEqual(popen.poll(), 11)
 
     def test_child_exception(self):
-        try:
+        with self.assertRaises(OSError) as exc:
             subprocess.Popen(['*']).wait()
-        except OSError as ex:
-            assert ex.errno == 2, ex
-        else:
-            raise AssertionError('Expected OSError: [Errno 2] No such file or directory')
+
+        self.assertEqual(exc.exception.errno, 2)
 
     def test_leak(self):
         num_before = greentest.get_number_open_files()
@@ -65,9 +61,6 @@ class Test(greentest.TestCase):
         p.wait()
         p.stdout.close()
         del p
-        if PYPY:
-            gc.collect()
-            gc.collect()
 
         num_after = greentest.get_number_open_files()
         self.assertEqual(num_before, num_after)
@@ -106,7 +99,8 @@ class Test(greentest.TestCase):
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            universal_newlines=True)
+            universal_newlines=True
+        )
         (stdout, stderr) = p.communicate('banana\r\n\xff\xff\xf2\xf9\r\n')
         self.assertIsInstance(stdout, str)
         self.assertIsInstance(stderr, str)
@@ -116,25 +110,50 @@ class Test(greentest.TestCase):
         self.assertEqual(stderr,
                          'pineapple\n\xff\xff\xf2\xf9\n')
 
+    @greentest.skipOnPy2("Only Python 2 decodes")
+    def test_communicate_undecodable(self):
+        # If the subprocess writes non-decodable data, `communicate` raises the
+        # same UnicodeDecodeError that the stdlib does, instead of
+        # printing it to the hub. This only applies to Python 3, because only it
+        # will actually use text mode.
+        # See https://github.com/gevent/gevent/issues/1510
+        with subprocess.Popen(
+                [
+                    sys.executable,
+                    '-W', 'ignore',
+                    '-c',
+                    "import os, sys; "
+                    r'os.write(sys.stdout.fileno(), b"\xff")'
+                ],
+                stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True, universal_newlines=True
+        ) as p:
+            with self.assertRaises(UnicodeDecodeError):
+                p.communicate()
+
     @greentest.skipOnLibuvOnPyPyOnWin("hangs")
     def test_universal1(self):
-        p = subprocess.Popen([sys.executable, "-c",
-                              'import sys,os;' + SETBINARY +
-                              'sys.stdout.write("line1\\n");'
-                              'sys.stdout.flush();'
-                              'sys.stdout.write("line2\\r");'
-                              'sys.stdout.flush();'
-                              'sys.stdout.write("line3\\r\\n");'
-                              'sys.stdout.flush();'
-                              'sys.stdout.write("line4\\r");'
-                              'sys.stdout.flush();'
-                              'sys.stdout.write("\\nline5");'
-                              'sys.stdout.flush();'
-                              'sys.stdout.write("\\nline6");'],
-                             stdout=subprocess.PIPE,
-                             universal_newlines=1,
-                             bufsize=1)
-        try:
+        with subprocess.Popen(
+                [
+                    sys.executable, "-c",
+                    'import sys,os;' + SETBINARY +
+                    'sys.stdout.write("line1\\n");'
+                    'sys.stdout.flush();'
+                    'sys.stdout.write("line2\\r");'
+                    'sys.stdout.flush();'
+                    'sys.stdout.write("line3\\r\\n");'
+                    'sys.stdout.flush();'
+                    'sys.stdout.write("line4\\r");'
+                    'sys.stdout.flush();'
+                    'sys.stdout.write("\\nline5");'
+                    'sys.stdout.flush();'
+                    'sys.stdout.write("\\nline6");'
+                ],
+                stdout=subprocess.PIPE,
+                universal_newlines=1,
+                bufsize=1
+        ) as p:
             stdout = p.stdout.read()
             if python_universal_newlines:
                 # Interpreter with universal newline support
@@ -149,26 +168,27 @@ class Test(greentest.TestCase):
                 # Interpreter without universal newline support
                 self.assertEqual(stdout,
                                  "line1\nline2\rline3\r\nline4\r\nline5\nline6")
-        finally:
-            p.stdout.close()
 
     @greentest.skipOnLibuvOnPyPyOnWin("hangs")
     def test_universal2(self):
-        p = subprocess.Popen([sys.executable, "-c",
-                              'import sys,os;' + SETBINARY +
-                              'sys.stdout.write("line1\\n");'
-                              'sys.stdout.flush();'
-                              'sys.stdout.write("line2\\r");'
-                              'sys.stdout.flush();'
-                              'sys.stdout.write("line3\\r\\n");'
-                              'sys.stdout.flush();'
-                              'sys.stdout.write("line4\\r\\nline5");'
-                              'sys.stdout.flush();'
-                              'sys.stdout.write("\\nline6");'],
-                             stdout=subprocess.PIPE,
-                             universal_newlines=1,
-                             bufsize=1)
-        try:
+        with subprocess.Popen(
+                [
+                    sys.executable, "-c",
+                    'import sys,os;' + SETBINARY +
+                    'sys.stdout.write("line1\\n");'
+                    'sys.stdout.flush();'
+                    'sys.stdout.write("line2\\r");'
+                    'sys.stdout.flush();'
+                    'sys.stdout.write("line3\\r\\n");'
+                    'sys.stdout.flush();'
+                    'sys.stdout.write("line4\\r\\nline5");'
+                    'sys.stdout.flush();'
+                    'sys.stdout.write("\\nline6");'
+                ],
+                stdout=subprocess.PIPE,
+                universal_newlines=1,
+                bufsize=1
+        ) as p:
             stdout = p.stdout.read()
             if python_universal_newlines:
                 # Interpreter with universal newline support
@@ -183,60 +203,54 @@ class Test(greentest.TestCase):
                 # Interpreter without universal newline support
                 self.assertEqual(stdout,
                                  "line1\nline2\rline3\r\nline4\r\nline5\nline6")
-        finally:
-            p.stdout.close()
 
     @greentest.skipOnWindows("Uses 'grep' command")
     def test_nonblock_removed(self):
         # see issue #134
         r, w = os.pipe()
         stdin = subprocess.FileObject(r)
-        p = subprocess.Popen(['grep', 'text'], stdin=stdin)
-        try:
-            # Closing one half of the pipe causes Python 3 on OS X to terminate the
-            # child process; it exits with code 1 and the assert that p.poll is None
-            # fails. Removing the close lets it pass under both Python 3 and 2.7.
-            # If subprocess.Popen._remove_nonblock_flag is changed to a noop, then
-            # the test fails (as expected) even with the close removed
-            #os.close(w)
-            time.sleep(0.1)
-            self.assertEqual(p.poll(), None)
-        finally:
-            if p.poll() is None:
-                p.kill()
-            stdin.close()
-            os.close(w)
+        with subprocess.Popen(['grep', 'text'], stdin=stdin) as p:
+            try:
+                # Closing one half of the pipe causes Python 3 on OS X to terminate the
+                # child process; it exits with code 1 and the assert that p.poll is None
+                # fails. Removing the close lets it pass under both Python 3 and 2.7.
+                # If subprocess.Popen._remove_nonblock_flag is changed to a noop, then
+                # the test fails (as expected) even with the close removed
+                #os.close(w)
+                time.sleep(0.1)
+                self.assertEqual(p.poll(), None)
+            finally:
+                if p.poll() is None:
+                    p.kill()
+                stdin.close()
+                os.close(w)
 
     def test_issue148(self):
         for _ in range(7):
-            try:
-                subprocess.Popen('this_name_must_not_exist')
-            except OSError as ex:
-                if ex.errno != errno.ENOENT:
-                    raise
-            else:
-                raise AssertionError('must fail with ENOENT')
+            with self.assertRaises(OSError) as exc:
+                with subprocess.Popen('this_name_must_not_exist'):
+                    pass
+
+            self.assertEqual(exc.exception.errno, errno.ENOENT)
 
     @greentest.skipOnLibuvOnPyPyOnWin("hangs")
     def test_check_output_keyword_error(self):
-        try:
+        with self.assertRaises(subprocess.CalledProcessError) as exc: # pylint:disable=no-member
             subprocess.check_output([sys.executable, '-c', 'import sys; sys.exit(44)'])
-        except subprocess.CalledProcessError as e: # pylint:disable=no-member
-            self.assertEqual(e.returncode, 44)
-        else:
-            raise AssertionError('must fail with CalledProcessError')
 
+        self.assertEqual(exc.exception.returncode, 44)
+
+    @greentest.skipOnPy3("The default buffer changed in Py3")
     def test_popen_bufsize(self):
         # Test that subprocess has unbuffered output by default
         # (as the vanilla subprocess module)
-        if PY3:
-            # The default changed under python 3.
-            return
-        p = subprocess.Popen([sys.executable, '-u', '-c',
-                              'import sys; sys.stdout.write(sys.stdin.readline())'],
-                             stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        p.stdin.write(b'foobar\n')
-        r = p.stdout.readline()
+        with subprocess.Popen(
+                [sys.executable, '-u', '-c',
+                 'import sys; sys.stdout.write(sys.stdin.readline())'],
+                stdin=subprocess.PIPE, stdout=subprocess.PIPE
+        ) as p:
+            p.stdin.write(b'foobar\n')
+            r = p.stdout.readline()
         self.assertEqual(r, b'foobar\n')
 
     @greentest.ignores_leakcheck
@@ -253,7 +267,6 @@ class Test(greentest.TestCase):
         def fn():
             with self.assertRaises(TypeError) as exc:
                 gevent.subprocess.Popen('echo 123', shell=True)
-                raise AssertionError("Should not be able to construct Popen")
             ex.append(exc.exception)
 
         thread = Thread(target=fn)
@@ -267,10 +280,12 @@ class Test(greentest.TestCase):
 
     @greentest.skipOnLibuvOnPyPyOnWin("hangs")
     def __test_no_output(self, kwargs, kind):
-        proc = subprocess.Popen([sys.executable, '-c', 'pass'],
-                                stdout=subprocess.PIPE,
-                                **kwargs)
-        stdout, stderr = proc.communicate()
+        with subprocess.Popen(
+                [sys.executable, '-c', 'pass'],
+                stdout=subprocess.PIPE,
+                **kwargs
+        ) as proc:
+            stdout, stderr = proc.communicate()
 
         self.assertIsInstance(stdout, kind)
         self.assertIsNone(stderr)
