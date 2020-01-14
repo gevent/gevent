@@ -18,9 +18,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import time
-
 import gevent
+from gevent._compat import perf_counter
 
 from . import sysinfo
 from . import leakcheck
@@ -69,11 +68,11 @@ class _DelayWaitMixin(object):
         seconds = getattr(timeout, 'seconds', timeout)
 
         gevent.get_hub().loop.update_now()
-        start = time.time()
+        start = perf_counter()
         try:
             result = self.wait(timeout)
         finally:
-            self._check_delay_bounds(seconds, time.time() - start,
+            self._check_delay_bounds(seconds, perf_counter() - start,
                                      self._default_delay_min_adj,
                                      self._default_delay_max_adj)
         return result

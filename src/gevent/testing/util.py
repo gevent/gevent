@@ -6,10 +6,11 @@ import traceback
 import unittest
 import threading
 import subprocess
-import time
+from time import sleep
 
 from . import six
 from gevent._config import validate_bool
+from gevent._compat import perf_counter
 from gevent.monkey import get_original
 
 # pylint: disable=broad-except,attribute-defined-outside-init
@@ -391,9 +392,9 @@ def run(command, **kwargs): # pylint:disable=too-many-locals
     name = popen.name
 
     try:
-        time_start = time.time()
+        time_start = perf_counter()
         out, err = popen.communicate()
-        took = time.time() - time_start
+        took = perf_counter() - time_start
         if popen.was_killed or popen.poll() is None:
             result = 'TIMEOUT'
         else:
@@ -611,7 +612,7 @@ class TestServer(ExampleMixin,
 
     def before(self):
         if self.before_delay is not None:
-            time.sleep(self.before_delay)
+            sleep(self.before_delay)
         self.assertIsNone(self.popen.poll(),
                           '%s died with code %s' % (
                               self.example, self.popen.poll(),
@@ -619,7 +620,7 @@ class TestServer(ExampleMixin,
 
     def after(self):
         if self.after_delay is not None:
-            time.sleep(self.after_delay)
+            sleep(self.after_delay)
         self.assertIsNone(self.popen.poll(),
                           '%s died with code %s' % (
                               self.example, self.popen.poll(),
@@ -646,6 +647,6 @@ class alarm(threading.Thread):
         self.start()
 
     def run(self):
-        time.sleep(self.timeout)
+        sleep(self.timeout)
         sys.stderr.write('Timeout.\n')
         os._exit(5)

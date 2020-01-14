@@ -20,7 +20,6 @@
 from __future__ import absolute_import, print_function, division
 
 import sys
-from time import time
 import os.path
 from contextlib import contextmanager
 from unittest import TestCase as BaseTestCase
@@ -28,6 +27,8 @@ from functools import wraps
 
 import gevent
 from gevent._util import LazyOnClass
+from gevent._compat import perf_counter
+from gevent._compat import get_clock_info
 
 from . import sysinfo
 from . import params
@@ -63,13 +64,17 @@ class TimeAssertMixin(object):
                 fuzzy = expected * 5.0
             else:
                 fuzzy = expected / 2.0
-        start = time()
-        yield
-        elapsed = time() - start
+        min_time = expected - fuzzy
+        max_time = expected + fuzzy
+        start = perf_counter()
+        yield (min_time, max_time)
+        elapsed = perf_counter() - start
         try:
             self.assertTrue(
-                expected - fuzzy <= elapsed <= expected + fuzzy,
-                'Expected: %r; elapsed: %r; fuzzy %r' % (expected, elapsed, fuzzy))
+                min_time <= elapsed <= max_time,
+                'Expected: %r; elapsed: %r; fuzzy %r; clock_info: %s' % (
+                    expected, elapsed, fuzzy, get_clock_info('perf_counter')
+                ))
         except AssertionError:
             flaky.reraiseFlakyTestRaceCondition()
 

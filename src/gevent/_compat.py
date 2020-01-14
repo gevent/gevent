@@ -188,7 +188,11 @@ except ImportError:
 try:
     # Python 3.3+ (PEP 418)
     from time import perf_counter
+    from time import get_clock_info
+    from time import monotonic
     perf_counter = perf_counter
+    monotonic = monotonic
+    get_clock_info = get_clock_info
 except ImportError:
     import time
 
@@ -196,7 +200,9 @@ except ImportError:
         perf_counter = time.clock # pylint:disable=no-member
     else:
         perf_counter = time.time
-
+    monotonic = perf_counter
+    def get_clock_info(_):
+        return 'Unknown'
 
 ## Monitoring
 def get_this_psutil_process():

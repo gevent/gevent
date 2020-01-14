@@ -510,7 +510,7 @@ class RunFuncTestCase(greentest.TestCase):
     def test_run_with_shell_timeout_and_capture_output(self):
         #Output capturing after a timeout mustn't hang forever on open filehandles
         with self.runs_in_given_time(0.1):
-            with self.assertRaises(subprocess.TimeoutExpired) as c:
+            with self.assertRaises(subprocess.TimeoutExpired):
                 subprocess.run('sleep 3', shell=True, timeout=0.1,
                                capture_output=True)  # New session unspecified.
 
