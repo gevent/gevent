@@ -110,6 +110,7 @@ class TestPopen(greentest.TestCase):
         self.assertEqual(stderr,
                          'pineapple\n\xff\xff\xf2\xf9\n')
 
+    @greentest.skipOnWindows("Windows IO is weird; this doesn't raise")
     @greentest.skipOnPy2("Only Python 2 decodes")
     def test_communicate_undecodable(self):
         # If the subprocess writes non-decodable data, `communicate` raises the
@@ -397,7 +398,7 @@ class TestFDs(unittest.TestCase):
         from_path.assert_called_once_with('/proc/self/fd', [7], 42)
 
 class RunFuncTestCase(greentest.TestCase):
-    # Based on code from python 3.6
+    # Based on code from python 3.6+
 
     __timeout__ = greentest.LARGE_TIMEOUT
 
@@ -501,6 +502,17 @@ class RunFuncTestCase(greentest.TestCase):
                              env=newenv)
         self.assertEqual(cp.returncode, 33)
 
+    # This test _might_ wind up a bit fragile on loaded build+test machines
+    # as it depends on the timing with wide enough margins for normal situations
+    # but does assert that it happened "soon enough" to believe the right thing
+    # happened.
+    @greentest.skipOnWindows("requires posix like 'sleep' shell command")
+    def test_run_with_shell_timeout_and_capture_output(self):
+        #Output capturing after a timeout mustn't hang forever on open filehandles
+        with self.runs_in_given_time(0.1):
+            with self.assertRaises(subprocess.TimeoutExpired) as c:
+                subprocess.run('sleep 3', shell=True, timeout=0.1,
+                               capture_output=True)  # New session unspecified.
 
 if __name__ == '__main__':
     greentest.main()
