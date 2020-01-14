@@ -674,6 +674,11 @@ if WIN:
     disabled_tests += [
         # Issue with Unix vs DOS newlines in the file vs from the server
         'test_ssl.ThreadedTests.test_socketserver',
+        # On appveyor, this sometimes produces 'A non-blocking socket
+        # operation could not be completed immediately', followed by
+        # 'No connection could be made because the target machine
+        # actively refused it'
+        'test_socket.NonBlockingTCPTests.testAccept',
     ]
 
     # These are a problem on 3.5; on 3.6+ they wind up getting (accidentally) disabled.
@@ -803,6 +808,10 @@ if PY3:
             'test_subprocess.ProcessTestCaseNoPoll.test_cwd_with_relative_arg',
             'test_subprocess.ProcessTestCase.test_cwd_with_relative_executable',
 
+            # In 3.7 and 3.8 on Travis CI, this appears to take the full 3 seconds.
+            # Can't reproduce it locally. We have our own copy of this that takes
+            # timing on CI into account.
+            'test_subprocess.RunFuncTestCase.test_run_with_shell_timeout_and_capture_output',
         ]
 
     disabled_tests += [

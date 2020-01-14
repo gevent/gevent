@@ -5,7 +5,6 @@ import sys
 import os
 import glob
 import traceback
-import time
 import importlib
 from datetime import timedelta
 
@@ -135,7 +134,7 @@ class Runner(object):
 
     def _reap_all(self):
         while self._reap() > 0:
-            time.sleep(self.TIME_WAIT_REAP)
+            util.sleep(self.TIME_WAIT_REAP)
 
     def _spawn(self, pool, cmd, options):
         while True:
@@ -144,7 +143,7 @@ class Runner(object):
                 self._running_jobs.append(job)
                 return
 
-            time.sleep(self.TIME_WAIT_SPAWN)
+            util.sleep(self.TIME_WAIT_SPAWN)
 
     def __call__(self):
         util.log("Running tests in parallel with concurrency %s" % (self._worker_count,),)
@@ -153,11 +152,11 @@ class Runner(object):
         # sequentially.
         util.BUFFER_OUTPUT = self._worker_count > 1 or self._quiet
 
-        start = time.time()
+        start = util.perf_counter()
         try:
             self._run_tests()
         except KeyboardInterrupt:
-            self._report(time.time() - start, exit=False)
+            self._report(util.perf_counter() - start, exit=False)
             util.log('(partial results)\n')
             raise
         except:
@@ -165,7 +164,7 @@ class Runner(object):
             raise
 
         self._reap_all()
-        self._report(time.time() - start, exit=True)
+        self._report(util.perf_counter() - start, exit=True)
 
     def _run_tests(self):
         "Runs the tests, produces no report."
@@ -215,7 +214,7 @@ class TravisFoldingRunner(object):
     def __init__(self, runner, travis_fold_msg):
         self._runner = runner
         self._travis_fold_msg = travis_fold_msg
-        self._travis_fold_name = str(int(time.time()))
+        self._travis_fold_name = str(int(util.perf_counter()))
 
         # A zope-style acquisition proxy would be convenient here.
         run_tests = runner._run_tests

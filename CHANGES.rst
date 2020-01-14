@@ -39,7 +39,21 @@ Library and Dependency Updates
   with debugging. The event libraries allocate small amounts of memory
   at startup. The allocation functions have to take the GIL, but
   because of the limited amount of actual allocation that gets done
-  this is not expected to be a concern.
+  this is not expected to be a bottleneck.
+
+Other
+-----
+
+- Make `gevent.subprocess.Popen.communicate` raise exceptions raised
+  by reading from the process, like the standard library. In
+  particular, under Python 3, if the process output is being decoded
+  as text, this can now raise ``UnicodeDecodeError``. Reported in
+  :issue:`1510` by Ofer Koren.
+
+- Make `gevent.subprocess.Popen.communicate` be more careful about
+  closing files. Previously if a timeout error happened, a second call
+  to ``communicate`` might not close the pipe.
+
 
 1.5a3 (2020-01-01)
 ==================

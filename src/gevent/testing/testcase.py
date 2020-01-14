@@ -20,7 +20,6 @@
 from __future__ import absolute_import, print_function, division
 
 import sys
-from time import time
 import os.path
 from contextlib import contextmanager
 from unittest import TestCase as BaseTestCase
@@ -28,6 +27,8 @@ from functools import wraps
 
 import gevent
 from gevent._util import LazyOnClass
+from gevent._compat import perf_counter
+from gevent._compat import get_clock_info
 
 from . import sysinfo
 from . import params
@@ -63,13 +64,17 @@ class TimeAssertMixin(object):
                 fuzzy = expected * 5.0
             else:
                 fuzzy = expected / 2.0
-        start = time()
-        yield
-        elapsed = time() - start
+        min_time = expected - fuzzy
+        max_time = expected + fuzzy
+        start = perf_counter()
+        yield (min_time, max_time)
+        elapsed = perf_counter() - start
         try:
             self.assertTrue(
-                expected - fuzzy <= elapsed <= expected + fuzzy,
-                'Expected: %r; elapsed: %r; fuzzy %r' % (expected, elapsed, fuzzy))
+                min_time <= elapsed <= max_time,
+                'Expected: %r; elapsed: %r; fuzzy %r; clock_info: %s' % (
+                    expected, elapsed, fuzzy, get_clock_info('perf_counter')
+                ))
         except AssertionError:
             flaky.reraiseFlakyTestRaceCondition()
 
@@ -248,6 +253,11 @@ class TestCase(TestCaseMetaClass("NewBase",
     __timeout__ = params.LOCAL_TIMEOUT if not sysinfo.RUNNING_ON_CI else params.CI_TIMEOUT
 
     switch_expected = 'default'
+    #: Set this to true to cause errors that get reported to the hub to
+    #: always get propagated to the main greenlet. This can be done at the
+    #: class or method level.
+    #: .. caution:: This can hide errors and make it look like exceptions
+    #:    are propagated even if they're not.
     error_fatal = True
     uses_handle_error = True
     close_on_teardown = ()
@@ -257,7 +267,7 @@ class TestCase(TestCaseMetaClass("NewBase",
         # pylint:disable=arguments-differ
         if self.switch_expected == 'default':
             self.switch_expected = get_switch_expected(self.fullname)
-        return BaseTestCase.run(self, *args, **kwargs)
+        return super(TestCase, self).run(*args, **kwargs)
 
     def setUp(self):
         super(TestCase, self).setUp()

@@ -96,6 +96,7 @@ install:
   - echo $BUILD_RUNTIMES/snakepit/$TRAVIS_PYTHON_VERSION.d
   - ls -l $BUILD_RUNTIMES/snakepit/$TRAVIS_PYTHON_VERSION.d
   - python -c 'import gevent; print(gevent.__version__)'
+  - python -c 'from gevent._compat import get_clock_info; print(get_clock_info("perf_counter"))'
 script:
   # The generic script for the matrix expansion is to
   # test the defaults.

@@ -5,36 +5,50 @@ import unittest
 import sys
 import gevent.testing as greentest
 
-from gevent import core
+from gevent._config import Loop
+
+available_loops = Loop().get_options()
+available_loops.pop('libuv', None)
+
+def not_available(name):
+    return isinstance(available_loops[name], ImportError)
 
 
-
-class TestCore(unittest.TestCase):
-
-    def test_get_version(self):
-        version = core.get_version() # pylint: disable=no-member
-        self.assertIsInstance(version, str)
-        self.assertTrue(version)
-        header_version = core.get_header_version() # pylint: disable=no-member
-        self.assertIsInstance(header_version, str)
-        self.assertTrue(header_version)
-        self.assertEqual(version, header_version)
-
-
-class TestWatchers(unittest.TestCase):
+class WatcherTestMixin(object):
+    kind = None
 
     def _makeOne(self):
-        return core.loop() # pylint:disable=no-member
+        return self.kind(default=False) # pylint:disable=not-callable
 
     def destroyOne(self, loop):
         loop.destroy()
 
     def setUp(self):
         self.loop = self._makeOne()
+        self.core = sys.modules[self.kind.__module__]
 
     def tearDown(self):
         self.destroyOne(self.loop)
         del self.loop
+
+    def test_get_version(self):
+        version = self.core.get_version() # pylint: disable=no-member
+        self.assertIsInstance(version, str)
+        self.assertTrue(version)
+        header_version = self.core.get_header_version() # pylint: disable=no-member
+        self.assertIsInstance(header_version, str)
+        self.assertTrue(header_version)
+        self.assertEqual(version, header_version)
+
+    def test_events_conversion(self):
+        self.assertEqual(self.core._events_to_str(self.core.READ | self.core.WRITE), # pylint: disable=no-member
+                         'READ|WRITE')
+
+    def test_EVENTS(self):
+        self.assertEqual(str(self.core.EVENTS), # pylint: disable=no-member
+                         'gevent.core.EVENTS')
+        self.assertEqual(repr(self.core.EVENTS), # pylint: disable=no-member
+                         'gevent.core.EVENTS')
 
     def test_io(self):
         if greentest.WIN:
@@ -46,29 +60,64 @@ class TestWatchers(unittest.TestCase):
         with self.assertRaises(Error):
             self.loop.io(-1, 1)
 
-        if hasattr(core, 'TIMER'):
+        if hasattr(self.core, 'TIMER'):
             # libev
             with self.assertRaises(ValueError):
-                self.loop.io(1, core.TIMER) # pylint:disable=no-member
+                self.loop.io(1, self.core.TIMER) # pylint:disable=no-member
 
         # Test we can set events and io before it's started
         if not greentest.WIN:
             # We can't do this with arbitrary FDs on windows;
             # see libev_vfd.h
-            io = self.loop.io(1, core.READ) # pylint:disable=no-member
+            io = self.loop.io(1, self.core.READ) # pylint:disable=no-member
             io.fd = 2
             self.assertEqual(io.fd, 2)
-            io.events = core.WRITE # pylint:disable=no-member
-            if not hasattr(core, 'libuv'):
+            io.events = self.core.WRITE # pylint:disable=no-member
+            if not hasattr(self.core, 'libuv'):
                 # libev
                 # pylint:disable=no-member
-                self.assertEqual(core._events_to_str(io.events), 'WRITE|_IOFDSET')
+                self.assertEqual(self.core._events_to_str(io.events), 'WRITE|_IOFDSET')
             else:
 
-                self.assertEqual(core._events_to_str(io.events), # pylint:disable=no-member
+                self.assertEqual(self.core._events_to_str(io.events), # pylint:disable=no-member
                                  'WRITE')
             io.start(lambda: None)
             io.close()
+
+    def test_timer_constructor(self):
+        with self.assertRaises(ValueError):
+            self.loop.timer(1, -1)
+
+    def test_signal_constructor(self):
+        with self.assertRaises(ValueError):
+            self.loop.signal(1000)
+
+
+class LibevTestMixin(WatcherTestMixin):
+
+    def test_flags_conversion(self):
+        # pylint: disable=no-member
+        core = self.core
+        if not greentest.WIN:
+            self.assertEqual(core.loop(2, default=False).backend_int, 2)
+        self.assertEqual(core.loop('select', default=False).backend, 'select')
+        self.assertEqual(core._flags_to_int(None), 0)
+        self.assertEqual(core._flags_to_int(['kqueue', 'SELECT']), core.BACKEND_KQUEUE | core.BACKEND_SELECT)
+        self.assertEqual(core._flags_to_list(core.BACKEND_PORT | core.BACKEND_POLL), ['port', 'poll'])
+        self.assertRaises(ValueError, core.loop, ['port', 'blabla'])
+        self.assertRaises(TypeError, core.loop, object())
+
+@unittest.skipIf(not_available('libev-cext'), "Needs libev-cext")
+class TestLibevCext(LibevTestMixin, unittest.TestCase):
+    kind = available_loops['libev-cext']
+
+@unittest.skipIf(not_available('libev-cffi'), "Needs libev-cffi")
+class TestLibevCffi(LibevTestMixin, unittest.TestCase):
+    kind = available_loops['libev-cffi']
+
+@unittest.skipIf(not_available('libuv-cffi'), "Needs libuv-cffi")
+class TestLibuvCffi(WatcherTestMixin, unittest.TestCase):
+    kind = available_loops['libuv-cffi']
 
     @greentest.skipOnLibev("libuv-specific")
     @greentest.skipOnWindows("Destroying the loop somehow fails")
@@ -77,7 +126,7 @@ class TestWatchers(unittest.TestCase):
         import socket
         sock = socket.socket()
         fd = sock.fileno()
-
+        core = self.core
         read = self.loop.io(fd, core.READ)
         write = self.loop.io(fd, core.WRITE)
 
@@ -106,70 +155,6 @@ class TestWatchers(unittest.TestCase):
             write.close()
             sock.close()
 
-    def test_timer_constructor(self):
-        with self.assertRaises(ValueError):
-            self.loop.timer(1, -1)
-
-    def test_signal_constructor(self):
-        with self.assertRaises(ValueError):
-            self.loop.signal(1000)
-
-class TestWatchersDefault(TestWatchers):
-
-    def _makeOne(self):
-        return core.loop(default=True) # pylint:disable=no-member
-
-    def destroyOne(self, loop):
-        return
-
-# XXX: The crash may be fixed? The hang showed up after the crash was
-# reproduced and fixed on linux and OS X.
-@greentest.skipOnLibuvOnWin(
-    "This crashes with PyPy 5.10.0, only on Windows. "
-    "See https://ci.appveyor.com/project/denik/gevent/build/1.0.1380/job/lrlvid6mkjtyrhn5#L1103 "
-    "It has also timed out, but only on Appveyor CPython 3.6; local CPython 3.6 does not. "
-    "See https://ci.appveyor.com/project/denik/gevent/build/1.0.1414/job/yn7yi8b53vtqs8lw#L1523")
-@greentest.skipIf(
-    greentest.LIBUV and greentest.RUNNING_ON_TRAVIS and sys.version_info == (3, 8, 0, 'beta', 4),
-    "Crashes on 3.8.0b4 on TravisCI. "
-    "(https://travis-ci.org/gevent/gevent/jobs/582031266#L215) "
-    "Unable to reproduce locally so far on macOS."
-)
-class TestWatchersDefaultDestroyed(TestWatchers):
-
-    def _makeOne(self):
-        # pylint: disable=no-member
-        l = core.loop(default=True)
-        l.destroy()
-        del l
-        return core.loop(default=True)
-
-@greentest.skipOnLibuv("Tests for libev-only functions")
-class TestLibev(unittest.TestCase):
-
-    def test_flags_conversion(self):
-        # pylint: disable=no-member
-        if not greentest.WIN:
-            self.assertEqual(core.loop(2, default=False).backend_int, 2)
-        self.assertEqual(core.loop('select', default=False).backend, 'select')
-        self.assertEqual(core._flags_to_int(None), 0)
-        self.assertEqual(core._flags_to_int(['kqueue', 'SELECT']), core.BACKEND_KQUEUE | core.BACKEND_SELECT)
-        self.assertEqual(core._flags_to_list(core.BACKEND_PORT | core.BACKEND_POLL), ['port', 'poll'])
-        self.assertRaises(ValueError, core.loop, ['port', 'blabla'])
-        self.assertRaises(TypeError, core.loop, object())
-
-
-class TestEvents(unittest.TestCase):
-
-    def test_events_conversion(self):
-        self.assertEqual(core._events_to_str(core.READ | core.WRITE), # pylint: disable=no-member
-                         'READ|WRITE')
-
-    def test_EVENTS(self):
-        self.assertEqual(str(core.EVENTS), # pylint: disable=no-member
-                         'gevent.core.EVENTS')
-        self.assertEqual(repr(core.EVENTS), # pylint: disable=no-member
-                         'gevent.core.EVENTS')
 
 if __name__ == '__main__':
     greentest.main()

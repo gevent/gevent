@@ -371,7 +371,13 @@ class FileObjectBase(object):
         return getattr(self._io, name)
 
     def __repr__(self):
-        return '<%s _fobj=%r%s>' % (self.__class__.__name__, self.io, self._extra_repr())
+        return '<%s at 0x%x %s_fobj=%r%s>' % (
+            self.__class__.__name__,
+            id(self),
+            'closed' if self.closed else '',
+            self.io,
+            self._extra_repr()
+        )
 
     def _extra_repr(self):
         return ''
