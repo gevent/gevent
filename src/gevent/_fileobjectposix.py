@@ -311,7 +311,7 @@ class FileObjectPosix(FileObjectBase):
         descriptor = GreenOpenDescriptor(*args, **kwargs)
         # This attribute is documented as available for non-blocking reads.
         self.fileio, buffered_fobj = descriptor.open_raw_and_wrapped()
-        super(FileObjectPosix, self).__init__(buffered_fobj, descriptor.closefd)
+        FileObjectBase.__init__(self, buffered_fobj, descriptor.closefd)
 
     def _do_close(self, fobj, closefd):
         try:
