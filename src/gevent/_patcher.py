@@ -34,6 +34,7 @@ MAPPING = {
     'gevent.signal': 'signal',
     'gevent.time': 'time',
     'gevent.queue': 'queue' if PY3 else 'Queue',
+    'gevent.contextvars': 'contextvars',
 }
 
 _PATCH_PREFIX = '__g_patched_module_'

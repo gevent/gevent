@@ -6,6 +6,7 @@ from __future__ import print_function
 import os
 import sys
 
+
 from greenlet import greenlet as RawGreenlet
 
 from gevent import monkey
@@ -117,6 +118,20 @@ class _WorkerGreenlet(RawGreenlet):
                 hub.periodic_monitoring_thread.ignore_current_greenlet_blocking()
             self._hub_of_worker = hub
 
+    @staticmethod
+    def __print_tb(tb, stderr):
+        # Extracted from traceback to avoid accessing any module
+        # globals (these sometimes happen during interpreter shutdown;
+        # see test__subprocess_interrupted)
+        while tb is not None:
+            f = tb.tb_frame
+            lineno = tb.tb_lineno
+            co = f.f_code
+            filename = co.co_filename
+            name = co.co_name
+            print('  File "%s", line %d, in %s' % (filename, lineno, name),
+                  file=stderr)
+
     def __run_task(self, func, args, kwargs, thread_result):
         try:
             thread_result.set(func(*args, **kwargs))
@@ -128,25 +143,31 @@ class _WorkerGreenlet(RawGreenlet):
     def run(self):
         # pylint:disable=too-many-branches
         task = None
+        exc_info = sys.exc_info
+        fixup_hub_before_block = self.__fixup_hub_before_block
+        task_queue_get = self._task_queue.get
+        run_task = self.__run_task
+        task_queue_done = self._task_queue.task_done
         try:
             while 1: # tiny bit faster than True on Py2
-                self.__fixup_hub_before_block()
+                fixup_hub_before_block()
 
-                task = self._task_queue.get()
+                task = task_queue_get()
                 try:
                     if task is None:
                         return
 
-                    self.__run_task(*task)
+                    run_task(*task)
                 finally:
                     task = None
-                    self._task_queue.task_done()
+                    task_queue_done()
         except Exception as e: # pylint:disable=broad-except
             print(
-                "Failed to run worker thread. Task=%r Exception=%s%r" % (
-                    task, e, e
+                "Failed to run worker thread. Task=%r Exception=%r" % (
+                    task, e
                 ),
                 file=self._stderr)
+            self.__print_tb(exc_info()[-1], self._stderr)
         finally:
             # Re-check for the hub in case the task created it but then
             # failed.

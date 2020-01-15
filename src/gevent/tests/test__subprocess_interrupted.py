@@ -18,7 +18,7 @@ else:
         out, err = subprocess.Popen([sys.executable, '-W', 'ignore',
                                      __file__, 'runtestcase'],
                                     stderr=subprocess.PIPE).communicate()
-        # We've seen three. unexpected forms out output.
+        # We've seen a few unexpected forms of output.
         #
         # The first involves 'refs'; I don't remember what that was
         # about, but I think it had to do with debug builds of Python.
@@ -27,7 +27,10 @@ else:
         # started by \nsys.excepthook is missing\nlost sys.stderr".
         # This is a race condition between closing sys.stderr and
         # writing buffered data to a pipe that hasn't been read. We
-        # only see this using GEVENT_FILE=thread (which makes sense).
+        # only see this using GEVENT_FILE=thread (which makes sense);
+        # likewise, on Python 2 with thread, we can sometimes get
+        # `super() argument 1 must be type, not None`; this happens on module
+        # cleanup.
         #
         # The third is similar to the second: "AssertionError:
         # ...\nIOError: close() called during concurrent operation on

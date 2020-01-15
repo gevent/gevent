@@ -28,6 +28,7 @@ Synchronization primitives (locks, queues, events)
 
    gevent.event
    gevent.queue
+   gevent.local
    gevent.lock
 
 Low-level details
@@ -48,6 +49,7 @@ Module Listing
    gevent.backdoor
    gevent.baseserver
    gevent.builtins
+   gevent.contextvars
    gevent.core
    gevent.event
    gevent.events
