@@ -54,6 +54,10 @@ Other
   closing files. Previously if a timeout error happened, a second call
   to ``communicate`` might not close the pipe.
 
+- Add `gevent.contextvars`, a cooperative version of `contextvars`.
+  This is available to all Python versions. On Python 3.7 and above,
+  where `contextvars` is a standard library module, it is
+  monkey-patched by default. See :issue:`1407`.
 
 1.5a3 (2020-01-01)
 ==================

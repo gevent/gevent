@@ -494,6 +494,19 @@ def patch_time():
     """
     _patch_module('time')
 
+@_ignores_DoNotPatch
+def patch_contextvars():
+    """
+    On Python 3.7 and above, replaces the implementations of :mod:`contextvars`
+    with :mod:`gevent.contextvars`.
+    """
+    try:
+        __import__('contextvars')
+    except ImportError:
+        pass
+    else:
+        _patch_module('contextvars')
+
 
 def _patch_existing_locks(threading):
     if len(list(threading.enumerate())) != 1:
@@ -1065,7 +1078,7 @@ def _subscribe_signal_os(will_patch_all):
 def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=True, ssl=True,
               subprocess=True, sys=False, aggressive=True, Event=True,
               builtins=True, signal=True,
-              queue=True,
+              queue=True, contextvars=True,
               **kwargs):
     """
     Do all of the default monkey patching (calls every other applicable
@@ -1094,6 +1107,8 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
        Add *queue*, defaulting to True, for Python 3.7.
     .. versionchanged:: 1.5
        Remove the ``httplib`` argument. Previously, setting it raised a ``ValueError``.
+    .. versionchanged:: 1.5a3
+       Add the ``contextvars`` argument.
     .. versionchanged:: 1.5
        Better handling of patching more than once.
     """
@@ -1143,6 +1158,8 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
         patch_signal()
     if queue:
         patch_queue()
+    if contextvars:
+        patch_contextvars()
 
     _notify_patch(events.GeventDidPatchBuiltinModulesEvent(modules_to_patch, kwargs), _warnings)
     _notify_patch(events.GeventDidPatchAllEvent(modules_to_patch, kwargs), _warnings)

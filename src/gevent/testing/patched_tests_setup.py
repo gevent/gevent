@@ -230,6 +230,12 @@ disabled_tests = [
     # and this doesn't work reliably on all versions.
     'test_httplib.HeaderTests.test_headers_debuglevel',
 
+    # These depend on the exact error message produced by the interpreter
+    # when too many arguments are passed to functions. We can't match
+    # the exact signatures (because Python 2 doesn't support the syntax)
+    'test_context.ContextTest.test_context_new_1',
+    'test_context.ContextTest.test_context_var_new_1',
+
 ]
 
 if 'thread' in os.getenv('GEVENT_FILE', ''):
