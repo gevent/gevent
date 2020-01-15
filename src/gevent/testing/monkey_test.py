@@ -2,21 +2,14 @@ import sys
 import os
 
 
-kwargs = {}
-
-if sys.argv[1] == '--Event':
-    kwargs['Event'] = True
-    del sys.argv[1]
-else:
-    kwargs['Event'] = False
-
 test_filename = sys.argv[1]
 del sys.argv[1]
 
-print('Running with patch_all(%s): %s' % (','.join('%s=%r' % x for x in kwargs.items()), test_filename))
+print('Running with patch_all(): %s' % (test_filename,))
 
 from gevent import monkey
-monkey.patch_all(**kwargs)
+# Only test the default set of patch arguments.
+monkey.patch_all()
 
 from .sysinfo import RUNNING_ON_APPVEYOR
 from .sysinfo import PY37
@@ -87,7 +80,7 @@ try:
 except SkipTest as e:
     # Some tests can raise test.support.ResourceDenied
     # in their main method before the testrunner takes over.
-    # That's a kind of SkipTest. we can't get  a skip count because it
+    # That's a kind of SkipTest. we can't get a true skip count because it
     # hasn't run, though.
     print(e)
     # Match the regular unittest output, including ending with skipped

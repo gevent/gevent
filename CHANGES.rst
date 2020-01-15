@@ -14,6 +14,10 @@ Platform and Packaging Updates
   3.7.6 and 3.8.1. It is also tested with PyPy2 7.3 and PyPy 3.6
   7.3.
 
+- The include directories used to compile the C extensions have been
+  tweaked with the intent of making it easier to use older debug
+  versions of Python. See :issue:`1461`.
+
 Library and Dependency Updates
 ------------------------------
 

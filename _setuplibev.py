@@ -22,6 +22,7 @@ from _setuputils import LIBRARIES
 from _setuputils import DEFINE_MACROS
 from _setuputils import glob_many
 from _setuputils import should_embed
+from _setuputils import get_include_dirs
 
 
 LIBEV_EMBED = should_embed('libev')
@@ -63,12 +64,16 @@ def build_extension():
     # Return the un-cythonized extension.
     # This can be used to access things like `libraries` and `include_dirs`
     # and `define_macros` so we DRY.
+    include_dirs = get_include_dirs()
+    include_dirs.append(os.path.abspath(os.path.join('src', 'gevent', 'libev')))
+    if LIBEV_EMBED:
+        include_dirs.append(dep_abspath('libev'))
     CORE = Extension(name='gevent.libev.corecext',
                      sources=[
                          'src/gevent/libev/corecext.pyx',
                          'src/gevent/libev/callbacks.c',
                      ],
-                     include_dirs=['src/gevent/libev'] + [dep_abspath('libev')] if LIBEV_EMBED else [],
+                     include_dirs=include_dirs,
                      libraries=list(LIBRARIES),
                      define_macros=list(DEFINE_MACROS),
                      depends=glob_many('src/gevent/libev/callbacks.*',

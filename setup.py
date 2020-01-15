@@ -4,7 +4,7 @@ from __future__ import print_function
 import sys
 import os
 import os.path
-import sysconfig
+
 
 # setuptools is *required* on Windows
 # (https://bugs.python.org/issue23246) and for PyPy. No reason not to
@@ -20,6 +20,7 @@ from _setuputils import ConfiguringBuildExt
 from _setuputils import GeventClean
 from _setuputils import BuildFailed
 from _setuputils import cythonize1
+from _setuputils import get_include_dirs
 
 # Environment variables that are intended to be used outside of our own
 # CI should be documented in ``installing_from_source.rst``
@@ -48,30 +49,17 @@ from _setupares import ARES
 CORE = cythonize1(build_libev_extension())
 
 # Get access to the greenlet header file.
-# The sysconfig dir is not enough if we're in a virtualenv
-# See https://github.com/pypa/pip/issues/4610
-include_dirs = [sysconfig.get_path("include")]
-venv_include_dir = os.path.join(sys.prefix, 'include', 'site',
-                                'python' + sysconfig.get_python_version())
-venv_include_dir = os.path.abspath(venv_include_dir)
-if os.path.exists(venv_include_dir):
-    include_dirs.append(venv_include_dir)
-
-# If we're installed via buildout, and buildout also installs
-# greenlet, we have *NO* access to greenlet.h at all. So include
-# our own copy as a fallback.
-include_dirs.append('deps')
 
 SEMAPHORE = Extension(name="gevent.__semaphore",
                       sources=["src/gevent/_semaphore.py"],
                       depends=['src/gevent/__semaphore.pxd'],
-                      include_dirs=include_dirs)
+                      include_dirs=get_include_dirs())
 
 
 LOCAL = Extension(name="gevent._local",
                   sources=["src/gevent/local.py"],
                   depends=['src/gevent/_local.pxd'],
-                  include_dirs=include_dirs)
+                  include_dirs=get_include_dirs())
 
 
 GREENLET = Extension(name="gevent._greenlet",
@@ -83,59 +71,59 @@ GREENLET = Extension(name="gevent._greenlet",
                          'src/gevent/__ident.pxd',
                          'src/gevent/_ident.py'
                      ],
-                     include_dirs=include_dirs)
+                     include_dirs=get_include_dirs())
 
 ABSTRACT_LINKABLE = Extension(name="gevent.__abstract_linkable",
                               sources=["src/gevent/_abstract_linkable.py"],
                               depends=['src/gevent/__abstract_linkable.pxd'],
-                              include_dirs=include_dirs)
+                              include_dirs=get_include_dirs())
 
 
 IDENT = Extension(name="gevent.__ident",
                   sources=["src/gevent/_ident.py"],
                   depends=['src/gevent/__ident.pxd'],
-                  include_dirs=include_dirs)
+                  include_dirs=get_include_dirs())
 
 
 IMAP = Extension(name="gevent.__imap",
                  sources=["src/gevent/_imap.py"],
                  depends=['src/gevent/__imap.pxd'],
-                 include_dirs=include_dirs)
+                 include_dirs=get_include_dirs())
 
 EVENT = Extension(name="gevent._event",
                   sources=["src/gevent/event.py"],
                   depends=['src/gevent/_event.pxd'],
-                  include_dirs=include_dirs)
+                  include_dirs=get_include_dirs())
 
 QUEUE = Extension(name="gevent._queue",
                   sources=["src/gevent/queue.py"],
                   depends=['src/gevent/_queue.pxd'],
-                  include_dirs=include_dirs)
+                  include_dirs=get_include_dirs())
 
 HUB_LOCAL = Extension(name="gevent.__hub_local",
                       sources=["src/gevent/_hub_local.py"],
                       depends=['src/gevent/__hub_local.pxd'],
-                      include_dirs=include_dirs)
+                      include_dirs=get_include_dirs())
 
 WAITER = Extension(name="gevent.__waiter",
                    sources=["src/gevent/_waiter.py"],
                    depends=['src/gevent/__waiter.pxd'],
-                   include_dirs=include_dirs)
+                   include_dirs=get_include_dirs())
 
 HUB_PRIMITIVES = Extension(name="gevent.__hub_primitives",
                            sources=["src/gevent/_hub_primitives.py"],
                            depends=['src/gevent/__hub_primitives.pxd'],
-                           include_dirs=include_dirs)
+                           include_dirs=get_include_dirs())
 
 GLT_PRIMITIVES = Extension(name="gevent.__greenlet_primitives",
                            sources=["src/gevent/_greenlet_primitives.py"],
                            depends=['src/gevent/__greenlet_primitives.pxd'],
-                           include_dirs=include_dirs)
+                           include_dirs=get_include_dirs())
 
 TRACER = Extension(name="gevent.__tracer",
                    sources=["src/gevent/_tracer.py"],
                    depends=['src/gevent/__tracer.pxd'],
-                   include_dirs=include_dirs)
+                   include_dirs=get_include_dirs())
 
 
 _to_cythonize = [

@@ -9,6 +9,8 @@ import re
 import os
 import os.path
 import sys
+import sysconfig
+from distutils import sysconfig as dist_sysconfig
 from subprocess import check_call
 from glob import glob
 
@@ -151,8 +153,51 @@ def make_universal_header(filename, *defines):
                         break
             print(line, file=f)
 
-# Processes
+def get_include_dirs():
+    """
+    Return additional include directories that might be needed to
+    compile extensions. Specifically, we need the greenlet.h header
+    in many of our extensions.
+    """
+    # setuptools will put the normal include directory for Python.h on the
+    # include path automatically. We don't want to override that with
+    # a different Python3h if we can avoid it: On older versions of Python,
+    # that can cause issues with debug builds (see https://github.com/gevent/gevent/issues/1461)
+    # so order matters here.
+    #
+    # sysconfig.get_path('include') will return the path to the main include
+    # directory. In a virtual environment, that's a symlink to the main
+    # Python installation include directory:
+    #   sysconfig.get_path('include') -> /path/to/venv/include/python3.8
+    #   /path/to/venv/include/python3.7 -> /pythondir/include/python3.8
+    #
+    # distutils.sysconfig.get_python_inc() returns the main Python installation
+    # include directory:
+    #   distutils.sysconfig.get_python_inc() -> /pythondir/include/python3.8
+    #
+    # Neither sysconfig dir is not enough if we're in a virtualenv; the greenlet.h
+    # header goes into a site/ subdir. See https://github.com/pypa/pip/issues/4610
+    dist_inc_dir = os.path.abspath(dist_sysconfig.get_python_inc()) # 1
+    sys_inc_dir = os.path.abspath(sysconfig.get_path("include")) # 2
+    venv_include_dir = os.path.join(
+        sys.prefix, 'include', 'site',
+        'python' + sysconfig.get_python_version()
+    )
+    venv_include_dir = os.path.abspath(venv_include_dir)
 
+    # If we're installed via buildout, and buildout also installs
+    # greenlet, we have *NO* access to greenlet.h at all. So include
+    # our own copy as a fallback.
+    dep_inc_dir = os.path.abspath('deps') # 3
+
+    return [
+        p
+        for p in (dist_inc_dir, sys_inc_dir, dep_inc_dir)
+        if os.path.exists(p)
+    ]
+
+
+## Processes
 
 def _system(cmd, cwd=None, env=None, **kwargs):
     sys.stdout.write('Running %r in %s\n' % (cmd, cwd or os.getcwd()))
