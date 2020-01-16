@@ -286,8 +286,37 @@ def __call_module_hook(gevent_module, name, module, items, _warnings):
     func(module, items, warn)
 
 
+class _GeventDoPatchRequest(object):
+
+    PY3 = PY3
+    get_original = staticmethod(get_original)
+
+    def __init__(self,
+                 target_module,
+                 source_module,
+                 items,
+                 patch_kwargs):
+        self.target_module = target_module
+        self.source_module = source_module
+        self.items = items
+        self.patch_kwargs = patch_kwargs or {}
+
+    def default_patch_items(self):
+        for attr in self.items:
+            patch_item(self.target_module, attr, getattr(self.source_module, attr))
+
+    def remove_item(self, target_module, *items):
+        if isinstance(target_module, str):
+            items = (target_module,) + items
+            target_module = self.target_module
+
+        for item in items:
+            remove_item(target_module, item)
+
+
 def patch_module(target_module, source_module, items=None,
                  _warnings=None,
+                 _patch_kwargs=None,
                  _notify_will_subscribers=True,
                  _notify_did_subscribers=True,
                  _call_hooks=True):
@@ -335,8 +364,16 @@ def patch_module(target_module, source_module, items=None,
     except events.DoNotPatch:
         return False
 
-    for attr in items:
-        patch_item(target_module, attr, getattr(source_module, attr))
+    # Undocumented, internal use: If the module defines
+    # `_gevent_do_monkey_patch(patch_request: _GeventDoPatchRequest)` call that;
+    # the module is responsible for its own patching.
+    do_patch = getattr(
+        source_module,
+        '_gevent_do_monkey_patch',
+        _GeventDoPatchRequest.default_patch_items
+    )
+    request = _GeventDoPatchRequest(target_module, source_module, items, _patch_kwargs)
+    do_patch(request)
 
     if _call_hooks:
         __call_module_hook(source_module, 'did', target_module, items, _warnings)
@@ -355,6 +392,7 @@ def patch_module(target_module, source_module, items=None,
 def _patch_module(name,
                   items=None,
                   _warnings=None,
+                  _patch_kwargs=None,
                   _notify_will_subscribers=True,
                   _notify_did_subscribers=True,
                   _call_hooks=True):
@@ -364,7 +402,7 @@ def _patch_module(name,
     target_module = __import__(module_name)
 
     patch_module(target_module, gevent_module, items=items,
-                 _warnings=_warnings,
+                 _warnings=_warnings, _patch_kwargs=_patch_kwargs,
                  _notify_will_subscribers=_notify_will_subscribers,
                  _notify_did_subscribers=_notify_did_subscribers,
                  _call_hooks=_call_hooks)
@@ -946,56 +984,8 @@ def patch_select(aggressive=True):
     - :class:`selectors.KqueueSelector`
     - :class:`selectors.DevpollSelector` (Python 3.5+)
     """
-
-    source_mod, target_mod = _patch_module('select', _notify_did_subscribers=False)
-    if aggressive:
-        select = target_mod
-        # since these are blocking we're removing them here. This makes some other
-        # modules (e.g. asyncore)  non-blocking, as they use select that we provide
-        # when none of these are available.
-        remove_item(select, 'epoll')
-        remove_item(select, 'kqueue')
-        remove_item(select, 'kevent')
-        remove_item(select, 'devpoll')
-
-    if PY3:
-        # Python 3 wants to use `select.select` as a member function,
-        # leading to this error in selectors.py (because gevent.select.select is
-        # not a builtin and doesn't get the magic auto-static that they do)
-        #    r, w, _ = self._select(self._readers, self._writers, [], timeout)
-        #    TypeError: select() takes from 3 to 4 positional arguments but 5 were given
-        # Note that this obviously only happens if selectors was imported after we had patched
-        # select; but there is a code path that leads to it being imported first (but now we've
-        # patched select---so we can't compare them identically)
-        select = target_mod # Should be gevent-patched now
-        orig_select_select = get_original('select', 'select')
-        assert select.select is not orig_select_select
-        selectors = __import__('selectors')
-        if selectors.SelectSelector._select in (select.select, orig_select_select):
-            def _select(self, *args, **kwargs): # pylint:disable=unused-argument
-                return select.select(*args, **kwargs)
-            selectors.SelectSelector._select = _select
-            _select._gevent_monkey = True
-
-        # Python 3.7 refactors the poll-like selectors to use a common
-        # base class and capture a reference to select.poll, etc, at
-        # import time. selectors tends to get imported early
-        # (importing 'platform' does it: platform -> subprocess -> selectors),
-        # so we need to clean that up.
-        if hasattr(selectors, 'PollSelector') and hasattr(selectors.PollSelector, '_selector_cls'):
-            selectors.PollSelector._selector_cls = select.poll
-
-        if aggressive:
-            # If `selectors` had already been imported before we removed
-            # select.epoll|kqueue|devpoll, these may have been defined in terms
-            # of those functions. They'll fail at runtime.
-            remove_item(selectors, 'EpollSelector')
-            remove_item(selectors, 'KqueueSelector')
-            remove_item(selectors, 'DevpollSelector')
-            selectors.DefaultSelector = selectors.SelectSelector
-
-    from gevent import events
-    _notify_patch(events.GeventDidPatchModuleEvent('select', source_mod, target_mod))
+    _patch_module('select',
+                  _patch_kwargs={'aggressive': aggressive})
 
 @_ignores_DoNotPatch
 def patch_subprocess():

@@ -299,3 +299,67 @@ if original_poll is not None:
             del self.fds[fileno]
 
 del original_poll
+
+
+def _gevent_do_monkey_patch(patch_request):
+    aggressive = patch_request.patch_kwargs['aggressive']
+    target_mod = patch_request.target_module
+
+    patch_request.default_patch_items()
+
+    if aggressive:
+        # since these are blocking we're removing them here. This makes some other
+        # modules (e.g. asyncore)  non-blocking, as they use select that we provide
+        # when none of these are available.
+        patch_request.remove_item(
+            'epoll'
+            'kqueue',
+            'kevent',
+            'devpoll',
+        )
+
+    if patch_request.PY3:
+        # TODO: Do we need to broadcast events about patching the selectors
+        # package? If so, must be careful to deal with DoNotPatch exceptions.
+
+        # Python 3 wants to use `select.select` as a member function,
+        # leading to this error in selectors.py (because gevent.select.select is
+        # not a builtin and doesn't get the magic auto-static that they do)
+        #    r, w, _ = self._select(self._readers, self._writers, [], timeout)
+        #    TypeError: select() takes from 3 to 4 positional arguments but 5 were given
+        # Note that this obviously only happens if selectors was imported after we had patched
+        # select; but there is a code path that leads to it being imported first (but now we've
+        # patched select---so we can't compare them identically)
+
+        orig_select_select = patch_request.get_original('select', 'select')
+        assert target_mod.select is not orig_select_select
+        selectors = __import__('selectors')
+        if selectors.SelectSelector._select in (target_mod.select, orig_select_select):
+            def _select(self, *args, **kwargs): # pylint:disable=unused-argument
+                return select(*args, **kwargs)
+            selectors.SelectSelector._select = _select
+            _select._gevent_monkey = True # prove for test cases
+
+        # Python 3.7 refactors the poll-like selectors to use a common
+        # base class and capture a reference to select.poll, etc, at
+        # import time. selectors tends to get imported early
+        # (importing 'platform' does it: platform -> subprocess -> selectors),
+        # so we need to clean that up.
+        if hasattr(selectors, 'PollSelector') and hasattr(selectors.PollSelector, '_selector_cls'):
+            selectors.PollSelector._selector_cls = poll
+
+        if aggressive:
+            # If `selectors` had already been imported before we removed
+            # select.epoll|kqueue|devpoll, these may have been defined in terms
+            # of those functions. They'll fail at runtime.
+            patch_request.remove_item(
+                selectors,
+                'EpollSelector',
+                'KqueueSelector',
+                'DevpollSelector',
+            )
+            selectors.DefaultSelector = getattr(
+                selectors,
+                'PollSelector',
+                selectors.SelectSelector
+            )

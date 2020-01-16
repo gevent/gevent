@@ -63,6 +63,13 @@ Other
   where `contextvars` is a standard library module, it is
   monkey-patched by default. See :issue:`1407`.
 
+- Use `selectors.PollSelector` as the `selectors.DefaultSelector`
+  after monkey-patching if `select.poll` was defined. Previously,
+  gevent replaced it with `selectors.SelectSelector`, which has a
+  different set of limitations (e.g., on certain platforms such as
+  glibc Linux, it has a hardcoded limitation of only working with file
+  descriptors < 1024). See :issue:`1466` reported by Sam Wong.
+
 1.5a3 (2020-01-01)
 ==================
 
