@@ -21,6 +21,9 @@ patch_all()
 )
 class TestSelectors(greentest.TestCase):
 
+    @greentest.skipOnWindows(
+        "SelectSelector._select is a normal function on Windows"
+    )
     def test_selectors_select_is_patched(self):
         # https://github.com/gevent/gevent/issues/835
         _select = selectors.SelectSelector._select
