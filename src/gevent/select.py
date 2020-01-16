@@ -5,6 +5,7 @@ Waiting for I/O completion.
 from __future__ import absolute_import, division, print_function
 
 import sys
+import select as __select__
 
 from gevent.event import Event
 from gevent.hub import _get_hub_noargs as get_hub
@@ -15,7 +16,7 @@ from gevent._util import copy_globals
 from gevent._util import _NONE
 
 from errno import EINTR
-from select import select as _real_original_select
+_real_original_select = __select__.select
 if sys.platform.startswith('win32'):
     def _original_select(r, w, x, t):
         # windows can't handle three empty lists, but we've always
@@ -26,21 +27,21 @@ if sys.platform.startswith('win32'):
 else:
     _original_select = _real_original_select
 
-
-try:
-    from select import POLLIN, POLLOUT, POLLNVAL
-    __implements__ = ['select', 'poll']
-except ImportError:
-    POLLIN = 1
-    POLLOUT = 4
-    POLLNVAL = 32
-    __implements__ = ['select']
+# These will be replaced by copy_globals
+POLLIN = 1
+POLLOUT = 4
+POLLNVAL = 32
+__implements__ = [
+    'select',
+]
+if hasattr(__select__, 'poll'):
+    __implements__.append('poll')
+else:
+    __extra__ = [
+        'poll',
+    ]
 
 __all__ = ['error'] + __implements__
-if 'poll' not in __all__:
-    __all__.append('poll')
-
-import select as __select__
 
 error = __select__.error
 
