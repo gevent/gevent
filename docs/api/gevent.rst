@@ -89,7 +89,7 @@ Waiting
 .. autofunction:: joinall
 
 Working with multiple processes
-=============================
+===============================
 
 .. note::
    These functions will only be available if :func:`os.fork` is

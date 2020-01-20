@@ -8,7 +8,6 @@ except ImportError:
 import socket
 
 import gevent
-from gevent import select
 
 from gevent.monkey import patch_all
 import gevent.testing as greentest
