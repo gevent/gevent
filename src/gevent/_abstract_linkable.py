@@ -202,9 +202,6 @@ class AbstractLinkable(object):
         return None # pragma: no cover all extent subclasses override
 
     def _wait(self, timeout=None):
-        if self.ready():
-            return self._wait_return_value(False, False)
-
         gotit = self._wait_core(timeout)
         return self._wait_return_value(True, gotit)
 
