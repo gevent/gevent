@@ -314,7 +314,7 @@ class poll(object):
 
 if _original_epoll is not _NONE:
     class epoll(object):
-        def __init__(self, sizehint=-1, flags=0):
+        def __init__(self, sizehint=-1, flags=0):  # pylint:disable=unused-argument
             self._watchers = dict()
             self._results = dict()
             self._inactive_watchers = set()
@@ -340,7 +340,7 @@ if _original_epoll is not _NONE:
             self._epoll_for_testing_fds.close()
 
             while self._watchers:
-                fd, watch = self._watchers.popitem()
+                _, watch = self._watchers.popitem()
                 watch.close()
 
             self._closed = True
