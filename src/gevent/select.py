@@ -34,12 +34,17 @@ POLLNVAL = 32
 __implements__ = [
     'select',
 ]
+__extra__ = []
+
 if hasattr(__select__, 'poll'):
     __implements__.append('poll')
 else:
-    __extra__ = [
-        'poll',
-    ]
+    __extra__.append("poll")
+
+if hasattr(__select__, 'epoll'):
+    __implements__.append('epoll')
+else:
+    __extra__.append("epoll")
 
 __all__ = ['error'] + __implements__
 
@@ -307,6 +312,101 @@ class poll(object):
         del self.fds[fileno]
 
 
+class epoll(object):
+    def __init__(self, sizehint=-1, flags=0):
+        self._watchers = dict()
+        self._results = dict()
+        self._inactive_watchers = set()
+
+        self._has_results = Event()
+
+        self._loop = get_hub().loop
+
+    def close(self, fh):
+        while self._watchers:
+            fd, watch = self._watchers.popitem()
+            watch.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, typ, val, tb):
+        self.close()
+
+    def _add_events(self, events, fd):
+        if events < 0:
+            poll_events = POLLNVAL
+        else:
+            poll_events = 0
+            if events & _EV_READ:
+                poll_events |= POLLIN
+            else:
+                poll_events |= POLLOUT
+
+        self._results[fd] = poll_events
+        self._has_results.set()
+
+    def register(self, fh, eventmask=_NONE):
+        fd = get_fileno(fh)
+        if fd in self._watchers:
+            raise FileExistsError
+
+        if eventmask is _NONE:
+            flags = _EV_READ | _EV_WRITE
+        else:
+            flags = 0
+            if eventmask & POLLIN:
+                flags |= _EV_READ
+            if eventmask & POLLOUT:
+                flags |= _EV_WRITE
+
+        watcher = self._loop.io(fd, flags)
+        watcher.priority = self._loop.MAXPRI
+        watcher.start(self._add_events, fd, pass_events=True)
+
+        self._watchers[fd] = watcher
+
+    def unregister(self, fh):
+        fd = get_fileno(fh)
+
+        self._results.pop(fd, None)
+        self._inactive_watchers.discard(fd)
+
+        watcher = self._watchers.pop(fd)
+        watcher.close()
+
+    def modify(self, fh, eventmask=_NONE):
+        self.unregister(fh)
+        self.register(fh, eventmask)
+
+    def poll(self, timeout=None, maxevents=-1):
+        while self._inactive_watchers:
+            fd = self._inactive_watchers.pop()
+            watcher = self._watchers[fd]
+            watcher.start(self._add_events, fd, pass_events=True)
+
+        if not self._results:
+            self._has_results.wait(timeout)
+
+        # Since we are emulating an epoll object within another epoll object,
+        # once a watcher has fired, we must deactivate it until poll is called
+        # next. If we did not, someone else could call, e.g., gevent.time.sleep
+        # and any unconsumed bytes on our watched fd would prevent the process
+        # from sleeping correctly.
+        for fd in self._results:
+            self._watchers[fd].stop()
+            self._inactive_watchers.add(fd)
+
+        ret = list(self._results.items())
+        self._results = dict()
+        self._has_results.clear()
+
+        if maxevents != -1:
+            ret = ret[:maxevents]
+
+        return ret
+
+
 def _gevent_do_monkey_patch(patch_request):
     aggressive = patch_request.patch_kwargs['aggressive']
     target_mod = patch_request.target_module
@@ -318,7 +418,6 @@ def _gevent_do_monkey_patch(patch_request):
         # modules (e.g. asyncore)  non-blocking, as they use select that we provide
         # when none of these are available.
         patch_request.remove_item(
-            'epoll'
             'kqueue',
             'kevent',
             'devpoll',
@@ -360,18 +459,20 @@ def _gevent_do_monkey_patch(patch_request):
         if hasattr(selectors, 'PollSelector') and hasattr(selectors.PollSelector, '_selector_cls'):
             selectors.PollSelector._selector_cls = poll
 
+        if hasattr(selectors, 'EpollSelector') and hasattr(selectors.PollSelector, '_selector_cls'):
+            selectors.EpollSelector._selector_cls = epoll
+
         if aggressive:
             # If `selectors` had already been imported before we removed
             # select.epoll|kqueue|devpoll, these may have been defined in terms
             # of those functions. They'll fail at runtime.
             patch_request.remove_item(
                 selectors,
-                'EpollSelector',
                 'KqueueSelector',
                 'DevpollSelector',
             )
             selectors.DefaultSelector = getattr(
                 selectors,
-                'PollSelector',
+                'EpollSelector',
                 selectors.SelectSelector
             )
