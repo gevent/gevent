@@ -27,6 +27,8 @@ if sys.platform.startswith('win32'):
 else:
     _original_select = _real_original_select
 
+_original_epoll = getattr(__select__, "epoll", _NONE)
+
 # These will be replaced by copy_globals
 POLLIN = 1
 POLLOUT = 4
@@ -43,8 +45,6 @@ else:
 
 if hasattr(__select__, 'epoll'):
     __implements__.append('epoll')
-else:
-    __extra__.append("epoll")
 
 __all__ = ['error'] + __implements__
 
@@ -312,99 +312,125 @@ class poll(object):
         del self.fds[fileno]
 
 
-class epoll(object):
-    def __init__(self, sizehint=-1, flags=0):
-        self._watchers = dict()
-        self._results = dict()
-        self._inactive_watchers = set()
+if _original_epoll is not _NONE:
+    class epoll(object):
+        def __init__(self, sizehint=-1, flags=0):
+            self._watchers = dict()
+            self._results = dict()
+            self._inactive_watchers = set()
 
-        self._has_results = Event()
+            self._has_results = Event()
 
-        self._loop = get_hub().loop
+            self._loop = get_hub().loop
+            self._epoll_for_testing_fds = _original_epoll()
+            self._closed = False
 
-    def close(self, fh):
-        while self._watchers:
-            fd, watch = self._watchers.popitem()
-            watch.close()
+        def _test_fd(self, fd, flags):
+            # Real epoll objects return errors the moment an invalid fd (e.g. a
+            # regular file) is registered with them. We emulate that by testing
+            # each submitted fd with a real epoll object.
+            self._epoll_for_testing_fds.register(fd, flags)
+            self._epoll_for_testing_fds.unregister(fd)
 
-    def __enter__(self):
-        return self
+        @property
+        def closed(self):
+            return self._closed
 
-    def __exit__(self, typ, val, tb):
-        self.close()
+        def close(self):
+            self._epoll_for_testing_fds.close()
 
-    def _add_events(self, events, fd):
-        if events < 0:
-            poll_events = POLLNVAL
-        else:
-            poll_events = 0
-            if events & _EV_READ:
-                poll_events |= POLLIN
+            while self._watchers:
+                fd, watch = self._watchers.popitem()
+                watch.close()
+
+            self._closed = True
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, typ, val, tb):
+            self.close()
+
+        def _add_events(self, events, fd):
+            if events < 0:
+                poll_events = POLLNVAL
             else:
-                poll_events |= POLLOUT
+                poll_events = 0
+                if events & _EV_READ:
+                    poll_events |= POLLIN
+                else:
+                    poll_events |= POLLOUT
 
-        self._results[fd] = poll_events
-        self._has_results.set()
+            self._results[fd] = poll_events
+            self._has_results.set()
 
-    def register(self, fh, eventmask=_NONE):
-        fd = get_fileno(fh)
-        if fd in self._watchers:
-            raise FileExistsError
+        def register(self, fh, eventmask=_NONE):
+            fd = get_fileno(fh)
+            if fd in self._watchers:
+                raise FileExistsError
 
-        if eventmask is _NONE:
-            flags = _EV_READ | _EV_WRITE
-        else:
-            flags = 0
-            if eventmask & POLLIN:
-                flags |= _EV_READ
-            if eventmask & POLLOUT:
-                flags |= _EV_WRITE
+            self._test_fd(fd, eventmask)
 
-        watcher = self._loop.io(fd, flags)
-        watcher.priority = self._loop.MAXPRI
-        watcher.start(self._add_events, fd, pass_events=True)
+            if eventmask is _NONE:
+                flags = _EV_READ | _EV_WRITE
+            else:
+                flags = 0
+                if eventmask & POLLIN:
+                    flags |= _EV_READ
+                if eventmask & POLLOUT:
+                    flags |= _EV_WRITE
 
-        self._watchers[fd] = watcher
-
-    def unregister(self, fh):
-        fd = get_fileno(fh)
-
-        self._results.pop(fd, None)
-        self._inactive_watchers.discard(fd)
-
-        watcher = self._watchers.pop(fd)
-        watcher.close()
-
-    def modify(self, fh, eventmask=_NONE):
-        self.unregister(fh)
-        self.register(fh, eventmask)
-
-    def poll(self, timeout=None, maxevents=-1):
-        while self._inactive_watchers:
-            fd = self._inactive_watchers.pop()
-            watcher = self._watchers[fd]
+            watcher = self._loop.io(fd, flags)
+            watcher.priority = self._loop.MAXPRI
             watcher.start(self._add_events, fd, pass_events=True)
 
-        if not self._results:
-            self._has_results.wait(timeout)
+            self._watchers[fd] = watcher
 
-        # Since we are emulating an epoll object within another epoll object,
-        # once a watcher has fired, we must deactivate it until poll is called
-        # next. If we did not, someone else could call, e.g., gevent.time.sleep
-        # and any unconsumed bytes on our watched fd would prevent the process
-        # from sleeping correctly.
-        for fd in self._results:
-            self._watchers[fd].stop()
-            self._inactive_watchers.add(fd)
+        def unregister(self, fh):
+            fd = get_fileno(fh)
 
-        ret = list(self._results.items())
-        self._results = dict()
-        self._has_results.clear()
+            self._results.pop(fd, None)
+            self._inactive_watchers.discard(fd)
 
-        if maxevents != -1:
-            ret = ret[:maxevents]
+            watcher = self._watchers.pop(fd)
+            watcher.close()
 
-        return ret
+        def modify(self, fh, eventmask=_NONE):
+            self.unregister(fh)
+            self.register(fh, eventmask)
+
+        def poll(self, timeout=None, maxevents=-1):
+            while self._inactive_watchers:
+                fd = self._inactive_watchers.pop()
+                watcher = self._watchers[fd]
+                watcher.start(self._add_events, fd, pass_events=True)
+
+            if not self._results:
+                self._has_results.wait(timeout)
+
+            # Since we are emulating an epoll object within another epoll object,
+            # once a watcher has fired, we must deactivate it until poll is called
+            # next. If we did not, someone else could call, e.g., gevent.time.sleep
+            # and any unconsumed bytes on our watched fd would prevent the process
+            # from sleeping correctly.
+            for fd in self._results:
+                self._watchers[fd].stop()
+                self._inactive_watchers.add(fd)
+
+            ret = list(self._results.items())
+            self._results = dict()
+            self._has_results.clear()
+
+            if maxevents != -1:
+                ret = ret[:maxevents]
+
+            return ret
+
+        def fileno(self):
+            # There is no file descriptor which backs this epoll implementation
+            # any epoll fd which does exist may be shared across many other callers,
+            # so returning it would potentially interfere with them.
+            raise NotImplementedError
 
 
 def _gevent_do_monkey_patch(patch_request):

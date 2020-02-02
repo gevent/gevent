@@ -29,14 +29,14 @@ class TestSelectors(greentest.TestCase):
         self.assertIn('_gevent_monkey', dir(_select))
 
     @greentest.skipUnless(
-        hasattr(selectors, 'PollSelector'),
+        hasattr(selectors, 'EpollSelector'),
         "Needs gevent.select.poll"
     )
     def test_poll_is_default(self):
         # Depending on the order of imports, gevent.select.poll may be defined but
         # selectors.PollSelector may not be defined.
         # https://github.com/gevent/gevent/issues/1466
-        self.assertIs(selectors.DefaultSelector, selectors.PollSelector)
+        self.assertIs(selectors.DefaultSelector, selectors.EpollSelector)
 
     def _check_selector(self, sel):
         def read(conn, _mask):

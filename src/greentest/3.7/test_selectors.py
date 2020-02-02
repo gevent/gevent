@@ -290,10 +290,16 @@ class BaseSelectorTestCase(unittest.TestCase):
         s = self.SELECTOR()
         self.addCleanup(s.close)
 
-        if hasattr(s, 'fileno'):
+        if not hasattr(s, 'fileno'):
+            return
+
+        try:
             fd = s.fileno()
-            self.assertTrue(isinstance(fd, int))
-            self.assertGreaterEqual(fd, 0)
+        except NotImplementedError:
+            return
+
+        self.assertTrue(isinstance(fd, int))
+        self.assertGreaterEqual(fd, 0)
 
     def test_selector(self):
         s = self.SELECTOR()
