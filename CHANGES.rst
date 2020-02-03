@@ -18,6 +18,10 @@ Platform and Packaging Updates
   tweaked with the intent of making it easier to use older debug
   versions of Python. See :issue:`1461`.
 
+- The binary wheels and installed package no longer include generated
+  C source files and headers. Also excluded are Cython .pxd files,
+  which were never documented. Please file an issue if you miss these.
+
 Library and Dependency Updates
 ------------------------------
 

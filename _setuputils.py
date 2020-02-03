@@ -153,7 +153,7 @@ def make_universal_header(filename, *defines):
                         break
             print(line, file=f)
 
-def get_include_dirs():
+def get_include_dirs(*extra_paths):
     """
     Return additional include directories that might be needed to
     compile extensions. Specifically, we need the greenlet.h header
@@ -161,7 +161,7 @@ def get_include_dirs():
     """
     # setuptools will put the normal include directory for Python.h on the
     # include path automatically. We don't want to override that with
-    # a different Python3h if we can avoid it: On older versions of Python,
+    # a different Python.h if we can avoid it: On older versions of Python,
     # that can cause issues with debug builds (see https://github.com/gevent/gevent/issues/1461)
     # so order matters here.
     #
@@ -192,7 +192,7 @@ def get_include_dirs():
 
     return [
         p
-        for p in (dist_inc_dir, sys_inc_dir, dep_inc_dir)
+        for p in (dist_inc_dir, sys_inc_dir, dep_inc_dir) + extra_paths
         if os.path.exists(p)
     ]
 
@@ -213,7 +213,11 @@ def system(cmd, cwd=None, env=None, **kwargs):
         sys.exit(1)
 
 
+###
 # Cython
+###
+
+COMMON_UTILITY_INCLUDE_DIR = "src/gevent/_generated_include"
 
 # Based on code from
 # http://cython.readthedocs.io/en/latest/src/reference/compilation.html#distributing-cython-modules
@@ -236,17 +240,49 @@ except ImportError:
     cythonize = _dummy_cythonize
 
 def cythonize1(ext):
+    # All the directories we have .pxd files
+    # and .h files that are included regardless of
+    # embed settings.
+    standard_include_paths = [
+        'src/gevent',
+        'src/gevent/libev',
+        'src/gevent/resolver',
+        # This is for generated include files; see below.
+        '.',
+    ]
     try:
         new_ext = cythonize(
             [ext],
-            include_path=['src/gevent', 'src/gevent/libev', 'src/gevent/resolver'],
+            include_path=standard_include_paths,
             annotate=True,
             compiler_directives={
                 'language_level': '3str',
                 'always_allow_keywords': False,
                 'infer_types': True,
                 'nonecheck': False,
-            }
+            },
+            # The common_utility_include_dir (not well documented)
+            # causes Cython to emit separate files for much of the
+            # static support code. Each of the modules then includes
+            # the static files they need. They have hash names based
+            # on digest of all the relevant compiler directives,
+            # including those set here and those set in the file. It's
+            # worth monitoring to be sure that we don't start to get
+            # divergent copies; make sure files declare the same
+            # options.
+            #
+            # The value used here must be listed in the above ``include_path``,
+            # and included in sdists. Files will be included based on this
+            # full path, so its parent directory, ``.``, must be on the runtime
+            # include path.
+            common_utility_include_dir=COMMON_UTILITY_INCLUDE_DIR,
+            # The ``cache`` argument is not well documented, but causes Cython to
+            # cache to disk some intermediate results. In the past, this was
+            # incompatible with ``common_utility_include_dir``, but not anymore.
+            # However, it seems to only function on posix (it spawns ``du``).
+            # It doesn't seem to buy us much speed, and results in a bunch of
+            # ResourceWarnings about unclosed files.
+            # cache="build/cycache",
         )[0]
     except ValueError:
         # 'invalid literal for int() with base 10: '3str'
@@ -262,8 +298,29 @@ def cythonize1(ext):
         if hasattr(ext, optional_attr):
             setattr(new_ext, optional_attr,
                     getattr(ext, optional_attr))
+    new_ext.extra_compile_args.extend(IGNORE_THIRD_PARTY_WARNINGS)
+    new_ext.include_dirs.extend(standard_include_paths)
     return new_ext
 
+# A tuple of arguments to add to ``extra_compile_args``
+# to ignore warnings from third-party code we can't do anything
+# about.
+IGNORE_THIRD_PARTY_WARNINGS = ()
+if sys.platform == 'darwin':
+    # macos, or other platforms using clang
+    # (TODO: How to detect clang outside those platforms?)
+    IGNORE_THIRD_PARTY_WARNINGS += (
+        # If clang is old and doesn't support the warning, these
+        # are ignored, albeit not silently.
+        # The first two are all over the place from Cython.
+        '-Wno-unreachable-code',
+        '-Wno-deprecated-declarations',
+        # generic, started with some xcode update
+        '-Wno-incompatible-sysroot',
+        # libuv
+        '-Wno-tautological-compare',
+        '-Wno-implicit-function-declaration',
+    )
 
 ## Distutils extensions
 class BuildFailed(Exception):
@@ -322,8 +379,10 @@ class ConfiguringBuildExt(build_ext):
 
 
 class Extension(_Extension):
-    # This class exists currently mostly to make pylint
-    # happy in terms of attributes we use.
+    # This class has a few functions:
+    #
+    #    1. Make pylint happy in terms of attributes we use.
+    #    2. Add default arguments, often platform specific.
 
     def __init__(self, *args, **kwargs):
         self.libraries = []
@@ -366,6 +425,7 @@ class GeventClean(clean):
         dirs_to_remove = [
             'htmlcov',
             '.eggs',
+            COMMON_UTILITY_INCLUDE_DIR,
         ]
         if self.all:
             dirs_to_remove += [
