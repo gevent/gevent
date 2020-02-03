@@ -27,10 +27,21 @@ if sys.platform.startswith('win32'):
 else:
     _original_select = _real_original_select
 
-# These will be replaced by copy_globals
+# These will be replaced by copy_globals if they are defined by the
+# platform. They're not defined on Windows, but we still provide
+# poll() there. We only pay attention to POLLIN and POLLOUT.
 POLLIN = 1
+POLLPRI = 2
 POLLOUT = 4
+POLLERR = 8
+POLLHUP = 16
 POLLNVAL = 32
+
+POLLRDNORM = 64
+POLLRDBAND = 128
+POLLWRNORM = 4
+POLLWRBAND = 256
+
 __implements__ = [
     'select',
 ]
