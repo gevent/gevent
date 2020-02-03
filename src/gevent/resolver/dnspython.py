@@ -105,25 +105,36 @@ def _patch_dns():
         'dns': ('rdata', 'resolver', 'rdtypes'),
         'dns.rdtypes': ('IN', 'ANY', ),
         'dns.rdtypes.IN': ('A', 'AAAA',),
-        'dns.rdtypes.ANY': ('SOA',),
+        'dns.rdtypes.ANY': ('SOA', 'PTR'),
     }
     def extra_all(mod_name):
         return extras.get(mod_name, ())
-    patcher = importer('dns', extra_all)
-    top = patcher.module
-    def _dns_import_patched(name):
-        assert name.startswith('dns')
-        with patcher():
-            patcher.import_one(name)
-        return dns
 
-    # This module tries to dynamically import classes
-    # using __import__, and it's important that they match
-    # the ones we just created, otherwise exceptions won't be caught
-    # as expected. It uses a one-arg __import__ statement and then
-    # tries to walk down the sub-modules using getattr, so we can't
-    # directly use import_patched as-is.
-    top.rdata.__import__ = _dns_import_patched
+    def after_import_hook(mod):
+        # Runs while still in the original patching scope.
+        # The dns.rdata:get_rdata_class() function tries to
+        # dynamically import modules using __import__ and then walk
+        # through the attribute tree to find classes in `dns.rdtypes`.
+        # It is critical that this all matches up, otherwise we can
+        # get different exception classes that don't get caught.
+        # We could patch __import__ to do things at runtime, but it's
+        # easier to enumerate the world and populate the cache now
+        # before we then switch the names back.
+        rdata = mod.rdata
+        get_rdata_class = rdata.get_rdata_class
+        for rdclass in mod.rdataclass._by_value:
+            for rdtype in mod.rdatatype._by_value:
+                get_rdata_class(rdclass, rdtype)
+
+    patcher = importer('dns', extra_all, after_import_hook)
+    top = patcher.module
+
+    # Now disable the dynamic imports
+    def _no_dynamic_imports(name):
+        raise ValueError(name)
+
+    top.rdata.__import__ = _no_dynamic_imports
+
 
     return top
 
