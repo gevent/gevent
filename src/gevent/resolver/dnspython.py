@@ -78,9 +78,10 @@ from gevent.resolver import hostname_types
 from gevent.resolver._hostsfile import HostsFile
 from gevent.resolver._addresses import is_ipv6_addr
 
+from gevent.builtins import __import__ as g_import
+
 from gevent._compat import string_types
 from gevent._compat import iteritems
-from gevent._patcher import import_patched
 from gevent._config import config
 
 __all__ = [
@@ -88,61 +89,48 @@ __all__ = [
 ]
 
 # Import the DNS packages to use the gevent modules,
-# even if the system is not monkey-patched.
+# even if the system is not monkey-patched. If it *is* already
+# patched, this imports a second copy under a different name,
+# which is probably not strictly necessary, but matches
+# what we've historically done, and allows configuring the resolvers
+# differently.
 
-# Beginning in dnspython 0.16, note that this imports dns.dnssec,
-# which imports Cryptodome, which wants to load a lot of shared
-# libraries, and to do so it invokes platform.architecture() for each
-# one; that wants to fork and run commands (see events.py for similar
-# issues with platform, and test__threading_2.py for notes about
-# threading._after_fork if the GIL has been initialized), which in
-# turn want to call threading._after_fork if the GIL has been
-# initialized; all of that means that this now wants to have the hub
-# initialized potentially much earlier than before, although we delay
-# importing and creating the resolver until the hub is asked for it.
-# We avoid the _after_fork issues by first caching the results of
-# platform.architecture before doing the patched imports.
 def _patch_dns():
-    import platform
-    result = platform.architecture()
-    orig_arch = platform.architecture
-    def arch(*args, **kwargs):
-        if not args and not kwargs:
-            return result
-        return orig_arch(*args, **kwargs)
-    platform.architecture = arch
-    try:
-        top = import_patched('dns')
-        for pkg in ('dns',
-                    'dns.rdtypes',
-                    'dns.rdtypes.IN',
-                    'dns.rdtypes.ANY'):
-            mod = import_patched(pkg)
-            for name in mod.__all__:
-                setattr(mod, name, import_patched(pkg + '.' + name))
-    finally:
-        platform.architecture = orig_arch
+    from gevent._patcher import import_patched as importer
+    # The dns package itself is empty but defines __all__
+    # we make sure to import all of those things now under the
+    # patch. Note this triggers two DeprecationWarnings,
+    # one of which we could avoid.
+    extras = {
+        'dns': ('rdata', 'resolver', 'rdtypes'),
+        'dns.rdtypes': ('IN', 'ANY', ),
+        'dns.rdtypes.IN': ('A', 'AAAA',),
+        'dns.rdtypes.ANY': ('SOA',),
+    }
+    def extra_all(mod_name):
+        return extras.get(mod_name, ())
+    patcher = importer('dns', extra_all)
+    top = patcher.module
+    def _dns_import_patched(name):
+        assert name.startswith('dns')
+        with patcher():
+            patcher.import_one(name)
+        return dns
+
+    # This module tries to dynamically import classes
+    # using __import__, and it's important that they match
+    # the ones we just created, otherwise exceptions won't be caught
+    # as expected. It uses a one-arg __import__ statement and then
+    # tries to walk down the sub-modules using getattr, so we can't
+    # directly use import_patched as-is.
+    top.rdata.__import__ = _dns_import_patched
+
     return top
 
 dns = _patch_dns()
 
-def _dns_import_patched(name):
-    assert name.startswith('dns')
-    import_patched(name)
-    return dns
-
-# This module tries to dynamically import classes
-# using __import__, and it's important that they match
-# the ones we just created, otherwise exceptions won't be caught
-# as expected. It uses a one-arg __import__ statement and then
-# tries to walk down the sub-modules using getattr, so we can't
-# directly use import_patched as-is.
-dns.rdata.__import__ = _dns_import_patched
-
 resolver = dns.resolver
 dTimeout = dns.resolver.Timeout
-
-_exc_clear = getattr(sys, 'exc_clear', lambda: None)
 
 # This is a wrapper for dns.resolver._getaddrinfo with two crucial changes.
 # First, it backports https://github.com/rthalley/dnspython/issues/316
@@ -156,7 +144,9 @@ _exc_clear = getattr(sys, 'exc_clear', lambda: None)
 # lookups that are not super fast. But it does have a habit of leaving
 # exceptions around which can complicate our memleak checks.)
 def _getaddrinfo(host=None, service=None, family=AF_UNSPEC, socktype=0,
-                 proto=0, flags=0, _orig_gai=resolver._getaddrinfo):
+                 proto=0, flags=0,
+                 _orig_gai=resolver._getaddrinfo,
+                 _exc_clear=getattr(sys, 'exc_clear', lambda: None)):
     if flags & (socket.AI_ADDRCONFIG | socket.AI_V4MAPPED) != 0:
         # Not implemented.  We raise a gaierror as opposed to a
         # NotImplementedError as it helps callers handle errors more
@@ -170,7 +160,6 @@ def _getaddrinfo(host=None, service=None, family=AF_UNSPEC, socktype=0,
 resolver._getaddrinfo = _getaddrinfo
 
 HOSTS_TTL = 300.0
-
 
 
 class _HostsAnswer(dns.resolver.Answer):
