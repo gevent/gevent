@@ -259,13 +259,16 @@ if not LIBUV_EMBED:
 LIBUV_INCLUDE_DIRS.append(parentdir)
 
 ffi.cdef(_cdef)
-ffi.set_source('gevent.libuv._corecffi',
-               _source,
-               sources=LIBUV_SOURCES,
-               depends=LIBUV_SOURCES,
-               include_dirs=LIBUV_INCLUDE_DIRS,
-               libraries=list(LIBUV_LIBRARIES),
-               define_macros=list(LIBUV_MACROS))
+ffi.set_source(
+    'gevent.libuv._corecffi',
+    _source,
+    sources=LIBUV_SOURCES,
+    depends=LIBUV_SOURCES,
+    include_dirs=LIBUV_INCLUDE_DIRS,
+    libraries=list(LIBUV_LIBRARIES),
+    define_macros=list(LIBUV_MACROS),
+    extra_compile_args=list(_setuputils.IGNORE_THIRD_PARTY_WARNINGS),
+)
 
 if __name__ == '__main__':
     # See notes in libev/_corecffi_build.py for how to test this.

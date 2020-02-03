@@ -26,6 +26,7 @@ from _setuputils import dep_abspath
 from _setuputils import RUNNING_ON_CI
 from _setuputils import RUNNING_FROM_CHECKOUT
 from _setuputils import cythonize1
+from _setuputils import get_include_dirs
 
 
 CARES_EMBED = should_embed('c-ares')
@@ -85,13 +86,18 @@ def configure_ares(bext, ext):
         os.chdir(cwd)
 
 
-ARES = Extension(name='gevent.resolver.cares',
-                 sources=['src/gevent/resolver/cares.pyx'],
-                 include_dirs=['src/gevent/resolver'] + [dep_abspath('c-ares')] if CARES_EMBED else [],
-                 libraries=list(LIBRARIES),
-                 define_macros=list(DEFINE_MACROS),
-                 depends=glob_many('src/gevent/resolver/dnshelper.c',
-                                   'src/gevent/resolver/cares_*.[ch]'))
+ARES = Extension(
+    name='gevent.resolver.cares',
+    sources=[
+        'src/gevent/resolver/cares.pyx'
+    ],
+    include_dirs=get_include_dirs(*([dep_abspath('c-ares')] if CARES_EMBED else [])),
+    libraries=list(LIBRARIES),
+    define_macros=list(DEFINE_MACROS),
+    depends=glob_many(
+        'src/gevent/resolver/dnshelper.c',
+        'src/gevent/resolver/cares_*.[ch]')
+)
 
 ares_required = RUNNING_ON_CI and RUNNING_FROM_CHECKOUT
 ARES.optional = not ares_required
