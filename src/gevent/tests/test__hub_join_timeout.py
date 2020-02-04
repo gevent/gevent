@@ -10,7 +10,7 @@ from gevent.testing.testcase import TimeAssertMixin
 SMALL_TICK = 0.05
 
 # setting up signal does not affect join()
-gevent.signal(1, lambda: None)  # wouldn't work on windows
+gevent.signal_handler(1, lambda: None)  # wouldn't work on windows
 
 
 def repeated(func, repetitions=2):

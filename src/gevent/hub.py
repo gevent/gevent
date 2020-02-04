@@ -213,25 +213,32 @@ def kill(greenlet, exception=GreenletExit):
 
 class signal(object):
     """
+    signal_handler(signalnum, handler, *args, **kwargs) -> object
+
     Call the *handler* with the *args* and *kwargs* when the process
     receives the signal *signalnum*.
 
-    The *handler* will be run in a new greenlet when the signal is delivered.
+    The *handler* will be run in a new greenlet when the signal is
+    delivered.
 
-    This returns an object with the useful method ``cancel``, which, when called,
-    will prevent future deliveries of *signalnum* from calling *handler*.
+    This returns an object with the useful method ``cancel``, which,
+    when called, will prevent future deliveries of *signalnum* from
+    calling *handler*.
 
     .. note::
 
-        This may not operate correctly with SIGCHLD if libev child watchers
-        are used (as they are by default with os.fork).
+        This may not operate correctly with ``SIGCHLD`` if libev child
+        watchers are used (as they are by default with
+        `gevent.os.fork`). See :mod:`gevent.signal` for a more
+        general purpose solution.
 
     .. versionchanged:: 1.2a1
-       The ``handler`` argument is required to be callable at construction time.
-    """
 
-    # XXX: This is manually documented in gevent.rst while it is aliased in
-    # the gevent module.
+        The ``handler`` argument is required to
+        be callable at construction time.
+    """
+    # This is documented as a function, not a class,
+    # so we're free to change implementation details.
 
     greenlet_class = None
 

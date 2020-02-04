@@ -46,7 +46,6 @@ __all__ = [
     'killall',
     'reinit',
     'setswitchinterval',
-    'signal', # deprecated
     'signal_handler',
     'sleep',
     'spawn',
@@ -100,60 +99,11 @@ try:
 except ImportError:
     __all__.remove('fork')
 
-# See https://github.com/gevent/gevent/issues/648
-# A temporary backwards compatibility shim to enable users to continue
-# to treat 'from gevent import signal' as a callable, to matter whether
-# the 'gevent.signal' module has been imported first
-from gevent.hub import signal as _signal_class
-signal_handler = _signal_class
-from gevent import signal as _signal_module
-
-# The object 'gevent.signal' must:
-# - be callable, returning a gevent.hub.signal;
-# - answer True to isinstance(gevent.signal(...), gevent.signal);
-# - answer True to isinstance(gevent.signal(...), gevent.hub.signal)
-# - have all the attributes of the module 'gevent.signal';
-# - answer True to isinstance(gevent.signal, types.ModuleType) (optional)
-
-# The only way to do this is to use a metaclass, an instance of which (a class)
-# is put in sys.modules and is substituted for gevent.hub.signal.
-# This handles everything except the last one.
-
-
-class _signal_metaclass(type):
-
-    def __getattr__(cls, name):
-        return getattr(_signal_module, name)
-
-    def __setattr__(cls, name, value):
-        setattr(_signal_module, name, value)
-
-    def __instancecheck__(cls, instance):
-        return isinstance(instance, _signal_class)
-
-    def __dir__(cls):
-        return dir(_signal_module)
-
-
-class signal(object):
-
-    __doc__ = _signal_module.__doc__
-
-    def __new__(cls, *args, **kwargs):
-        return _signal_class(*args, **kwargs)
-
-
-# The metaclass is applied after the class declaration
-# for Python 2/3 compatibility
-signal = _signal_metaclass(str("signal"),
-                           (),
-                           dict(signal.__dict__))
-
-sys.modules['gevent.signal'] = signal
-sys.modules['gevent.hub'].signal = signal
-
-del sys
-
+# This used to be available as gevent.signal; that broke in 1.1b4 but
+# a temporary alias was added (See
+# https://github.com/gevent/gevent/issues/648). It was ugly and complex and
+# caused confusion, so it was removed in 1.5. See https://github.com/gevent/gevent/issues/1529
+from gevent.hub import signal as signal_handler
 
 # the following makes hidden imports visible to freezing tools like
 # py2exe. see https://github.com/gevent/gevent/issues/181

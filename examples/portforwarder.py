@@ -97,8 +97,8 @@ def main():
     dest = parse_address(args[1])
     server = PortForwarder(source, dest)
     log('Starting port forwarder %s:%s -> %s:%s', *(server.address[:2] + dest))
-    gevent.signal(signal.SIGTERM, server.close)
-    gevent.signal(signal.SIGINT, server.close)
+    gevent.signal_handler(signal.SIGTERM, server.close)
+    gevent.signal_handler(signal.SIGINT, server.close)
     server.start()
     gevent.wait()
 
