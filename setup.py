@@ -343,6 +343,9 @@ def run_setup(ext_modules):
                 '*.crt',
                 '*.txt',
                 '*.key',
+                # We have a few .py files that aren't technically in packages;
+                # This one enables coverage for testing.
+                'coveragesite/*.py',
             ]
         },
         ext_modules=ext_modules,
