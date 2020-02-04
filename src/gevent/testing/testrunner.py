@@ -561,9 +561,10 @@ def main():
             print("Ignoring coverage option on PyPy on CI; slow")
         else:
             coverage = True
-            os.environ['COVERAGE_PROCESS_START'] = os.path.abspath(".coveragerc")
+            cov_config = os.environ['COVERAGE_PROCESS_START'] = os.path.abspath(".coveragerc")
             if PYPY:
-                os.environ['COVERAGE_PROCESS_START'] = os.path.abspath(".coveragerc-pypy")
+                cov_config = os.environ['COVERAGE_PROCESS_START'] = os.path.abspath(".coveragerc-pypy")
+
             this_dir = os.path.dirname(__file__)
             site_dir = os.path.join(this_dir, 'coveragesite')
             site_dir = os.path.abspath(site_dir)
@@ -572,7 +573,11 @@ def main():
             # coverage files (which will have distinct suffixes because of parallel=true in .coveragerc
             # in this directory; makes them easier to combine and use with coverage report)
             os.environ['COVERAGE_FILE'] = os.path.abspath(".") + os.sep + ".coverage"
-            print("Enabling coverage to", os.environ['COVERAGE_FILE'], "with site", site_dir)
+            print("Enabling coverage to", os.environ['COVERAGE_FILE'],
+                  "with site", site_dir,
+                  "and configuration file", cov_config)
+            assert os.path.exists(cov_config)
+            assert os.path.exists(os.path.join(site_dir, 'sitecustomize.py'))
 
     _setup_environ(debug=options.debug)
 
