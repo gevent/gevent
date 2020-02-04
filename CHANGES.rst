@@ -74,6 +74,10 @@ Other
   glibc Linux, it has a hardcoded limitation of only working with file
   descriptors < 1024). See :issue:`1466` reported by Sam Wong.
 
+- Make the dnspython resolver work if dns python had been imported
+  before the gevent resolver was initialized. Reported in
+  :issue:`1526` by Chris Utz and Josh Zuech.
+
 1.5a3 (2020-01-01)
 ==================
 
