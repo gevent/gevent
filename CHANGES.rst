@@ -49,6 +49,15 @@ Library and Dependency Updates
   because of the limited amount of actual allocation that gets done
   this is not expected to be a bottleneck.
 
+Potentially Breaking Changes
+----------------------------
+
+- Remove the magic proxy object ``gevent.signal``. This served as both
+  a deprecated alias of `gevent.signal_handler` *and* the module
+  `gevent.signal`. This made it confusing to humans and static
+  analysis tools alike. The alias was deprecated since gevent 1.1b4.
+  See :issue:`1596`.
+
 Other
 -----
 
@@ -77,6 +86,7 @@ Other
 - Make the dnspython resolver work if dns python had been imported
   before the gevent resolver was initialized. Reported in
   :issue:`1526` by Chris Utz and Josh Zuech.
+
 
 1.5a3 (2020-01-01)
 ==================

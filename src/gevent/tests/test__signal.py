@@ -27,10 +27,11 @@ class TestSignal(greentest.TestCase):
     __timeout__ = greentest.LARGE_TIMEOUT
 
     def test_handler(self):
-        self.assertRaises(TypeError, gevent.signal, signal.SIGALRM, 1)
+        with self.assertRaises(TypeError):
+            gevent.signal_handler(signal.SIGALRM, 1)
 
     def test_alarm(self):
-        sig = gevent.signal(signal.SIGALRM, raise_Expected)
+        sig = gevent.signal_handler(signal.SIGALRM, raise_Expected)
         assert sig.ref is False, repr(sig.ref)
         sig.ref = True
         assert sig.ref is True
