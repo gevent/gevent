@@ -95,24 +95,6 @@ Other
   3.5.9, 3.6.9, 3.7.5 and 3.8.0 (final). It is also tested with PyPy2
   7.2 and PyPy 3.6 7.2
 
-- The file objects (FileObjectPosix, FileObjectThread) now
-  consistently text and binary modes. If neither 'b' nor 't' is given
-  in the mode, they will read and write native strings. If 't' is
-  given, they will always work with unicode strings, and 'b' will
-  always work with byte strings. (FileObjectPosix already worked this
-  way.) See :issue:`1441`.
-
-- The file objects accept *encoding*, *errors* and *newline*
-  arguments. On Python 2, these are only used if 't' is in the mode.
-
-- The default mode for FileObjectPosix changed from ``rb`` to simply
-  ``r``, for consistency with the other file objects and the standard
-  ``open`` and ``io.open`` functions.
-
-- Fix ``FileObjectPosix`` improperly being used from multiple
-  greenlets. Previously this was hidden by forcing buffering, which
-  raised ``RuntimeError``.
-
 - Fix using monkey-patched ``threading.Lock`` and ``threading.RLock``
   objects as spin locks by making them call ``sleep(0)`` if they
   failed to acquire the lock in a non-blocking call. This lets other
@@ -177,6 +159,35 @@ Other
   CPython 3.7 and 3.8 dictionaries are initially empty and only
   allocate space once an attribute is added; they're still smaller
   than on earlier versions though).
+
+
+File Object Changes
+-------------------
+
+.. caution:: There may be breaking changes here for applications that
+             relied on the old behaviour. The old behaviour was under
+             specified and inconsistent and really only worked
+             consistently with 'wb' and 'rb' modes, so most
+             applications shouldn't be affected.
+
+- The file objects (``FileObjectPosix``, ``FileObjectThread``) now
+  consistently support text and binary modes. If neither 'b' nor 't' is given
+  in the mode, they will read and write native strings. If 't' is
+  given, they will always work with unicode strings, and 'b' will
+  always work with byte strings. (``FileObjectPosix`` already worked this
+  way.) See :issue:`1441`.
+
+- The file objects accept *encoding*, *errors* and *newline*
+  arguments. On Python 2, these are only used if 't' is in the mode.
+
+- The default mode for ``FileObjectPosix`` changed from ``rb`` to simply
+  ``r``, for consistency with the other file objects and the standard
+  `open` and :func:`io.open` functions.
+
+- Fix ``FileObjectPosix`` improperly being used from multiple
+  greenlets. Previously this was hidden by forcing buffering, which
+  raised ``RuntimeError``.
+
 
 1.5a2 (2019-10-21)
 ==================
