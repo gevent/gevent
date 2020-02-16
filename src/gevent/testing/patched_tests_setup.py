@@ -715,7 +715,7 @@ if PYPY:
 
     if PY36:
         disabled_tests += [
-            # These are flaky, begining in 3.6-alpha 7.0, not finding some flag
+            # These are flaky, beginning in 3.6-alpha 7.0, not finding some flag
             # set, apparently a race condition
             'test_asyncore.TestAPI_UveIPv6Poll.test_handle_accept',
             'test_asyncore.TestAPI_UveIPv6Poll.test_handle_accepted',
