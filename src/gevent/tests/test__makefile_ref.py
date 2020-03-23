@@ -54,12 +54,15 @@ class Test(greentest.TestCase):
             raise
         raise AssertionError('NOT RAISED EBADF: %r() returned %r' % (func, result))
 
-    if WIN or (PYPY and PY3 and greentest.LINUX):
+    if WIN or (PYPY and greentest.LINUX):
         def __assert_fd_open(self, fileno):
             # We can't detect open file descriptors on Windows.
             # On PyPy 3.6-7.3 on Travis CI (linux), for some reason the
             # client file descriptors don't always show as open. Don't know why,
             # was fine in 7.2.
+            # On March 23 2020 we had to pin psutil back to a version
+            # for PyPy 2 (see setup.py) and this same problem started happening there.
+            # PyPy on macOS was unaffected.
             pass
     else:
         def __assert_fd_open(self, fileno):
