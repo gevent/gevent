@@ -4,7 +4,7 @@
 
 .. currentmodule:: gevent
 
-1.5a4 (unreleased)
+1.5a4 (2020-03-23)
 ==================
 
 Platform and Packaging Updates
