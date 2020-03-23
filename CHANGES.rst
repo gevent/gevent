@@ -49,6 +49,10 @@ Library and Dependency Updates
   because of the limited amount of actual allocation that gets done
   this is not expected to be a bottleneck.
 
+- Update the bundled ``tblib`` library to the unreleased 1.7.0
+  version. The only change is to add more attributes to ``Frame`` and ``Code``
+  objects for pytest compatibility. See :pr:`1541`.
+
 Potentially Breaking Changes
 ----------------------------
 
