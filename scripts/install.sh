@@ -108,10 +108,10 @@ for var in "$@"; do
             install 3.6.10 python3.6 3.6.d
             ;;
         3.7)
-            install 3.7.6 python3.7 3.7.d
+            install 3.7.7 python3.7 3.7.d
             ;;
         3.8)
-            install 3.8.1 python3.8 3.8.d
+            install 3.8.2 python3.8 3.8.d
             ;;
         pypy2.7)
             install pypy2.7-7.3.0 pypy2.7 pypy2.7.d
