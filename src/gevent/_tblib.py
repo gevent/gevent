@@ -110,6 +110,7 @@ tb_set_next = None
 # __init__.py
 import re
 from types import CodeType
+from types import FrameType
 from types import TracebackType
 
 try:
@@ -126,7 +127,12 @@ FRAME_RE = re.compile(r'^\s*File "(?P<co_filename>.+)", line (?P<tb_lineno>\d+)(
 
 class _AttrDict(dict):
     __slots__ = ()
-    __getattr__ = dict.__getitem__
+
+    def __getattr__(self, name):
+        try:
+            return self[name]
+        except KeyError:
+            raise AttributeError(name)
 
 
 # noinspection PyPep8Naming
@@ -142,21 +148,36 @@ class Code(object):
     def __init__(self, code):
         self.co_filename = code.co_filename
         self.co_name = code.co_name
+        self.co_argcount = 0
+        self.co_kwonlyargcount = 0
+        self.co_varnames = ()
         # gevent: copy more attributes
         self.co_nlocals = code.co_nlocals
         self.co_stacksize = code.co_stacksize
         self.co_flags = code.co_flags
         self.co_firstlineno = code.co_firstlineno
 
+    def __reduce__(self):
+        return Code, (_AttrDict(self.__dict__),)
+
+    # noinspection SpellCheckingInspection
+    def __tproxy__(self, operation, *args, **kwargs):
+        if operation in ('__getattribute__', '__getattr__'):
+            return getattr(self, args[0])
+        else:
+            return getattr(self, operation)(*args, **kwargs)
+
 
 class Frame(object):
     def __init__(self, frame):
+        self.f_locals = {}
         self.f_globals = dict([
             (k, v)
             for k, v in frame.f_globals.items()
             if k in ("__file__", "__name__")
         ])
         self.f_code = Code(frame.f_code)
+        self.f_lineno = frame.f_lineno
 
     def clear(self):
         # For compatibility with PyPy 3.5;
@@ -164,6 +185,17 @@ class Frame(object):
         # and is called by traceback.clear_frames(), which
         # in turn is called by unittest.TestCase.assertRaises
         pass
+
+    # noinspection SpellCheckingInspection
+    def __tproxy__(self, operation, *args, **kwargs):
+        if operation in ('__getattribute__', '__getattr__'):
+            if args[0] == 'f_code':
+                return tproxy(CodeType, self.f_code.__tproxy__)
+            else:
+                return getattr(self, args[0])
+        else:
+            return getattr(self, operation)(*args, **kwargs)
+
 
 class Traceback(object):
 
@@ -188,7 +220,7 @@ class Traceback(object):
 
     def as_traceback(self):
         if tproxy:
-            return tproxy(TracebackType, self.__tproxy_handler)
+            return tproxy(TracebackType, self.__tproxy__)
         if not tb_set_next:
             raise RuntimeError("Cannot re-create traceback !")
 
@@ -222,7 +254,7 @@ class Traceback(object):
 
             # noinspection PyBroadException
             try:
-                exec(code, current.tb_frame.f_globals, {})
+                exec(code, dict(current.tb_frame.f_globals), {})
             except:
                 next_tb = sys.exc_info()[2].tb_next
                 if top_tb is None:
@@ -238,19 +270,22 @@ class Traceback(object):
         finally:
             del top_tb
             del tb
+    to_traceback = as_traceback
 
 
     # noinspection SpellCheckingInspection
-    def __tproxy_handler(self, operation, *args, **kwargs):
+    def __tproxy__(self, operation, *args, **kwargs):
         if operation in ('__getattribute__', '__getattr__'):
             if args[0] == 'tb_next':
                 return self.tb_next and self.tb_next.as_traceback()
+            elif args[0] == 'tb_frame':
+                return tproxy(FrameType, self.tb_frame.__tproxy__)
             else:
                 return getattr(self, args[0])
         else:
             return getattr(self, operation)(*args, **kwargs)
 
-    def to_dict(self):
+    def as_dict(self):
         """Convert a Traceback into a dictionary representation"""
         if self.tb_next is None:
             tb_next = None
@@ -264,12 +299,14 @@ class Traceback(object):
         frame = {
             'f_globals': self.tb_frame.f_globals,
             'f_code': code,
+            'f_lineno': self.tb_frame.f_lineno,
         }
         return {
             'tb_frame': frame,
             'tb_lineno': self.tb_lineno,
             'tb_next': tb_next,
         }
+    to_dict = as_dict
 
     @classmethod
     def from_dict(cls, dct):
@@ -285,6 +322,7 @@ class Traceback(object):
         frame = _AttrDict(
             f_globals=dct['tb_frame']['f_globals'],
             f_code=code,
+            f_lineno=dct['tb_frame']['f_lineno'],
         )
         tb = _AttrDict(
             tb_frame=frame,
@@ -324,6 +362,7 @@ class Traceback(object):
                             __name__='?',
                         ),
                         f_code=_AttrDict(frame),
+                        f_lineno=int(frame['tb_lineno']),
                     ),
                     tb_next=previous,
                 )
