@@ -4,10 +4,12 @@
 # and disables ccache.
 # Setting it to python overrides our TRAVIS_PYTHON_VERSION (which
 # we're only using in hopes of being able to go *back* to using
-# python: one day so making the migration simpler)
-language: minimal
+# python: one day so making the migration simpler). "shell" and
+# "minimal" are aliases.
+language: shell
 dist: xenial
 group: travis_latest
+os: linux
 
 env:
     global:
@@ -39,7 +41,7 @@ env:
 
     # Recall that unless otherwise specified, jobs inherit
     # the first entry in this list.
-    matrix:
+    jobs:
       - TRAVIS_PYTHON_VERSION=2.7
       - TRAVIS_PYTHON_VERSION=3.5
       - TRAVIS_PYTHON_VERSION=3.6
@@ -48,9 +50,6 @@ env:
       - TRAVIS_PYTHON_VERSION=pypy2.7
       - TRAVIS_PYTHON_VERSION=pypy3.6
       - TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0 GEVENTSETUP_EV_VERIFY=3
-
-matrix:
-  fast_finish: true
 
 
 before_install:
@@ -125,6 +124,7 @@ stages:
 
 
 jobs:
+  fast_finish: true
   include:
     - &build-gevent
       stage: build-gevent
