@@ -17,10 +17,15 @@ class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
     """
     Semaphore(value=1) -> Semaphore
 
-    A semaphore manages a counter representing the number of release()
-    calls minus the number of acquire() calls, plus an initial value.
-    The acquire() method blocks if necessary until it can return
-    without making the counter negative.
+    .. seealso:: :class:`BoundedSemaphore` for a safer version that prevents
+       some classes of bugs. If unsure, most users should opt for `BoundedSemaphore`.
+
+    A semaphore manages a counter representing the number of `release`
+    calls minus the number of `acquire` calls, plus an initial value.
+    The `acquire` method blocks if necessary until it can return
+    without making the counter negative. A semaphore does not track ownership
+    by greenlets; any greenlet can call `release`, whether or not it has previously
+    called `acquire`.
 
     If not given, ``value`` defaults to 1.
 
@@ -29,16 +34,12 @@ class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
     This Semaphore's ``__exit__`` method does not call the trace function
     on CPython, but does under PyPy.
 
-    .. seealso:: :class:`BoundedSemaphore` for a safer version that prevents
-       some classes of bugs.
 
     .. versionchanged:: 1.4.0
-
-        The order in which waiters are awakened is not specified. It was not
-        specified previously, but usually went in FIFO order.
+        Document that the order in which waiters are awakened is not specified. It was not
+        specified previously, but due to CPython implementation quirks usually went in FIFO order.
     .. versionchanged:: 1.5a3
        Waiting greenlets are now awakened in the order in which they waited.
-
     .. versionchanged:: 1.5a3
        The low-level ``rawlink`` method (most users won't use this) now automatically
        unlinks waiters before calling them.
@@ -56,19 +57,43 @@ class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
         return '<%s counter=%s _links[%s]>' % params
 
     def locked(self):
-        """Return a boolean indicating whether the semaphore can be acquired.
-        Most useful with binary semaphores."""
+        """
+        Return a boolean indicating whether the semaphore can be
+        acquired (`False` if the semaphore *can* be acquired). Most
+        useful with binary semaphores (those with an initial value of 1).
+
+        :rtype: bool
+        """
         return self.counter <= 0
 
     def release(self):
         """
-        Release the semaphore, notifying any waiters if needed.
+        Release the semaphore, notifying any waiters if needed. There
+        is no return value.
+
+        .. note::
+
+            This can be used to over-release the semaphore.
+            (Release more times than it has been acquired or was initially
+            created with.)
+
+            This is usually a sign of a bug, but under some circumstances it can be
+            used deliberately, for example, to model the arrival of additional
+            resources.
+
+        :rtype: None
         """
         self.counter += 1
         self._check_and_notify()
         return self.counter
 
     def ready(self):
+        """
+        Return a boolean indicating whether the semaphore can be
+        acquired (`True` if the semaphore can be acquired).
+
+        :rtype: bool
+        """
         return self.counter > 0
 
     def _start_notify(self):
@@ -84,18 +109,18 @@ class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
 
     def wait(self, timeout=None):
         """
-        wait(timeout=None) -> int
-
         Wait until it is possible to acquire this semaphore, or until the optional
         *timeout* elapses.
 
-        .. caution:: If this semaphore was initialized with a size of 0,
+        .. note:: If this semaphore was initialized with a *value* of 0,
            this method will block forever if no timeout is given.
 
         :keyword float timeout: If given, specifies the maximum amount of seconds
            this method will block.
         :return: A number indicating how many times the semaphore can be acquired
-            before blocking.
+            before blocking. *This could be 0,* if other waiters acquired
+            the semaphore.
+        :rtype: int
         """
         if self.counter > 0:
             return self.counter
@@ -109,15 +134,16 @@ class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
 
         Acquire the semaphore.
 
-        .. caution:: If this semaphore was initialized with a size of 0,
+        .. note:: If this semaphore was initialized with a *value* of 0,
            this method will block forever (unless a timeout is given or blocking is
            set to false).
 
         :keyword bool blocking: If True (the default), this function will block
            until the semaphore is acquired.
-        :keyword float timeout: If given, specifies the maximum amount of seconds
+        :keyword float timeout: If given, and *blocking* is true,
+           specifies the maximum amount of seconds
            this method will block.
-        :return: A boolean indicating whether the semaphore was acquired.
+        :return: A `bool` indicating whether the semaphore was acquired.
            If ``blocking`` is True and ``timeout`` is None (the default), then
            (so long as this semaphore was initialized with a size greater than 0)
            this will always return True. If a timeout was given, and it expired before
@@ -172,9 +198,13 @@ class BoundedSemaphore(Semaphore):
         self._initial_value = self.counter
 
     def release(self):
+        """
+        Like :meth:`Semaphore.release`, but raises :class:`ValueError`
+        if the semaphore is being over-released.
+        """
         if self.counter >= self._initial_value:
             raise self._OVER_RELEASE_ERROR("Semaphore released too many times")
-        Semaphore.release(self)
+        return Semaphore.release(self)
 
 
 

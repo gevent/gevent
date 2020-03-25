@@ -1,5 +1,12 @@
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
-"""Locking primitives"""
+"""
+Locking primitives.
+
+These include semaphores with arbitrary bounds (:class:`Semaphore` and
+its safer subclass :class:`BoundedSemaphore`) and a semaphore with
+infinite bounds (:class:`DummySemaphore`), along with a reentrant lock
+(:class:`RLock`) with the same API as :class:`threading.RLock`.
+"""
 from __future__ import absolute_import
 
 from gevent.hub import getcurrent
@@ -9,8 +16,8 @@ from gevent._semaphore import Semaphore, BoundedSemaphore # pylint:disable=no-na
 
 __all__ = [
     'Semaphore',
-    'DummySemaphore',
     'BoundedSemaphore',
+    'DummySemaphore',
     'RLock',
 ]
 
@@ -129,7 +136,8 @@ class DummySemaphore(object):
     """
     DummySemaphore(value=None) -> DummySemaphore
 
-    A Semaphore initialized with "infinite" initial value. None of its
+    An object with the same API as :class:`Semaphore`,
+    initialized with "infinite" initial value. None of its
     methods ever block.
 
     This can be used to parameterize on whether or not to actually
@@ -166,6 +174,10 @@ class DummySemaphore(object):
         """A DummySemaphore is never locked so this always returns False."""
         return False
 
+    def ready(self):
+        """A DummySemaphore is never locked so this always returns True."""
+        return True
+
     def release(self):
         """Releasing a dummy semaphore does nothing."""
 
@@ -200,7 +212,23 @@ class DummySemaphore(object):
 class RLock(object):
     """
     A mutex that can be acquired more than once by the same greenlet.
+
+    A mutex can only be locked by one greenlet at a time. A single greenlet
+    can `acquire` the mutex as many times as desired, though. Each call to
+    `acquire` must be paired with a matching call to `release`.
+
+    It is an error for a greenlet that has not acquired the mutex
+    to release it.
+
+    Instances are context managers.
     """
+
+    __slots__ = (
+        '_block',
+        '_owner',
+        '_count',
+        '__weakref__',
+    )
 
     def __init__(self):
         self._block = Semaphore(1)
@@ -215,12 +243,21 @@ class RLock(object):
             self._count,
             self._owner)
 
-    def acquire(self, blocking=1):
+    def acquire(self, blocking=True, timeout=None):
+        """
+        Acquire the mutex, blocking if *blocking* is true, for up to
+        *timeout* seconds.
+
+        .. versionchanged:: 1.5a4
+           Added the *timeout* parameter.
+
+        :return: A boolean indicating whether the mutex was acquired.
+        """
         me = getcurrent()
         if self._owner is me:
             self._count = self._count + 1
             return 1
-        rc = self._block.acquire(blocking)
+        rc = self._block.acquire(blocking, timeout)
         if rc:
             self._owner = me
             self._count = 1
@@ -230,6 +267,12 @@ class RLock(object):
         return self.acquire()
 
     def release(self):
+        """
+        Release the mutex.
+
+        Only the greenlet that originally acquired the mutex can
+        release it.
+        """
         if self._owner is not getcurrent():
             raise RuntimeError("cannot release un-acquired lock")
         self._count = count = self._count - 1
