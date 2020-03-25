@@ -1,4 +1,4 @@
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 
 import functools
 import gc
@@ -133,7 +133,8 @@ class TestFileObjectBlock(greentest.TestCase): # serves as a base for the concur
         self.assertEqual(native_data, fileobj_data)
 
     def __check_native_matches(self, byte_data, open_mode,
-                               meth='read', **open_kwargs):
+                               meth='read', open_path=True,
+                               **open_kwargs):
         fileno, path = tempfile.mkstemp('.gevent_test_' + open_mode)
         self.addCleanup(os.remove, path)
 
@@ -143,8 +144,16 @@ class TestFileObjectBlock(greentest.TestCase): # serves as a base for the concur
         with io.open(path, open_mode, **open_kwargs) as f:
             native_data = getattr(f, meth)()
 
-        with self._makeOne(path, open_mode, **open_kwargs) as f:
-            gevent_data = getattr(f, meth)()
+        if open_path:
+            with self._makeOne(path, open_mode, **open_kwargs) as f:
+                gevent_data = getattr(f, meth)()
+        else:
+            # Note that we don't use ``io.open()`` for the raw file,
+            # on Python 2. We want 'r' to mean what the usual call to open() means.
+            opener = io.open if PY3 else open
+            with opener(path, open_mode, **open_kwargs) as raw:
+                with self._makeOne(raw) as f:
+                    gevent_data = getattr(f, meth)()
 
         self.assertEqual(native_data, gevent_data)
         return gevent_data
@@ -171,7 +180,7 @@ class TestFileObjectBlock(greentest.TestCase): # serves as a base for the concur
         pass
 
     @skipUnlessWorksWithRegularFiles
-    def test_rbU_produces_bytes(self):
+    def test_rbU_produces_bytes_readline(self):
         # Including U in rb still produces bytes.
         # Note that the universal newline behaviour is
         # essentially ignored in explicit bytes mode.
@@ -192,6 +201,24 @@ class TestFileObjectBlock(greentest.TestCase): # serves as a base for the concur
         )
         self.assertIsInstance(gevent_data[0], str)
 
+    @skipUnlessWorksWithRegularFiles
+    def test_r_readline_produces_native(self):
+        gevent_data = self.__check_native_matches(
+            b'line1\n',
+            'r',
+            meth='readline',
+        )
+        self.assertIsInstance(gevent_data, str)
+
+    @skipUnlessWorksWithRegularFiles
+    def test_r_readline_on_fobject_produces_native(self):
+        gevent_data = self.__check_native_matches(
+            b'line1\n',
+            'r',
+            meth='readline',
+            open_path=False,
+        )
+        self.assertIsInstance(gevent_data, str)
 
     def test_close_pipe(self):
         # Issue #190, 203

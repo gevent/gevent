@@ -188,8 +188,9 @@ class DummySemaphore(object):
     def unlink(self, callback):
         pass
 
-    def wait(self, timeout=None):
+    def wait(self, timeout=None): # pylint:disable=unused-argument
         """Waiting for a DummySemaphore returns immediately."""
+        return 1
 
     def acquire(self, blocking=True, timeout=None):
         """

@@ -8,6 +8,9 @@
 ==================
 
 - Make `gevent.lock.RLock.acquire` accept the *timeout* parameter.
+- Fix an ``AttributeError`` when wrapping gevent's ``FileObject``
+  around an opened text stream. Reported in :issue:`1542` by
+  dmrlawson.
 
 
 1.5a4 (2020-03-23)
