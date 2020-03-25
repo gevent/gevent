@@ -1,5 +1,12 @@
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
-"""Locking primitives"""
+"""
+Locking primitives.
+
+These include semaphores with arbitrary bounds (:class:`Semaphore` and
+its safer subclass :class:`BoundedSemaphore`) and a semaphore with
+infinite bounds (:class:`DummySemaphore`), along with a reentrant lock
+(:class:`RLock`) with the same API as :class:`threading.RLock`.
+"""
 from __future__ import absolute_import
 
 from gevent.hub import getcurrent

@@ -17,9 +17,8 @@ class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
     """
     Semaphore(value=1) -> Semaphore
 
-    .. note::
-        Most users should prefer :class:`BoundedSemaphore`, a safer
-        subclass of this class.
+    .. seealso:: :class:`BoundedSemaphore` for a safer version that prevents
+       some classes of bugs. If unsure, most users should opt for `BoundedSemaphore`.
 
     A semaphore manages a counter representing the number of `release`
     calls minus the number of `acquire` calls, plus an initial value.
@@ -35,8 +34,6 @@ class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
     This Semaphore's ``__exit__`` method does not call the trace function
     on CPython, but does under PyPy.
 
-    .. seealso:: :class:`BoundedSemaphore` for a safer version that prevents
-       some classes of bugs.
 
     .. versionchanged:: 1.4.0
         Document that the order in which waiters are awakened is not specified. It was not
