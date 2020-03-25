@@ -227,6 +227,7 @@ class RLock(object):
         '_block',
         '_owner',
         '_count',
+        '__weakref__',
     )
 
     def __init__(self):
