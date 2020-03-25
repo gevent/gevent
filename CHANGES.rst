@@ -7,7 +7,7 @@
 1.5a5 (unreleased)
 ==================
 
-- Nothing changed yet.
+- Make `gevent.lock.RLock.acquire` accept the *timeout* parameter.
 
 
 1.5a4 (2020-03-23)
