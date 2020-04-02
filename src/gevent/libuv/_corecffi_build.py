@@ -7,9 +7,10 @@
 # this file to know what functions are created and available on the generated
 # module.
 from __future__ import absolute_import, print_function
-import sys
 import os
 import os.path # pylint:disable=no-name-in-module
+import platform
+import sys
 
 from cffi import FFI
 
@@ -235,6 +236,9 @@ elif sys.platform.startswith('sunos'):
     _add_library('nsl')
     _add_library('sendfile')
     _add_library('socket')
+    if platform.release() == '5.10':
+        # https://github.com/libuv/libuv/issues/1458
+        _define_macro('SUNOS_NO_IFADDRS', '')
 elif WIN:
     _define_macro('_GNU_SOURCE', 1)
     _define_macro('WIN32', 1)
