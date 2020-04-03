@@ -194,11 +194,15 @@ elif sys.platform.startswith('netbsd'):
         _libuv_source('unix/posix-hrtime.c'),
         _libuv_source('unix/bsd-proctitle.c'),
     ]
-
 elif sys.platform.startswith('sunos'):
     LIBUV_SOURCES += [
         _libuv_source('unix/no-proctitle.c'),
         _libuv_source('unix/sunos.c'),
+    ]
+elif sys.platform.startswith('aix'):
+    LIBUV_SOURCES += [
+        _libuv_source('unix/aix.c'),
+        _libuv_source('unix/aix-common.c'),
     ]
 
 
@@ -235,6 +239,9 @@ elif sys.platform.startswith('sunos'):
     _add_library('nsl')
     _add_library('sendfile')
     _add_library('socket')
+elif sys.platform.startswith('aix'):
+    _define_macro('_LINUX_SOURCE_COMPAT', 1)
+    _add_library('perfstat')
 elif WIN:
     _define_macro('_GNU_SOURCE', 1)
     _define_macro('WIN32', 1)
