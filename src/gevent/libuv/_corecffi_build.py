@@ -7,9 +7,10 @@
 # this file to know what functions are created and available on the generated
 # module.
 from __future__ import absolute_import, print_function
-import sys
 import os
 import os.path # pylint:disable=no-name-in-module
+import platform
+import sys
 
 from cffi import FFI
 
@@ -239,6 +240,10 @@ elif sys.platform.startswith('sunos'):
     _add_library('nsl')
     _add_library('sendfile')
     _add_library('socket')
+    if platform.release() == '5.10':
+        # https://github.com/libuv/libuv/issues/1458
+        # https://github.com/giampaolo/psutil/blob/4d6a086411c77b7909cce8f4f141bbdecfc0d354/setup.py#L298-L300
+        _define_macro('SUNOS_NO_IFADDRS', '')
 elif sys.platform.startswith('aix'):
     _define_macro('_LINUX_SOURCE_COMPAT', 1)
     _add_library('perfstat')
