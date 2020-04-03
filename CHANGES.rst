@@ -11,7 +11,8 @@
 - Fix an ``AttributeError`` when wrapping gevent's ``FileObject``
   around an opened text stream. Reported in :issue:`1542` by
   dmrlawson.
-
+- Fix compilation of libuv on AIX and Solaris 10. See :pr:`1549` and :pr:`1548` 
+  by Arnon Yaari.
 
 1.5a4 (2020-03-23)
 ==================

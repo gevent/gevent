@@ -195,11 +195,15 @@ elif sys.platform.startswith('netbsd'):
         _libuv_source('unix/posix-hrtime.c'),
         _libuv_source('unix/bsd-proctitle.c'),
     ]
-
 elif sys.platform.startswith('sunos'):
     LIBUV_SOURCES += [
         _libuv_source('unix/no-proctitle.c'),
         _libuv_source('unix/sunos.c'),
+    ]
+elif sys.platform.startswith('aix'):
+    LIBUV_SOURCES += [
+        _libuv_source('unix/aix.c'),
+        _libuv_source('unix/aix-common.c'),
     ]
 
 
@@ -238,7 +242,11 @@ elif sys.platform.startswith('sunos'):
     _add_library('socket')
     if platform.release() == '5.10':
         # https://github.com/libuv/libuv/issues/1458
+        # https://github.com/giampaolo/psutil/blob/4d6a086411c77b7909cce8f4f141bbdecfc0d354/setup.py#L298-L300
         _define_macro('SUNOS_NO_IFADDRS', '')
+elif sys.platform.startswith('aix'):
+    _define_macro('_LINUX_SOURCE_COMPAT', 1)
+    _add_library('perfstat')
 elif WIN:
     _define_macro('_GNU_SOURCE', 1)
     _define_macro('WIN32', 1)
