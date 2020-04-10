@@ -20,3 +20,12 @@ requires = [
      # Python 3.7 requires at least 0.4.14, which is ABI incompatible with earlier
      "greenlet>=0.4.14 ; platform_python_implementation == 'CPython'",
 ]
+
+[tool.towncrier]
+directory = "docs/changes"
+filename = "CHANGES.rst"
+package = "gevent"
+package_dir = "src"
+issue_format = ":issue:`{issue}`"
+title_format = false
+template = "docs/_templates/hr-between-versions.rst.tmpl"

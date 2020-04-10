@@ -7,7 +7,7 @@
 .. toctree::
    :maxdepth: 2
 
-   changelog
+   changelog_1_4
 
 Detailed information on what has changed is available in the
 :doc:`changelog`. This document summarizes the most important changes

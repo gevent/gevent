@@ -11,8 +11,8 @@
 Supported Platforms
 ===================
 
-`gevent 1.5`_ runs on Python 2.7.9 and up, and Python 3.5, 3.6 and
-3.7. gevent requires the `greenlet <https://greenlet.readthedocs.io>`_
+`gevent 1.5`_ runs on Python 2.7.9 and up, and Python 3.5, 3.6, 3.7 and
+3.8. gevent requires the `greenlet <https://greenlet.readthedocs.io>`_
 library and will install the `cffi`_ library by default on Windows.
 The cffi library will become the default on all platforms in a future
 release of gevent.
@@ -65,9 +65,8 @@ Installation
 .. note::
 
    This section is about installing released versions of gevent as
-   distributed on the `Python Package Index`_. For developing with
-   gevent, including running tests, see `development`_. For building
-   gevent from source, including customizing the build and embedded
+   distributed on the `Python Package Index`_. For building gevent
+   from source, including customizing the build and embedded
    libraries, see `Installing From Source`_.
 
 .. _Python Package Index: http://pypi.org/project/gevent
@@ -132,18 +131,10 @@ test
     Everything needed to run the complete gevent test suite.
 
 
-Development
-===========
-
-For development information, including installing from git and running
-tests, see `development`_.
-
-
 .. _`pip`: https://pip.pypa.io/en/stable/installing/
 .. _`wheels`: http://pythonwheels.com
 .. _`gevent 1.5`: whatsnew_1_5.html
-.. _`development`: development.html
-.. _`Installing From Source`: installing_from_source.html
+.. _`Installing From Source`: http://gevent.org/development/installing_from_source.html
 
 .. _`cffi`: https://cffi.readthedocs.io
 .. _`limitations in libev`: http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#WIN32_PLATFORM_LIMITATIONS_AND_WORKA

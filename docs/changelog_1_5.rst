@@ -7,7 +7,7 @@
 .. towncrier release notes start
 
 
-1.5a5 (unreleased)
+1.5.0 (unreleased)
 ==================
 
 - Make `gevent.lock.RLock.acquire` accept the *timeout* parameter.
