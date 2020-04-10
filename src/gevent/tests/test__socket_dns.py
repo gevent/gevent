@@ -530,22 +530,28 @@ add(TestGeventOrg, TestGeventOrg.HOSTNAME)
 
 
 class TestFamily(TestCase):
-
+    maxDiff = None
     @classmethod
     def getresult(cls):
         if not hasattr(cls, '_result'):
-            cls._result = getattr(socket, 'getaddrinfo')(TestGeventOrg.HOSTNAME, None)
+            cls._result = socket.getaddrinfo(TestGeventOrg.HOSTNAME, None)
         return cls._result
 
+    @unittest.skip(
+        "In April 2020, the system resolvers started returning INET6 answers on macOS and Travis "
+        "whereas gevent only returns INET (presumably the RTD configuration changed). "
+    )
     def test_inet(self):
-        self.assertEqualResults(self.getresult(),
-                                gevent_socket.getaddrinfo(TestGeventOrg.HOSTNAME, None, socket.AF_INET),
-                                'getaddrinfo')
+        self.assertEqualResults(
+            self.getresult(),
+            gevent_socket.getaddrinfo(TestGeventOrg.HOSTNAME, None, socket.AF_INET),
+            'getaddrinfo')
 
     def test_unspec(self):
-        self.assertEqualResults(self.getresult(),
-                                gevent_socket.getaddrinfo(TestGeventOrg.HOSTNAME, None, socket.AF_UNSPEC),
-                                'getaddrinfo')
+        self.assertEqualResults(
+            self.getresult(),
+            gevent_socket.getaddrinfo(TestGeventOrg.HOSTNAME, None, socket.AF_UNSPEC),
+            'getaddrinfo')
 
     def test_badvalue(self):
         self._test('getaddrinfo', TestGeventOrg.HOSTNAME, None, 255)
