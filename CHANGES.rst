@@ -7,6 +7,12 @@
 .. towncrier release notes start
 
 
+20.0.0 (unreleased)
+===================
+
+- Nothing changed yet.
+
+
 1.5.0 (2020-04-10)
 ==================
 
