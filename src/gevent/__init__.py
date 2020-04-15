@@ -21,7 +21,7 @@ _version_info = namedtuple('version_info',
 #: .. deprecated:: 1.2
 #:  Use ``pkg_resources.parse_version(__version__)`` (or the equivalent
 #:  ``packaging.version.Version(__version__)``).
-version_info = _version_info(1, 5, 0, 'dev', 0)
+version_info = _version_info(20, 0, 0, 'dev', 0) # XXX: Remove me
 
 #: The human-readable PEP 440 version identifier.
 #: Use ``pkg_resources.parse_version(__version__)`` or

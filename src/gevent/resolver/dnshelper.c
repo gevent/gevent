@@ -13,10 +13,11 @@
 #include "cares_ntop.h"
 #include "cares_pton.h"
 
-#if PY_VERSION_HEX < 0x02060000
-  #define PyUnicode_FromString         PyString_FromString
-#elif PY_MAJOR_VERSION < 3
-  #define PyUnicode_FromString         PyBytes_FromString
+#if PY_MAJOR_VERSION >= 3
+#define PY3K
+#define GPyNative_FromString PyUnicode_FromString
+#else
+#define GPyNative_FromString PyString_FromString
 #endif
 
 
@@ -51,7 +52,7 @@ gevent_append_addr(PyObject* list, int family, void* src, char* tmpbuf, size_t t
     int status = -1;
     PyObject* tmp;
     if (ares_inet_ntop(family, src, tmpbuf, tmpsize)) {
-        tmp = PyUnicode_FromString(tmpbuf);
+        tmp = GPyNative_FromString(tmpbuf);
         if (tmp) {
             status = PyList_Append(list, tmp);
             Py_DECREF(tmp);
@@ -64,7 +65,7 @@ gevent_append_addr(PyObject* list, int family, void* src, char* tmpbuf, size_t t
 static PyObject*
 parse_h_name(struct hostent *h)
 {
-    return PyUnicode_FromString(h->h_name);
+    return GPyNative_FromString(h->h_name);
 }
 
 
@@ -81,7 +82,7 @@ parse_h_aliases(struct hostent *h)
         for (pch = h->h_aliases; *pch != NULL; pch++) {
             if (*pch != h->h_name && strcmp(*pch, h->h_name)) {
                 int status;
-                tmp = PyUnicode_FromString(*pch);
+                tmp = GPyNative_FromString(*pch);
                 if (tmp == NULL) {
                     break;
                 }

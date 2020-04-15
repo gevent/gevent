@@ -125,7 +125,7 @@ class watcher(_base.watcher):
         # Instead, this is arranged as a callback to GC when the
         # watcher class dies. Obviously it's important to keep the ffi
         # watcher alive.
-        # We can pass in "subclasses" if uv_handle_t that line up at the C level,
+        # We can pass in "subclasses" of uv_handle_t that line up at the C level,
         # but that don't in CFFI without a cast. But be careful what we use the cast
         # for, don't pass it back to C.
         ffi_handle_watcher = cls._FFI.cast('uv_handle_t*', ffi_watcher)

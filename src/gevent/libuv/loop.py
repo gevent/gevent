@@ -448,8 +448,8 @@ class loop(AbstractLoop):
         if not self._queued_callbacks:
             return False
 
-        cbs = list(self._queued_callbacks)
-        self._queued_callbacks = []
+        cbs = self._queued_callbacks[:]
+        del self._queued_callbacks[:]
 
         for watcher_ptr, arg in cbs:
             handle = watcher_ptr.data
@@ -458,15 +458,23 @@ class loop(AbstractLoop):
                 assert not libuv.uv_is_active(watcher_ptr)
                 continue
             val = _callbacks.python_callback(handle, arg)
-            if val == -1:
+            if val == -1: # Failure.
                 _callbacks.python_handle_error(handle, arg)
-            elif val == 1:
+            elif val == 1: # Success
                 if not libuv.uv_is_active(watcher_ptr):
-                    if watcher_ptr.data != handle:
-                        if watcher_ptr.data:
-                            _callbacks.python_stop(None)
-                    else:
-                        _callbacks.python_stop(handle)
+                    # The callback closed the watcher in C. Good.
+                    # It's supposed to also reset the pointer to NULL at
+                    # that same time. If it resets it to something else, we're
+                    # re-using the same watcher object, and that's not correct either.
+                    # Prevoiusly we checked for that case, but we shouldn't need to.
+                    handle_after_callback = watcher_ptr.data
+                    try:
+                        if handle_after_callback:
+                            _callbacks.python_stop(handle_after_callback)
+                        if handle_after_callback != handle:
+                            _callbacks.python_stop(handle)
+                    finally:
+                        watcher_ptr.data = ffi.NULL
         return True
 
 

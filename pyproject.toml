@@ -26,6 +26,6 @@ directory = "docs/changes"
 filename = "CHANGES.rst"
 package = "gevent"
 package_dir = "src"
-issue_format = ":issue:`{issue}`"
+issue_format = "See :issue:`{issue}`."
 title_format = false
 template = "docs/_templates/hr-between-versions.rst.tmpl"

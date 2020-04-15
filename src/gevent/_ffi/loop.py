@@ -310,17 +310,28 @@ class AbstractCallbacks(object):
 
 
 def assign_standard_callbacks(ffi, lib, callbacks_class, extras=()): # pylint:disable=unused-argument
+    """
+    Given the typical *ffi* and *lib* arguments, and a subclass of :class:`AbstractCallbacks`
+    in *callbacks_class*, set up the ``def_extern`` Python callbacks from C
+    into an instance of *callbacks_class*.
+
+    :param tuple extras: If given, this is a sequence of ``(name, error_function)``
+      additional callbacks to register. Each *name* is an attribute of
+      the *callbacks_class* instance. (Each element cas also be just a *name*.)
+    :return: The *callbacks_class* instance. This object must be kept alive,
+      typically at module scope.
+    """
     # callbacks keeps these cdata objects alive at the python level
     callbacks = callbacks_class(ffi)
     extras = [extra if len(extra) == 2 else (extra, None) for extra in extras]
     extras = tuple([(getattr(callbacks, name), error) for name, error in extras])
-    for (func, error_func) in ((callbacks.python_callback, None),
-                               (callbacks.python_handle_error, None),
-                               (callbacks.python_stop, None),
-                               (callbacks.python_check_callback,
-                                callbacks.check_callback_onerror),
-                               (callbacks.python_prepare_callback,
-                                callbacks.check_callback_onerror)) + extras:
+    for (func, error_func) in (
+            (callbacks.python_callback, None),
+            (callbacks.python_handle_error, None),
+            (callbacks.python_stop, None),
+            (callbacks.python_check_callback, callbacks.check_callback_onerror),
+            (callbacks.python_prepare_callback, callbacks.check_callback_onerror)
+    ) + extras:
         # The name of the callback function matches the 'extern Python' declaration.
         error_func = error_func or callbacks.unhandled_onerror
         callback = ffi.def_extern(onerror=error_func)(func)
