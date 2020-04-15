@@ -11,7 +11,9 @@ environment:
     # too often we get failures to resolve DNS names or failures
     # to connect on AppVeyor.
     GEVENTTEST_USE_RESOURCES: "-network"
-    PYTHONTRACEMALLOC: 10
+    # Enable this if debugging a resource leak. Otherwise
+    # it slows things down.
+    # PYTHONTRACEMALLOC: 10
 
   matrix:
 
@@ -155,8 +157,8 @@ build_script:
   # Build the compiled extension
   # Try to get some things that don't wind up in the pip cache as
   # built wheels if they're built during an isolated build.
-  - "%CMD_IN_ENV% %PYEXE% -m pip install -U pycparser wheel cython setuptools cffi wrapt"
-  - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -m pip install -r dev-requirements.txt
+  - "%CMD_IN_ENV% %PYEXE% -m pip install -U wheel cython setuptools cffi"
+  - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -m pip install -U -e .[test]
 
 test_script:
   # Run the project tests
@@ -171,7 +173,7 @@ after_test:
   # https://ci.appveyor.com/project/denik/gevent/builds/23810605/job/83aw4u67artt002b#L602
   # So we violate DRY and repeate some requirements in order to use
   # --no-build-isolation
-  - "%CMD_IN_ENV% %PYEXE% -m pip install -U pycparser wheel cython setuptools cffi"
+  - "%CMD_IN_ENV% %PYEXE% -m pip install wheel cython setuptools cffi"
   - "%CMD_IN_ENV% %PYEXE% -m pip wheel --no-build-isolation . -w dist"
   - ps: "ls dist"
 

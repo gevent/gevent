@@ -709,10 +709,14 @@ class Test_getnameinfo_127001(TestCase):
 
 class Test_getnameinfo_geventorg(TestCase):
 
+    @unittest.skipIf(RESOLVER_DNSPYTHON,
+                     "dnspython raises an error when multiple results are returned")
     def test_NUMERICHOST(self):
         self._test('getnameinfo', (TestGeventOrg.HOSTNAME, 80), 0)
         self._test('getnameinfo', (TestGeventOrg.HOSTNAME, 80), socket.NI_NUMERICHOST)
 
+    @unittest.skipIf(RESOLVER_DNSPYTHON,
+                     "dnspython raises an error when multiple results are returned")
     def test_NUMERICSERV(self):
         self._test('getnameinfo', (TestGeventOrg.HOSTNAME, 80), socket.NI_NUMERICSERV)
 
