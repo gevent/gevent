@@ -108,8 +108,8 @@ environment:
     #   PYTHON_EXE: python
 
 # matrix:
-#     allow_failures:
-#       - PYTHON_ID: "pypy"
+#   allow_failures:
+#     - PYTHON_ID: "pypy"
 
 install:
   # If there is a newer build queued for the same PR, cancel this one.
