@@ -19,6 +19,9 @@ env:
         - PYTHONUNBUFFERED=1
         - PYTHONDONTWRITEBYTECODE=1
         - PIP_UPGRADE_STRATEGY=eager
+        # Don't get warnings about Python 2 support being deprecated. We
+        # know.
+        - PIP_NO_PYTHON_VERSION_WARNING=1
         - CC="ccache gcc"
         - CCACHE_NOCPP2=true
         - CCACHE_SLOPPINESS=file_macro,time_macros,include_file_ctime,include_file_mtime

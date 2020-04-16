@@ -17,6 +17,9 @@ environment:
     # too often we get failures to resolve DNS names or failures
     # to connect on AppVeyor.
     GEVENTTEST_USE_RESOURCES: "-network"
+    # Don't get warnings about Python 2 support being deprecated. We
+    # know.
+    PIP_NO_PYTHON_VERSION_WARNING: 1
     # Enable this if debugging a resource leak. Otherwise
     # it slows things down.
     # PYTHONTRACEMALLOC: 10
