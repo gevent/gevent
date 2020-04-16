@@ -1,4 +1,10 @@
 clone_depth: 50
+max_jobs: 8
+shallow_clone: true
+build:
+  parallel: true
+  verbosity: minimal
+
 environment:
   global:
     # SDK v7.0 MSVC Express 2008's SetEnv.cmd script will fail if the
@@ -14,8 +20,14 @@ environment:
     # Enable this if debugging a resource leak. Otherwise
     # it slows things down.
     # PYTHONTRACEMALLOC: 10
+    ##
+    # Upload settings for twine.
+    TWINE_USERNAME: "__token__"
+    TWINE_PASSWORD:
+      secure: m1SSFQeqMo/O65xd0tKYT5wBnqVHSmX8nWw5aui+i65GWODEkXbRp4QQha9PLNtiQvYBTO4tAkWaimWhEHZyx6Zun/0yEcBmovFkLaLWXKdekIDcX+Oi0aefP1t4yoo8C9amOLMAV/t229P7hzqCUDHB9JHvhOWbBMsCJ4VCIKCCiMObUeSazD4lBwgiwMHHfyfMF+xWs24jc5D/7a/xpSghvzoaoLl/gBDCy1op2tsuAIgJCF0P1YjUP/bzVNqmjMa2bG5pQY5n8mskuTTqdA==
 
-  matrix:
+
+matrix:
 
     # Pre-installed Python versions, which Appveyor may upgrade to
     # a later point release.
@@ -184,3 +196,8 @@ artifacts:
 #on_success:
 #  - TODO: upload the content of dist/*.whl to a public wheelhouse
 #
+
+deploy_script:
+  - ps: if ($env:APPVEYOR_REPO_TAG -eq $TRUE) { pip install twine; twine upload --skip-existing dist/* }
+
+deploy: on
