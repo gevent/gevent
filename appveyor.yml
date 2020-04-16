@@ -141,8 +141,6 @@ install:
           (New-Object Net.WebClient).DownloadFile('https://bitbucket.org/pypy/pypy/downloads/pypy2.7-v7.3.0-win32.zip', "${env:PYTMP}\pypy2-v7.3.0-win32.zip");
         }
         7z x -y "${env:PYTMP}\pypy2-v7.3.0-win32.zip" -oC:\ | Out-Null;
-        & "${env:PYTHON}\pypy.exe" "-mensurepip";
-
       }
       elseif (-not(Test-Path($env:PYTHON))) {
         & appveyor\install.ps1;
@@ -159,8 +157,10 @@ install:
   - "%PYEXE% -c \"import struct; print(struct.calcsize('P') * 8)\""
 
   # Upgrade to the latest version of pip to avoid it displaying warnings
-  # about it being out of date.
-  - "%CMD_IN_ENV% %PYEXE% -m pip install --disable-pip-version-check --user --upgrade pip"
+  # about it being out of date. Do this here instead of above in
+  # powershell because the annoying 'DEPRECATION:blahblahblah 2.7 blahblahblah'
+  # breaks powershell.
+  - "%CMD_IN_ENV% %PYEXE% -mensurepip -U --user"
 
   - ps: "if(Test-Path(\"${env:PYTHON}\\bin\")) {ls ${env:PYTHON}\\bin;}"
   - ps: "if(Test-Path(\"${env:PYTHON}\\Scripts\")) {ls ${env:PYTHON}\\Scripts;}"
