@@ -15,7 +15,7 @@ from gevent.testing.sysinfo import RESOLVER_NOT_SYSTEM
 from gevent.testing.sysinfo import PYPY
 from gevent.testing.sysinfo import PY3
 from gevent.testing.sysinfo import PY35
-
+from gevent.testing.sysinfo import OSX
 from gevent.testing.sysinfo import LIBUV
 
 IGNORED_TESTS = []
@@ -279,18 +279,6 @@ if PYPY:
                 'test__pywsgi.py',
             ]
 
-        IGNORED_TESTS += [
-            # XXX Re-enable these when we have more time to investigate.
-            # This test, which normally takes ~60s, sometimes
-            # hangs forever after running several tests. I cannot reproduce,
-            # it seems highly load dependent. Observed with both libev and libuv.
-            'test__threadpool.py',
-            # This test, which normally takes 4-5s, sometimes
-            # hangs forever after running two tests. I cannot reproduce,
-            # it seems highly load dependent. Observed with both libev and libuv.
-            'test__threading_2.py',
-        ]
-
     if PY3 and TRAVIS:
         FAILING_TESTS += [
             ## ---
@@ -299,6 +287,18 @@ if PYPY:
             'FLAKY test_subprocess.py', # timeouts on one test.
         ]
 
+if TRAVIS and (PYPY or OSX):
+    IGNORED_TESTS += [
+        # XXX Re-enable these when we have more time to investigate.
+        # This test, which normally takes ~60s, sometimes
+        # hangs forever after running several tests. I cannot reproduce,
+        # it seems highly load dependent. Observed with both libev and libuv.
+        'test__threadpool.py',
+        # This test, which normally takes 4-5s, sometimes
+        # hangs forever after running two tests. I cannot reproduce,
+        # it seems highly load dependent. Observed with both libev and libuv.
+        'test__threading_2.py',
+    ]
 
 if LIBUV:
     if sys.platform.startswith("darwin"):

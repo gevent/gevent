@@ -38,8 +38,6 @@ def get_ALL_RESOURCES():
     # shouldn't be enabled by default or when asking for "all" resources.
     # ALL_RESOURCES is the list of resources enabled by default or with "all" resources.
 
-
-
     try:
         # 3.6 and 3.7
         from test.libregrtest import ALL_RESOURCES
@@ -64,7 +62,10 @@ def get_ALL_RESOURCES():
             'xpickle'
         )
 
-    return list(ALL_RESOURCES)
+    return list(ALL_RESOURCES) + [
+        # Do we test the stdlib monkey-patched?
+        'gevent_monkey',
+    ]
 
 
 def parse_resources(resource_str=None):

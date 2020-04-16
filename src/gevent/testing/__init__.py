@@ -89,6 +89,7 @@ from .skipping import skipOnPy3
 from .skipping import skipWithoutResource
 from .skipping import skipWithoutExternalNetwork
 from .skipping import skipOnPy2
+from .skipping import skipOnManylinux
 
 from .exception import ExpectedException
 

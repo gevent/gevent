@@ -461,10 +461,14 @@ class socket(_socketcommon.SocketMixin):
 
     if hasattr(_socket.socket, 'recvmsg_into'):
 
-        def recvmsg_into(self, *args):
+        def recvmsg_into(self, buffers, *args):
             while True:
                 try:
-                    return self._sock.recvmsg_into(*args)
+                    if args:
+                        # The C code is sensitive about whether extra arguments are
+                        # passed or not.
+                        return self._sock.recvmsg_into(buffers, *args)
+                    return self._sock.recvmsg_into(buffers)
                 except error as ex:
                     if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                         raise

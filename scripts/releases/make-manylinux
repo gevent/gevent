@@ -5,6 +5,15 @@
 set -e
 export PYTHONUNBUFFERED=1
 export PYTHONDONTWRITEBYTECODE=1
+# Use a fixed hash seed for reproducability
+export PYTHONHASHSEED=8675309
+# Disable tests that use external network resources;
+# too often we get failures to resolve DNS names or failures
+# to connect on AppVeyor.
+export GEVENTTEST_USE_RESOURCES="-network"
+export CI=1
+export TRAVIS=true
+export GEVENT_MANYLINUX=1
 
 if [ -d /gevent -a -d /opt/python ]; then
     # Running inside docker
@@ -18,9 +27,13 @@ if [ -d /gevent -a -d /opt/python ]; then
         cd /tmp/build
         git clone /gevent gevent
         cd gevent
-        PATH=$variant/bin:$PATH $variant/bin/pip wheel . -w dist
+        PATH=$variant/bin:$PATH $variant/bin/python -mpip wheel . -w dist
         auditwheel repair --plat manylinux2010_x86_64 dist/gevent*.whl
         cp wheelhouse/gevent*.whl /gevent/wheelhouse
+
+        PATH=$variant/bin:$PATH $variant/bin/python -mpip install -U --no-compile `ls dist/gevent*whl`[test]
+        PATH=$variant/bin:$PATH $variant/bin/python -mgevent.tests
+
         cd /gevent
         rm -rf /tmp/build
     done
@@ -29,3 +42,4 @@ if [ -d /gevent -a -d /opt/python ]; then
 fi
 
 docker run --rm -ti -v "$(pwd):/gevent" quay.io/pypa/manylinux2010_x86_64 /gevent/scripts/releases/$(basename $0)
+ls -l wheelhouse

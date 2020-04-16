@@ -11,11 +11,7 @@ except ImportError:
 import threading
 import unittest
 
-try:
-    from test import support
-except ImportError:
-    from test import test_support as support
-
+from gevent.testing import support
 from gevent.testing.testcase import TimeAssertMixin
 
 def _wait():

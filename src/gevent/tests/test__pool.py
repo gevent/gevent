@@ -533,7 +533,7 @@ class TestSpawn(greentest.TestCase):
         self.assertEqual(len(p), 1)
         p.spawn(gevent.sleep, 0.1)  # this spawn blocks until the old one finishes
         self.assertEqual(len(p), 1)
-        gevent.sleep(0.19 if not greentest.RUNNING_ON_APPVEYOR else 0.5)
+        gevent.sleep(0.19 if not greentest.EXPECT_POOR_TIMER_RESOLUTION else 0.5)
         self.assertEqual(len(p), 0)
 
     def testSpawnAndWait(self):

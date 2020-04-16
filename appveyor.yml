@@ -27,7 +27,7 @@ environment:
       secure: m1SSFQeqMo/O65xd0tKYT5wBnqVHSmX8nWw5aui+i65GWODEkXbRp4QQha9PLNtiQvYBTO4tAkWaimWhEHZyx6Zun/0yEcBmovFkLaLWXKdekIDcX+Oi0aefP1t4yoo8C9amOLMAV/t229P7hzqCUDHB9JHvhOWbBMsCJ4VCIKCCiMObUeSazD4lBwgiwMHHfyfMF+xWs24jc5D/7a/xpSghvzoaoLl/gBDCy1op2tsuAIgJCF0P1YjUP/bzVNqmjMa2bG5pQY5n8mskuTTqdA==
 
 
-matrix:
+  matrix:
 
     # Pre-installed Python versions, which Appveyor may upgrade to
     # a later point release.

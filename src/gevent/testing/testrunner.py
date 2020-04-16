@@ -35,6 +35,7 @@ TIMEOUT = 100 # seconds
 DEFAULT_NWORKERS = int(os.environ.get('NWORKERS') or max(cpu_count() - 1, 4))
 if DEFAULT_NWORKERS > 10:
     DEFAULT_NWORKERS = 10
+SUGGESTED_NWORKERS = DEFAULT_NWORKERS
 
 if RUN_LEAKCHECKS:
     # Capturing the stats takes time, and we run each
@@ -146,7 +147,10 @@ class Runner(object):
             util.sleep(self.TIME_WAIT_SPAWN)
 
     def __call__(self):
-        util.log("Running tests in parallel with concurrency %s" % (self._worker_count,),)
+        util.log("Running tests in parallel with concurrency %s %s." % (
+            self._worker_count,
+            util._colorize('number', '(concurrency available: %d)' % SUGGESTED_NWORKERS)
+        ),)
         # Setting global state, in theory we can be used multiple times.
         # This is fine as long as we are single threaded and call these
         # sequentially.
@@ -405,7 +409,7 @@ def report(total, failed, passed, exit=True, took=None,
         print_list(passed_unexpected)
 
     if failed:
-        util.log('\n%s/%s tests failed%s', len(failed), total, took)
+        util.log('\n%s/%s tests failed%s', len(failed), total, took, color='warning')
 
         for name in failed:
             if matches(configured_failing_tests, name, include_flaky=True):
@@ -414,7 +418,7 @@ def report(total, failed, passed, exit=True, took=None,
                 failed_unexpected.append(name)
 
         if failed_expected:
-            util.log('\n%s/%s expected failures', len(failed_expected), total)
+            util.log('\n%s/%s expected failures', len(failed_expected), total, color='warning')
             print_list(failed_expected)
 
         if failed_unexpected:

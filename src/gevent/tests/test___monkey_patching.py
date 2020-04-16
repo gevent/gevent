@@ -7,6 +7,7 @@ import atexit
 
 from gevent.testing import util
 from gevent.testing import sysinfo
+from gevent.testing.support import is_resource_enabled
 
 TIMEOUT = 120
 
@@ -19,6 +20,11 @@ def get_absolute_pythonpath():
 
 
 def TESTRUNNER(tests=None):
+    if not is_resource_enabled('gevent_monkey'):
+        util.log('WARNING: Testing monkey-patched stdlib has been disabled',
+                 color="suboptimal-behaviour")
+        return
+
     try:
         test_dir, version_test_dir = util.find_stdlib_tests()
     except util.NoSetupPyFound as e:

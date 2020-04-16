@@ -320,6 +320,9 @@ if sys.platform == 'darwin':
         # libuv
         '-Wno-tautological-compare',
         '-Wno-implicit-function-declaration',
+        # libev
+        '-Wno-unused-value',
+        '-Wno-macro-redefined',
     )
 
 ## Distutils extensions

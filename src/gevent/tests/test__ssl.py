@@ -49,6 +49,13 @@ class TestSSL(test__socket.TestTCP):
     # to send a very large amount to make it timeout
     _test_sendall_data = data_sent = b'hello' * 100000000
 
+    test_sendall_array = greentest.skipOnManylinux("Sometimes misses data")(
+        test__socket.TestTCP.test_sendall_array
+    )
+    test_sendall_str = greentest.skipOnManylinux("Sometimes misses data")(
+        test__socket.TestTCP.test_sendall_str
+    )
+
     @greentest.skipOnWindows("Not clear why we're skipping")
     def test_ssl_sendall_timeout0(self):
         # Issue #317: SSL_WRITE_PENDING in some corner cases

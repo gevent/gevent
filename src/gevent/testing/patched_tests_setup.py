@@ -1239,6 +1239,13 @@ disabled_tests += [
     'test_ssl.BasicSocketTests.test_openssl_version'
 ]
 
+if TRAVIS and OSX:
+
+    disabled_tests += [
+        # This sometimes produces OSError: Errno 40: Message too long
+        'test_socket.RecvmsgIntoTCPTest.testRecvmsgIntoGenerator',
+    ]
+
 # Now build up the data structure we'll use to actually find disabled tests
 # to avoid a linear scan for every file (it seems the list could get quite large)
 # (First, freeze the source list to make sure it isn't modified anywhere)

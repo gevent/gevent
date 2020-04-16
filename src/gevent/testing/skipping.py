@@ -35,6 +35,7 @@ def _do_not_skip(reason):
 skipOnWindows = _do_not_skip
 skipOnAppVeyor = _do_not_skip
 skipOnCI = _do_not_skip
+skipOnManylinux = _do_not_skip
 
 skipOnPyPy = _do_not_skip
 skipOnPyPyOnCI = _do_not_skip
@@ -76,6 +77,8 @@ if sysinfo.RUNNING_ON_APPVEYOR:
 if sysinfo.RUNNING_ON_CI:
     skipOnCI = unittest.skip
 
+if sysinfo.RUNNING_ON_MANYLINUX:
+    skipOnManylinux = unittest.skip
 
 if sysinfo.PYPY:
     skipOnPyPy = unittest.skip

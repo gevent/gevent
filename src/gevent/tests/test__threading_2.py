@@ -28,11 +28,8 @@ exec(setup_)
 setup_3 = '\n'.join('            %s' % line for line in setup_.split('\n'))
 setup_4 = '\n'.join('                %s' % line for line in setup_.split('\n'))
 
-
-try:
-    from test.support import verbose
-except ImportError:
-    from test.test_support import verbose
+from gevent.testing import support
+verbose = support.verbose
 
 import random
 import re

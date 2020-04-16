@@ -113,16 +113,20 @@ else:
 RUNNING_ON_TRAVIS = os.environ.get('TRAVIS')
 RUNNING_ON_APPVEYOR = os.environ.get('APPVEYOR')
 RUNNING_ON_CI = RUNNING_ON_TRAVIS or RUNNING_ON_APPVEYOR
+RUNNING_ON_MANYLINUX = os.environ.get('GEVENT_MANYLINUX')
 
 if RUNNING_ON_APPVEYOR:
     # We can't exec corecext on appveyor if we haven't run setup.py in
     # 'develop' mode (i.e., we install)
     NON_APPLICABLE_SUFFIXES += ('corecext',)
 
-EXPECT_POOR_TIMER_RESOLUTION = (PYPY3
-                                or RUNNING_ON_APPVEYOR
-                                or (LIBUV and PYPY)
-                                or RUN_COVERAGE)
+EXPECT_POOR_TIMER_RESOLUTION = (
+    PYPY3
+    or RUNNING_ON_APPVEYOR
+    or (LIBUV and PYPY)
+    or RUN_COVERAGE
+    or (OSX and RUNNING_ON_CI)
+)
 
 
 CONN_ABORTED_ERRORS = []

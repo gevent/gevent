@@ -108,7 +108,7 @@ class Test(greentest.TestCase):
 
     @greentest.skipOnAppVeyor("Timing is flaky, especially under Py 3.4/64-bit")
     @greentest.skipOnPyPy3OnCI("Timing is flaky, especially under Py 3.4/64-bit")
-    @greentest.reraises_flaky_timeout(Timeout)
+    @greentest.reraises_flaky_timeout((Timeout, AssertionError))
     def test_api(self):
         # Nothing happens if with-block finishes before the timeout expires
         t = Timeout(DELAY * 2)

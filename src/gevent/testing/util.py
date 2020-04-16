@@ -108,27 +108,16 @@ def log(message, *args, **kwargs):
 
     :keyword str color: One of the values from _colorscheme
     """
+    color = kwargs.pop('color', 'normal')
+
+    if args:
+        string = message % args
+    else:
+        string = message
+    string = _colorize(color, string)
+
     with output_lock: # pylint:disable=not-context-manager
-        color = kwargs.pop('color', 'normal')
-        try:
-            if args:
-                string = message % args
-            else:
-                string = message
-        except Exception:
-            traceback.print_exc()
-            try:
-                string = '%r %% %r\n\n' % (message, args)
-            except Exception:
-                pass
-            try:
-                string = _colorize('exception', string)
-                sys.stderr.write(string)
-            except Exception:
-                traceback.print_exc()
-        else:
-            string = _colorize(color, string)
-            sys.stderr.write(string + '\n')
+        sys.stderr.write(string + '\n')
 
 def debug(message, *args, **kwargs):
     """

@@ -11,10 +11,13 @@ dist: xenial
 group: travis_latest
 os: linux
 
+
 env:
     global:
         - BUILD_RUNTIMES=$HOME/.runtimes
         - PYTHONHASHSEED=8675309
+        - PYTHONUNBUFFERED=1
+        - PYTHONDONTWRITEBYTECODE=1
         - PIP_UPGRADE_STRATEGY=eager
         - CC="ccache gcc"
         - CCACHE_NOCPP2=true
@@ -28,9 +31,13 @@ env:
         - CPPFLAGS="-I$BUILD_LIBS/include -DEV_VERIFY=3"
         - LDFLAGS="-L$BUILD_LIBS/lib"
         - LD_LIBRARY_PATH="$BUILD_LIBS/lib"
+        # Uploading built wheels for releases.
+        # TWINE_PASSWORD is encrypted and stored directly in the
+        # travis repo settings.
+        - TWINE_USERNAME="__token__"
 
     # Note that this list is again *manually* expanded
-    # for the 'cache' stage. The benefit of doing this (instead of
+    # for the 'build-gevent' stage. The benefit of doing this (instead of
     # only listing a single version here, or using a different 'language')
     # is that we get separate caches per version. This keeps them small,
     # and prevents stepping on each other when we change Python minor
@@ -51,6 +58,24 @@ env:
       - TRAVIS_PYTHON_VERSION=pypy3.6
       - TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0 GEVENTSETUP_EV_VERIFY=3
 
+cache:
+  pip: true
+  directories:
+    - $HOME/.venv
+    - $HOME/.runtimes
+    - $HOME/.wheelhouse
+    - $HOME/.ccache
+    - $BUILD_LIBS
+    - $HOME/Library/Caches/pip
+
+before_cache:
+    - rm -f $HOME/.cache/pip/log/debug.log
+    # Store the configure caches. Having a cache can speed up c-ares
+    # configure from 2-3 minutes to 20 seconds.
+    - mkdir -p $BUILD_LIBS
+    - if [ -f deps/c-ares/config.cache ]; then cp deps/c-ares/config.cache $BUILD_LIBS/config.cache.ares ; fi
+    - if [ -f deps/libev/config.cache ];  then cp deps/libev/config.cache $BUILD_LIBS/config.cache.libev ; fi
+    - if [ -f deps/libuv/config.cache ];  then cp deps/libuv/config.cache $BUILD_LIBS/config.cache.libuv ; fi
 
 before_install:
   - export PATH=$BUILD_RUNTIMES/snakepit/$TRAVIS_PYTHON_VERSION.d/bin:$PATH
@@ -59,34 +84,24 @@ before_install:
   - if [ -f $BUILD_LIBS/config.cache.ares ]; then cp $BUILD_LIBS/config.cache.ares deps/c-ares/config.cache ; fi
   - if [ -f $BUILD_LIBS/config.cache.libev ]; then cp $BUILD_LIBS/config.cache.libev deps/libev/config.cache ; fi
   - if [ -f $BUILD_LIBS/config.cache.libuv ]; then cp $BUILD_LIBS/config.cache.libuv deps/libuv/config.cache ; fi
+  - |
+    if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+      whoami
+      mkdir -p $HOME/Library/Caches/pip
+      chown -R `whoami` $HOME/Library/Caches/pip
+      git clone https://github.com/MacPython/terryfy
+      source terryfy/travis_tools.sh
+      get_python_environment $TERRYFY_PYTHON venv
+      unset CC
+    fi
 
 before_script:
   # Show some details of interest
-  - python --version
-  - >
-    python -c "import greenlet; print(greenlet, greenlet.__version__)"
-  - >
-    python -c "import gevent.core; print(gevent.core.loop)"
-  - >
-    python -c "import gevent.ares; print(gevent.ares)"
-
-cache:
-  pip: true
-  directories:
-    - $HOME/.venv
-    - $HOME/.runtimes
-    - $HOME/.wheelhouse
-    - $HOME/.ccache
-    - $HOME/.libs
-
-before_cache:
-    - rm -f $HOME/.cache/pip/log/debug.log
-    # Store the configure caches. Having a cache can speed up c-ares
-    # configure from 2-3 minutes to 20 seconds.
-    - mkdir -p $BUILD_LIBS
-    - cp deps/c-ares/config.cache $BUILD_LIBS/config.cache.ares
-    - cp deps/libev/config.cache $BUILD_LIBS/config.cache.libev
-    - cp deps/libuv/config.cache $BUILD_LIBS/config.cache.libuv
+  - |
+    python --version
+    python -c 'import greenlet; print(greenlet, greenlet.__version__)'
+    python -c 'import gevent.core; print(gevent.core.loop)'
+    python -c 'import gevent.ares; print(gevent.ares)'
 
 
 # Installing is taken care of by the first stage.
@@ -112,15 +127,30 @@ script:
 
 # Submit coverage info
 after_success:
-  - python -m coverage combine
-  - python -m coverage report -i
-  - python -m coveralls
+  - python -m coverage combine || true
+  - python -m coverage report -i || true
+  - python -m coveralls || true
+  - |
+    if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+      ls -l dist
+      twine check dist/*
+      if [[ $TRAVIS_TAG ]]; then
+        twine upload --skip-existing dist/*
+      fi
+    fi
+  - |
+    if [[ -n "$DOCKER_IMAGE" ]]; then
+      ls -l wheelhouse
+      twine check wheelhouse/*
+      if [[ $TRAVIS_TAG ]]; then
+        twine upload --skip-existing wheelhouse/*
+      fi
+    fi
 
 
 stages:
   - build-gevent
   - test
-  - test-ares
 
 
 jobs:
@@ -139,7 +169,7 @@ jobs:
         # First, the build dependencies (see setup.cfg)
         # so that we don't have to use build isolation and can better use the cache;
         # Note that we can't use -U for cffi and greenlet on PyPy.
-        - &build-gevent-deps pip install -U setuptools wheel && pip install -U 'cffi;platform_python_implementation=="CPython"' cython 'greenlet;platform_python_implementation=="CPython"'
+        - &build-gevent-deps pip install -U setuptools wheel twine && pip install -U 'cffi;platform_python_implementation=="CPython"' cython 'greenlet;platform_python_implementation=="CPython"'
         # Next, build the wheel *in place*. This helps ccache, and also lets us cache the configure
         # output (pip install uses a random temporary directory, making this difficult)
         - python setup.py bdist_wheel
@@ -194,7 +224,26 @@ jobs:
         - python -c 'import gevent.libuv.loop as CF; assert not CF.libuv.LIBUV_EMBED'
 
     # Ok, now we switch to the test stage. These are all in addition
-    # to the jobs created by the matrix (and should override the `script` command).
+    # to the jobs created by the matrix (and should override the
+    # `script` command).
+
+    # The manylinux builds and tests.
+    # These take awhile, so get them started while others proceed in parallel.
+    - stage: test
+      name: 64-bit manylinux wheels (all Pythons)
+      services: docker
+      env: DOCKER_IMAGE=quay.io/pypa/manylinux2010_x86_64
+      install: docker pull $DOCKER_IMAGE
+      script: bash scripts/releases/make-manylinux
+      before_script: pip install -U twine
+
+    - stage: test
+      name: 32-bit manylinux wheels (all Pythons)
+      services: docker
+      env: DOCKER_IMAGE=quay.io/pypa/manylinux2010_i686 PRE_CMD=linux32
+      install: docker pull $DOCKER_IMAGE
+      script: bash scripts/releases/make-manylinux
+      before_script: pip install -U twine
 
     # Lint the code. Because this is a separate job, even if it fails fast
     # the tests will still run. Put it at the top for fast feedback.
@@ -314,6 +363,44 @@ jobs:
     #   env: TRAVIS_PYTHON_VERSION=pypy3.6
     #   name: dnspythonpypy36
 
+    ###
+    # Python on macOS.
+    # These take awhile, and tend to gum up the works getting started.
+    # TODO: maybe these and manylinux builds should be their own stage?
+    ###
+
+    # It's important to use 'macpython' builds to get the least
+    # restrictive wheel tag. It's also important to avoid
+    # 'homebrew 3' because it floats instead of being a specific
+    # version.
+    # TODO: This could probably be better broken into stages and just
+    # generally added to the matrix.
+    - &test-base-osx
+      name: Python 2.7 wheels for MacOS
+      os: osx
+      osx_image: xcode11.3
+      compiler: clang
+      # We require at least 2.7.15 to upload wheels.
+      # See https://github.com/zopefoundation/BTrees/issues/113
+      env: TERRYFY_PYTHON='macpython 2.7.17'
+      install:
+        - mkdir -p $BUILD_LIBS/lib
+        - *build-gevent-deps
+        - python setup.py bdist_wheel
+        - pip uninstall -y gevent
+        - pip install -U --no-compile `ls dist/gevent*whl`[test]
+
+    - <<: *test-base-osx
+      name: Python 3.6 wheels for MacOS
+      env: TERRYFY_PYTHON='macpython 3.6.8'
+
+    - <<: *test-base-osx
+      name: Python 3.7 wheels for MacOS
+      env: TERRYFY_PYTHON='macpython 3.7.6'
+
+    - <<: *test-base-osx
+      name: Python 3.8 wheels for MacOS
+      env: TERRYFY_PYTHON='macpython 3.8.1'
 
 notifications:
   email: false
