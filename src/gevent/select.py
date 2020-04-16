@@ -329,7 +329,7 @@ def _gevent_do_monkey_patch(patch_request):
         # modules (e.g. asyncore)  non-blocking, as they use select that we provide
         # when none of these are available.
         patch_request.remove_item(
-            'epoll'
+            'epoll',
             'kqueue',
             'kevent',
             'devpoll',
