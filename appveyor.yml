@@ -35,13 +35,6 @@ environment:
     # Pre-installed Python versions, which Appveyor may upgrade to
     # a later point release.
 
-    # 32-bit
-    - PYTHON: "C:\\pypy2.7-v7.3.0-win32"
-      PYTHON_ID: "pypy"
-      PYTHON_EXE: pypy
-      PYTHON_VERSION: "2.7.x"
-      PYTHON_ARCH: "32"
-
     # 64-bit
     - PYTHON: "C:\\Python38-x64"
       PYTHON_VERSION: "3.8.x"
@@ -68,6 +61,12 @@ environment:
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
 
+    # 32-bit
+    - PYTHON: "C:\\pypy2.7-v7.3.1-win32"
+      PYTHON_ID: "pypy"
+      PYTHON_EXE: pypy
+      PYTHON_VERSION: "2.7.x"
+      PYTHON_ARCH: "32"
 
     # 32-bit, wheel only (no testing)
     - PYTHON: "C:\\Python38"
@@ -137,10 +136,10 @@ install:
         New-Item -ItemType directory -Path "$env:PYTMP" | Out-Null;
       }
       if ("${env:PYTHON_ID}" -eq "pypy") {
-        if (!(Test-Path "${env:PYTMP}\pypy2-v7.3.0-win32.zip")) {
-          (New-Object Net.WebClient).DownloadFile('https://bitbucket.org/pypy/pypy/downloads/pypy2.7-v7.3.0-win32.zip', "${env:PYTMP}\pypy2-v7.3.0-win32.zip");
+        if (!(Test-Path "${env:PYTMP}\pypy2-v7.3.1-win32.zip")) {
+          (New-Object Net.WebClient).DownloadFile('https://bitbucket.org/pypy/pypy/downloads/pypy2.7-v7.3.1-win32.zip', "${env:PYTMP}\pypy2-v7.3.1-win32.zip");
         }
-        7z x -y "${env:PYTMP}\pypy2-v7.3.0-win32.zip" -oC:\ | Out-Null;
+        7z x -y "${env:PYTMP}\pypy2-v7.3.1-win32.zip" -oC:\ | Out-Null;
       }
       elseif (-not(Test-Path($env:PYTHON))) {
         & appveyor\install.ps1;
