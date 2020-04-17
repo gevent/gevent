@@ -158,6 +158,17 @@ else:
 WIN = sys.platform.startswith("win")
 PY36 = sys.version_info[:2] >= (3, 6)
 
+class _BadImplements(AttributeError):
+    """
+    Raised when ``__implements__`` is incorrect.
+    """
+
+    def __init__(self, module):
+        AttributeError.__init__(
+            self,
+            "Module %r has a bad or missing value for __implements__" % (module,)
+        )
+
 class MonkeyPatchWarning(RuntimeWarning):
     """
     The type of warnings we issue.
@@ -329,7 +340,8 @@ def patch_module(target_module, source_module, items=None,
     The *source_module* can provide some attributes to customize the process:
 
     * ``__implements__`` is a list of attribute names to copy; if not present,
-      the *items* keyword argument is mandatory.
+      the *items* keyword argument is mandatory. ``__implements__`` must only have
+      names from the standard library module in it.
     * ``_gevent_will_monkey_patch(target_module, items, warn, **kwargs)``
     * ``_gevent_did_monkey_patch(target_module, items, warn, **kwargs)``
       These two functions in the *source_module* are called *if* they exist,
@@ -351,7 +363,7 @@ def patch_module(target_module, source_module, items=None,
     if items is None:
         items = getattr(source_module, '__implements__', None)
         if items is None:
-            raise AttributeError('%r does not have __implements__' % source_module)
+            raise _BadImplements(source_module)
 
     try:
         if _call_hooks:
@@ -535,15 +547,29 @@ def patch_time():
 @_ignores_DoNotPatch
 def patch_contextvars():
     """
-    On Python 3.7 and above, replaces the implementations of :mod:`contextvars`
-    with :mod:`gevent.contextvars`.
+    Replaces the implementations of :mod:`contextvars` with
+    :mod:`gevent.contextvars`.
+
+    On Python 3.7 and above, this is a standard library module. On
+    earlier versions, a backport that uses the same distribution name
+    and import name is available on PyPI (though this is not
+    recommended). If that is installed, it will be patched.
+
+    .. versionchanged:: NEXT
+       Clarify that the backport is also patched.
     """
     try:
         __import__('contextvars')
     except ImportError:
         pass
     else:
-        _patch_module('contextvars')
+        try:
+            _patch_module('contextvars')
+        except _BadImplements:
+            # Prior to Python 3.7, but the backport must be installed.
+            # *Assume* it has the same things as the standard library would.
+            import gevent.contextvars
+            _patch_module('contextvars', gevent.contextvars.__stdlib_expected__)
 
 
 def _patch_existing_locks(threading):

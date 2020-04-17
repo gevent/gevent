@@ -45,7 +45,8 @@ from gevent._compat import PY37
 from gevent._util import _NONE
 from gevent.local import local
 
-__implements__ = __all__ if PY37 else None
+__stdlib_expected__ = __all__
+__implements__ = __stdlib_expected__ if PY37 else None
 
 # In the reference implementation, the interpreter level OS thread state
 # is modified to contain a pointer to the current context. Obviously we can't
