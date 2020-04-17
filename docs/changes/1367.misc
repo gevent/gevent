@@ -1,0 +1,2 @@
+Refactor ``known_failures.py`` to use a compact DSL instead of deeply
+nested condition statements.
