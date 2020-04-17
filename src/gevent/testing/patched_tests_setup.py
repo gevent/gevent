@@ -717,6 +717,8 @@ if PYPY:
             # Starting in 7.3.1 on Windows, this stopped raising ValueError; it appears to
             # be a bug in PyPy.
             'test_signal.WakeupFDTests.test_invalid_fd',
+            # Likewise for 7.3.1. See the comments for PY35
+            'test_socket.GeneralModuleTests.test_sock_ioctl',
         ]
 
     if PY36:
