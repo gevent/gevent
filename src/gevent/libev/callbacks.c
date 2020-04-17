@@ -4,7 +4,16 @@
 #include "ev.h"
 #include "corecext.h"
 #include "callbacks.h"
+
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-parameter"
+#endif
+
 #ifdef Py_PYTHON_H
+
+/* define gevent_realloc with libev semantics */
+#include "../_ffi/alloc.c"
 
 #if PY_MAJOR_VERSION >= 3
   #define PyInt_FromLong               PyLong_FromLong
@@ -25,6 +34,10 @@
   #endif
 #endif
 
+#define GGIL_DECLARE  PyGILState_STATE ___save
+#define GGIL_ENSURE  ___save = PyGILState_Ensure();
+#define GGIL_RELEASE  PyGILState_Release(___save);
+
 
 static CYTHON_INLINE void gevent_check_signals(struct PyGeventLoopObject* loop) {
     if (!ev_is_default_loop(loop->_ptr)) {
@@ -38,10 +51,6 @@ static CYTHON_INLINE void gevent_check_signals(struct PyGeventLoopObject* loop) 
 #define GET_OBJECT(PY_TYPE, EV_PTR, MEMBER) \
     ((struct PY_TYPE *)(((char *)EV_PTR) - offsetof(struct PY_TYPE, MEMBER)))
 
-
-/* define gevent_realloc with libev semantics */
-
-#include "../_ffi/alloc.c"
 
 void gevent_noop(struct ev_loop* loop, void* watcher, int revents) {}
 
@@ -65,11 +74,11 @@ static void gevent_stop(PyObject* watcher, struct PyGeventLoopObject* loop) {
 
 
 static void gevent_callback(struct PyGeventLoopObject* loop, PyObject* callback, PyObject* args, PyObject* watcher, void *c_watcher, int revents) {
-    GIL_DECLARE;
+    GGIL_DECLARE;
     PyObject *result, *py_events;
     long length;
     py_events = 0;
-    GIL_ENSURE;
+    GGIL_ENSURE;
     Py_INCREF(loop);
     Py_INCREF(callback);
     Py_INCREF(args);
@@ -121,7 +130,7 @@ end:
     Py_DECREF(args);
     Py_DECREF(callback);
     Py_DECREF(loop);
-    GIL_RELEASE;
+    GGIL_RELEASE;
 }
 
 
@@ -181,8 +190,8 @@ DEFINE_CALLBACKS
 void gevent_run_callbacks(struct ev_loop *_loop, void *watcher, int revents) {
     struct PyGeventLoopObject* loop;
     PyObject *result;
-    GIL_DECLARE;
-    GIL_ENSURE;
+    GGIL_DECLARE;
+    GGIL_ENSURE;
     loop = GET_OBJECT(PyGeventLoopObject, watcher, _prepare);
     Py_INCREF(loop);
     gevent_check_signals(loop);
@@ -195,16 +204,24 @@ void gevent_run_callbacks(struct ev_loop *_loop, void *watcher, int revents) {
         PyErr_Clear();
     }
     Py_DECREF(loop);
-    GIL_RELEASE;
+    GGIL_RELEASE;
 }
 
 /* This is only used on Win32 */
 
 void gevent_periodic_signal_check(struct ev_loop *_loop, void *watcher, int revents) {
-    GIL_DECLARE;
-    GIL_ENSURE;
+    GGIL_DECLARE;
+    GGIL_ENSURE;
     gevent_check_signals(GET_OBJECT(PyGeventLoopObject, watcher, _periodic_signal_checker));
-    GIL_RELEASE;
+    GGIL_RELEASE;
 }
 
+#undef GGIL_DECLARE
+#undef GGIL_ENSURE
+#undef GGIL_RELEASE
+
 #endif  /* Py_PYTHON_H */
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif

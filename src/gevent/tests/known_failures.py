@@ -300,8 +300,15 @@ if TRAVIS and (PYPY or OSX):
         'test__threading_2.py',
     ]
 
+if TRAVIS and OSX:
+    IGNORED_TESTS += [
+        # This rarely hangs for unknown reasons. I cannot reproduce
+        # locally.
+        'test__issue230.py',
+    ]
+
 if LIBUV:
-    if sys.platform.startswith("darwin"):
+    if OSX:
         FAILING_TESTS += [
         ]
 

@@ -164,14 +164,15 @@ disabled_tests = [
     # the file to a temp location during patching.
     'test_asyncore.HelperFunctionTests.test_compact_traceback',
 
-    'test_signal.WakeupSignalTests.test_wakeup_fd_early',
     # expects time.sleep() to return prematurely in case of a signal;
-    # gevent.sleep() is better than that and does not get interrupted (unless signal handler raises an error)
+    # gevent.sleep() is better than that and does not get interrupted
+    # (unless signal handler raises an error)
+    'test_signal.WakeupSignalTests.test_wakeup_fd_early',
 
+    # expects select.select() to raise select.error(EINTR'interrupted
+    # system call') gevent.select.select() does not get interrupted
+    # (unless signal handler raises an error) maybe it should?
     'test_signal.WakeupSignalTests.test_wakeup_fd_during',
-    # expects select.select() to raise select.error(EINTR'interrupted system call')
-    # gevent.select.select() does not get interrupted (unless signal handler raises an error)
-    # maybe it should?
 
     'test_signal.SiginterruptTest.test_without_siginterrupt',
     'test_signal.SiginterruptTest.test_siginterrupt_on',
@@ -709,9 +710,16 @@ if PYPY:
         # These are flaxy, apparently a race condition? Began with PyPy 2.7-7 and 3.6-7
         'test_asyncore.TestAPI_UsePoll.test_handle_error',
         'test_asyncore.TestAPI_UsePoll.test_handle_read',
-
-
     ]
+
+    if WIN:
+        disabled_tests += [
+            # Starting in 7.3.1 on Windows, this stopped raising ValueError; it appears to
+            # be a bug in PyPy.
+            'test_signal.WakeupFDTests.test_invalid_fd',
+            # Likewise for 7.3.1. See the comments for PY35
+            'test_socket.GeneralModuleTests.test_sock_ioctl',
+        ]
 
     if PY36:
         disabled_tests += [
