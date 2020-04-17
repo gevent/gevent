@@ -13,15 +13,17 @@ monkey.patch_all()
 
 from .sysinfo import RUNNING_ON_APPVEYOR
 from .sysinfo import PY37
+from .sysinfo import PYPY3
 from .patched_tests_setup import disable_tests_in_source
 from . import support
 from . import resources
 from . import SkipTest
 from . import util
 
-if RUNNING_ON_APPVEYOR and PY37:
+if (RUNNING_ON_APPVEYOR and PY37) or PYPY3:
     # 3.7 added a stricter mode for thread cleanup.
     # It appears to be unstable on Windows (at least appveyor)
+    # and PyPy3
     # and test_socket.py constantly fails with an extra thread
     # on some random test. We disable it entirely.
     # XXX: Figure out how to make a *definition* in ./support.py actually

@@ -32,10 +32,11 @@ except (ImportError, OSError, IOError):
     pass
 
 TIMEOUT = 100 # seconds
-DEFAULT_NWORKERS = int(os.environ.get('NWORKERS') or max(cpu_count() - 1, 4))
-if DEFAULT_NWORKERS > 10:
+AVAIL_NWORKERS = cpu_count() - 1
+DEFAULT_NWORKERS = int(os.environ.get('NWORKERS') or max(AVAIL_NWORKERS, 4))
+if DEFAULT_NWORKERS > 15:
     DEFAULT_NWORKERS = 10
-SUGGESTED_NWORKERS = DEFAULT_NWORKERS
+
 
 if RUN_LEAKCHECKS:
     # Capturing the stats takes time, and we run each
@@ -149,7 +150,7 @@ class Runner(object):
     def __call__(self):
         util.log("Running tests in parallel with concurrency %s %s." % (
             self._worker_count,
-            util._colorize('number', '(concurrency available: %d)' % SUGGESTED_NWORKERS)
+            util._colorize('number', '(concurrency available: %d)' % AVAIL_NWORKERS)
         ),)
         # Setting global state, in theory we can be used multiple times.
         # This is fine as long as we are single threaded and call these
