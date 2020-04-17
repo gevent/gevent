@@ -231,6 +231,7 @@ jobs:
     # These take awhile, so get them started while others proceed in parallel.
     - stage: test
       name: 64-bit manylinux wheels (all Pythons)
+      language: python
       services: docker
       env: DOCKER_IMAGE=quay.io/pypa/manylinux2010_x86_64
       install: docker pull $DOCKER_IMAGE
@@ -239,6 +240,7 @@ jobs:
 
     - stage: test
       name: 32-bit manylinux wheels (all Pythons)
+      language: python
       services: docker
       env: DOCKER_IMAGE=quay.io/pypa/manylinux2010_i686 PRE_CMD=linux32
       install: docker pull $DOCKER_IMAGE
