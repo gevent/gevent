@@ -390,6 +390,10 @@ def run_setup(ext_modules):
 
                 # leak checks. previously we had a hand-rolled version.
                 'objgraph',
+
+                # The backport for contextvars to test patching. It sadly uses the same
+                # import name as the stdlib module.
+                'contextvars == 2.4 ; python_version > "3.0" and python_version < "3.7"',
             ],
         },
         # It's always safe to pass the CFFI keyword, even if
