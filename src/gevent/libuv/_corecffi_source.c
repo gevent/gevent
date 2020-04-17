@@ -131,14 +131,6 @@ static void gevent_zero_loop(uv_loop_t* handle)
     memset(handle, 0, sizeof(uv_loop_t));
 }
 
-#if defined(PYPY_VERSION_NUM) && PYPY_VERSION_NUM <= 0x07020000
-/* Pypy 7.2 and below don't have the needed APIs.
-   See
-   https://ci.appveyor.com/project/denik/gevent/builds/30029974/job/oqf8pjpm7r28hcy2
-*/
-static void gevent_set_uv_alloc() {}
-#else
-
 #include "_ffi/alloc.c"
 
 static void* _gevent_uv_malloc(size_t size)
@@ -175,14 +167,9 @@ static void gevent_set_uv_alloc()
 			 _gevent_uv_calloc,
 			 _gevent_uv_free);
 }
-#endif
 
 #ifdef __clang__
 #pragma clang diagnostic pop
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunreachable-code"
 #endif
-
-/* Local Variables: */
-/* flycheck-clang-include-path: ("../../../deps/libuv/include") */
-/* End: */

@@ -1,0 +1,2 @@
+PyPy no longer uses the Python allocation functions for libuv and
+libev allocations.
