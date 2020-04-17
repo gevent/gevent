@@ -503,7 +503,7 @@ def populate(): # pylint:disable=too-many-branches
                     # TODO: Verify that this doesn't match more than once.
                     if condition:
                         TEST_FILE_OPTIONS.setdefault(test_name, {})[opt_name] = value
-            if not action.when:
+            if action.when:
                 if isinstance(action, Ignored):
                     IGNORED_TESTS.append(test_name)
                 elif isinstance(action, Flaky):
