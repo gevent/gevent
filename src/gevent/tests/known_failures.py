@@ -451,11 +451,16 @@ class Definitions(DefinitionsBase):
         ignore_coverage=ALWAYS, # times out
     )
 
-    test__refcount = RunAlone(
-        when=NEVER,
+    test__refcount = Ignored(
+        "Sometimes fails to connect for no reason",
+        when=(CI & OSX) | (CI & PYPY),
         ignore_coverage=PYPY
     )
 
+    test__doctests = Ignored(
+        "Sometimes times out during/after gevent._config.Config",
+        when=CI & OSX
+    )
 
 
 
