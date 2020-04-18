@@ -19,6 +19,7 @@ from .sysinfo import PYPY
 from .sysinfo import PY2
 from .sysinfo import RESOLVER_ARES
 from .sysinfo import RUN_LEAKCHECKS
+from .sysinfo import OSX
 from . import six
 from . import travis
 
@@ -50,7 +51,7 @@ DEFAULT_RUN_OPTIONS = {
 
 if RUNNING_ON_CI:
     # Too many and we get spurious timeouts
-    DEFAULT_NWORKERS = 4
+    DEFAULT_NWORKERS = 4 if not OSX else 2
 
 
 def _package_relative_filename(filename, package):
