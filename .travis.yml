@@ -200,6 +200,20 @@ jobs:
       env: TRAVIS_PYTHON_VERSION=pypy2.7
     - <<: *build-gevent
       env: TRAVIS_PYTHON_VERSION=pypy3.6
+
+    - <<: *build-gevent
+      env: TRAVIS_PYTHON_VERSION=2.7
+      os: osx
+    - <<: *build-gevent
+      env: TRAVIS_PYTHON_VERSION=3.6
+      os: osx
+    - <<: *build-gevent
+      env: TRAVIS_PYTHON_VERSION=3.7
+      os: osx
+    - <<: *build-gevent
+      env: TRAVIS_PYTHON_VERSION=3.8
+      os: osx
+
     - <<: *build-gevent
       env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0 GEVENTSETUP_EV_VERIFY=3
       install:
