@@ -9,7 +9,10 @@
 language: shell
 dist: xenial
 group: travis_latest
-os: linux
+os:
+  - linux
+  - osx
+osx_image: xcode11.3
 
 
 env:
@@ -89,13 +92,7 @@ before_install:
   - if [ -f $BUILD_LIBS/config.cache.libuv ]; then cp $BUILD_LIBS/config.cache.libuv deps/libuv/config.cache ; fi
   - |
     if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-      whoami
-      mkdir -p $HOME/Library/Caches/pip
-      chown -R `whoami` $HOME/Library/Caches/pip
-      git clone https://github.com/MacPython/terryfy
-      source terryfy/travis_tools.sh
-      get_python_environment $TERRYFY_PYTHON venv
-      unset CC
+      brew install ccache
     fi
 
 before_script:
@@ -135,8 +132,6 @@ after_success:
   - python -m coveralls || true
   - |
     if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-      ls -l dist
-      twine check dist/*
       if [[ $TRAVIS_TAG ]]; then
         twine upload --skip-existing dist/*
       fi
@@ -158,6 +153,16 @@ stages:
 
 jobs:
   fast_finish: true
+  exclude:
+    - os: osx
+      env: TRAVIS_PYTHON_VERSION=3.5
+    - os: osx
+      env: TRAVIS_PYTHON_VERSION=pypy2.7
+    - os: osx
+      env: TRAVIS_PYTHON_VERSION=pypy3.6
+    - os: osx
+      env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0 GEVENTSETUP_EV_VERIFY=3
+
   include:
     - &build-gevent
       stage: build-gevent
@@ -176,6 +181,8 @@ jobs:
         # Next, build the wheel *in place*. This helps ccache, and also lets us cache the configure
         # output (pip install uses a random temporary directory, making this difficult)
         - python setup.py bdist_wheel
+        - ls -l dist
+        - twine check dist/*
         - pip uninstall -y gevent
         - pip install -U --no-compile `ls dist/*whl`[test]
       script: ccache -s
@@ -305,29 +312,15 @@ jobs:
     # it's sufficient to test the alternate backend library for non-current versions;
     # run the full suite on the current version.
 
-    # 3.5.
-    - <<: *test-libuv-jobs
-      env: TRAVIS_PYTHON_VERSION=3.5
-      name: libuv35
-
     # 3.6
     - <<: *test-libuv-jobs
       env: TRAVIS_PYTHON_VERSION=3.6
       name: libuv36
 
     # 3.7
-    - <<: *test-ares-jobs
-      env: TRAVIS_PYTHON_VERSION=3.7
-      name: ares37
-    - <<: *test-dnspython-jobs
-      env: TRAVIS_PYTHON_VERSION=3.7
-      name: dnspython37
     - <<: *test-libuv-jobs
       env: TRAVIS_PYTHON_VERSION=3.7
       name: libuv37
-    - <<: *test-pure-jobs
-      env: TRAVIS_PYTHON_VERSION=3.7
-      name: pure37
 
     # 3.8
     - <<: *test-libuv-jobs
@@ -336,7 +329,15 @@ jobs:
     - <<: *test-libev-jobs
       env: TRAVIS_PYTHON_VERSION=3.8
       name: libev-cffi38
-
+    - <<: *test-ares-jobs
+      env: TRAVIS_PYTHON_VERSION=3.8
+      name: c-ares resolver on Python 3.8
+    - <<: *test-dnspython-jobs
+      env: TRAVIS_PYTHON_VERSION=3.8
+      name: dnspython resolver on Python 3.8
+    - <<: *test-pure-jobs
+      env: TRAVIS_PYTHON_VERSION=3.8
+      name: pure-Python on Python 3.8
 
     # 2.7, no-embed. Run the tests that exercise the libraries we
     # linked to.
@@ -360,52 +361,6 @@ jobs:
     - <<: *test-libuv-jobs
       env: TRAVIS_PYTHON_VERSION=pypy2.7
       name: libuvpypy27
-
-    # PyPy 3.6
-    # We don't do particular extra tests on it, it's not
-    # considered a production (still alpha at this writing).
-    # - <<: *test-dnspython-jobs
-    #   env: TRAVIS_PYTHON_VERSION=pypy3.6
-    #   name: dnspythonpypy36
-
-    ###
-    # Python on macOS.
-    # These take awhile, and tend to gum up the works getting started.
-    # TODO: maybe these and manylinux builds should be their own stage?
-    ###
-
-    # It's important to use 'macpython' builds to get the least
-    # restrictive wheel tag. It's also important to avoid
-    # 'homebrew 3' because it floats instead of being a specific
-    # version.
-    # TODO: This could probably be better broken into stages and just
-    # generally added to the matrix.
-    - &test-base-osx
-      name: Python 2.7 wheels for MacOS
-      os: osx
-      osx_image: xcode11.3
-      compiler: clang
-      # We require at least 2.7.15 to upload wheels.
-      # See https://github.com/zopefoundation/BTrees/issues/113
-      env: TERRYFY_PYTHON='macpython 2.7.17'
-      install:
-        - mkdir -p $BUILD_LIBS/lib
-        - *build-gevent-deps
-        - python setup.py bdist_wheel
-        - pip uninstall -y gevent
-        - pip install -U --no-compile `ls dist/gevent*whl`[test]
-
-    - <<: *test-base-osx
-      name: Python 3.6 wheels for MacOS
-      env: TERRYFY_PYTHON='macpython 3.6.8'
-
-    - <<: *test-base-osx
-      name: Python 3.7 wheels for MacOS
-      env: TERRYFY_PYTHON='macpython 3.7.6'
-
-    - <<: *test-base-osx
-      name: Python 3.8 wheels for MacOS
-      env: TERRYFY_PYTHON='macpython 3.8.1'
 
 notifications:
   email: false
