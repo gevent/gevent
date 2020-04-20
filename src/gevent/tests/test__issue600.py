@@ -10,7 +10,7 @@ import sys
 from multiprocessing import Process
 from subprocess import Popen, PIPE
 
-import gevent.testing as greentest
+from gevent import testing as greentest
 
 def f(sleep_sec):
     gevent.sleep(sleep_sec)

@@ -41,6 +41,8 @@ class Test(greentest.TestCase):
             raise AssertionError('must raise KeyboardInterrupt')
 
     def test_keyboard_interrupt_stderr_patched(self):
+        # XXX: This one non-top-level call prevents us from being
+        # run in a process with other tests.
         from gevent import monkey
         monkey.patch_sys(stdin=False, stdout=False, stderr=True)
         try:
