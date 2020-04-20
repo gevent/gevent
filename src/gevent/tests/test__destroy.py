@@ -48,4 +48,4 @@ class TestDestroyHub(unittest.TestCase):
         hub.destroy()
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main() # pragma: testrunner-no-combine

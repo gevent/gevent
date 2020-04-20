@@ -142,6 +142,7 @@ class TestTree(greentest.TestCase):
         value = re.compile(' fileno=.').sub('', value)
         value = value.replace('ref=-1', 'ref=0')
         value = value.replace("type.current_tree", 'GreenletTree.current_tree')
+        value = value.replace('gevent.tests.__main__.MyLocal', '__main__.MyLocal')
         return value
 
     @greentest.ignores_leakcheck

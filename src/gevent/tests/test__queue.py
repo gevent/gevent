@@ -1,7 +1,7 @@
 import unittest
 
 import gevent.testing as greentest
-from gevent.testing import TestCase, main
+from gevent.testing import TestCase
 import gevent
 from gevent.hub import get_hub, LoopExit
 from gevent import util
@@ -462,4 +462,4 @@ del AbstractGenericGetTestCase
 
 
 if __name__ == '__main__':
-    main()
+    greentest.main()

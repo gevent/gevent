@@ -25,7 +25,7 @@ class Test(greentest.TestCase):
 
         def target():
             tcurrent = threading.current_thread()
-            monkey.patch_all()
+            monkey.patch_all() # pragma: testrunner-no-monkey-combine
             tcurrent2 = threading.current_thread()
             self.assertIsNot(tcurrent, current)
             # We get a dummy thread now

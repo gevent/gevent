@@ -21,7 +21,8 @@ import sys
 import gevent
 from gevent import socket
 
-from gevent.testing import TestCase, main, tcp_listener
+from gevent import testing as greentest
+from gevent.testing import TestCase, tcp_listener
 from gevent.testing import gc_collect_if_needed
 from gevent.testing import skipOnPyPy
 from gevent.testing import params
@@ -142,4 +143,4 @@ class TestGreenIo(TestCase):
 
 
 if __name__ == '__main__':
-    main()
+    greentest.main()

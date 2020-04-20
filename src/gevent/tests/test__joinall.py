@@ -1,10 +1,20 @@
 import gevent
 
-
-def func():
-    pass
+from gevent import testing as greentest
 
 
-a = gevent.spawn(func)
-b = gevent.spawn(func)
-gevent.joinall([a, b, a])
+class Test(greentest.TestCase):
+
+    def test(self):
+
+        def func():
+            pass
+
+
+        a = gevent.spawn(func)
+        b = gevent.spawn(func)
+        gevent.joinall([a, b, a])
+
+
+if __name__ == '__main__':
+    greentest.main()

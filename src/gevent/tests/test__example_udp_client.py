@@ -1,5 +1,5 @@
 from gevent import monkey
-monkey.patch_all(subprocess=True)
+monkey.patch_all()
 
 
 from gevent.server import DatagramServer

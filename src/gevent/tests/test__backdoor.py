@@ -158,4 +158,4 @@ class Test(greentest.TestCase):
 
 
 if __name__ == '__main__':
-    greentest.main()
+    greentest.main() # pragma: testrunner-no-combine

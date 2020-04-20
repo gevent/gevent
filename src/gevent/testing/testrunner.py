@@ -1,15 +1,20 @@
 #!/usr/bin/env python
 from __future__ import print_function, absolute_import, division
 
+import re
 import sys
 import os
 import glob
 import traceback
 import importlib
-from datetime import timedelta
 
+from contextlib import contextmanager
+from datetime import timedelta
 from multiprocessing.pool import ThreadPool
 from multiprocessing import cpu_count
+
+from gevent._util import Lazy
+
 from . import util
 from .resources import parse_resources
 from .resources import setup_resources
@@ -244,106 +249,258 @@ class TravisFoldingRunner(object):
     def __call__(self):
         return self._runner()
 
-def discover(
-        tests=None, ignore_files=None,
-        ignored=(), coverage=False,
-        package=None,
-        configured_ignore_coverage=(),
-        configured_test_options=None,
-):
-    # pylint:disable=too-many-locals,too-many-branches
-    configured_test_options = configured_test_options or {}
-    olddir = os.getcwd()
-    ignore = set(ignored or ())
 
-    if ignore_files:
-        ignore_files = ignore_files.split(',')
-        for f in ignore_files:
-            ignore.update(set(load_list_from_file(f, package)))
+class Discovery(object):
+    package_dir = None
+    package = None
 
-    if coverage:
-        ignore.update(configured_ignore_coverage)
+    def __init__(
+            self,
+            tests=None,
+            ignore_files=None,
+            ignored=(),
+            coverage=False,
+            package=None,
+            configured_ignore_coverage=(),
+            configured_test_options=None,
+    ):
+        # pylint:disable=too-many-locals,too-many-branches
+        self.configured_test_options = configured_test_options or {}
+        self.ignore = set(ignored or ())
+        self.tests = tests
+        self.configured_test_options = configured_test_options
 
-    if package:
-        package_dir = _dir_from_package_name(package)
-        # We need to glob relative names, our config is based on filenames still
-        os.chdir(package_dir)
+        if ignore_files:
+            ignore_files = ignore_files.split(',')
+            for f in ignore_files:
+                self.ignore.update(set(load_list_from_file(f, package)))
 
-    if not tests:
-        tests = set(glob.glob('test_*.py')) - set(['test_support.py'])
-    else:
-        tests = set(tests)
+        if coverage:
+            self.ignore.update(configured_ignore_coverage)
 
-    if ignore:
-        # Always ignore the designated list, even if tests were specified
-        # on the command line. This fixes a nasty interaction with test__threading_vs_settrace.py
-        # being run under coverage when 'grep -l subprocess test*py' is used to list the tests
-        # to run.
-        tests -= ignore
-    tests = sorted(tests)
+        if package:
+            self.package = package
+            self.package_dir = _dir_from_package_name(package)
 
-    to_process = []
-    to_import = []
+    class Discovered(object):
+        def __init__(self, package, configured_test_options, ignore):
+            self.package = package
+            self.configured_test_options = configured_test_options
+            self.ignore = ignore
 
-    for filename in tests:
-        # Support either 'gevent.tests.foo' or 'gevent/tests/foo.py'
-        if filename.startswith('gevent.tests'):
-            # XXX: How does this interact with 'package'? Probably not well
-            qualified_name = module_name = filename
-            filename = filename[len('gevent.tests') + 1:]
-            filename = filename.replace('.', os.sep) + '.py'
-        else:
-            module_name = os.path.splitext(filename)[0]
-            qualified_name = package + '.' + module_name if package else module_name
-        with open(os.path.abspath(filename), 'rb') as f:
-            # Some of the test files (e.g., test__socket_dns) are
-            # UTF8 encoded. Depending on the environment, Python 3 may
-            # try to decode those as ASCII, which fails with UnicodeDecodeError.
-            # Thus, be sure to open and compare in binary mode.
-            # Open the absolute path to make errors more clear,
-            # but we can't store the absolute path, our configuration is based on
-            # relative file names.
-            contents = f.read()
-        if b'TESTRUNNER' in contents: # test__monkey_patching.py
-            # XXX: Rework this to avoid importing.
-            to_import.append(qualified_name)
-        else:
-            # XXX: For simple python module tests, try this with `runpy.run_module`,
-            # very similar to the way we run things for monkey patching.
-            # The idea here is that we can perform setup ahead of time (e.g., setup_resources())
-            # in each test without having to do it manually or force calls or modifications to those
-            # tests.
+            self.to_import = []
+            self.std_monkey_patch_files = []
+            self.no_monkey_patch_files = []
 
+            self.commands = []
+
+        @staticmethod
+        def __makes_simple_monkey_patch(
+                contents,
+                _patch_present=re.compile(br'[^#].*patch_all\(\)'),
+                _patch_indented=re.compile(br'    .*patch_all\(\)')
+        ):
+            return (
+                # A non-commented patch_all() call is present
+                bool(_patch_present.search(contents))
+                # that is not indented (because that implies its not at the top-level,
+                # so some preconditions are being set)
+                and not _patch_indented.search(contents)
+            )
+
+        @staticmethod
+        def __file_allows_monkey_combine(contents):
+            return b'testrunner-no-monkey-combine' not in contents
+
+        @staticmethod
+        def __file_allows_combine(contents):
+            return b'testrunner-no-combine' not in contents
+
+        @staticmethod
+        def __calls_unittest_main_toplevel(
+                contents,
+                _greentest_main=re.compile(br'    greentest.main\(\)'),
+                _unittest_main=re.compile(br'    unittest.main\(\)'),
+                _import_main=re.compile(br'from gevent.testing import.*main'),
+                _main=re.compile(br'    main\(\)'),
+        ):
+            # TODO: Add a check that this comes in a line directly after
+            # if __name__ == __main__.
+            return (
+                _greentest_main.search(contents)
+                or _unittest_main.search(contents)
+                or (_import_main.search(contents) and _main.search(contents))
+            )
+
+        def __can_monkey_combine(self, filename, contents):
+            return (
+                filename not in self.configured_test_options
+                and self.__makes_simple_monkey_patch(contents)
+                and self.__file_allows_monkey_combine(contents)
+                and self.__file_allows_combine(contents)
+                and self.__calls_unittest_main_toplevel(contents)
+            )
+
+        @staticmethod
+        def __makes_no_monkey_patch(contents, _patch_present=re.compile(br'[^#].*patch_\w*\(')):
+            return not _patch_present.search(contents)
+
+        def __can_nonmonkey_combine(self, filename, contents):
+            return (
+                filename not in self.configured_test_options
+                and self.__makes_no_monkey_patch(contents)
+                and self.__file_allows_combine(contents)
+                and self.__calls_unittest_main_toplevel(contents)
+            )
+
+        def __begin_command(self):
             cmd = [sys.executable, '-u']
             if PYPY and PY2:
                 # Doesn't seem to be an env var for this
                 cmd.extend(('-X', 'track-resources'))
-            if package:
-                # Using a package is the best way to work with coverage 5
-                # when we specify 'source = <package>'
-                cmd.append('-m' + qualified_name)
+            return cmd
+
+
+        def __add_test(self, qualified_name, filename, contents):
+            if b'TESTRUNNER' in contents: # test__monkey_patching.py
+                # XXX: Rework this to avoid importing.
+                # XXX: Rework this to allow test combining (it could write the files out and return
+                # them directly; we would use 'python -m gevent.monkey --module unittest ...)
+                self.to_import.append(qualified_name)
+            # TODO: I'm pretty sure combining breaks keeping particular tests standalone
+            elif self.__can_monkey_combine(filename, contents):
+                self.std_monkey_patch_files.append(qualified_name if self.package else filename)
+            elif self.__can_nonmonkey_combine(filename, contents):
+                self.no_monkey_patch_files.append(qualified_name if self.package else filename)
             else:
-                cmd.append(filename)
+                # XXX: For simple python module tests, try this with
+                # `runpy.run_module`, very similar to the way we run
+                # things for monkey patching. The idea here is that we
+                # can perform setup ahead of time (e.g.,
+                # setup_resources()) in each test without having to do
+                # it manually or force calls or modifications to those
+                # tests.
+                cmd = self.__begin_command()
+                if self.package:
+                    # Using a package is the best way to work with coverage 5
+                    # when we specify 'source = <package>'
+                    cmd.append('-m' + qualified_name)
+                else:
+                    cmd.append(filename)
 
-            options = DEFAULT_RUN_OPTIONS.copy()
-            options.update(configured_test_options.get(filename, {}))
-            to_process.append((cmd, options))
+                options = DEFAULT_RUN_OPTIONS.copy()
+                options.update(self.configured_test_options.get(filename, {}))
+                self.commands.append((cmd, options))
 
-    os.chdir(olddir)
-    # When we actually execute, do so from the original directory,
-    # this helps find setup.py
-    for qualified_name in to_import:
-        module = importlib.import_module(qualified_name)
-        for cmd, options in module.TESTRUNNER():
-            if remove_options(cmd)[-1] in ignore:
-                continue
-            to_process.append((cmd, options))
+        @staticmethod
+        def __remove_options(lst):
+            return [x for x in lst if x and not x.startswith('-')]
 
-    return to_process
+        def __expand_imports(self):
+            for qualified_name in self.to_import:
+                module = importlib.import_module(qualified_name)
+                for cmd, options in module.TESTRUNNER():
+                    if self.__remove_options(cmd)[-1] in self.ignore:
+                        continue
+                    self.commands.append((cmd, options))
+            del self.to_import[:]
+
+        def __combine_commands(self, files, group_size=5):
+            if not files:
+                return
+
+            from itertools import groupby
+            cnt = [0, 0]
+            def make_group(_):
+                if cnt[0] > group_size:
+                    cnt[0] = 0
+                    cnt[1] += 1
+                cnt[0] += 1
+                return cnt[1]
+
+            for _, group in groupby(files, make_group):
+
+                cmd = self.__begin_command()
+                cmd.append('-m')
+                cmd.append('unittest')
+                cmd.append('-v')
+                for name in group:
+                    cmd.append(name)
+                self.commands.insert(0, (cmd, DEFAULT_RUN_OPTIONS.copy()))
+
+            del files[:]
 
 
-def remove_options(lst):
-    return [x for x in lst if x and not x.startswith('-')]
+        def visit_file(self, filename):
+            # Support either 'gevent.tests.foo' or 'gevent/tests/foo.py'
+            if filename.startswith('gevent.tests'):
+                # XXX: How does this interact with 'package'? Probably not well
+                qualified_name = module_name = filename
+                filename = filename[len('gevent.tests') + 1:]
+                filename = filename.replace('.', os.sep) + '.py'
+            else:
+                module_name = os.path.splitext(filename)[0]
+                qualified_name = self.package + '.' + module_name if self.package else module_name
+
+            with open(os.path.abspath(filename), 'rb') as f:
+                # Some of the test files (e.g., test__socket_dns) are
+                # UTF8 encoded. Depending on the environment, Python 3 may
+                # try to decode those as ASCII, which fails with UnicodeDecodeError.
+                # Thus, be sure to open and compare in binary mode.
+                # Open the absolute path to make errors more clear,
+                # but we can't store the absolute path, our configuration is based on
+                # relative file names.
+                contents = f.read()
+
+            self.__add_test(qualified_name, filename, contents)
+
+        def visit_files(self, filenames):
+            for filename in filenames:
+                self.visit_file(filename)
+            self.__expand_imports()
+            self.__combine_commands(self.std_monkey_patch_files)
+            self.__combine_commands(self.no_monkey_patch_files)
+
+    @contextmanager
+    def _in_package_dir(self):
+        olddir = os.getcwd()
+        if self.package_dir:
+            os.chdir(self.package_dir)
+        try:
+            yield
+        finally:
+            os.chdir(olddir)
+
+    @Lazy
+    def discovered(self):
+        tests = self.tests
+        discovered = self.Discovered(self.package, self.configured_test_options, self.ignore)
+
+        # We need to glob relative names, our config is based on filenames still
+        with self._in_package_dir():
+            if not tests:
+                tests = set(glob.glob('test_*.py')) - set(['test_support.py'])
+            else:
+                tests = set(tests)
+
+            if self.ignore:
+                # Always ignore the designated list, even if tests
+                # were specified on the command line. This fixes a
+                # nasty interaction with
+                # test__threading_vs_settrace.py being run under
+                # coverage when 'grep -l subprocess test*py' is used
+                # to list the tests to run.
+                tests -= self.ignore
+            tests = sorted(tests)
+            discovered.visit_files(tests)
+
+        return discovered
+
+    def __iter__(self):
+        return iter(self.discovered.commands) # pylint:disable=no-member
+
+    def __len__(self):
+        return len(self.discovered.commands) # pylint:disable=no-member
 
 def load_list_from_file(filename, package):
     result = []
@@ -600,7 +757,7 @@ def main():
         IGNORE_COVERAGE = config['IGNORE_COVERAGE']
 
 
-    tests = discover(
+    tests = Discovery(
         options.tests,
         ignore_files=options.ignore,
         ignored=IGNORED_TESTS,

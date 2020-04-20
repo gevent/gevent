@@ -3,7 +3,7 @@
 
 import threading
 from gevent import monkey
-monkey.patch_all()
+monkey.patch_all() # pragma: testrunner-no-monkey-combine
 
 import gevent.testing as greentest
 

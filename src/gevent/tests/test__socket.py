@@ -49,7 +49,7 @@ class Thread(_Thread):
 
 
 class TestTCP(greentest.TestCase):
-
+    maxDiff = None
     __timeout__ = None
     TIMEOUT_ERROR = socket.timeout
     long_data = ", ".join([str(x) for x in range(20000)])
@@ -210,7 +210,9 @@ class TestTCP(greentest.TestCase):
 
         if match_data is None:
             match_data = self.long_data
-        self.assertEqual(read_data, [match_data])
+        read_data = read_data[0].split(b',')
+        match_data = match_data.split(b',')
+        self.assertEqual(read_data, match_data)
 
     def test_sendall_str(self):
         self._test_sendall(self.long_data)

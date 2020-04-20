@@ -1,7 +1,7 @@
 import sys
 import unittest
 
-from gevent.testing import TestCase, main
+from gevent.testing import TestCase
 import gevent
 from gevent.timeout import Timeout
 
@@ -53,4 +53,4 @@ class TestQueue(TestCase): # pragma: no cover
 
 
 if __name__ == '__main__':
-    main()
+    unittest.main()

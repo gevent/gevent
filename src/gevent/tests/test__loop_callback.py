@@ -1,13 +1,18 @@
-from gevent.core import loop
+from gevent import get_hub
+from gevent import testing as greentest
 
-count = 0
+class Test(greentest.TestCase):
+    def test(self):
+        count = [0]
+
+        def incr():
+            count[0] += 1
+
+        loop = get_hub().loop
+        loop.run_callback(incr)
+        loop.run()
+        self.assertEqual(count, [1])
 
 
-def incr():
-    global count
-    count += 1
-
-loop = loop()
-loop.run_callback(incr)
-loop.run()
-assert count == 1, count
+if __name__ == '__main__':
+    greentest.main()

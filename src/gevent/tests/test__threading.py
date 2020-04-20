@@ -1,7 +1,7 @@
 """
 Tests specifically for the monkey-patched threading module.
 """
-from gevent import monkey; monkey.patch_all()
+from gevent import monkey; monkey.patch_all() # pragma: testrunner-no-monkey-combine
 import gevent.hub
 
 # check that the locks initialized by 'threading' did not init the hub

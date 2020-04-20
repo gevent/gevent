@@ -52,6 +52,6 @@ if __name__ == '__main__':
 
     # Only patch after we're running
     from gevent import monkey
-    monkey.patch_all()
+    monkey.patch_all() # pragma: testrunner-no-monkey-combine
 
     greentest.main()

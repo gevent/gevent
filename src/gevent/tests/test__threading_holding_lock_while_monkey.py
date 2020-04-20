@@ -5,4 +5,4 @@ import threading
 # in python code, this used to throw RuntimeErro("Cannot release un-acquired lock")
 # See https://github.com/gevent/gevent/issues/615
 with threading.RLock():
-    monkey.patch_all()
+    monkey.patch_all() # pragma: testrunner-no-monkey-combine
