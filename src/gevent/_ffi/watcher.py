@@ -268,7 +268,7 @@ class watcher(object):
         raise NotImplementedError()
 
     def _watcher_ffi_stop(self):
-        self._watcher_stop(self.loop._ptr, self._watcher)
+        self._watcher_stop(self.loop.ptr, self._watcher)
 
     def _watcher_ffi_ref(self):
         raise NotImplementedError()

@@ -30,4 +30,6 @@ class Test_udp_client(util.TestServer):
 
 
 if __name__ == '__main__':
-    main()
+    # Running this following test__example_portforwarder on Appveyor
+    # doesn't work in the same process for some reason.
+    main() # pragma: testrunner-no-combine

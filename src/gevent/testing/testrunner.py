@@ -261,14 +261,12 @@ class Discovery(object):
             ignored=(),
             coverage=False,
             package=None,
-            configured_ignore_coverage=(),
-            configured_test_options=None,
+            config=None,
     ):
-        # pylint:disable=too-many-locals,too-many-branches
-        self.configured_test_options = configured_test_options or {}
+        self.config = config or {}
         self.ignore = set(ignored or ())
         self.tests = tests
-        self.configured_test_options = configured_test_options
+        self.configured_test_options = config.get('TEST_FILE_OPTIONS', set())
 
         if ignore_files:
             ignore_files = ignore_files.split(',')
@@ -276,14 +274,17 @@ class Discovery(object):
                 self.ignore.update(set(load_list_from_file(f, package)))
 
         if coverage:
-            self.ignore.update(configured_ignore_coverage)
+            self.ignore.update(config.get('IGNORE_COVERAGE', set()))
 
         if package:
             self.package = package
             self.package_dir = _dir_from_package_name(package)
 
     class Discovered(object):
-        def __init__(self, package, configured_test_options, ignore):
+        def __init__(self, package, configured_test_options, ignore, config):
+            self.orig_dir = os.getcwd()
+            self.configured_run_alone = config['RUN_ALONE']
+            self.configured_failing_tests = config['FAILING_TESTS']
             self.package = package
             self.configured_test_options = configured_test_options
             self.ignore = ignore
@@ -332,9 +333,17 @@ class Discovery(object):
                 or (_import_main.search(contents) and _main.search(contents))
             )
 
+        def __has_config(self, filename):
+            return (
+                RUN_LEAKCHECKS
+                or filename in self.configured_test_options
+                or filename in self.configured_run_alone
+                or matches(self.configured_failing_tests, filename)
+            )
+
         def __can_monkey_combine(self, filename, contents):
             return (
-                filename not in self.configured_test_options
+                not self.__has_config(filename)
                 and self.__makes_simple_monkey_patch(contents)
                 and self.__file_allows_monkey_combine(contents)
                 and self.__file_allows_combine(contents)
@@ -347,7 +356,7 @@ class Discovery(object):
 
         def __can_nonmonkey_combine(self, filename, contents):
             return (
-                filename not in self.configured_test_options
+                not self.__has_config(filename)
                 and self.__makes_no_monkey_patch(contents)
                 and self.__file_allows_combine(contents)
                 and self.__calls_unittest_main_toplevel(contents)
@@ -367,7 +376,6 @@ class Discovery(object):
                 # XXX: Rework this to allow test combining (it could write the files out and return
                 # them directly; we would use 'python -m gevent.monkey --module unittest ...)
                 self.to_import.append(qualified_name)
-            # TODO: I'm pretty sure combining breaks keeping particular tests standalone
             elif self.__can_monkey_combine(filename, contents):
                 self.std_monkey_patch_files.append(qualified_name if self.package else filename)
             elif self.__can_nonmonkey_combine(filename, contents):
@@ -457,15 +465,17 @@ class Discovery(object):
         def visit_files(self, filenames):
             for filename in filenames:
                 self.visit_file(filename)
-            self.__expand_imports()
+            with Discovery._in_dir(self.orig_dir):
+                self.__expand_imports()
             self.__combine_commands(self.std_monkey_patch_files)
             self.__combine_commands(self.no_monkey_patch_files)
 
+    @staticmethod
     @contextmanager
-    def _in_package_dir(self):
+    def _in_dir(package_dir):
         olddir = os.getcwd()
-        if self.package_dir:
-            os.chdir(self.package_dir)
+        if package_dir:
+            os.chdir(package_dir)
         try:
             yield
         finally:
@@ -474,10 +484,11 @@ class Discovery(object):
     @Lazy
     def discovered(self):
         tests = self.tests
-        discovered = self.Discovered(self.package, self.configured_test_options, self.ignore)
+        discovered = self.Discovered(self.package, self.configured_test_options,
+                                     self.ignore, self.config)
 
         # We need to glob relative names, our config is based on filenames still
-        with self._in_package_dir():
+        with self._in_dir(self.package_dir):
             if not tests:
                 tests = set(glob.glob('test_*.py')) - set(['test_support.py'])
             else:
@@ -716,7 +727,6 @@ def main():
     FAILING_TESTS = []
     IGNORED_TESTS = []
     RUN_ALONE = []
-    TEST_FILE_OPTIONS = {}
 
     coverage = False
     if options.coverage or os.environ.get("GEVENTTEST_COVERAGE"):
@@ -753,9 +763,6 @@ def main():
         FAILING_TESTS = config['FAILING_TESTS']
         IGNORED_TESTS = config['IGNORED_TESTS']
         RUN_ALONE = config['RUN_ALONE']
-        TEST_FILE_OPTIONS = config['TEST_FILE_OPTIONS']
-        IGNORE_COVERAGE = config['IGNORE_COVERAGE']
-
 
     tests = Discovery(
         options.tests,
@@ -763,8 +770,7 @@ def main():
         ignored=IGNORED_TESTS,
         coverage=coverage,
         package=options.package,
-        configured_ignore_coverage=IGNORE_COVERAGE,
-        configured_test_options=TEST_FILE_OPTIONS,
+        config=config,
     )
     if options.discover:
         for cmd, options in tests:

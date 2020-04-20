@@ -44,6 +44,3 @@ class QuietHub(Hub):
             # see handle_error
             return
         return Hub.print_exception(self, context, t, v, tb)
-
-    def destroy(self, destroy_loop=None):
-        raise AssertionError("Do not destroy the hub in a unittest")

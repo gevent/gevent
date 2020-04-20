@@ -619,7 +619,7 @@ class timer(_base.TimerMixin, watcher):
     _again = False
 
     def _watcher_ffi_init(self, args):
-        self._watcher_init(self.loop._ptr, self._watcher)
+        self._watcher_init(self.loop.ptr, self._watcher)
         self._after, self._repeat = args
         if self._after and self._after < 0.001:
             import warnings
@@ -674,7 +674,7 @@ class stat(_base.StatMixin, watcher):
         return data
 
     def _watcher_ffi_init(self, args):
-        return self._watcher_init(self.loop._ptr, self._watcher)
+        return self._watcher_init(self.loop.ptr, self._watcher)
 
     MIN_STAT_INTERVAL = 0.1074891 # match libev; 0.0 is default
 
@@ -707,7 +707,7 @@ class signal(_base.SignalMixin, watcher):
     _watcher_callback_name = '_gevent_signal_callback1'
 
     def _watcher_ffi_init(self, args):
-        self._watcher_init(self.loop._ptr, self._watcher)
+        self._watcher_init(self.loop.ptr, self._watcher)
         self.ref = False # libev doesn't ref these by default
 
 

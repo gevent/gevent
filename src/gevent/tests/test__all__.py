@@ -110,7 +110,6 @@ class AbstractTestMixin(object):
             except ImportError:
                 if modname in modules.OPTIONAL_MODULES:
                     msg = "Unable to import %s" % modname
-                    warnings.warn(msg) # make the testrunner print it
                     raise unittest.SkipTest(msg)
                 raise
 

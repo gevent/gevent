@@ -29,6 +29,7 @@ import gevent
 from gevent._util import LazyOnClass
 from gevent._compat import perf_counter
 from gevent._compat import get_clock_info
+from gevent._hub_local import get_hub_if_exists
 
 from . import sysinfo
 from . import params
@@ -277,7 +278,9 @@ class TestCase(TestCaseMetaClass("NewBase",
         # so that doesn't always happen. test__pool.py:TestPoolYYY.test_async
         # tends to show timeouts that are too short if we don't.
         # XXX: Should some core part of the loop call this?
-        gevent.get_hub().loop.update_now()
+        hub = get_hub_if_exists()
+        if hub and hub.loop:
+            hub.loop.update_now()
         self.close_on_teardown = []
         self.addCleanup(self._tearDownCloseOnTearDown)
 

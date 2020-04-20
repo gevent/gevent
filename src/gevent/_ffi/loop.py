@@ -397,9 +397,7 @@ class AbstractLoop(object):
 
 
     def _init_loop_and_aux_watchers(self, flags=None, default=None):
-
         self._ptr = self._init_loop(flags, default)
-
 
         # self._check is a watcher that runs in each iteration of the
         # mainloop, just after the blocking call. It's point is to handle
@@ -541,12 +539,13 @@ class AbstractLoop(object):
         raise NotImplementedError()
 
     def destroy(self):
-        if self._ptr:
+        ptr = self.ptr
+        if ptr:
             try:
-                if not self._can_destroy_loop(self._ptr):
+                if not self._can_destroy_loop(ptr):
                     return False
                 self._stop_aux_watchers()
-                self._destroy_loop(self._ptr)
+                self._destroy_loop(ptr)
             finally:
                 # not ffi.NULL, we don't want something that can be
                 # passed to C and crash later. This will create nice friendly
@@ -566,6 +565,7 @@ class AbstractLoop(object):
 
     @property
     def ptr(self):
+        # Use this when you need to be sure the pointer is valid.
         return self._ptr
 
     @property
@@ -650,7 +650,7 @@ class AbstractLoop(object):
 
     @property
     def default(self):
-        return self._default if self._ptr else False
+        return self._default if self.ptr else False
 
     @property
     def iteration(self):
@@ -730,9 +730,11 @@ class AbstractLoop(object):
         return cb
 
     def _format(self):
-        if not self._ptr:
+        ptr = self.ptr
+        if not ptr:
             return 'destroyed'
-        msg = self.backend
+        msg = "backend=" + self.backend
+        msg += ' ptr=' + str(ptr)
         if self.default:
             msg += ' default'
         msg += ' pending=%s' % self.pendingcnt
@@ -759,6 +761,6 @@ class AbstractLoop(object):
 
     @property
     def activecnt(self):
-        if not self._ptr:
+        if not self.ptr:
             raise ValueError('operation on destroyed loop')
         return 0
