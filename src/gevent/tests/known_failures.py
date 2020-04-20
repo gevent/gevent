@@ -452,7 +452,7 @@ class Definitions(DefinitionsBase):
 
     test__refcount = Ignored(
         "Sometimes fails to connect for no reason",
-        when=(CI & OSX) | (CI & PYPY),
+        when=(CI & OSX) | (CI & PYPY) | APPVEYOR,
         ignore_coverage=PYPY
     )
 

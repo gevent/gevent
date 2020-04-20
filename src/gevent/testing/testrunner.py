@@ -431,7 +431,7 @@ class Discovery(object):
                 cmd = self.__begin_command()
                 cmd.append('-m')
                 cmd.append('unittest')
-                cmd.append('-v')
+                # cmd.append('-v')
                 for name in group:
                     cmd.append(name)
                 self.commands.insert(0, (cmd, DEFAULT_RUN_OPTIONS.copy()))
@@ -536,6 +536,8 @@ def matches(possibilities, command, include_flaky=True):
         # Strip off '.py' from filenames to see if we match a module.
         # XXX: This could be much better. Our command needs better structure.
         if command.endswith(' ' + line) or command.endswith(line.replace(".py", '')):
+            return True
+        if ' '  not in command and command == line:
             return True
     return False
 

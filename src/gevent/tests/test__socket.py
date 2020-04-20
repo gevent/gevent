@@ -22,6 +22,7 @@ from gevent.testing import support
 from gevent.testing import params
 from gevent.testing.sockets import tcp_listener
 from gevent.testing.skipping import skipWithoutExternalNetwork
+from gevent.testing.skipping import skipOnMacOnCI
 
 # we use threading on purpose so that we can test both regular and
 # gevent sockets with the same code
@@ -49,7 +50,6 @@ class Thread(_Thread):
 
 
 class TestTCP(greentest.TestCase):
-    maxDiff = None
     __timeout__ = None
     TIMEOUT_ERROR = socket.timeout
     long_data = ", ".join([str(x) for x in range(20000)])
@@ -221,6 +221,7 @@ class TestTCP(greentest.TestCase):
         def test_sendall_unicode(self):
             self._test_sendall(six.text_type(self.long_data))
 
+    @skipOnMacOnCI("Sometimes fails for no apparent reason (buffering?)")
     def test_sendall_array(self):
         data = array.array("B", self.long_data)
         self._test_sendall(data)

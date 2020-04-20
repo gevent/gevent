@@ -32,6 +32,8 @@ def _do_not_skip(reason):
     return _identity
 
 
+skipOnMac = _do_not_skip
+skipOnMacOnCI = _do_not_skip
 skipOnWindows = _do_not_skip
 skipOnAppVeyor = _do_not_skip
 skipOnCI = _do_not_skip
@@ -62,6 +64,8 @@ skipOnLibev = _do_not_skip
 if sysinfo.WIN:
     skipOnWindows = unittest.skip
 
+if sysinfo.OSX:
+    skipOnMac = unittest.skip
 
 if sysinfo.RUNNING_ON_APPVEYOR:
     # See comments scattered around about timeouts and the timer
@@ -76,6 +80,8 @@ if sysinfo.RUNNING_ON_APPVEYOR:
 
 if sysinfo.RUNNING_ON_CI:
     skipOnCI = unittest.skip
+    if sysinfo.OSX:
+        skipOnMacOnCI = unittest.skip
 
 if sysinfo.RUNNING_ON_MANYLINUX:
     skipOnManylinux = unittest.skip
