@@ -474,22 +474,25 @@ class _SimulatedWithAsyncMixin(object):
         return self._async.active
 
     def start(self, cb, *args):
+        assert self._async is not None
         self._register_loop_callback()
         self.callback = cb
         self.args = args
         self._async.start(cb, *args)
-        #watcher.start(self, cb, *args)
 
     def stop(self):
         self._unregister_loop_callback()
         self.callback = None
         self.args = None
-        self._async.stop()
+        if self._async is not None:
+            # If we're stop() after close().
+            # That should be allowed.
+            self._async.stop()
 
     def close(self):
         if self._async is not None:
             a = self._async
-            #self._async = None
+            self._async = None
             a.close()
 
     def _register_loop_callback(self):
@@ -503,9 +506,7 @@ class _SimulatedWithAsyncMixin(object):
 class fork(_SimulatedWithAsyncMixin,
            _base.ForkMixin,
            watcher):
-    # We'll have to implement this one completely manually
-    # Right now it doesn't matter much since libuv doesn't survive
-    # a fork anyway. (That's a work in progress)
+    # We'll have to implement this one completely manually.
     _watcher_skip_ffi = False
 
     def _register_loop_callback(self):

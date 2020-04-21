@@ -160,11 +160,13 @@ class TestForkAndWatch(greentest.TestCase):
         pid = os.fork_and_watch()
         if pid:
             os.waitpid(-1, 0)
-            # Can't assert on what the pid actually was,
+            # Can't assert on what the found pid actually was,
             # our testrunner may have spawned multiple children.
             os._reap_children(0) # make the leakchecker happy
         else: # pragma: no cover
             gevent.sleep(2)
+            # The test framework will catch a regular SystemExit
+            # from sys.exit(), we need to just kill the process.
             os._exit(0)
 
     def test_waitpid_wrong_neg(self):

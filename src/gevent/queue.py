@@ -38,12 +38,14 @@ if sys.version_info[0] == 2:
     import Queue as __queue__ # python 3: pylint:disable=import-error
 else:
     import queue as __queue__ # python 2: pylint:disable=import-error
-Full = __queue__.Full
-Empty = __queue__.Empty
+# We re-export these exceptions to client modules.
+# But we also want fast access to them from Cython with a cdef,
+# and we do that with the _ definition.
+_Full = Full = __queue__.Full
+_Empty = Empty = __queue__.Empty
 
 from gevent.timeout import Timeout
 from gevent._hub_local import get_hub_noargs as get_hub
-from greenlet import getcurrent
 from gevent.exceptions import InvalidSwitchError
 
 __all__ = []
@@ -71,6 +73,8 @@ def _safe_remove(deq, item):
 
 import gevent._waiter
 locals()['Waiter'] = gevent._waiter.Waiter
+locals()['getcurrent'] = __import__('greenlet').getcurrent
+locals()['greenlet_init'] = lambda: None
 
 class ItemWaiter(Waiter): # pylint:disable=undefined-variable
     # pylint:disable=assigning-non-slot
@@ -256,7 +260,7 @@ class Queue(object):
             self._put(item)
             if self.getters:
                 self._schedule_unlock()
-        elif self.hub is getcurrent():
+        elif self.hub is getcurrent(): # pylint:disable=undefined-variable
             # We're in the mainloop, so we cannot wait; we can switch to other greenlets though.
             # Check if possible to get a free slot in the queue.
             while self.getters and self.qsize() and self.qsize() >= self._maxsize:
@@ -290,13 +294,14 @@ class Queue(object):
         """
         self.put(item, False)
 
+
     def __get_or_peek(self, method, block, timeout):
         # Internal helper method. The `method` should be either
         # self._get when called from self.get() or self._peek when
         # called from self.peek(). Call this after the initial check
         # to see if there are items in the queue.
 
-        if self.hub is getcurrent():
+        if self.hub is getcurrent(): # pylint:disable=undefined-variable
             # special case to make get_nowait() or peek_nowait() runnable in the mainloop greenlet
             # there are no items in the queue; try to fix the situation by unlocking putters
             while self.putters:
@@ -305,12 +310,12 @@ class Queue(object):
                 self.putters.popleft().put_and_switch()
                 if self.qsize():
                     return method()
-            raise Empty()
+            raise Empty
 
         if not block:
             # We can't block, we're not the hub, and we have nothing
             # to return. No choice...
-            raise Empty()
+            raise Empty
 
         waiter = Waiter() # pylint:disable=undefined-variable
         timeout = Timeout._start_new_or_dummy(timeout, Empty)
@@ -362,7 +367,8 @@ class Queue(object):
         (*timeout* is ignored in that case).
         """
         if self.qsize():
-            # XXX: Why doesn't this schedule an unlock like get() does?
+            # This doesn't schedule an unlock like get() does because we're not
+            # actually making any space.
             return self._peek()
 
         return self.__get_or_peek(self._peek, block, timeout)
@@ -604,7 +610,7 @@ class Channel(object):
         return True
 
     def put(self, item, block=True, timeout=None):
-        if self.hub is getcurrent():
+        if self.hub is getcurrent(): # pylint:disable=undefined-variable
             if self.getters:
                 getter = self.getters.popleft()
                 getter.switch(item)
@@ -634,7 +640,7 @@ class Channel(object):
         self.put(item, False)
 
     def get(self, block=True, timeout=None):
-        if self.hub is getcurrent():
+        if self.hub is getcurrent(): # pylint:disable=undefined-variable
             if self.putters:
                 item, putter = self.putters.popleft()
                 self.hub.loop.run_callback(putter.switch, putter)
@@ -680,6 +686,12 @@ class Channel(object):
         return result
 
     next = __next__ # Py2
+
+def _init():
+    greenlet_init() # pylint:disable=undefined-variable
+
+_init()
+
 
 from gevent._util import import_c_accel
 import_c_accel(globals(), 'gevent._queue')

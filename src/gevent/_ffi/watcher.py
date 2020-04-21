@@ -345,25 +345,36 @@ class watcher(object):
                 # may fail if __init__ did; will be harmlessly printed
                 self.close()
 
+    __in_repr = False
+
     def __repr__(self):
-        formats = self._format()
-        result = "<%s at 0x%x%s" % (self.__class__.__name__, id(self), formats)
-        if self.pending:
-            result += " pending"
-        if self.callback is not None:
-            fself = getattr(self.callback, '__self__', None)
-            if fself is self:
-                result += " callback=<bound method %s of self>" % (self.callback.__name__)
-            else:
-                result += " callback=%r" % (self.callback, )
-        if self.args is not None:
-            result += " args=%r" % (self.args, )
-        if self.callback is None and self.args is None:
-            result += " stopped"
-        result += " watcher=%s" % (self._watcher)
-        result += " handle=%s" % (self._watcher_handle)
-        result += " ref=%s" % (self.ref)
-        return result + ">"
+        basic = "<%s at 0x%x" % (self.__class__.__name__, id(self))
+        if self.__in_repr:
+            return basic + '>'
+        # Running child watchers have been seen to have a
+        # recursive repr in ``self.args``, thanks to ``gevent.os.fork_and_watch``
+        # passing the watcher as an argument to its callback.
+        self.__in_repr = True
+        try:
+            result = '%s%s' % (basic, self._format())
+            if self.pending:
+                result += " pending"
+            if self.callback is not None:
+                fself = getattr(self.callback, '__self__', None)
+                if fself is self:
+                    result += " callback=<bound method %s of self>" % (self.callback.__name__)
+                else:
+                    result += " callback=%r" % (self.callback, )
+            if self.args is not None:
+                result += " args=%r" % (self.args, )
+            if self.callback is None and self.args is None:
+                result += " stopped"
+            result += " watcher=%s" % (self._watcher)
+            result += " handle=%s" % (self._watcher_handle)
+            result += " ref=%s" % (self.ref)
+            return result + ">"
+        finally:
+            self.__in_repr = False
 
     @property
     def _watcher_handle(self):

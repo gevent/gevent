@@ -30,6 +30,12 @@ class _EVENTSType(object):
 EVENTS = GEVENT_CORE_EVENTS = _EVENTSType()
 
 
+class _DiscardedSet(frozenset):
+    __slots__ = ()
+
+    def discard(self, o):
+        "Does nothing."
+
 #####
 ## Note on CFFI objects, callbacks and the lifecycle of watcher objects
 #
@@ -382,6 +388,8 @@ class AbstractLoop(object):
     # Subclasses should set this in __init__ to reflect
     # whether they were the default loop.
     _default = None
+
+    _keepaliveset = _DiscardedSet()
 
     def __init__(self, ffi, lib, watchers, flags=None, default=None):
         self._ffi = ffi

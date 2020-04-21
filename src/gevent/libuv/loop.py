@@ -588,6 +588,8 @@ class loop(AbstractLoop):
         self._sigchld_watcher = ffi.new('uv_signal_t*')
         libuv.uv_signal_init(self.ptr, self._sigchld_watcher)
         self._sigchld_watcher.data = self._handle_to_self
+        # Don't let this keep the loop alive
+        libuv.uv_unref(self._sigchld_watcher)
 
         libuv.uv_signal_start(self._sigchld_watcher,
                               libuv.python_sigchld_callback,
@@ -635,7 +637,7 @@ class loop(AbstractLoop):
         except ValueError:
             pass
 
-        # Now's a good time to clean up any dead lists we don't need
+        # Now's a good time to clean up any dead watchers we don't need
         # anymore
         for pid in list(self._child_watchers):
             if not self._child_watchers[pid]:
