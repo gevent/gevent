@@ -100,14 +100,15 @@ static void _gevent_fs_poll_callback3(void* handlep, int status, const uv_stat_t
 static void gevent_uv_walk_callback_close(uv_handle_t* handle, void* arg)
 {
     if( handle && !uv_is_closing(handle) ) {
-	uv_close(handle, NULL);
+        uv_close(handle, NULL);
+        handle->data = NULL;
     }
 }
 
 static void gevent_close_all_handles(uv_loop_t* loop)
 {
     if (loop) {
-	uv_walk(loop, gevent_uv_walk_callback_close, NULL);
+        uv_walk(loop, gevent_uv_walk_callback_close, NULL);
     }
 }
 
@@ -155,7 +156,7 @@ static void* _gevent_uv_calloc(size_t count, size_t size)
     void* result;
     result = _gevent_uv_malloc(count * size);
     if(result) {
-	memset(result, 0, count * size);
+        memset(result, 0, count * size);
     }
     return result;
 }
@@ -163,9 +164,9 @@ static void* _gevent_uv_calloc(size_t count, size_t size)
 static void gevent_set_uv_alloc()
 {
     uv_replace_allocator(_gevent_uv_malloc,
-			 _gevent_uv_realloc,
-			 _gevent_uv_calloc,
-			 _gevent_uv_free);
+                         _gevent_uv_realloc,
+                         _gevent_uv_calloc,
+                         _gevent_uv_free);
 }
 
 #ifdef __clang__

@@ -1,7 +1,7 @@
 import unittest
 
 import gevent.testing as greentest
-from gevent.testing import TestCase, main
+from gevent.testing import TestCase
 import gevent
 from gevent.hub import get_hub, LoopExit
 from gevent import util
@@ -24,7 +24,8 @@ class TestQueue(TestCase):
     def test_peek_empty(self):
         q = queue.Queue()
         # No putters waiting, in the main loop: LoopExit
-        self.assertRaises(LoopExit, q.peek)
+        with self.assertRaises(LoopExit):
+            q.peek()
 
         def waiter(q):
             self.assertRaises(Empty, q.peek, timeout=0.01)
@@ -323,6 +324,8 @@ class TestNoWait(TestCase):
         assert q.empty(), q
 
     def test_get_nowait_unlock_channel(self):
+        # get_nowait runs fine in the hub, and
+        # it switches to a waiting putter if needed.
         result = []
         q = queue.Channel()
         p = gevent.spawn(q.put, 5)
@@ -330,19 +333,21 @@ class TestNoWait(TestCase):
         def store_result(func, *args):
             result.append(func(*args))
 
-        assert q.empty(), q
-        assert q.full(), q
+        self.assertTrue(q.empty())
+        self.assertTrue(q.full())
+
         gevent.sleep(0.001)
-        assert q.empty(), q
-        assert q.full(), q
+        self.assertTrue(q.empty())
+        self.assertTrue(q.full())
+
         get_hub().loop.run_callback(store_result, q.get_nowait)
         gevent.sleep(0.001)
-        assert q.empty(), q
-        assert q.full(), q
-        assert result == [5], result
-        assert p.ready(), p
-        assert p.dead, p
-        assert q.empty(), q
+        self.assertTrue(q.empty())
+        self.assertTrue(q.full())
+        self.assertEqual(result, [5])
+        self.assertTrue(p.ready())
+        self.assertTrue(p.dead)
+        self.assertTrue(q.empty())
 
     # put_nowait must work from the mainloop
     def test_put_nowait_unlock(self):
@@ -462,4 +467,4 @@ del AbstractGenericGetTestCase
 
 
 if __name__ == '__main__':
-    main()
+    greentest.main()

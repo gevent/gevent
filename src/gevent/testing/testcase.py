@@ -29,6 +29,7 @@ import gevent
 from gevent._util import LazyOnClass
 from gevent._compat import perf_counter
 from gevent._compat import get_clock_info
+from gevent._hub_local import get_hub_if_exists
 
 from . import sysinfo
 from . import params
@@ -146,12 +147,24 @@ class StringAssertMixin(object):
 class TestTimeout(gevent.Timeout):
     _expire_info = ''
 
-    def __init__(self, timeout):
-        gevent.Timeout.__init__(self, timeout, 'test timed out\n', ref=False)
+    def __init__(self, timeout, method='Not Given'):
+        gevent.Timeout.__init__(
+            self,
+            timeout,
+            '%r: test timed out\n' % (method,),
+            ref=False
+        )
 
     def _on_expiration(self, prev_greenlet, ex):
         from gevent.util import format_run_info
-        self._expire_info = '\n'.join(format_run_info())
+        loop = gevent.get_hub().loop
+        debug_info = 'N/A'
+        if hasattr(loop, 'debug'):
+            debug_info = [str(s) for s in loop.debug()]
+        run_info = format_run_info()
+        self._expire_info = 'Loop Debug:\n%s\nRun Info:\n%s' % (
+            '\n'.join(debug_info), '\n'.join(run_info)
+        )
         gevent.Timeout._on_expiration(self, prev_greenlet, ex)
 
     def __str__(self):
@@ -165,7 +178,7 @@ def _wrap_timeout(timeout, method):
 
     @wraps(method)
     def wrapper(self, *args, **kwargs):
-        with TestTimeout(timeout):
+        with TestTimeout(timeout, method):
             return method(self, *args, **kwargs)
 
     return wrapper
@@ -277,7 +290,9 @@ class TestCase(TestCaseMetaClass("NewBase",
         # so that doesn't always happen. test__pool.py:TestPoolYYY.test_async
         # tends to show timeouts that are too short if we don't.
         # XXX: Should some core part of the loop call this?
-        gevent.get_hub().loop.update_now()
+        hub = get_hub_if_exists()
+        if hub and hub.loop:
+            hub.loop.update_now()
         self.close_on_teardown = []
         self.addCleanup(self._tearDownCloseOnTearDown)
 

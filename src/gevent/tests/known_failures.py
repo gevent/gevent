@@ -364,7 +364,6 @@ class Definitions(DefinitionsBase):
         it seems highly load dependent. Observed with both libev and libuv.
         """,
         when=TRAVIS & (PYPY | OSX),
-        run_alone=ALWAYS,
         # This often takes much longer on PyPy on CI.
         options={'timeout': (CI & PYPY, 180)},
     )
@@ -438,11 +437,11 @@ class Definitions(DefinitionsBase):
         """,
     )
 
-    test__pool = test__queue = RunAlone(
+    test__pool = RunAlone(
         """
         On a heavily loaded box, these can all take upwards of 200s.
         """,
-        when=CI & LEAKTEST | PY3
+        when=CI & LEAKTEST
     )
 
     test_socket = RunAlone(
@@ -453,7 +452,7 @@ class Definitions(DefinitionsBase):
 
     test__refcount = Ignored(
         "Sometimes fails to connect for no reason",
-        when=(CI & OSX) | (CI & PYPY),
+        when=(CI & OSX) | (CI & PYPY) | APPVEYOR,
         ignore_coverage=PYPY
     )
 

@@ -86,7 +86,8 @@ class TestTree(greentest.TestCase):
         # so perhaps we need a GC?
         for _ in range(3):
             gc.collect()
-
+        gevent.get_hub().resolver = None # Reset resolver, don't need to see it
+        gevent.get_hub().threadpool = None # ditto the pool
         glets = []
         l = MyLocal(42)
         assert l
@@ -135,6 +136,10 @@ class TestTree(greentest.TestCase):
     def _normalize_tree_format(self, value):
         import re
         hexobj = re.compile('0x[0123456789abcdef]+L?', re.I)
+
+        hub_repr = repr(gevent.get_hub())
+        value = value.replace(hub_repr, "<HUB>")
+
         value = hexobj.sub('X', value)
         value = value.replace('epoll', 'select')
         value = value.replace('select', 'default')
@@ -142,6 +147,7 @@ class TestTree(greentest.TestCase):
         value = re.compile(' fileno=.').sub('', value)
         value = value.replace('ref=-1', 'ref=0')
         value = value.replace("type.current_tree", 'GreenletTree.current_tree')
+        value = value.replace('gevent.tests.__main__.MyLocal', '__main__.MyLocal')
         return value
 
     @greentest.ignores_leakcheck
@@ -159,26 +165,26 @@ class TestTree(greentest.TestCase):
  :    Greenlet Locals:
  :      Local <class '__main__.MyLocal'> at X
  :        {'foo': 42}
- +--- <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
+ +--- <HUB>
  :          Parent: <greenlet.greenlet object at X>
  +--- <Greenlet "Greenlet-1" at X: t2>; finished with value <Greenlet "CustomName-0" at 0x
- :          Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
+ :          Parent: <HUB>
  |    +--- <Greenlet "CustomName-0" at X: t1>; finished with exception ExpectedException()
- :                Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
+ :                Parent: <HUB>
  +--- <Greenlet "Greenlet-2" at X: t2>; finished with value <Greenlet "CustomName-4" at 0x
- :          Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
+ :          Parent: <HUB>
  |    +--- <Greenlet "CustomName-4" at X: t1>; finished with exception ExpectedException()
- :                Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
+ :                Parent: <HUB>
  +--- <Greenlet "Greenlet-3" at X: t3>; finished with value <Greenlet "Greenlet-5" at X
- :          Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
+ :          Parent: <HUB>
  :          Spawn Tree Locals
  :          {'stl': 'STL'}
  |    +--- <Greenlet "Greenlet-5" at X: t2>; finished with value <Greenlet "CustomName-6" at 0x
- :                Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
+ :                Parent: <HUB>
  |         +--- <Greenlet "CustomName-6" at X: t1>; finished with exception ExpectedException()
- :                      Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
+ :                      Parent: <HUB>
  +--- <Greenlet "Greenlet-7" at X: <bound method GreenletTree.current_tree of <class 'gevent.util.GreenletTree'>>>; finished with value <gevent.util.GreenletTree obje
-            Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
+            Parent: <HUB>
         """.strip()
         self.assertEqual(expected, value)
 

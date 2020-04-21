@@ -25,6 +25,8 @@ from gevent.hub import Hub
 from .exception import ExpectedException
 
 class QuietHub(Hub):
+    _resolver = None
+    _threadpool = None
 
     EXPECTED_TEST_ERROR = (ExpectedException,)
 

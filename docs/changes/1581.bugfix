@@ -1,0 +1,3 @@
+libuv loops that have watched children can now exit. Previously, the
+SIGCHLD watcher kept the loop alive even if there were no longer any
+watched children.

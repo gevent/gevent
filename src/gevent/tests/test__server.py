@@ -140,7 +140,10 @@ class TestCase(greentest.TestCase):
                 conn.close()
 
         ex = exc.exception
-        self.assertIn(ex.args[0], (errno.ECONNREFUSED, errno.EADDRNOTAVAIL), ex)
+        self.assertIn(ex.args[0],
+                      (errno.ECONNREFUSED, errno.EADDRNOTAVAIL,
+                       errno.ECONNRESET, errno.ECONNABORTED),
+                      (ex, ex.args))
 
     def assert500(self):
         self.Settings.assert500(self)

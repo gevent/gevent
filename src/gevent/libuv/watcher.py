@@ -474,22 +474,25 @@ class _SimulatedWithAsyncMixin(object):
         return self._async.active
 
     def start(self, cb, *args):
+        assert self._async is not None
         self._register_loop_callback()
         self.callback = cb
         self.args = args
         self._async.start(cb, *args)
-        #watcher.start(self, cb, *args)
 
     def stop(self):
         self._unregister_loop_callback()
         self.callback = None
         self.args = None
-        self._async.stop()
+        if self._async is not None:
+            # If we're stop() after close().
+            # That should be allowed.
+            self._async.stop()
 
     def close(self):
         if self._async is not None:
             a = self._async
-            #self._async = None
+            self._async = None
             a.close()
 
     def _register_loop_callback(self):
@@ -503,9 +506,7 @@ class _SimulatedWithAsyncMixin(object):
 class fork(_SimulatedWithAsyncMixin,
            _base.ForkMixin,
            watcher):
-    # We'll have to implement this one completely manually
-    # Right now it doesn't matter much since libuv doesn't survive
-    # a fork anyway. (That's a work in progress)
+    # We'll have to implement this one completely manually.
     _watcher_skip_ffi = False
 
     def _register_loop_callback(self):
@@ -619,7 +620,7 @@ class timer(_base.TimerMixin, watcher):
     _again = False
 
     def _watcher_ffi_init(self, args):
-        self._watcher_init(self.loop._ptr, self._watcher)
+        self._watcher_init(self.loop.ptr, self._watcher)
         self._after, self._repeat = args
         if self._after and self._after < 0.001:
             import warnings
@@ -674,7 +675,7 @@ class stat(_base.StatMixin, watcher):
         return data
 
     def _watcher_ffi_init(self, args):
-        return self._watcher_init(self.loop._ptr, self._watcher)
+        return self._watcher_init(self.loop.ptr, self._watcher)
 
     MIN_STAT_INTERVAL = 0.1074891 # match libev; 0.0 is default
 
@@ -707,7 +708,7 @@ class signal(_base.SignalMixin, watcher):
     _watcher_callback_name = '_gevent_signal_callback1'
 
     def _watcher_ffi_init(self, args):
-        self._watcher_init(self.loop._ptr, self._watcher)
+        self._watcher_init(self.loop.ptr, self._watcher)
         self.ref = False # libev doesn't ref these by default
 
 

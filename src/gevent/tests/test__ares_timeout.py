@@ -29,7 +29,8 @@ class TestTimeout(greentest.TestCase):
             while True:
                 listener.recvfrom(10000)
 
-        gevent.spawn(reader)
+        greader = gevent.spawn(reader)
+        self._close_on_teardown(greader.kill)
 
         r = Resolver(servers=[address[0]], timeout=0.001, tries=1,
                      udp_port=address[-1])

@@ -1,5 +1,5 @@
 from __future__ import print_function, absolute_import
-from gevent import monkey; monkey.patch_all(subprocess=True)
+from gevent import monkey; monkey.patch_all()
 import signal
 
 import socket

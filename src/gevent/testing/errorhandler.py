@@ -17,7 +17,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-
+from __future__ import print_function
 from functools import wraps
 
 
@@ -29,7 +29,6 @@ def wrap_error_fatal(method):
     def wrapper(self, *args, **kwargs):
         # XXX should also be able to do gevent.SYSTEM_ERROR = object
         # which is a global default to all hubs
-
         gevent.get_hub().SYSTEM_ERROR = object
         try:
             return method(self, *args, **kwargs)

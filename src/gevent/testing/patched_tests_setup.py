@@ -1247,7 +1247,7 @@ disabled_tests += [
     'test_ssl.BasicSocketTests.test_openssl_version'
 ]
 
-if TRAVIS and OSX:
+if OSX:
 
     disabled_tests += [
         # This sometimes produces OSError: Errno 40: Message too long

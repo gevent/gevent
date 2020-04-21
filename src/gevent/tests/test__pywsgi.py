@@ -22,7 +22,7 @@ from __future__ import print_function
 
 from gevent import monkey
 
-monkey.patch_all(thread=False)
+monkey.patch_all()
 
 from contextlib import contextmanager
 try:
