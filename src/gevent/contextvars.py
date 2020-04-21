@@ -84,7 +84,7 @@ class _ContextData(object):
     )
 
     def __init__(self):
-        self._mapping = dict()
+        self._mapping = {}
 
     def __getitem__(self, key):
         return self._mapping[key]

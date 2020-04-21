@@ -330,7 +330,7 @@ def assign_standard_callbacks(ffi, lib, callbacks_class, extras=()): # pylint:di
     # callbacks keeps these cdata objects alive at the python level
     callbacks = callbacks_class(ffi)
     extras = [extra if len(extra) == 2 else (extra, None) for extra in extras]
-    extras = tuple([(getattr(callbacks, name), error) for name, error in extras])
+    extras = tuple((getattr(callbacks, name), error) for name, error in extras)
     for (func, error_func) in (
             (callbacks.python_callback, None),
             (callbacks.python_handle_error, None),

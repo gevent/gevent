@@ -487,9 +487,9 @@ def patch_sys(stdin=True, stdout=True, stderr=True):
     if PY3:
         items = None
     else:
-        items = set([('stdin' if stdin else None),
+        items = {('stdin' if stdin else None),
                      ('stdout' if stdout else None),
-                     ('stderr' if stderr else None)])
+                     ('stderr' if stderr else None)}
         items.discard(None)
         items = list(items)
 

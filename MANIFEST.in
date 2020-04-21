@@ -16,6 +16,7 @@ include AUTHORS
 include Makefile.ext
 include known_failures.py
 include *.yml
+include *.toml
 include *.txt
 include _setup*.py
 include CHANGES.rst
