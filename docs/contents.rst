@@ -36,11 +36,9 @@ Developing and Packaging gevent
 ===============================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
-   development/installing_from_source
    development/index
-   development/release_process
 
 
 Related Information

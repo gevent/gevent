@@ -9,6 +9,7 @@ fallback to doing this if no binary wheel is available. (If you'll be
 :ref:`developing <development>` gevent, you'll need to install from
 source also; follow that link for more details.)
 
+
 General Notes
 =============
 
@@ -18,9 +19,34 @@ General Notes
   options, such as to use a system version of libuv instead of the
   embedded version. See :ref:`build-config`.
 
-- You'll need a working C compiler that can build Python extensions.
-  On some platforms, you may need to install Python development
-  packages.
+- You'll need `pip 19 and setuptools 40.8
+  <https://pip.pypa.io/en/stable/reference/pip/#pep-517-and-518-support>`_
+  with fully functional :pep:`518` and :pep:`517` support to install
+  gevent from source.
+
+- You'll need a working C compiler toolchain that can build Python
+  extensions. On some platforms, you may need to install Python
+  development packages. You'll also need the ability to compile `cffi
+  <https://pypi.org/project/cffi/>`_ modules, which may require
+  installing FFI development packages. Installing `make
+  <https://en.wikipedia.org/wiki/Make_(software)>`_ and other common
+  utilities such as `file
+  <https://en.wikipedia.org/wiki/File_(command)>`_ may also be
+  required.
+
+  For example, on Alpine Linux, one might need to do this::
+
+     apk add --virtual build-deps file make gcc musl-dev libffi-dev
+
+  See :issue:`1567`, :issue:`1559`, and :issue:`1566`.
+
+  .. note::
+
+     The exact set of external dependencies isn't necessarily fixed
+     and depends on the configure scripts of the bundled C libraries
+     such as libev, libuv and c-ares. Disabling :ref:`embed-lib` and
+     using system libraries can reduce these dependencies, although
+     this isn't encouraged.
 
 - Installing from source requires ``setuptools``. This is installed
   automatically in virtual environments and by buildout. However,
@@ -31,9 +57,9 @@ General Notes
   `have issues installing gevent for this reason
   <https://github.com/pypa/pipenv/issues/2113>`_.
 
-- gevent 1.5 comes with a ``pyproject.toml`` file that installs the
-  build dependencies, including CFFI (needed for libuv support). pip
-  18 or above is required for this support.
+- gevent 1.5 and newer come with a ``pyproject.toml`` file that
+  installs the build dependencies, including CFFI (needed for libuv
+  support). pip 18 or above is required for this support.
 
 - You can use pip's `VCS support
   <https://pip.pypa.io/en/stable/reference/pip_install/#vcs-support>`_
@@ -109,17 +135,18 @@ yes/no.
   In general, setting ``CPPFLAGS`` is more general and can contain
   other macros recognized by libev.
 
+.. _embed-lib:
 
 Embedding Libraries
 -------------------
 
-By default, gevent builds and embeds tested versions of its
-C dependencies libev, libuv, and c-ares. This is the
-recommended configuration as the specific versions used are tested by
-gevent, and sometimes require patches to be applied. Moreover,
-embedding, especially in the case of libev, can be more efficient as
-features not needed by gevent can be disabled, resulting in smaller or
-faster libraries or runtimes.
+By default, gevent builds and embeds tested versions of its C
+dependencies libev, libuv, and c-ares. This is the recommended
+configuration as the specific versions used are tested by gevent, and
+sometimes require patches to be applied. Moreover, embedding,
+especially in the case of libev, can be more efficient as features not
+needed by gevent can be disabled, resulting in smaller or faster
+libraries or runtimes.
 
 However, this can be disabled, either for all libraries at once or for
 individual libraries.

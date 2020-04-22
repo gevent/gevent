@@ -32,6 +32,8 @@ gevent 1.5 drops support for Python 3.4, and drops support for PyPy
 gevent is tested with CPython 2.7.17, 3.5.9, 3.6.10, 3.7.7, 3.8.2,
 PyPy 2 7.3.0 and PyPy3 7.3.0.
 
+.. caution:: Older releases, such as RHEL 5, are no longer supported.
+
 Packaging Changes
 =================
 
@@ -41,16 +43,26 @@ instead of the older ``manylinux1`` standard. This updated platform
 tag allows gevent to distribute libuv support by default. CentOS 6 is
 the baseline for this tag.
 
-.. note:: Older releases, such as RHEL 5, are no longer supported.
-
 gevent bundles a ``pyproject.toml`` now. This is useful for building
 from source.
+
+.. caution::
+
+   The requirements for building from source may have changed,
+   especially in minimal container environments (e.g., Alpine Linux).
+   See :doc:`development/installing_from_source` for more information.
 
 The legacy ``Makefile`` has been removed in favor of built-in setup.py
 commands.
 
 Certain environment variables used at build time have been deprecated
 and renamed.
+
+Generated ``.c`` and ``.h`` files are no longer included in the
+distribution. Neither are Cython ``.pxd`` files. This is because
+linking to internal C optimizations is not supported and likely to
+crash if used against a different version of gevent than exactly what
+it was compiled for. See :issue:`1568` for more details.
 
 Library Updates
 ===============

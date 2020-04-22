@@ -18,7 +18,6 @@ Read the documentation online at http://www.gevent.org.
 Post feedback and issues on the `bug tracker`_, `mailing list`_, blog_
 and `twitter (@gevent)`_.
 
-
 .. include:: docs/install.rst
 
 .. _bug tracker: https://github.com/gevent/gevent/wiki/Projects

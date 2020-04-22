@@ -8,25 +8,38 @@
   This file is included in README.rst so it is limited to plain
   ReST markup, not Sphinx.
 
+.. note::
+
+   If you are reading this document on the `Python Package Index`_
+   (PyPI, https://pypi.org/), it is specific to the version of gevent that
+   you are viewing. If you are viewing this document on gevent.org, it
+   refers to the current state of gevent in source control (git
+   master).
+
 Supported Platforms
 ===================
 
-`gevent 1.5`_ runs on Python 2.7.9 and up, and Python 3.5, 3.6, 3.7 and
+This version of gevent runs on Python 2.7.9 and up, and Python 3.5, 3.6, 3.7 and
 3.8. gevent requires the `greenlet <https://greenlet.readthedocs.io>`_
 library and will install the `cffi`_ library by default on Windows.
 The cffi library will become the default on all platforms in a future
 release of gevent.
 
-gevent 1.5 also runs on PyPy 7.0 or above. On PyPy, there are no
-external dependencies.
+This version of gevent also runs on PyPy 7.0 or above. On PyPy, there
+are no external dependencies.
 
 gevent is tested on Windows, macOS, and Linux, and should run on most
 other Unix-like operating systems (e.g., FreeBSD, Solaris, etc.)
 
-.. note:: On Windows using the deprecated libev backend, gevent is
-          limited to a maximum of 1024 open sockets due to
-          `limitations in libev`_. This limitation should not exist
-          with the default libuv backend.
+.. note::
+
+   Windows is supported as a tier 2, "best effort," platform. It is
+   suitable for development, but not recommended for production.
+
+   On Windows using the deprecated libev backend, gevent is
+   limited to a maximum of 1024 open sockets due to
+   `limitations in libev`_. This limitation should not exist
+   with the default libuv backend.
 
 Older Versions of Python
 ------------------------
@@ -85,6 +98,12 @@ distributed as binary `wheels`_.
    <https://github.com/pypa/pip/pull/5008>`_ to install the
    manylinux2010 wheels.
 
+.. tip::
+
+   Binary wheels cannot be installed on non-manylinux2010 compatible
+   Linux systems, such as those that use `musl
+   <https://musl.libc.org>`_, including `Alpine Linux
+   <https://alpinelinux.org>`_. Those systems must install from source.
 
 Installing From Source
 ----------------------
@@ -94,7 +113,6 @@ pre-built wheels are available or if wheel installation is disabled),
 you can build gevent from source. A normal ``pip install`` will
 fall back to doing this if no binary wheel is available. See
 `Installing From Source`_ for more, including common installation issues.
-
 
 Extra Dependencies
 ==================
