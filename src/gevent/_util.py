@@ -214,3 +214,74 @@ except ImportError:
 Interface = Interface
 implementer = implementer
 Attribute = Attribute
+
+
+def prereleaser_middle(data): # pragma: no cover
+    """
+    zest.releaser prerelease middle hook for gevent.
+
+    The prerelease step:
+
+        asks you for a version number
+        updates the setup.py or version.txt and the
+        CHANGES/HISTORY/CHANGELOG file (with either
+        this new version
+        number and offers to commit those changes to git
+
+    The middle hook:
+
+        All data dictionary items are available and some questions
+        (like new version number) have been asked.
+        No filesystem changes have been made yet.
+
+    It is our job to finish up the filesystem changes needed, including:
+
+    - Calling towncrier to handle CHANGES.rst
+    - Add the version number to ``versionadded``, ``versionchanged`` and
+      ``deprecated`` directives in Python source.
+    """
+    if data['name'] != 'gevent':
+        # We are specified in ``setup.cfg``, not ``setup.py``, so we do not
+        # come into play for other projects, only this one. We shouldn't
+        # need this check, but there it is.
+        return
+
+    import re
+    import os
+    import subprocess
+    from gevent.testing import modules
+
+    new_version = data['new_version']
+
+    # Generate CHANGES.rst, remove old news entries.
+    subprocess.check_call([
+        'towncrier',
+        'build',
+        '--version', data['new_version'],
+        '--yes'
+    ])
+
+    # Put the version number in source files.
+    regex = re.compile(b'.. (versionchanged|versionadded|deprecated):: NEXT')
+    replacement = r'.. \1:: %s' % (new_version,)
+    for path, _ in modules.walk_modules(
+            # Start here
+            basedir=os.path.join(data['reporoot'], 'src', 'gevent'),
+            # Include sub-dirs
+            recursive=True,
+            # Include tests
+            include_tests=True,
+            # and other things usually excluded
+            excluded_modules=(),
+            # Don't return build binaries
+            include_so=False,
+            # Don't try to import things; we want all files.
+            check_optional=False,
+    ):
+        with open(path, 'rb') as f:
+            contents = f.read()
+        new_contents, count = regex.subn(replacement, contents)
+        if count:
+            print("Replaced version NEXT in", path)
+            with open(path, 'wb') as f:
+                f.write(new_contents)

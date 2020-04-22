@@ -43,6 +43,16 @@ OPTIONAL_MODULES = frozenset({
     'gevent.libuv.watcher',
 })
 
+EXCLUDED_MODULES = frozenset({
+    '__init__',
+    'core',
+    'ares',
+    '_util',
+    '_semaphore',
+    'corecffi',
+    '_corecffi',
+    '_corecffi_build',
+})
 
 def walk_modules(
         basedir=None,
@@ -50,7 +60,9 @@ def walk_modules(
         include_so=False,
         recursive=False,
         check_optional=True,
+        include_tests=False,
         optional_modules=OPTIONAL_MODULES,
+        excluded_modules=EXCLUDED_MODULES,
 ):
     """
     Find gevent modules, yielding tuples of ``(path, importable_module_name)``.
@@ -78,14 +90,20 @@ def walk_modules(
         if os.path.isdir(path):
             if not recursive:
                 continue
-            if fn in ['testing', 'tests']:
+            if not include_tests and fn in ['testing', 'tests']:
                 continue
             pkg_init = os.path.join(path, '__init__.py')
             if os.path.exists(pkg_init):
                 yield pkg_init, modpath + fn
-                for p, m in walk_modules(path, modpath + fn + ".",
-                                         check_optional=check_optional,
-                                         optional_modules=optional_modules):
+                for p, m in walk_modules(
+                        path, modpath + fn + ".",
+                        include_so=include_so,
+                        recursive=recursive,
+                        check_optional=check_optional,
+                        include_tests=include_tests,
+                        optional_modules=optional_modules,
+                        excluded_modules=excluded_modules,
+                ):
                     yield p, m
             continue
 
@@ -93,8 +111,7 @@ def walk_modules(
             x = fn[:-3]
             if x.endswith('_d'):
                 x = x[:-2]
-            if x in ['__init__', 'core', 'ares', '_util', '_semaphore',
-                     'corecffi', '_corecffi', '_corecffi_build']:
+            if x in excluded_modules:
                 continue
             modname = modpath + x
             if check_optional and modname in optional_modules:
