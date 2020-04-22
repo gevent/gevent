@@ -261,6 +261,16 @@ def prereleaser_middle(data): # pragma: no cover
         '--yes'
     ])
 
+    data['update_history'] = False # Because towncrier already did.
+
+    # But unstage it; we want it to show in the diff zest.releaser will do
+    subprocess.check_call([
+        'git',
+        'restore',
+        '--staged',
+        'CHANGES.rst',
+    ])
+
     # Put the version number in source files.
     regex = re.compile(b'.. (versionchanged|versionadded|deprecated):: NEXT')
     replacement = r'.. \1:: %s' % (new_version,)
