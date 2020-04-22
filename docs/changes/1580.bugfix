@@ -1,2 +1,0 @@
-Fix destroying the libuv default loop and then using the default loop
-again.

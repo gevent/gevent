@@ -1,2 +1,0 @@
-Fix a spurious warning about watchers and resource leaks on libuv on
-Windows. Reported by Stéphane Rainville.

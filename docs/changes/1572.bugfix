@@ -1,4 +1,0 @@
-Make it possible to monkey-patch :mod:`contextvars` before Python 3.7
-if a non-standard backport that uses the same name as the standard
-library does is installed. Previously this would raise an error.
-Reported by Simon Davy.

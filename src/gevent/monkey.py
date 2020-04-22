@@ -555,7 +555,7 @@ def patch_contextvars():
     and import name is available on PyPI (though this is not
     recommended). If that is installed, it will be patched.
 
-    .. versionchanged:: NEXT
+    .. versionchanged:: 20.04.0
        Clarify that the backport is also patched.
     """
     try:

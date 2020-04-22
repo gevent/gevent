@@ -1,2 +1,0 @@
-Make monkey-patching properly remove ``select.epoll`` and
-``select.kqueue``. Reported by Kirill Smelkov.
