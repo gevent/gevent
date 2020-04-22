@@ -273,7 +273,7 @@ def prereleaser_middle(data): # pragma: no cover
 
     # Put the version number in source files.
     regex = re.compile(b'.. (versionchanged|versionadded|deprecated):: NEXT')
-    replacement = r'.. \1:: %s' % (new_version,)
+    replacement = br'.. \1:: %s' % (new_version,)
     for path, _ in modules.walk_modules(
             # Start here
             basedir=os.path.join(data['reporoot'], 'src', 'gevent'),
