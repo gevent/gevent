@@ -56,3 +56,62 @@ can be done in one line by installing the ``dev-requirements.txt`` file::
    This pip command does not work with pip 19.1. Either use pip 19.0
    or below, or use pip 19.1.1 with ``--no-use-pep517``. See `issue
    1412 <https://github.com/gevent/gevent/issues/1412>`_.
+
+Making Changes
+==============
+
+When adding new features (functions, methods, modules), be sure to
+provide docstrings. The docstring should end with Sphinx's
+`versionadded directive
+<https://www.sphinx-doc.org/en/master/usage/restructuredtext/directives.html#directive-versionadded>`_,
+using a version string of "NEXT". This string will automatically be
+replaced with the correct version during the release process.
+
+For example:
+
+.. code-block:: python
+
+   def make_plumbus(schleem, rub_fleeb=True):
+      """
+      Produces a plumbus.
+
+      :param int scheem: The number of schleem to use.
+          Possibly repurposed.
+      :keyword bool rub_fleeb: Whether to rub the fleeb.
+          Rubbing the fleeb is important, so only disable
+          if you know what you're doing.
+      .. versionadded:: NEXT
+      """
+
+When making a change to an existing feature that has already been
+released, apply the appropriate `versionchanged
+<https://www.sphinx-doc.org/en/master/usage/restructuredtext/directives.html#directive-versionchanged>`_
+or `deprecated
+<https://www.sphinx-doc.org/en/master/usage/restructuredtext/directives.html#directive-deprecated>`_
+directive, also using "NEXT".
+
+.. code-block:: python
+
+   def make_plumbus(schleem, rub_fleeb=True):
+      """
+      Produces a plumbus.
+
+      :param int schleem: The schleem to use.
+          Possibly repurposed.
+      :keyword bool rub_fleeb: Whether to rub the fleeb.
+          Rubbing the fleeb is important, so only disable
+          if you know what you're doing.
+      :return: A :class:`Plumbus`.
+      .. versionadded:: 20.04.0
+      .. versionchanged:: NEXT
+         The *rub_fleeb* parameter is ignored; the fleeb
+         must always be rubbed.
+      """
+
+    def extract_fleeb_juice():
+        """
+        Get the fleeb juice.
+
+        .. deprecated:: NEXT
+           Extracting fleeb juice now happens automatically.
+        """

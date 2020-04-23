@@ -2,10 +2,18 @@
  Release Process
 =================
 
-Release Cadence
-===============
+Release Cadence and Versions
+============================
 
-TODO: Write me.
+After :doc:`gevent 1.5 <../whatsnew_1_5>`, gevent releases switched to
+`CalVer <https://calver.org>`_, using the scheme ``YY.0M.Micro``
+(two-digit year, zero-padded month, micro/patch number). Thus the
+first release in April of 2020 would be version ``20.04.0``. A second
+release would be ``20.04.1``, etc. The first release in May
+would be ``20.05.0``, and so on.
+
+If there have been changes to master, gevent should produce a release
+at least once a month.
 
 Deprecation Policy
 ==================
@@ -39,26 +47,16 @@ Releasing gevent
           maintainers.
 
 gevent is released using `zest.releaser
-<https://pypi.org/project/zest.releaser/>`_. The general flow is
-something like this:
+<https://pypi.org/project/zest.releaser/>`_. Binary wheels are
+published automatically by Travis CI (macOS and manylinux) and
+Appveyor (Windows) when a tag is uploaded.
+
 
 1. Push all relevant changes to master.
-2. From the gevent working copy, run ``prerelease``. Fix any issues it
+2. From the gevent working copy, run ``fullrelease``. Fix any issues it
    brings up. Let it bump the version number (or enter the correct
-   one) and commit.
-3. Run ``release``. Let it create the tag and commit it; let it create
-   an sdist, but **do not** let it upload it.
-4. Push the tag and master to github.
-5. Let appveyor build the tag. Download all the built wheels from that
-   release. The easiest way to do that is with Ned Batchelder's
-   `appveyor-download.py script
-   <https://bitbucket.org/ned/coveragepy/src/tip/ci/download_appveyor.py>`_.
-6. Meanwhile, spin up docker and from the root of the gevent checkout
-   run ``scripts/releases/make-manylinux``. This creates wheels in
-   ``wheelhouse/``.
-7. If on a mac, ``cd scripts/releases && ./geventreleases.sh``. This
-   creates wheels in ``/tmp/gevent/``.
-8. Upload the Appveyor, manylinux, and mac wheels to pypi using
-   ``twine``. Also be sure to upload the sdist!
-9. Run ``postrelease``, let it bump the version and push the changes
-   to github.
+   one), commit, create the tag, create the sdist, upload the sdist
+   and push the tag to GitHub.
+3. Monitor the build process on the CI systems. If particular builds
+   fail due to test instability, re-run them to allow the binary wheel
+   to be uploaded.

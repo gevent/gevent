@@ -23,10 +23,9 @@ There are a number of systems in place to help ensure gevent is of the
 highest possible quality:
 
 - A test suite is run for every push and pull request submitted. Travis
-  CI is used to test on Linux, and `AppVeyor`_ runs the builds on
+  CI is used to test on Linux and macOS, and `AppVeyor`_ runs the builds on
   Windows. Pull requests with tests that don't pass will be
   automatically failed.
-
 
   .. image:: https://travis-ci.org/gevent/gevent.svg?branch=master
      :target: https://travis-ci.org/gevent/gevent
