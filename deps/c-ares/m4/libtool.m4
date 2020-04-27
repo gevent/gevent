@@ -4704,6 +4704,12 @@ m4_if([$1], [CXX], [
 	_LT_TAGVAR(lt_prog_compiler_pic, $1)='-KPIC'
 	_LT_TAGVAR(lt_prog_compiler_static, $1)='-static'
         ;;
+      # flang / f18. f95 an alias for gfortran or flang on Debian
+      flang* | f18* | f95*)
+	_LT_TAGVAR(lt_prog_compiler_wl, $1)='-Wl,'
+	_LT_TAGVAR(lt_prog_compiler_pic, $1)='-fPIC'
+	_LT_TAGVAR(lt_prog_compiler_static, $1)='-static'
+        ;;
       # icc used to be incompatible with GCC.
       # ICC 10 doesn't accept -KPIC any more.
       icc* | ifort*)

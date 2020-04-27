@@ -312,7 +312,7 @@ class Greenlet(greenlet):
         # may be quietly broken: it's not thread safe.
         # If our parent is no longer the hub for whatever reason, this will raise a
         # AttributeError or TypeError.
-        hub = get_my_hub(self) # type:SwitchOutGreenletWithLoop pylint:disable=undefined-variable
+        hub = get_my_hub(self) # pylint:disable=undefined-variable
 
         reg = hub.ident_registry
         return reg.get_ident(self)
@@ -775,7 +775,7 @@ class Greenlet(greenlet):
         try:
             t = Timeout._start_new_or_dummy(timeout)
             try:
-                result = get_my_hub(self).switch()
+                result = get_my_hub(self).switch() # pylint:disable=undefined-variable
                 if result is not self:
                     raise InvalidSwitchError('Invalid switch into Greenlet.get(): %r' % (result, ))
             finally:
@@ -809,7 +809,7 @@ class Greenlet(greenlet):
         try:
             t = Timeout._start_new_or_dummy(timeout)
             try:
-                result = get_my_hub(self).switch()
+                result = get_my_hub(self).switch() # pylint:disable=undefined-variable
                 if result is not self:
                     raise InvalidSwitchError('Invalid switch into Greenlet.join(): %r' % (result, ))
             finally:

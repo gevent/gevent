@@ -28,6 +28,7 @@ from __future__ import absolute_import, division, print_function
 
 import binascii
 import re
+import struct
 
 from gevent.resolver import hostname_types
 

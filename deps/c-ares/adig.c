@@ -795,8 +795,8 @@ static const char *class_name(int dnsclass)
 
 static void usage(void)
 {
-  fprintf(stderr, "usage: adig [-f flag] [-s server] [-c class] "
-          "[-t type] [-p port] name ...\n");
+  fprintf(stderr, "usage: adig [-h] [-d] [-f flag] [-s server] [-c class] "
+          "[-t type] [-T|U port] name ...\n");
   exit(1);
 }
 

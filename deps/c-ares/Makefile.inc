@@ -1,6 +1,9 @@
 
 CSOURCES = ares__close_sockets.c	\
   ares__get_hostent.c			\
+  ares__parse_into_addrinfo.c		\
+  ares__readaddrinfo.c			\
+  ares__sortaddrinfo.c			\
   ares__read_line.c			\
   ares__timeval.c			\
   ares_android.c			\
@@ -12,6 +15,8 @@ CSOURCES = ares__close_sockets.c	\
   ares_fds.c				\
   ares_free_hostent.c			\
   ares_free_string.c			\
+  ares_freeaddrinfo.c			\
+  ares_getaddrinfo.c			\
   ares_getenv.c				\
   ares_gethostbyaddr.c			\
   ares_gethostbyname.c			\
@@ -88,8 +93,10 @@ HTMLPAGES = ares_cancel.html		\
   ares_free_data.html			\
   ares_free_hostent.html		\
   ares_free_string.html			\
+  ares_freeaddrinfo.html		\
   ares_get_servers.html			\
   ares_get_servers_ports.html		\
+  ares_getaddrinfo.html			\
   ares_gethostbyaddr.html		\
   ares_gethostbyname.html		\
   ares_gethostbyname_file.html		\
@@ -143,8 +150,10 @@ PDFPAGES = ares_cancel.pdf		\
   ares_free_data.pdf			\
   ares_free_hostent.pdf			\
   ares_free_string.pdf			\
+  ares_freeaddrinfo.pdf			\
   ares_get_servers.pdf			\
   ares_get_servers_ports.pdf		\
+  ares_getaddrinfo.pdf			\
   ares_gethostbyaddr.pdf		\
   ares_gethostbyname.pdf		\
   ares_gethostbyname_file.pdf		\

@@ -201,6 +201,6 @@ static void callback(void *arg, int status, int timeouts, struct hostent *host)
 
 static void usage(void)
 {
-  fprintf(stderr, "usage: ahost [-t {a|aaaa|u}] {host|addr} ...\n");
+  fprintf(stderr, "usage: ahost [-h] [-d] [-s {domain}] [-t {a|aaaa|u}] {host|addr} ...\n");
   exit(1);
 }

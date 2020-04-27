@@ -364,10 +364,10 @@ PROG3_OBJS = $(PROG3_OBJS) $(PROG3_OBJDIR)\ahost.obj
 !IF "$(VALID_CFGSET)" == "FALSE"
 
 ALL:
-    $(MAKE) /f .\Makefile.msvc  CFG=lib-release  ALL
-    $(MAKE) /f .\Makefile.msvc  CFG=lib-debug    ALL
-    $(MAKE) /f .\Makefile.msvc  CFG=dll-release  ALL
-    $(MAKE) /f .\Makefile.msvc  CFG=dll-debug    ALL
+    $(MAKE) /NOLOGO /f .\Makefile.msvc  CFG=lib-release  ALL
+    $(MAKE) /NOLOGO /f .\Makefile.msvc  CFG=lib-debug    ALL
+    $(MAKE) /NOLOGO /f .\Makefile.msvc  CFG=dll-release  ALL
+    $(MAKE) /NOLOGO /f .\Makefile.msvc  CFG=dll-debug    ALL
 
 clean:
     @-RMDIR /S /Q $(BASE_DIR) >NUL 2>&1

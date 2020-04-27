@@ -112,7 +112,7 @@ class _Definition(object):
         assert isinstance(run_alone, Condition)
         assert isinstance(ignore_coverage, Condition)
         self.when = when
-        self.__name__ = None
+        self.__name__ = None # pylint:disable=non-str-assignment-to-dunder-name
         self.run_alone = run_alone
         self.ignore_coverage = ignore_coverage
         if options:

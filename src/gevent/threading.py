@@ -142,8 +142,7 @@ class _DummyThread(_DummyThread_):
 
     _stop = _Thread__stop # py3
 
-    def _wait_for_tstate_lock(self, *args, **kwargs):
-        # pylint:disable=arguments-differ
+    def _wait_for_tstate_lock(self, *args, **kwargs): # pylint:disable=signature-differs
         pass
 
 if hasattr(__threading__, 'main_thread'): # py 3.4+

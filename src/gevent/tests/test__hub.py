@@ -351,7 +351,7 @@ class TestHandleError(unittest.TestCase):
         def bad_handle_error(*args):
             raise AttributeError
 
-        hub = get_hub().handle_error = bad_handle_error
+        get_hub().handle_error = bad_handle_error
 
         class MyException(Exception):
             pass

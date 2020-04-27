@@ -36,6 +36,12 @@ class SocketWithBanner(socket.socket):
         self.banner = None
         super(SocketWithBanner, self).__init__(*args, **kwargs)
 
+    def __enter__(self):
+        return socket.socket.__enter__(self)
+
+    def __exit__(self, t, v, tb):
+        return socket.socket.__exit__(self, t, v, tb)
+
 
 @greentest.skipOnAppVeyor(
     "With the update to libev 4.31 and potentially closing sockets in the background, "

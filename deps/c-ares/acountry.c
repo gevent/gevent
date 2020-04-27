@@ -69,7 +69,7 @@
 #define INADDR_NONE 0xffffffff
 #endif
 
-static const char *usage      = "acountry [-vh?] {host|addr} ...\n";
+static const char *usage      = "acountry [-?hdv] {host|addr} ...\n";
 static const char  nerd_fmt[] = "%u.%u.%u.%u.zz.countries.nerd.dk";
 static const char *nerd_ver1  = nerd_fmt + 14;  /* .countries.nerd.dk */
 static const char *nerd_ver2  = nerd_fmt + 11;  /* .zz.countries.nerd.dk */

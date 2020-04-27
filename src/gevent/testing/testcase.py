@@ -276,8 +276,7 @@ class TestCase(TestCaseMetaClass("NewBase",
     close_on_teardown = ()
     __old_subscribers = ()
 
-    def run(self, *args, **kwargs):
-        # pylint:disable=arguments-differ
+    def run(self, *args, **kwargs): # pylint:disable=signature-differs
         if self.switch_expected == 'default':
             self.switch_expected = get_switch_expected(self.fullname)
         return super(TestCase, self).run(*args, **kwargs)

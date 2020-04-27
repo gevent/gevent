@@ -37,7 +37,7 @@ class TestSSL(test__socket.TestTCP):
         self._close_on_teardown(raw_listener)
         return listener
 
-    def create_connection(self, *args, **kwargs): # pylint:disable=arguments-differ
+    def create_connection(self, *args, **kwargs): # pylint:disable=signature-differs
         return self._close_on_teardown(
             ssl.wrap_socket(super(TestSSL, self).create_connection(*args, **kwargs)))
 

@@ -1661,6 +1661,146 @@ AC_DEFUN([CARES_CHECK_FUNC_GETSERVBYPORT_R], [
 ])
 
 
+dnl CARES_CHECK_FUNC_GETSERVBYNAME_R
+dnl -------------------------------------------------
+dnl Verify if getservbyname_r is available, prototyped,
+dnl and can be compiled. If all of these are true, and
+dnl usage has not been previously disallowed with
+dnl shell variable cares_disallow_getservbyname_r, then
+dnl HAVE_GETSERVBYNAME_R will be defined.
+
+AC_DEFUN([CARES_CHECK_FUNC_GETSERVBYNAME_R], [
+  AC_REQUIRE([CARES_INCLUDES_NETDB])dnl
+  #
+  tst_links_getservbyname_r="unknown"
+  tst_proto_getservbyname_r="unknown"
+  tst_compi_getservbyname_r="unknown"
+  tst_allow_getservbyname_r="unknown"
+  tst_nargs_getservbyname_r="unknown"
+  #
+  AC_MSG_CHECKING([if getservbyname_r can be linked])
+  AC_LINK_IFELSE([
+    AC_LANG_FUNC_LINK_TRY([getservbyname_r])
+  ],[
+    AC_MSG_RESULT([yes])
+    tst_links_getservbyname_r="yes"
+  ],[
+    AC_MSG_RESULT([no])
+    tst_links_getservbyname_r="no"
+  ])
+  #
+  if test "$tst_links_getservbyname_r" = "yes"; then
+    AC_MSG_CHECKING([if getservbyname_r is prototyped])
+    AC_EGREP_CPP([getservbyname_r],[
+      $cares_includes_netdb
+    ],[
+      AC_MSG_RESULT([yes])
+      tst_proto_getservbyname_r="yes"
+    ],[
+      AC_MSG_RESULT([no])
+      tst_proto_getservbyname_r="no"
+    ])
+  fi
+  #
+  if test "$tst_proto_getservbyname_r" = "yes"; then
+    if test "$tst_nargs_getservbyname_r" = "unknown"; then
+      AC_MSG_CHECKING([if getservbyname_r takes 4 args.])
+      AC_COMPILE_IFELSE([
+        AC_LANG_PROGRAM([[
+          $cares_includes_netdb
+        ]],[[
+          if(0 != getservbyname_r(0, 0, 0, 0))
+            return 1;
+        ]])
+      ],[
+        AC_MSG_RESULT([yes])
+        tst_compi_getservbyname_r="yes"
+        tst_nargs_getservbyname_r="4"
+      ],[
+        AC_MSG_RESULT([no])
+        tst_compi_getservbyname_r="no"
+      ])
+    fi
+    if test "$tst_nargs_getservbyname_r" = "unknown"; then
+      AC_MSG_CHECKING([if getservbyname_r takes 5 args.])
+      AC_COMPILE_IFELSE([
+        AC_LANG_PROGRAM([[
+          $cares_includes_netdb
+        ]],[[
+          if(0 != getservbyname_r(0, 0, 0, 0, 0))
+            return 1;
+        ]])
+      ],[
+        AC_MSG_RESULT([yes])
+        tst_compi_getservbyname_r="yes"
+        tst_nargs_getservbyname_r="5"
+      ],[
+        AC_MSG_RESULT([no])
+        tst_compi_getservbyname_r="no"
+      ])
+    fi
+    if test "$tst_nargs_getservbyname_r" = "unknown"; then
+      AC_MSG_CHECKING([if getservbyname_r takes 6 args.])
+      AC_COMPILE_IFELSE([
+        AC_LANG_PROGRAM([[
+          $cares_includes_netdb
+        ]],[[
+          if(0 != getservbyname_r(0, 0, 0, 0, 0, 0))
+            return 1;
+        ]])
+      ],[
+        AC_MSG_RESULT([yes])
+        tst_compi_getservbyname_r="yes"
+        tst_nargs_getservbyname_r="6"
+      ],[
+        AC_MSG_RESULT([no])
+        tst_compi_getservbyname_r="no"
+      ])
+    fi
+    AC_MSG_CHECKING([if getservbyname_r is compilable])
+    if test "$tst_compi_getservbyname_r" = "yes"; then
+      AC_MSG_RESULT([yes])
+    else
+      AC_MSG_RESULT([no])
+    fi
+  fi
+  #
+  if test "$tst_compi_getservbyname_r" = "yes"; then
+    AC_MSG_CHECKING([if getservbyname_r usage allowed])
+    if test "x$cares_disallow_getservbyname_r" != "xyes"; then
+      AC_MSG_RESULT([yes])
+      tst_allow_getservbyname_r="yes"
+    else
+      AC_MSG_RESULT([no])
+      tst_allow_getservbyname_r="no"
+    fi
+  fi
+  #
+  AC_MSG_CHECKING([if getservbyname_r might be used])
+  if test "$tst_links_getservbyname_r" = "yes" &&
+     test "$tst_proto_getservbyname_r" = "yes" &&
+     test "$tst_compi_getservbyname_r" = "yes" &&
+     test "$tst_allow_getservbyname_r" = "yes"; then
+    AC_MSG_RESULT([yes])
+    AC_DEFINE_UNQUOTED(HAVE_GETSERVBYNAME_R, 1,
+      [Define to 1 if you have the getservbyname_r function.])
+    AC_DEFINE_UNQUOTED(GETSERVBYNAME_R_ARGS, $tst_nargs_getservbyname_r,
+      [Specifies the number of arguments to getservbyname_r])
+    if test "$tst_nargs_getservbyname_r" -eq "4"; then
+      AC_DEFINE(GETSERVBYNAME_R_BUFSIZE, sizeof(struct servent_data),
+        [Specifies the size of the buffer to pass to getservbyname_r])
+    else
+      AC_DEFINE(GETSERVBYNAME_R_BUFSIZE, 4096,
+        [Specifies the size of the buffer to pass to getservbyname_r])
+    fi
+    ac_cv_func_getservbyname_r="yes"
+  else
+    AC_MSG_RESULT([no])
+    ac_cv_func_getservbyname_r="no"
+  fi
+])
+
+
 dnl CARES_CHECK_FUNC_INET_NET_PTON
 dnl -------------------------------------------------
 dnl Verify if inet_net_pton is available, prototyped, can
