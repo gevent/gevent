@@ -16,6 +16,8 @@ import re
 from .sysinfo import RUNNING_ON_APPVEYOR as APPVEYOR
 from .sysinfo import RUNNING_ON_TRAVIS as TRAVIS
 from .sysinfo import RESOLVER_NOT_SYSTEM as ARES
+from .sysinfo import RESOLVER_ARES
+from .sysinfo import RUNNING_ON_CI
 from .sysinfo import RUN_COVERAGE
 
 
@@ -1253,6 +1255,14 @@ if OSX:
         # This sometimes produces OSError: Errno 40: Message too long
         'test_socket.RecvmsgIntoTCPTest.testRecvmsgIntoGenerator',
     ]
+
+    if RESOLVER_ARES and PY38 and not RUNNING_ON_CI:
+        disabled_tests += [
+            # When updating to 1.16.0 this was seen locally, but not on CI.
+            # Tuples differ: ('ff02::1de:c0:face:8d', 1234, 0, 0)
+            #             != ('ff02::1de:c0:face:8d', 1234, 0, 1)
+            'test_socket.GeneralModuleTests.test_getaddrinfo_ipv6_scopeid_symbolic',
+        ]
 
 # Now build up the data structure we'll use to actually find disabled tests
 # to avoid a linear scan for every file (it seems the list could get quite large)

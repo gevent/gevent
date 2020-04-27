@@ -276,7 +276,7 @@ jobs:
     - stage: test
       # We need pylint, since above we're not installing a
       # requirements file.
-      install: pip install pylint
+      install: pip install -U pylint
       script: python -m pylint --limit-inference-results=1 --rcfile=.pylintrc gevent
       env: TRAVIS_PYTHON_VERSION=3.7
       name: lint37
