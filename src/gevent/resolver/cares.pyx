@@ -3,14 +3,17 @@
 # seems to be buggy (at least for the `result` class) and produces code that
 # can't compile ("local variable 'result' referenced before assignment").
 # See https://github.com/cython/cython/issues/1786
-# cython: auto_pickle=False
+# cython: auto_pickle=False,language_level=3str
 cimport libcares as cares
 import sys
 
+from cpython.tuple cimport PyTuple_Check
+from cpython.getargs cimport PyArg_ParseTuple
 from cpython.ref cimport Py_INCREF
 from cpython.ref cimport Py_DECREF
 from cpython.mem cimport PyMem_Malloc
 from cpython.mem cimport PyMem_Free
+from libc.string cimport memset
 
 from _socket import gaierror
 
@@ -32,14 +35,27 @@ TIMEOUT = 1
 DEF EV_READ = 1
 DEF EV_WRITE = 2
 
+cdef extern from *:
+    """
+#ifdef CARES_EMBED
+#include "ares_setup.h"
+#endif
 
-cdef extern from "dnshelper.c":
+#ifdef HAVE_NETDB_H
+#include <netdb.h>
+#endif
+    """
+
+cdef extern from "ares.h":
     int AF_INET
     int AF_INET6
+    int INET6_ADDRSTRLEN
 
     struct hostent:
         char* h_name
         int h_addrtype
+        char** h_aliases
+        char** h_addr_list
 
     struct sockaddr_t "sockaddr":
         pass
@@ -47,21 +63,27 @@ cdef extern from "dnshelper.c":
     struct ares_channeldata:
         pass
 
-    object parse_h_name(hostent*)
-    object parse_h_aliases(hostent*)
-    object parse_h_addr_list(hostent*)
-    void* create_object_from_hostent(void*)
+    struct in_addr:
+        unsigned int s_addr
 
-    # this imports _socket lazily
-    object PyUnicode_FromString(char*)
-    int PyTuple_Check(object)
-    int PyArg_ParseTuple(object, char*, ...) except 0
+    struct sockaddr_in:
+        int sin_family
+        int sin_port
+        in_addr sin_addr
+
+    struct in6_addr:
+        char s6_addr[16]
+
     struct sockaddr_in6:
-        pass
-    int gevent_make_sockaddr(char* hostp, int port, int flowinfo, int scope_id, sockaddr_in6* sa6)
+        int sin6_family
+        int sin6_port
+        unsigned int sin6_flowinfo
+        in6_addr sin6_addr
+        unsigned int sin6_scope_id
 
 
-    void memset(void*, int, int)
+    unsigned int htons(unsigned int hostshort)
+
 
 
 ARES_SUCCESS = cares.ARES_SUCCESS
@@ -207,6 +229,43 @@ class ares_host_result(tuple):
         return (self.family, tuple(self))
 
 
+cdef list _parse_h_aliases(hostent* host):
+    cdef list result = []
+    cdef char** aliases = host.h_aliases
+
+    if not aliases or not aliases[0]:
+        return result
+
+    while aliases[0]: # *aliases
+        # The old C version of this excluded an alias if
+        # it matched the host name. I don't think the stdlib does that?
+        result.append(_as_str(aliases[0]))
+        aliases += 1
+    return result
+
+
+cdef list _parse_h_addr_list(hostent* host):
+    cdef list result = []
+    cdef char** addr_list = host.h_addr_list
+    cdef int addr_type = host.h_addrtype
+    # INET6_ADDRSTRLEN is 46, but we can't use that named constant
+    # here; cython doesn't like it.
+    cdef char tmpbuf[46]
+
+    if not addr_list or not addr_list[0]:
+        return result
+
+    while addr_list[0]:
+        if not cares.ares_inet_ntop(host.h_addrtype, addr_list[0], tmpbuf, INET6_ADDRSTRLEN):
+            import _socket
+            raise _socket.error("Failed in ares_inet_ntop")
+
+        result.append(_as_str(tmpbuf))
+        addr_list += 1
+
+    return result
+
+
 cdef void gevent_ares_host_callback(void *arg, int status, int timeouts, hostent* host):
     cdef channel channel
     cdef object callback
@@ -218,13 +277,26 @@ cdef void gevent_ares_host_callback(void *arg, int status, int timeouts, hostent
             callback(result(None, gaierror(status, strerror(status))))
         else:
             try:
-                host_result = ares_host_result(host.h_addrtype, (parse_h_name(host), parse_h_aliases(host), parse_h_addr_list(host)))
+                host_result = ares_host_result(host.h_addrtype,
+                                               (_as_str(host.h_name),
+                                                _parse_h_aliases(host),
+                                                _parse_h_addr_list(host)))
             except:
                 callback(result(None, sys.exc_info()[1]))
             else:
                 callback(result(host_result))
     except:
         channel.loop.handle_error(callback, *sys.exc_info())
+
+from cpython.version cimport PY_MAJOR_VERSION
+
+cdef object _as_str(const char* val):
+    if not val:
+        return None
+
+    if PY_MAJOR_VERSION < 3:
+        return <bytes>val
+    return val.decode('utf-8')
 
 
 cdef void gevent_ares_nameinfo_callback(void *arg, int status, int timeouts, char *c_node, char *c_service):
@@ -238,17 +310,28 @@ cdef void gevent_ares_nameinfo_callback(void *arg, int status, int timeouts, cha
         if status:
             callback(result(None, gaierror(status, strerror(status))))
         else:
-            if c_node:
-                node = PyUnicode_FromString(c_node)
-            else:
-                node = None
-            if c_service:
-                service = PyUnicode_FromString(c_service)
-            else:
-                service = None
+            node = _as_str(c_node)
+            service = _as_str(c_service)
             callback(result((node, service)))
     except:
         channel.loop.handle_error(callback, *sys.exc_info())
+
+
+
+cdef int _make_sockaddr(const char* hostp, int port, int flowinfo, int scope_id, sockaddr_in6* sa6):
+    if cares.ares_inet_pton(AF_INET, hostp, &(<sockaddr_in*>sa6).sin_addr.s_addr) > 0:
+        (<sockaddr_in*>sa6).sin_family = AF_INET
+        (<sockaddr_in*>sa6).sin_port = htons(port)
+        return sizeof(sockaddr_in)
+
+    if cares.ares_inet_pton(AF_INET6, hostp, &(sa6.sin6_addr).s6_addr) > 0:
+        sa6.sin6_family = AF_INET6
+        sa6.sin6_port = htons(port)
+        sa6.sin6_flowinfo = flowinfo
+        sa6.sin6_scope_id = scope_id
+        return sizeof(sockaddr_in6);
+
+    return -1;
 
 
 cdef class channel:
@@ -447,7 +530,7 @@ cdef class channel:
         PyArg_ParseTuple(sockaddr, "si|ii", &hostp, &port, &flowinfo, &scope_id)
         if port < 0 or port > 65535:
             raise gaierror(-8, 'Invalid value for port: %r' % port)
-        cdef int length = gevent_make_sockaddr(hostp, port, flowinfo, scope_id, &sa6)
+        cdef int length = _make_sockaddr(hostp, port, flowinfo, scope_id, &sa6)
         if length <= 0:
             raise InvalidIP(repr(hostp))
         cdef object arg = (self, callback)

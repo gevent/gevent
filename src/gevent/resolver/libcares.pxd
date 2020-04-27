@@ -139,11 +139,6 @@ cdef extern from "ares.h":
         ares_addrinfo_cname *cnames
         ares_addrinfo_node  *nodes
 
-    # typedef void (*ares_addrinfo_callback)(
-    #     void *arg, int status,
-    #     int timeouts,
-    #     ares_addrinfo *result)
-
     void ares_getaddrinfo(
         void* channel,
         const char *name,
@@ -156,3 +151,4 @@ cdef extern from "ares.h":
     void ares_freeaddrinfo(ares_addrinfo *ai)
 
     int ares_inet_pton(int af, const char *src, void *dst)
+    const char* ares_inet_ntop(int af, const void *src, char *dst, ares_socklen_t size);

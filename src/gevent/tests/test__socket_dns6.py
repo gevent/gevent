@@ -36,7 +36,7 @@ from gevent.testing.sysinfo import RESOLVER_DNSPYTHON
 # by default we skip the tests everywhere else.
 
 class Test6(TestCase):
-
+    NORMALIZE_GHBA_IGNORE_ALIAS = True
     # host that only has AAAA record
     host = 'aaaa.test-ipv6.com'
 

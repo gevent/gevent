@@ -327,13 +327,18 @@ class TestCase(greentest.TestCase):
             result.sort()
         return result
 
+    def _normalize_result_getnameinfo(self, result):
+        return result
+
+    NORMALIZE_GHBA_IGNORE_ALIAS = False
     def _normalize_result_gethostbyaddr(self, result):
         if not RESOLVER_NOT_SYSTEM:
             return result
 
-        if isinstance(result, tuple):
+        if self.NORMALIZE_GHBA_IGNORE_ALIAS and isinstance(result, tuple):
             # On some systems, a random alias is found in the aliaslist
-            # by the system resolver, but not by cares and vice versa. We deem the aliaslist
+            # by the system resolver, but not by cares and vice versa. This is *probably* only the
+            # case for localhost or things otherwise in /etc/hosts. We deem the aliaslist
             # unimportant and discard it.
             return (result[0], [], result[2])
         return result
@@ -381,9 +386,9 @@ add(TestTypeError, 25)
 
 
 class TestHostname(TestCase):
+    NORMALIZE_GHBA_IGNORE_ALIAS = True
 
-    def _normalize_result_gethostbyaddr(self, result):
-        result = TestCase._normalize_result_gethostbyaddr(self, result)
+    def _ares_normalize_name(self, result):
         if RESOLVER_ARES and isinstance(result, tuple):
             # The system resolver can return the FQDN, in the first result,
             # when given certain configurations. But c-ares
@@ -391,6 +396,16 @@ class TestHostname(TestCase):
             name = result[0]
             name = name.split('.', 1)[0]
             result = (name,) + result[1:]
+        return result
+    def _normalize_result_gethostbyaddr(self, result):
+        result = TestCase._normalize_result_gethostbyaddr(self, result)
+        return self._ares_normalize_name(result)
+
+    def _normalize_result_getnameinfo(self, result):
+        result = TestCase._normalize_result_getnameinfo(self, result)
+        if PY2:
+            # Not sure why we only saw this on Python 2
+            result = self._ares_normalize_name(result)
         return result
 
 add(
@@ -417,6 +432,7 @@ class TestLocalhost(TestCase):
             return ()
         return super(TestLocalhost, self)._normalize_result_getaddrinfo(result)
 
+    NORMALIZE_GHBA_IGNORE_ALIAS = True
     if greentest.RUNNING_ON_TRAVIS and greentest.PY2 and RESOLVER_NOT_SYSTEM:
         def _normalize_result_gethostbyaddr(self, result):
             # Beginning in November 2017 after an upgrade to Travis,
@@ -455,7 +471,7 @@ add(Test1234, '1.2.3.4')
 
 
 class Test127001(TestCase):
-    pass
+    NORMALIZE_GHBA_IGNORE_ALIAS = True
 
 add(
     Test127001, '127.0.0.1',

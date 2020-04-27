@@ -83,6 +83,10 @@ class Resolver(AbstractResolver):
       results, and c-ares may report more ips on a multi-homed
       host.
 
+    - The system implementation may return some names fully qualified, where
+      this implementation returns only the host name. This appears to be
+      the case only with entries found in ``/etc/hosts``.
+
     .. caution::
 
         This module is considered extremely experimental on PyPy, and
@@ -175,11 +179,16 @@ class Resolver(AbstractResolver):
         # pylint:disable=too-many-locals,too-many-branches
         if isinstance(host, text_type):
             host = host.encode('idna')
-        elif not isinstance(host, str) or (flags & AI_NUMERICHOST):
+        if not isinstance(host, bytes) or (flags & AI_NUMERICHOST) or host in (
+                b'localhost', b'ip6-localhost'):
             # this handles cases which do not require network access
             # 1) host is None
             # 2) host is of an invalid type
             # 3) AI_NUMERICHOST flag is set
+            # 4) It's a well-known alias. TODO: This is special casing that we don't
+            #    really want to do. It's here because it resolves a discrepancy with the system
+            #    resolvers caught by test cases. In gevent 20.4.0, this only worked correctly on
+            #    Python 3 and not Python 2, by accident.
             return getaddrinfo(host, port, family, socktype, proto, flags)
             # we also call _socket.getaddrinfo below if family is not one of AF_*
 

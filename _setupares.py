@@ -95,7 +95,6 @@ ARES = Extension(
     libraries=list(LIBRARIES),
     define_macros=list(DEFINE_MACROS),
     depends=glob_many(
-        'src/gevent/resolver/dnshelper.c',
         'src/gevent/resolver/cares_*.[ch]')
 )
 
