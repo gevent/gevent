@@ -1,4 +1,12 @@
 cdef extern from "ares.h":
+    # These two are defined in <sys/socket.h> and <netdb.h>, respectively,
+    # on POSIX. On Windows, they are in <winsock2.h>. "ares.h" winds up
+    # indirectly including both of those.
+    struct sockaddr:
+        pass
+    struct hostent:
+        pass
+
     struct ares_options:
         int flags
         void* sock_state_cb
@@ -74,6 +82,7 @@ cdef extern from "ares.h":
     int ARES_NI_LOOKUPHOST
     int ARES_NI_LOOKUPSERVICE
 
+    ctypedef int ares_socklen_t
 
     int ares_library_init(int flags)
     void ares_library_cleanup()
@@ -104,6 +113,46 @@ cdef extern from "ares.h":
 
     int ares_set_servers(void* channel, ares_addr_node *servers)
 
+    struct ares_addrinfo_hints:
+        int ai_flags
+        int ai_family
+        int ai_socktype
+        int ai_protocol
 
-cdef extern from "cares_pton.h":
-    int ares_inet_pton(int af, char *src, void *dst)
+    struct ares_addrinfo_node:
+        int ai_ttl
+        int ai_flags
+        int ai_family
+        int ai_socktype
+        int ai_protocol
+        ares_socklen_t ai_addrlen
+        sockaddr *ai_addr
+        ares_addrinfo_node *ai_next
+
+    struct ares_addrinfo_cname:
+        int ttl
+        char *alias
+        char *name
+        ares_addrinfo_cname *next
+
+    struct ares_addrinfo:
+        ares_addrinfo_cname *cnames
+        ares_addrinfo_node  *nodes
+
+    # typedef void (*ares_addrinfo_callback)(
+    #     void *arg, int status,
+    #     int timeouts,
+    #     ares_addrinfo *result)
+
+    void ares_getaddrinfo(
+        void* channel,
+        const char *name,
+        const char* service,
+        const ares_addrinfo_hints *hints,
+        #ares_addrinfo_callback callback,
+        void* callback,
+        void *arg)
+
+    void ares_freeaddrinfo(ares_addrinfo *ai)
+
+    int ares_inet_pton(int af, const char *src, void *dst)

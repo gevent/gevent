@@ -10,8 +10,6 @@
 
 #include "ares.h"
 
-#include "cares_ntop.h"
-#include "cares_pton.h"
 
 #if PY_MAJOR_VERSION >= 3
 #define PY3K

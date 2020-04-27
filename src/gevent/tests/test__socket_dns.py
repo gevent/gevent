@@ -31,6 +31,7 @@ if getattr(resolver, 'pool', None) is not None:
 
 from gevent.testing.sysinfo import RESOLVER_NOT_SYSTEM
 from gevent.testing.sysinfo import RESOLVER_DNSPYTHON
+from gevent.testing.sysinfo import RESOLVER_ARES
 from gevent.testing.sysinfo import PY2
 import gevent.testing.timing
 
@@ -39,6 +40,7 @@ assert gevent_socket.gaierror is socket.gaierror
 assert gevent_socket.error is socket.error
 
 TRACE = not util.QUIET and os.getenv('GEVENT_DEBUG', '') == 'trace'
+RUN_ALL_HOST_TESTS = os.getenv('GEVENTTEST_RUN_ALL_ETC_HOST_TESTS', '')
 
 def trace(message, *args, **kwargs):
     if TRACE:
@@ -379,7 +381,17 @@ add(TestTypeError, 25)
 
 
 class TestHostname(TestCase):
-    pass
+
+    def _normalize_result_gethostbyaddr(self, result):
+        result = TestCase._normalize_result_gethostbyaddr(self, result)
+        if RESOLVER_ARES and isinstance(result, tuple):
+            # The system resolver can return the FQDN, in the first result,
+            # when given certain configurations. But c-ares
+            # does not.
+            name = result[0]
+            name = name.split('.', 1)[0]
+            result = (name,) + result[1:]
+        return result
 
 add(
     TestHostname,
@@ -504,7 +516,7 @@ class TestEtcHosts(TestCase):
         hf = SanitizedHostsFile(os.path.join(os.path.dirname(__file__),
                                              'hosts_file.txt'))
         all_etc_hosts = sorted(hf.iter_all_host_addr_pairs())
-        if len(all_etc_hosts) > cls.MAX_HOSTS and util.QUIET:
+        if len(all_etc_hosts) > cls.MAX_HOSTS and not RUN_ALL_HOST_TESTS:
             all_etc_hosts = all_etc_hosts[:cls.MAX_HOSTS]
 
         for host, ip in all_etc_hosts:
@@ -519,13 +531,14 @@ TestEtcHosts.populate_tests()
 
 class TestGeventOrg(TestCase):
 
-    HOSTNAME = 'www.gevent.org'
+    HOSTNAME = 'python-gevent.readthedocs.org'
 
 # For this test to work correctly, it needs to resolve to
 # an address with a single A record; round-robin DNS and multiple A records
 # may mess it up (subsequent requests---and we always make two---may return
 # unequal results). We used to use gevent.org, but that now has multiple A records;
-# trying www.gevent.org which is a CNAME to readthedocs.org.
+# trying www.gevent.org which is a CNAME to readthedocs.org then worked, but it became
+# an alias for python-gevent.readthedocs.org, which is an alias for readthedocs.io.
 add(TestGeventOrg, TestGeventOrg.HOSTNAME)
 
 
