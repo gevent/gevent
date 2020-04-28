@@ -96,6 +96,11 @@ cdef extern from "ares.h":
     void ares_cancel(void* channel)
     void ares_getnameinfo(void* channel, void* sa, int salen, int flags, void* callback, void *arg)
 
+    # Added in 1.10
+    int ares_inet_pton(int af, const char *src, void *dst)
+    const char* ares_inet_ntop(int af, const void *src, char *dst, ares_socklen_t size);
+
+
     struct in_addr:
         pass
 
@@ -112,6 +117,12 @@ cdef extern from "ares.h":
         addr_union addr
 
     int ares_set_servers(void* channel, ares_addr_node *servers)
+
+    # Added in 1.16
+    int ARES_AI_NOSORT
+    int ARES_AI_ENVHOSTS
+    int ARES_AI_CANONNAME
+    int ARES_AI_NUMERICSERV
 
     struct ares_addrinfo_hints:
         int ai_flags
@@ -149,6 +160,3 @@ cdef extern from "ares.h":
         void *arg)
 
     void ares_freeaddrinfo(ares_addrinfo *ai)
-
-    int ares_inet_pton(int af, const char *src, void *dst)
-    const char* ares_inet_ntop(int af, const void *src, char *dst, ares_socklen_t size);

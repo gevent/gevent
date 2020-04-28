@@ -87,6 +87,10 @@ class Resolver(AbstractResolver):
       this implementation returns only the host name. This appears to be
       the case only with entries found in ``/etc/hosts``.
 
+    - c-ares supports a limited set of flags for ``getnameinfo`` and
+      ``getaddrinfo``; unknown flags are ignored. System-specific flags
+      such as ``AI_V4MAPPED_CFG`` are not supported.
+
     .. caution::
 
         This module is considered extremely experimental on PyPy, and
@@ -102,7 +106,7 @@ class Resolver(AbstractResolver):
     .. _c-ares: http://c-ares.haxx.se
     """
 
-    ares_class = channel
+    cares_class = channel
 
     def __init__(self, hub=None, use_environ=True, **kwargs):
         if hub is None:
@@ -114,27 +118,27 @@ class Resolver(AbstractResolver):
                     value = setting.get()
                     if value is not None:
                         kwargs.setdefault(setting.kwarg_name, value)
-        self.ares = self.ares_class(hub.loop, **kwargs)
+        self.cares = self.cares_class(hub.loop, **kwargs)
         self.pid = os.getpid()
         self.params = kwargs
         self.fork_watcher = hub.loop.fork(ref=False)
         self.fork_watcher.start(self._on_fork)
 
     def __repr__(self):
-        return '<gevent.resolver_ares.Resolver at 0x%x ares=%r>' % (id(self), self.ares)
+        return '<gevent.resolver_ares.Resolver at 0x%x ares=%r>' % (id(self), self.cares)
 
     def _on_fork(self):
         # NOTE: See comment in gevent.hub.reinit.
         pid = os.getpid()
         if pid != self.pid:
-            self.hub.loop.run_callback(self.ares.destroy)
-            self.ares = self.ares_class(self.hub.loop, **self.params)
+            self.hub.loop.run_callback(self.cares.destroy)
+            self.cares = self.cares_class(self.hub.loop, **self.params)
             self.pid = pid
 
     def close(self):
-        if self.ares is not None:
-            self.hub.loop.run_callback(self.ares.destroy)
-            self.ares = None
+        if self.cares is not None:
+            self.hub.loop.run_callback(self.cares.destroy)
+            self.cares = None
         self.fork_watcher.stop()
 
     def gethostbyname(self, hostname, family=AF_INET):
@@ -154,7 +158,7 @@ class Resolver(AbstractResolver):
                 raise TypeError('Expected string, not %s' % type(hostname).__name__)
 
         while True:
-            ares = self.ares
+            ares = self.cares
             try:
                 waiter = Waiter(self.hub)
                 ares.gethostbyname(waiter, hostname, family)
@@ -163,14 +167,14 @@ class Resolver(AbstractResolver):
                     raise gaierror(-5, 'No address associated with hostname')
                 return result
             except gaierror:
-                if ares is self.ares:
+                if ares is self.cares:
                     if hostname == b'255.255.255.255':
                         # The stdlib handles this case in 2.7 and 3.x, but ares does not.
                         # It is tested by test_socket.py in 3.4.
                         # HACK: So hardcode the expected return.
                         return ('255.255.255.255', [], ['255.255.255.255'])
                     raise
-                # "self.ares is not ares" means channel was destroyed (because we were forked)
+                # "self.cares is not ares" means channel was destroyed (because we were forked)
 
     def _lookup_port(self, port, socktype):
         return lookup_port(port, socktype)
@@ -200,17 +204,17 @@ class Resolver(AbstractResolver):
         if proto:
             socktype_proto = [(x, y) for (x, y) in socktype_proto if proto == y]
 
-        ares = self.ares
+        ares = self.cares
 
         if family == AF_UNSPEC:
-            ares_values = Values(self.hub, 2)
+            ares_values = _Values(self.hub, 2)
             ares.gethostbyname(ares_values, host, AF_INET)
             ares.gethostbyname(ares_values, host, AF_INET6)
         elif family == AF_INET:
-            ares_values = Values(self.hub, 1)
+            ares_values = _Values(self.hub, 1)
             ares.gethostbyname(ares_values, host, AF_INET)
         elif family == AF_INET6:
-            ares_values = Values(self.hub, 1)
+            ares_values = _Values(self.hub, 1)
             ares.gethostbyname(ares_values, host, AF_INET6)
         else:
             raise gaierror(5, 'ai_family not supported: %r' % (family, ))
@@ -252,11 +256,11 @@ class Resolver(AbstractResolver):
 
     def getaddrinfo(self, host, port, family=0, socktype=0, proto=0, flags=0):
         while True:
-            ares = self.ares
+            ares = self.cares
             try:
                 return self._getaddrinfo(host, port, family, socktype, proto, flags)
             except gaierror:
-                if ares is self.ares:
+                if ares is self.cares:
                     raise
 
     def _gethostbyaddr(self, ip_address):
@@ -273,7 +277,7 @@ class Resolver(AbstractResolver):
 
         waiter = Waiter(self.hub)
         try:
-            self.ares.gethostbyaddr(waiter, ip_address)
+            self.cares.gethostbyaddr(waiter, ip_address)
             return waiter.get()
         except InvalidIP:
             result = self._getaddrinfo(ip_address, None, family=AF_UNSPEC, socktype=SOCK_DGRAM)
@@ -285,17 +289,17 @@ class Resolver(AbstractResolver):
             if _ip_address == ip_address:
                 raise
             waiter.clear()
-            self.ares.gethostbyaddr(waiter, _ip_address)
+            self.cares.gethostbyaddr(waiter, _ip_address)
             return waiter.get()
 
     def gethostbyaddr(self, ip_address):
         ip_address = _resolve_special(ip_address, AF_UNSPEC)
         while True:
-            ares = self.ares
+            ares = self.cares
             try:
                 return self._gethostbyaddr(ip_address)
             except gaierror:
-                if ares is self.ares:
+                if ares is self.cares:
                     raise
 
     def _getnameinfo(self, sockaddr, flags):
@@ -329,7 +333,7 @@ class Resolver(AbstractResolver):
         elif family == AF_INET6:
             address = address[:2] + sockaddr[2:]
 
-        self.ares.getnameinfo(waiter, address, flags)
+        self.cares.getnameinfo(waiter, address, flags)
         node, service = waiter.get()
 
         if service is None:
@@ -347,16 +351,18 @@ class Resolver(AbstractResolver):
 
     def getnameinfo(self, sockaddr, flags):
         while True:
-            ares = self.ares
+            ares = self.cares
             try:
                 return self._getnameinfo(sockaddr, flags)
             except gaierror:
-                if ares is self.ares:
+                if ares is self.cares:
                     raise
 
 
-class Values(object):
-    # helper to collect multiple values; ignore errors unless nothing has succeeded
+class _Values(object):
+    # helper to collect the results of multiple c-ares calls
+    # and ignore errors unless nothing has succeeded
+
     # QQQ could probably be moved somewhere - hub.py?
 
     __slots__ = ['count', 'values', 'error', 'waiter']
