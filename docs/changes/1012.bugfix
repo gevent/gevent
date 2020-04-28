@@ -1,3 +1,9 @@
+Use ``ares_getaddrinfo`` instead of a manual lookup.
+
+This requires c-ares 1.16.0.
+
+Note that this may change the results, in particular their order.
+
 As part of this, certain parts of the c-ares extension were adapted to
 use modern Cython idioms.
 

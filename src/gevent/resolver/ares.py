@@ -4,16 +4,14 @@ c-ares based hostname resolver.
 """
 from __future__ import absolute_import, print_function, division
 import os
-import sys
 
-from _socket import getaddrinfo
+from _socket import getaddrinfo as native_getaddrinfo
 from _socket import gaierror
 from _socket import error
 
 from gevent._compat import string_types
 from gevent._compat import text_type
-
-from gevent._compat import reraise
+from gevent._compat import integer_types
 from gevent._compat import PY3
 
 from gevent.hub import Waiter
@@ -22,9 +20,10 @@ from gevent.hub import get_hub
 from gevent.socket import AF_UNSPEC
 from gevent.socket import AF_INET
 from gevent.socket import AF_INET6
-from gevent.socket import SOCK_STREAM
 from gevent.socket import SOCK_DGRAM
-from gevent.socket import SOCK_RAW
+from gevent.socket import SOCK_STREAM
+from gevent.socket import SOL_TCP
+from gevent.socket import SOL_UDP
 from gevent.socket import AI_NUMERICHOST
 
 from gevent._config import config
@@ -179,12 +178,25 @@ class Resolver(AbstractResolver):
     def _lookup_port(self, port, socktype):
         return lookup_port(port, socktype)
 
-    def _getaddrinfo(self, host, port, family=0, socktype=0, proto=0, flags=0):
+    def _getaddrinfo(
+            self, host, port,
+            family=0, socktype=0, proto=0, flags=0,
+            fill_in_type_proto=True
+    ):
+        """
+        Returns a list ``(family, socktype, proto, canonname, sockaddr)``
+
+        TODO: Implement canonical names.
+
+        :raises gaierror: If no results are found.
+        """
         # pylint:disable=too-many-locals,too-many-branches
         if isinstance(host, text_type):
             host = host.encode('idna')
         if not isinstance(host, bytes) or (flags & AI_NUMERICHOST) or host in (
                 b'localhost', b'ip6-localhost'):
+            # XXX: Now that we're using ares_getaddrinfo, how much of this is still
+            # necessary?
             # this handles cases which do not require network access
             # 1) host is None
             # 2) host is of an invalid type
@@ -193,65 +205,68 @@ class Resolver(AbstractResolver):
             #    really want to do. It's here because it resolves a discrepancy with the system
             #    resolvers caught by test cases. In gevent 20.4.0, this only worked correctly on
             #    Python 3 and not Python 2, by accident.
-            return getaddrinfo(host, port, family, socktype, proto, flags)
-            # we also call _socket.getaddrinfo below if family is not one of AF_*
+            return native_getaddrinfo(host, port, family, socktype, proto, flags)
 
-        port, socktypes = self._lookup_port(port, socktype)
 
-        socktype_proto = [(SOCK_STREAM, 6), (SOCK_DGRAM, 17), (SOCK_RAW, 0)]
-        if socktypes:
-            socktype_proto = [(x, y) for (x, y) in socktype_proto if x in socktypes]
-        if proto:
-            socktype_proto = [(x, y) for (x, y) in socktype_proto if proto == y]
+        if isinstance(port, text_type):
+            port = port.encode('ascii')
+        elif isinstance(port, integer_types):
+            if port == 0:
+                port = None
+            else:
+                port = str(port).encode('ascii')
 
-        ares = self.cares
-
-        if family == AF_UNSPEC:
-            ares_values = _Values(self.hub, 2)
-            ares.gethostbyname(ares_values, host, AF_INET)
-            ares.gethostbyname(ares_values, host, AF_INET6)
-        elif family == AF_INET:
-            ares_values = _Values(self.hub, 1)
-            ares.gethostbyname(ares_values, host, AF_INET)
-        elif family == AF_INET6:
-            ares_values = _Values(self.hub, 1)
-            ares.gethostbyname(ares_values, host, AF_INET6)
-        else:
-            raise gaierror(5, 'ai_family not supported: %r' % (family, ))
-
-        values = ares_values.get()
-        if len(values) == 2 and values[0] == values[1]:
-            values.pop()
-
-        result = []
-        result4 = []
-        result6 = []
-
-        for addrs in values:
-            if addrs.family == AF_INET:
-                for addr in addrs[-1]:
-                    sockaddr = (addr, port)
-                    for socktype4, proto4 in socktype_proto:
-                        result4.append((AF_INET, socktype4, proto4, '', sockaddr))
-            elif addrs.family == AF_INET6:
-                for addr in addrs[-1]:
-                    if addr == '::1':
-                        dest = result
-                    else:
-                        dest = result6
-                    sockaddr = (addr, port, 0, 0)
-                    for socktype6, proto6 in socktype_proto:
-                        dest.append((AF_INET6, socktype6, proto6, '', sockaddr))
-
-        # As of 2016, some platforms return IPV6 first and some do IPV4 first,
-        # and some might even allow configuration of which is which. For backwards
-        # compatibility with earlier releases (but not necessarily resolver_thread!)
-        # we return 4 first. See https://github.com/gevent/gevent/issues/815 for more.
-        result += result4 + result6
+        waiter = Waiter(self.hub)
+        self.cares.getaddrinfo(
+            waiter,
+            host,
+            port,
+            family,
+            socktype,
+            proto,
+            flags,
+        )
+        # Result is a list of:
+        # (family, socktype, proto, canonname, sockaddr)
+        # Where sockaddr depends on family; for INET it is
+        # (address, port)
+        # and INET6 is
+        # (address, port, flow info, scope id)
+        result = waiter.get()
 
         if not result:
             raise gaierror(-5, 'No address associated with hostname')
 
+        if fill_in_type_proto:
+            # c-ares 1.16 DOES NOT fill in socktype or proto in the results,
+            # ever. It's at least supposed to do that if they were given as
+            # hints, but it doesn't (https://github.com/c-ares/c-ares/issues/317)
+            # Sigh.
+            if socktype:
+                hard_type_proto = [
+                    (socktype, SOL_TCP if socktype == SOCK_STREAM else SOL_UDP),
+                ]
+            elif proto:
+                hard_type_proto = [
+                    (SOCK_STREAM if proto == SOL_TCP else SOCK_DGRAM, proto),
+                ]
+            else:
+                hard_type_proto = [
+                    (SOCK_STREAM, SOL_TCP),
+                    (SOCK_DGRAM, SOL_UDP),
+                ]
+
+            result = [
+                (rfamily,
+                 hard_type if not rtype else rtype,
+                 hard_proto if not rproto else rproto,
+                 rcanon,
+                 raddr)
+                for rfamily, rtype, rproto, rcanon, raddr
+                in result
+                for hard_type, hard_proto
+                in hard_type_proto
+            ]
         return result
 
     def getaddrinfo(self, host, port, family=0, socktype=0, proto=0, flags=0):
@@ -319,12 +334,17 @@ class Resolver(AbstractResolver):
         if not isinstance(port, int):
             raise TypeError('port must be an integer, not %s' % type(port))
 
-        waiter = Waiter(self.hub)
-        result = self._getaddrinfo(address, str(sockaddr[1]), family=AF_UNSPEC, socktype=SOCK_DGRAM)
-        if not result:
-            reraise(*sys.exc_info())
-        elif len(result) != 1:
+        if len(sockaddr) > 2:
+            # Must be IPv6: (host, port, [flowinfo, [scopeid]])
+            flowinfo = sockaddr[2]
+            if flowinfo > 0xfffff:
+                raise OverflowError("getnameinfo(): flowinfo must be 0-1048575.")
+
+        result = self._getaddrinfo(address, str(sockaddr[1]),
+                                   family=AF_UNSPEC, socktype=SOCK_DGRAM, fill_in_type_proto=False)
+        if len(result) != 1:
             raise error('sockaddr resolved to multiple addresses')
+
         family, _socktype, _proto, _name, address = result[0]
 
         if family == AF_INET:
@@ -333,21 +353,21 @@ class Resolver(AbstractResolver):
         elif family == AF_INET6:
             address = address[:2] + sockaddr[2:]
 
+        waiter = Waiter(self.hub)
         self.cares.getnameinfo(waiter, address, flags)
         node, service = waiter.get()
 
-        if service is None:
-            if PY3:
-                # ares docs: "If the query did not complete
-                # successfully, or one of the values was not
-                # requested, node or service will be NULL ". Python 2
-                # allows that for the service, but Python 3 raises
-                # an error. This is tested by test_socket in py 3.4
-                err = gaierror('nodename nor servname provided, or not known')
-                err.errno = 8
-                raise err
-            service = '0'
-        return node, service
+        if service is None and PY3:
+            # ares docs: "If the query did not complete
+            # successfully, or one of the values was not
+            # requested, node or service will be NULL ". Python 2
+            # allows that for the service, but Python 3 raises
+            # an error. This is tested by test_socket in py 3.4
+            err = gaierror('nodename nor servname provided, or not known')
+            err.errno = 8
+            raise err
+
+        return node, service or '0'
 
     def getnameinfo(self, sockaddr, flags):
         while True:
@@ -357,34 +377,3 @@ class Resolver(AbstractResolver):
             except gaierror:
                 if ares is self.cares:
                     raise
-
-
-class _Values(object):
-    # helper to collect the results of multiple c-ares calls
-    # and ignore errors unless nothing has succeeded
-
-    # QQQ could probably be moved somewhere - hub.py?
-
-    __slots__ = ['count', 'values', 'error', 'waiter']
-
-    def __init__(self, hub, count):
-        self.count = count
-        self.values = []
-        self.error = None
-        self.waiter = Waiter(hub)
-
-    def __call__(self, source):
-        self.count -= 1
-        if source.exception is None:
-            self.values.append(source.value)
-        else:
-            self.error = source.exception
-        if self.count <= 0:
-            self.waiter.switch(None)
-
-    def get(self):
-        self.waiter.get()
-        if self.values:
-            return self.values
-        assert error is not None
-        raise self.error # pylint:disable=raising-bad-type

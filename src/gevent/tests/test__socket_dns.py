@@ -47,10 +47,15 @@ def trace(message, *args, **kwargs):
         util.debug(message, *args, **kwargs)
 
 def _run(function, *args):
+    # Things that the stdlib should never raise and neither should we;
+    # these indicate bugs in our code and we want to raise them.
+    REAL_ERRORS = (AttributeError, ValueError, NameError)
     try:
         result = function(*args)
         assert not isinstance(result, BaseException), repr(result)
         return result
+    except REAL_ERRORS:
+        raise
     except Exception as ex:
         if TRACE:
             traceback.print_exc()
@@ -230,7 +235,7 @@ def add(klass, hostname, name=None,
 
 @skipWithoutExternalNetwork("Tries to resolve and compare hostnames/addrinfo")
 class TestCase(greentest.TestCase):
-
+    maxDiff = None
     __timeout__ = 30
     switch_expected = None
     verbose_dns = TRACE
