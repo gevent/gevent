@@ -76,7 +76,9 @@ static void gevent_zero_prepare(struct ev_prepare* handle)
 
 static void gevent_set_ev_alloc()
 {
-    ev_set_allocator(gevent_realloc);
+    void* (*ptr)(void*, long);
+    ptr = (void*(*)(void*, long))&gevent_realloc;
+    ev_set_allocator(ptr);
 }
 
 #ifdef __clang__

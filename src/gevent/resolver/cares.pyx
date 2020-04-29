@@ -3,43 +3,61 @@
 # seems to be buggy (at least for the `result` class) and produces code that
 # can't compile ("local variable 'result' referenced before assignment").
 # See https://github.com/cython/cython/issues/1786
-# cython: auto_pickle=False
+# cython: auto_pickle=False,language_level=3str
 cimport libcares as cares
 import sys
 
+from cpython.version cimport PY_MAJOR_VERSION
+from cpython.tuple cimport PyTuple_Check
+from cpython.getargs cimport PyArg_ParseTuple
 from cpython.ref cimport Py_INCREF
 from cpython.ref cimport Py_DECREF
 from cpython.mem cimport PyMem_Malloc
 from cpython.mem cimport PyMem_Free
+from libc.string cimport memset
 
+import _socket
 from _socket import gaierror
 
 
 __all__ = ['channel']
 
-cdef object string_types
-cdef object text_type
+cdef tuple string_types
+cdef type text_type
 
-if sys.version_info[0] >= 3:
+if PY_MAJOR_VERSION >= 3:
     string_types = str,
     text_type = str
 else:
     string_types = __builtins__.basestring,
     text_type = __builtins__.unicode
 
-TIMEOUT = 1
+DEF TIMEOUT = 1
 
 DEF EV_READ = 1
 DEF EV_WRITE = 2
 
+cdef extern from *:
+    """
+#ifdef CARES_EMBED
+#include "ares_setup.h"
+#endif
 
-cdef extern from "dnshelper.c":
+#ifdef HAVE_NETDB_H
+#include <netdb.h>
+#endif
+    """
+
+cdef extern from "ares.h":
     int AF_INET
     int AF_INET6
+    int INET6_ADDRSTRLEN
 
     struct hostent:
         char* h_name
         int h_addrtype
+        char** h_aliases
+        char** h_addr_list
 
     struct sockaddr_t "sockaddr":
         pass
@@ -47,112 +65,68 @@ cdef extern from "dnshelper.c":
     struct ares_channeldata:
         pass
 
-    object parse_h_name(hostent*)
-    object parse_h_aliases(hostent*)
-    object parse_h_addr_list(hostent*)
-    void* create_object_from_hostent(void*)
+    struct in_addr:
+        unsigned int s_addr
 
-    # this imports _socket lazily
-    object PyUnicode_FromString(char*)
-    int PyTuple_Check(object)
-    int PyArg_ParseTuple(object, char*, ...) except 0
+    struct sockaddr_in:
+        int sin_family
+        int sin_port
+        in_addr sin_addr
+
+    struct in6_addr:
+        char s6_addr[16]
+
     struct sockaddr_in6:
-        pass
-    int gevent_make_sockaddr(char* hostp, int port, int flowinfo, int scope_id, sockaddr_in6* sa6)
+        int sin6_family
+        int sin6_port
+        unsigned int sin6_flowinfo
+        in6_addr sin6_addr
+        unsigned int sin6_scope_id
 
 
-    void memset(void*, int, int)
+    unsigned int htons(unsigned int hostshort)
+    unsigned int ntohs(unsigned int hostshort)
+    unsigned int htonl(unsigned int hostlong)
+    unsigned int ntohl(unsigned int hostlong)
 
-
-ARES_SUCCESS = cares.ARES_SUCCESS
-ARES_ENODATA = cares.ARES_ENODATA
-ARES_EFORMERR = cares.ARES_EFORMERR
-ARES_ESERVFAIL = cares.ARES_ESERVFAIL
-ARES_ENOTFOUND = cares.ARES_ENOTFOUND
-ARES_ENOTIMP = cares.ARES_ENOTIMP
-ARES_EREFUSED = cares.ARES_EREFUSED
-ARES_EBADQUERY = cares.ARES_EBADQUERY
-ARES_EBADNAME = cares.ARES_EBADNAME
-ARES_EBADFAMILY = cares.ARES_EBADFAMILY
-ARES_EBADRESP = cares.ARES_EBADRESP
-ARES_ECONNREFUSED = cares.ARES_ECONNREFUSED
-ARES_ETIMEOUT = cares.ARES_ETIMEOUT
-ARES_EOF = cares.ARES_EOF
-ARES_EFILE = cares.ARES_EFILE
-ARES_ENOMEM = cares.ARES_ENOMEM
-ARES_EDESTRUCTION = cares.ARES_EDESTRUCTION
-ARES_EBADSTR = cares.ARES_EBADSTR
-ARES_EBADFLAGS = cares.ARES_EBADFLAGS
-ARES_ENONAME = cares.ARES_ENONAME
-ARES_EBADHINTS = cares.ARES_EBADHINTS
-ARES_ENOTINITIALIZED = cares.ARES_ENOTINITIALIZED
-ARES_ELOADIPHLPAPI = cares.ARES_ELOADIPHLPAPI
-ARES_EADDRGETNETWORKPARAMS = cares.ARES_EADDRGETNETWORKPARAMS
-ARES_ECANCELLED = cares.ARES_ECANCELLED
-
-ARES_FLAG_USEVC = cares.ARES_FLAG_USEVC
-ARES_FLAG_PRIMARY = cares.ARES_FLAG_PRIMARY
-ARES_FLAG_IGNTC = cares.ARES_FLAG_IGNTC
-ARES_FLAG_NORECURSE = cares.ARES_FLAG_NORECURSE
-ARES_FLAG_STAYOPEN = cares.ARES_FLAG_STAYOPEN
-ARES_FLAG_NOSEARCH = cares.ARES_FLAG_NOSEARCH
-ARES_FLAG_NOALIASES = cares.ARES_FLAG_NOALIASES
-ARES_FLAG_NOCHECKRESP = cares.ARES_FLAG_NOCHECKRESP
+cdef int AI_NUMERICSERV = _socket.AI_NUMERICSERV
+cdef int AI_CANONNAME = _socket.AI_CANONNAME
+cdef int NI_NUMERICHOST = _socket.NI_NUMERICHOST
+cdef int NI_NUMERICSERV = _socket.NI_NUMERICSERV
+cdef int NI_NOFQDN = _socket.NI_NOFQDN
+cdef int NI_NAMEREQD = _socket.NI_NAMEREQD
+cdef int NI_DGRAM = _socket.NI_DGRAM
 
 
 _ares_errors = dict([
-                (cares.ARES_SUCCESS, 'ARES_SUCCESS'),
-                (cares.ARES_ENODATA, 'ARES_ENODATA'),
-                (cares.ARES_EFORMERR, 'ARES_EFORMERR'),
-                (cares.ARES_ESERVFAIL, 'ARES_ESERVFAIL'),
-                (cares.ARES_ENOTFOUND, 'ARES_ENOTFOUND'),
-                (cares.ARES_ENOTIMP, 'ARES_ENOTIMP'),
-                (cares.ARES_EREFUSED, 'ARES_EREFUSED'),
-                (cares.ARES_EBADQUERY, 'ARES_EBADQUERY'),
-                (cares.ARES_EBADNAME, 'ARES_EBADNAME'),
-                (cares.ARES_EBADFAMILY, 'ARES_EBADFAMILY'),
-                (cares.ARES_EBADRESP, 'ARES_EBADRESP'),
-                (cares.ARES_ECONNREFUSED, 'ARES_ECONNREFUSED'),
-                (cares.ARES_ETIMEOUT, 'ARES_ETIMEOUT'),
-                (cares.ARES_EOF, 'ARES_EOF'),
-                (cares.ARES_EFILE, 'ARES_EFILE'),
-                (cares.ARES_ENOMEM, 'ARES_ENOMEM'),
-                (cares.ARES_EDESTRUCTION, 'ARES_EDESTRUCTION'),
-                (cares.ARES_EBADSTR, 'ARES_EBADSTR'),
-                (cares.ARES_EBADFLAGS, 'ARES_EBADFLAGS'),
-                (cares.ARES_ENONAME, 'ARES_ENONAME'),
-                (cares.ARES_EBADHINTS, 'ARES_EBADHINTS'),
-                (cares.ARES_ENOTINITIALIZED, 'ARES_ENOTINITIALIZED'),
-                (cares.ARES_ELOADIPHLPAPI, 'ARES_ELOADIPHLPAPI'),
-                (cares.ARES_EADDRGETNETWORKPARAMS, 'ARES_EADDRGETNETWORKPARAMS'),
-                (cares.ARES_ECANCELLED, 'ARES_ECANCELLED')])
+    (cares.ARES_SUCCESS, 'ARES_SUCCESS'),
 
-
-# maps c-ares flag to _socket module flag
-_cares_flag_map = None
-
-
-cdef _prepare_cares_flag_map():
-    global _cares_flag_map
-    import _socket
-    _cares_flag_map = [
-        (getattr(_socket, 'NI_NUMERICHOST', 1), cares.ARES_NI_NUMERICHOST),
-        (getattr(_socket, 'NI_NUMERICSERV', 2), cares.ARES_NI_NUMERICSERV),
-        (getattr(_socket, 'NI_NOFQDN', 4), cares.ARES_NI_NOFQDN),
-        (getattr(_socket, 'NI_NAMEREQD', 8), cares.ARES_NI_NAMEREQD),
-        (getattr(_socket, 'NI_DGRAM', 16), cares.ARES_NI_DGRAM)]
-
-
-cpdef _convert_cares_flags(int flags, int default=cares.ARES_NI_LOOKUPHOST|cares.ARES_NI_LOOKUPSERVICE):
-    if _cares_flag_map is None:
-        _prepare_cares_flag_map()
-    for socket_flag, cares_flag in _cares_flag_map:
-        if socket_flag & flags:
-            default |= cares_flag
-            flags &= ~socket_flag
-        if not flags:
-            return default
-    raise gaierror(-1, "Bad value for ai_flags: 0x%x" % flags)
+    (cares.ARES_EADDRGETNETWORKPARAMS, 'ARES_EADDRGETNETWORKPARAMS'),
+    (cares.ARES_EBADFAMILY, 'ARES_EBADFAMILY'),
+    (cares.ARES_EBADFLAGS, 'ARES_EBADFLAGS'),
+    (cares.ARES_EBADHINTS, 'ARES_EBADHINTS'),
+    (cares.ARES_EBADNAME, 'ARES_EBADNAME'),
+    (cares.ARES_EBADQUERY, 'ARES_EBADQUERY'),
+    (cares.ARES_EBADRESP, 'ARES_EBADRESP'),
+    (cares.ARES_EBADSTR, 'ARES_EBADSTR'),
+    (cares.ARES_ECANCELLED, 'ARES_ECANCELLED'),
+    (cares.ARES_ECONNREFUSED, 'ARES_ECONNREFUSED'),
+    (cares.ARES_EDESTRUCTION, 'ARES_EDESTRUCTION'),
+    (cares.ARES_EFILE, 'ARES_EFILE'),
+    (cares.ARES_EFORMERR, 'ARES_EFORMERR'),
+    (cares.ARES_ELOADIPHLPAPI, 'ARES_ELOADIPHLPAPI'),
+    (cares.ARES_ENODATA, 'ARES_ENODATA'),
+    (cares.ARES_ENOMEM, 'ARES_ENOMEM'),
+    (cares.ARES_ENONAME, 'ARES_ENONAME'),
+    (cares.ARES_ENOTFOUND, 'ARES_ENOTFOUND'),
+    (cares.ARES_ENOTIMP, 'ARES_ENOTIMP'),
+    (cares.ARES_ENOTINITIALIZED, 'ARES_ENOTINITIALIZED'),
+    (cares.ARES_EOF, 'ARES_EOF'),
+    (cares.ARES_EREFUSED, 'ARES_EREFUSED'),
+    (cares.ARES_ESERVICE, 'ARES_ESERVICE'),
+    (cares.ARES_ESERVFAIL, 'ARES_ESERVFAIL'),
+    (cares.ARES_ETIMEOUT, 'ARES_ETIMEOUT'),
+])
 
 
 cpdef strerror(code):
@@ -170,7 +144,7 @@ cdef void gevent_sock_state_callback(void *data, int s, int read, int write):
     ch._sock_state_callback(s, read, write)
 
 
-cdef class result:
+cdef class Result(object):
     cdef public object value
     cdef public object exception
 
@@ -207,6 +181,42 @@ class ares_host_result(tuple):
         return (self.family, tuple(self))
 
 
+cdef list _parse_h_aliases(hostent* host):
+    cdef list result = []
+    cdef char** aliases = host.h_aliases
+
+    if not aliases or not aliases[0]:
+        return result
+
+    while aliases[0]: # *aliases
+        # The old C version of this excluded an alias if
+        # it matched the host name. I don't think the stdlib does that?
+        result.append(_as_str(aliases[0]))
+        aliases += 1
+    return result
+
+
+cdef list _parse_h_addr_list(hostent* host):
+    cdef list result = []
+    cdef char** addr_list = host.h_addr_list
+    cdef int addr_type = host.h_addrtype
+    # INET6_ADDRSTRLEN is 46, but we can't use that named constant
+    # here; cython doesn't like it.
+    cdef char tmpbuf[46]
+
+    if not addr_list or not addr_list[0]:
+        return result
+
+    while addr_list[0]:
+        if not cares.ares_inet_ntop(host.h_addrtype, addr_list[0], tmpbuf, INET6_ADDRSTRLEN):
+            raise _socket.error("Failed in ares_inet_ntop")
+
+        result.append(_as_str(tmpbuf))
+        addr_list += 1
+
+    return result
+
+
 cdef void gevent_ares_host_callback(void *arg, int status, int timeouts, hostent* host):
     cdef channel channel
     cdef object callback
@@ -215,16 +225,28 @@ cdef void gevent_ares_host_callback(void *arg, int status, int timeouts, hostent
     cdef object host_result
     try:
         if status or not host:
-            callback(result(None, gaierror(status, strerror(status))))
+            callback(Result(None, gaierror(status, strerror(status))))
         else:
             try:
-                host_result = ares_host_result(host.h_addrtype, (parse_h_name(host), parse_h_aliases(host), parse_h_addr_list(host)))
+                host_result = ares_host_result(host.h_addrtype,
+                                               (_as_str(host.h_name),
+                                                _parse_h_aliases(host),
+                                                _parse_h_addr_list(host)))
             except:
-                callback(result(None, sys.exc_info()[1]))
+                callback(Result(None, sys.exc_info()[1]))
             else:
-                callback(result(host_result))
+                callback(Result(host_result))
     except:
         channel.loop.handle_error(callback, *sys.exc_info())
+
+
+cdef object _as_str(const char* val):
+    if not val:
+        return None
+
+    if PY_MAJOR_VERSION < 3:
+        return <bytes>val
+    return val.decode('utf-8')
 
 
 cdef void gevent_ares_nameinfo_callback(void *arg, int status, int timeouts, char *c_node, char *c_service):
@@ -236,27 +258,39 @@ cdef void gevent_ares_nameinfo_callback(void *arg, int status, int timeouts, cha
     cdef object service
     try:
         if status:
-            callback(result(None, gaierror(status, strerror(status))))
+            callback(Result(None, gaierror(status, strerror(status))))
         else:
-            if c_node:
-                node = PyUnicode_FromString(c_node)
-            else:
-                node = None
-            if c_service:
-                service = PyUnicode_FromString(c_service)
-            else:
-                service = None
-            callback(result((node, service)))
+            node = _as_str(c_node)
+            service = _as_str(c_service)
+            callback(Result((node, service)))
     except:
         channel.loop.handle_error(callback, *sys.exc_info())
 
 
-cdef class channel:
 
-    cdef public object loop
+cdef int _make_sockaddr(const char* hostp, int port, int flowinfo, int scope_id, sockaddr_in6* sa6):
+    if cares.ares_inet_pton(AF_INET, hostp, &(<sockaddr_in*>sa6).sin_addr.s_addr) > 0:
+        (<sockaddr_in*>sa6).sin_family = AF_INET
+        (<sockaddr_in*>sa6).sin_port = htons(port)
+        return sizeof(sockaddr_in)
+
+    if cares.ares_inet_pton(AF_INET6, hostp, &(sa6.sin6_addr).s6_addr) > 0:
+        sa6.sin6_family = AF_INET6
+        sa6.sin6_port = htons(port)
+        sa6.sin6_flowinfo = flowinfo
+        sa6.sin6_scope_id = scope_id
+        return sizeof(sockaddr_in6);
+
+    return -1;
+
+
+cdef class channel:
     cdef ares_channeldata* channel
-    cdef public dict _watchers
-    cdef public object _timer
+
+    cdef readonly object loop
+
+    cdef dict _watchers
+    cdef object _timer
 
     def __init__(self, object loop, flags=None, timeout=None, tries=None, ndots=None,
                  udp_port=None, tcp_port=None, servers=None):
@@ -264,26 +298,34 @@ cdef class channel:
         cdef cares.ares_options options
         memset(&options, 0, sizeof(cares.ares_options))
         cdef int optmask = cares.ARES_OPT_SOCK_STATE_CB
+
         options.sock_state_cb = <void*>gevent_sock_state_callback
         options.sock_state_cb_data = <void*>self
+
         if flags is not None:
             options.flags = int(flags)
             optmask |= cares.ARES_OPT_FLAGS
+
         if timeout is not None:
             options.timeout = int(float(timeout) * 1000)
             optmask |= cares.ARES_OPT_TIMEOUTMS
+
         if tries is not None:
             options.tries = int(tries)
             optmask |= cares.ARES_OPT_TRIES
+
         if ndots is not None:
             options.ndots = int(ndots)
             optmask |= cares.ARES_OPT_NDOTS
+
         if udp_port is not None:
             options.udp_port = int(udp_port)
             optmask |= cares.ARES_OPT_UDP_PORT
+
         if tcp_port is not None:
             options.tcp_port = int(tcp_port)
             optmask |= cares.ARES_OPT_TCP_PORT
+
         cdef int result = cares.ares_library_init(cares.ARES_LIB_INIT_ALL)  # ARES_LIB_INIT_WIN32 -DUSE_WINSOCK?
         if result:
             raise gaierror(result, strerror(result))
@@ -413,7 +455,8 @@ cdef class channel:
         # note that for file lookups still AF_INET can be returned for AF_INET6 request
         cdef object arg = (self, callback)
         Py_INCREF(arg)
-        cares.ares_gethostbyname(self.channel, name, family, <void*>gevent_ares_host_callback, <void*>arg)
+        cares.ares_gethostbyname(self.channel, name, family,
+                                 <void*>gevent_ares_host_callback, <void*>arg)
 
     def gethostbyaddr(self, object callback, char* addr):
         if not self.channel:
@@ -447,7 +490,7 @@ cdef class channel:
         PyArg_ParseTuple(sockaddr, "si|ii", &hostp, &port, &flowinfo, &scope_id)
         if port < 0 or port > 65535:
             raise gaierror(-8, 'Invalid value for port: %r' % port)
-        cdef int length = gevent_make_sockaddr(hostp, port, flowinfo, scope_id, &sa6)
+        cdef int length = _make_sockaddr(hostp, port, flowinfo, scope_id, &sa6)
         if length <= 0:
             raise InvalidIP(repr(hostp))
         cdef object arg = (self, callback)
@@ -455,10 +498,146 @@ cdef class channel:
         cdef sockaddr_t* x = <sockaddr_t*>&sa6
         cares.ares_getnameinfo(self.channel, x, length, flags, <void*>gevent_ares_nameinfo_callback, <void*>arg)
 
+    @staticmethod
+    cdef int _convert_cares_ni_flags(int flags):
+        cdef int cares_flags = cares.ARES_NI_LOOKUPHOST | cares.ARES_NI_LOOKUPSERVICE
+        if flags & NI_NUMERICHOST:
+            cares_flags |= cares.ARES_NI_NUMERICHOST
+        if flags & NI_NUMERICSERV:
+            cares_flags |= cares.ARES_NI_NUMERICSERV
+        if flags & NI_NOFQDN:
+            cares_flags |= cares.ARES_NI_NOFQDN
+        if flags & NI_NAMEREQD:
+            cares_flags |= cares.ARES_NI_NAMEREQD
+        if flags & NI_DGRAM:
+            cares_flags |= cares.ARES_NI_DGRAM
+        return cares_flags
+
     def getnameinfo(self, object callback, tuple sockaddr, int flags):
-        try:
-            flags = _convert_cares_flags(flags)
-        except gaierror:
-            # The stdlib just ignores bad flags
-            flags = 0
+        flags = channel._convert_cares_ni_flags(flags)
         return self._getnameinfo(callback, sockaddr, flags)
+
+    @staticmethod
+    cdef int _convert_cares_ai_flags(int flags):
+        # c-ares supports a limited set of flags.
+        # We always want NOSORT, because that implies that
+        # c-ares will not connect to resolved addresses.
+        cdef int cares_flags = cares.ARES_AI_NOSORT
+        if flags & AI_CANONNAME:
+            cares_flags |= cares.ARES_AI_CANONNAME
+        if flags & AI_NUMERICSERV:
+            cares_flags |= cares.ARES_AI_NUMERICSERV
+        return cares_flags
+
+    @staticmethod
+    cdef void _getaddrinfo_cb(void *arg,
+                              int status,
+                              int timeouts,
+                              cares.ares_addrinfo* result):
+        cdef cares.ares_addrinfo_node* nodes
+        cdef cares.ares_addrinfo_cname* cnames
+        cdef sockaddr_in* sadr4
+        cdef sockaddr_in6* sadr6
+        cdef object canonname = ''
+
+        cdef channel channel
+        cdef object callback
+        # INET6_ADDRSTRLEN is 46, but we can't use that named constant
+        # here; cython doesn't like it.
+        cdef char tmpbuf[46]
+
+        channel, callback = <tuple>arg
+        Py_DECREF(<tuple>arg)
+
+
+        # Result is a list of:
+        # (family, socktype, proto, canonname, sockaddr)
+        # Where sockaddr depends on family; for INET it is
+        # (address, port)
+        # and INET6 is
+        # (address, port, flow info, scope id)
+        # TODO: Check the canonnames.
+        addrs = []
+        try:
+            if status != cares.ARES_SUCCESS:
+                callback(Result(None, gaierror(status, strerror(status))))
+                return
+            if result.cnames:
+                # These tend to come in pairs:
+                #
+                # alias: www.gevent.org name: python-gevent.readthedocs.org
+                # alias: python-gevent.readthedocs.org name: readthedocs.io
+                #
+                # The standard library returns the last name so we do too.
+
+                cnames = result.cnames
+                while cnames:
+                    canonname = _as_str(cnames.name)
+                    cnames = cnames.next
+
+            nodes = result.nodes
+            while nodes:
+                if nodes.ai_family == AF_INET:
+                    sadr4 = <sockaddr_in*>nodes.ai_addr
+                    cares.ares_inet_ntop(nodes.ai_family, &sadr4.sin_addr, tmpbuf,
+                                            INET6_ADDRSTRLEN)
+                    sockaddr = (
+                        _as_str(tmpbuf),
+                        ntohs(sadr4.sin_port),
+                    )
+                elif nodes.ai_family == AF_INET6:
+                    sadr6 = <sockaddr_in6*>nodes.ai_addr
+                    cares.ares_inet_ntop(nodes.ai_family, &sadr6.sin6_addr, tmpbuf,
+                                            INET6_ADDRSTRLEN)
+
+                    sockaddr = (
+                        _as_str(tmpbuf),
+                        ntohs(sadr6.sin6_port),
+                        sadr6.sin6_flowinfo,
+                        sadr6.sin6_scope_id,
+                    )
+                addrs.append((
+                    nodes.ai_family,
+                    nodes.ai_socktype,
+                    nodes.ai_protocol,
+                    canonname,
+                    sockaddr,
+                ))
+                nodes = nodes.ai_next
+
+            callback(Result(addrs, None))
+        except:
+            channel.loop.handle_error(callback, *sys.exc_info())
+        finally:
+            if result:
+                cares.ares_freeaddrinfo(result)
+
+    def getaddrinfo(self,
+                    object callback,
+                    const char* name,
+                    object service, # AKA port
+                    int family=0,
+                    int type=0,
+                    int proto=0,
+                    int flags=0):
+        if not self.channel:
+            raise gaierror(cares.ARES_EDESTRUCTION, 'this ares channel has been destroyed')
+
+        cdef cares.ares_addrinfo_hints hints
+        memset(&hints, 0, sizeof(cares.ares_addrinfo_hints))
+
+        hints.ai_flags = channel._convert_cares_ai_flags(flags)
+        hints.ai_family = family
+        hints.ai_socktype = type
+        hints.ai_protocol = proto
+        cdef object arg = (self, callback)
+        Py_INCREF(arg)
+
+        cares.ares_getaddrinfo(
+            self.channel,
+            name,
+            NULL if service is None else <char*>service,
+            &hints,
+            <void*>channel._getaddrinfo_cb,
+            <void*>arg
+        )

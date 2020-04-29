@@ -1,4 +1,12 @@
 cdef extern from "ares.h":
+    # These two are defined in <sys/socket.h> and <netdb.h>, respectively,
+    # on POSIX. On Windows, they are in <winsock2.h>. "ares.h" winds up
+    # indirectly including both of those.
+    struct sockaddr:
+        pass
+    struct hostent:
+        pass
+
     struct ares_options:
         int flags
         void* sock_state_cb
@@ -36,30 +44,31 @@ cdef extern from "ares.h":
     int ARES_SOCKET_BAD
 
     int ARES_SUCCESS
-    int ARES_ENODATA
+    int ARES_EADDRGETNETWORKPARAMS
+    int ARES_EBADFAMILY
+    int ARES_EBADFLAGS
+    int ARES_EBADHINTS
+    int ARES_EBADNAME
+    int ARES_EBADQUERY
+    int ARES_EBADRESP
+    int ARES_EBADSTR
+    int ARES_ECANCELLED
+    int ARES_ECONNREFUSED
+    int ARES_EDESTRUCTION
+    int ARES_EFILE
     int ARES_EFORMERR
-    int ARES_ESERVFAIL
+    int ARES_ELOADIPHLPAPI
+    int ARES_ENODATA
+    int ARES_ENOMEM
+    int ARES_ENONAME
     int ARES_ENOTFOUND
     int ARES_ENOTIMP
-    int ARES_EREFUSED
-    int ARES_EBADQUERY
-    int ARES_EBADNAME
-    int ARES_EBADFAMILY
-    int ARES_EBADRESP
-    int ARES_ECONNREFUSED
-    int ARES_ETIMEOUT
-    int ARES_EOF
-    int ARES_EFILE
-    int ARES_ENOMEM
-    int ARES_EDESTRUCTION
-    int ARES_EBADSTR
-    int ARES_EBADFLAGS
-    int ARES_ENONAME
-    int ARES_EBADHINTS
     int ARES_ENOTINITIALIZED
-    int ARES_ELOADIPHLPAPI
-    int ARES_EADDRGETNETWORKPARAMS
-    int ARES_ECANCELLED
+    int ARES_EOF
+    int ARES_EREFUSED
+    int ARES_ESERVFAIL
+    int ARES_ESERVICE
+    int ARES_ETIMEOUT
 
     int ARES_NI_NOFQDN
     int ARES_NI_NUMERICHOST
@@ -74,6 +83,7 @@ cdef extern from "ares.h":
     int ARES_NI_LOOKUPHOST
     int ARES_NI_LOOKUPSERVICE
 
+    ctypedef int ares_socklen_t
 
     int ares_library_init(int flags)
     void ares_library_cleanup()
@@ -86,6 +96,11 @@ cdef extern from "ares.h":
     char* ares_strerror(int code)
     void ares_cancel(void* channel)
     void ares_getnameinfo(void* channel, void* sa, int salen, int flags, void* callback, void *arg)
+
+    # Added in 1.10
+    int ares_inet_pton(int af, const char *src, void *dst)
+    const char* ares_inet_ntop(int af, const void *src, char *dst, ares_socklen_t size);
+
 
     struct in_addr:
         pass
@@ -104,6 +119,45 @@ cdef extern from "ares.h":
 
     int ares_set_servers(void* channel, ares_addr_node *servers)
 
+    # Added in 1.16
+    int ARES_AI_NOSORT
+    int ARES_AI_ENVHOSTS
+    int ARES_AI_CANONNAME
+    int ARES_AI_NUMERICSERV
 
-cdef extern from "cares_pton.h":
-    int ares_inet_pton(int af, char *src, void *dst)
+    struct ares_addrinfo_hints:
+        int ai_flags
+        int ai_family
+        int ai_socktype
+        int ai_protocol
+
+    struct ares_addrinfo_node:
+        int ai_ttl
+        int ai_flags
+        int ai_family
+        int ai_socktype
+        int ai_protocol
+        ares_socklen_t ai_addrlen
+        sockaddr *ai_addr
+        ares_addrinfo_node *ai_next
+
+    struct ares_addrinfo_cname:
+        int ttl
+        char *alias
+        char *name
+        ares_addrinfo_cname *next
+
+    struct ares_addrinfo:
+        ares_addrinfo_cname *cnames
+        ares_addrinfo_node  *nodes
+
+    void ares_getaddrinfo(
+        void* channel,
+        const char *name,
+        const char* service,
+        const ares_addrinfo_hints *hints,
+        #ares_addrinfo_callback callback,
+        void* callback,
+        void *arg)
+
+    void ares_freeaddrinfo(ares_addrinfo *ai)
