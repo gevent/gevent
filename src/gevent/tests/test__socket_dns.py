@@ -14,8 +14,7 @@ import traceback
 
 import gevent.socket as gevent_socket
 import gevent.testing as greentest
-#from gevent.testing.util import log
-#from gevent.testing.util import debug
+
 from gevent.testing import util
 from gevent.testing import six
 from gevent.testing.six import xrange
@@ -39,69 +38,8 @@ import gevent.testing.timing
 assert gevent_socket.gaierror is socket.gaierror
 assert gevent_socket.error is socket.error
 
-TRACE = not util.QUIET and os.getenv('GEVENT_DEBUG', '') == 'trace'
+
 RUN_ALL_HOST_TESTS = os.getenv('GEVENTTEST_RUN_ALL_ETC_HOST_TESTS', '')
-
-def trace(message, *args, **kwargs):
-    if TRACE:
-        util.debug(message, *args, **kwargs)
-
-def _run(function, *args):
-    # Things that the stdlib should never raise and neither should we;
-    # these indicate bugs in our code and we want to raise them.
-    REAL_ERRORS = (AttributeError, ValueError, NameError)
-    try:
-        result = function(*args)
-        assert not isinstance(result, BaseException), repr(result)
-        return result
-    except REAL_ERRORS:
-        raise
-    except Exception as ex:
-        if TRACE:
-            traceback.print_exc()
-        return ex
-
-
-def format_call(function, args):
-    args = repr(args)
-    if args.endswith(',)'):
-        args = args[:-2] + ')'
-    try:
-        module = function.__module__.replace('gevent._socketcommon', 'gevent')
-        name = function.__name__
-        return '%s:%s%s' % (module, name, args)
-    except AttributeError:
-        return function + args
-
-
-def trace_fresult(result, seconds):
-    if not TRACE:
-        return
-    if isinstance(result, Exception):
-        msg = '  -=>  raised %r' % (result, )
-    else:
-        msg = '  -=>  returned %r' % (result, )
-    time_ms = ' %.2fms' % (seconds * 1000.0, )
-    space = 80 - len(msg) - len(time_ms)
-    if space > 0:
-        space = ' ' * space
-    else:
-        space = ''
-    util.debug(msg + space + time_ms)
-
-
-def run(function, *args):
-    trace(format_call(function, args))
-    delta = time()
-    result = _run(function, *args)
-    delta = time() - delta
-    trace_fresult(result, delta)
-    return result, delta
-
-
-def trace_call(result, runtime, function, *args):
-    util.debug(format_call(function, args))
-    trace_fresult(result, runtime)
 
 
 def compare_relaxed(a, b):
@@ -207,13 +145,13 @@ def add(klass, hostname, name=None,
     test1.__name__ = 'test_%s_getaddrinfo' % name
     _setattr(klass, test1.__name__, test1)
 
-    def test2(self):
+    def test_gethostbyname(self):
         x = hostname() if call else hostname
         ipaddr = self._test('gethostbyname', x)
         if not isinstance(ipaddr, Exception):
             self._test('gethostbyaddr', ipaddr)
-    test2.__name__ = 'test_%s_gethostbyname' % name
-    _setattr(klass, test2.__name__, test2)
+    test_gethostbyname.__name__ = 'test_%s_gethostbyname' % name
+    _setattr(klass, test_gethostbyname.__name__, test_gethostbyname)
 
     def test3(self):
         x = hostname() if call else hostname
@@ -238,7 +176,70 @@ class TestCase(greentest.TestCase):
     maxDiff = None
     __timeout__ = 30
     switch_expected = None
+
+    TRACE = not util.QUIET and os.getenv('GEVENT_DEBUG', '') == 'trace'
     verbose_dns = TRACE
+
+    def trace(self, message, *args, **kwargs):
+        if self.TRACE:
+            util.debug(message, *args, **kwargs)
+
+    # Things that the stdlib should never raise and neither should we;
+    # these indicate bugs in our code and we want to raise them.
+    REAL_ERRORS = (AttributeError, ValueError, NameError)
+
+    def __run_resolver(self, function, args):
+        try:
+            result = function(*args)
+            assert not isinstance(result, BaseException), repr(result)
+            return result
+        except self.REAL_ERRORS:
+            raise
+        except Exception as ex:
+            if self.TRACE:
+                traceback.print_exc()
+            return ex
+
+    def __trace_call(self, result, runtime, function, *args):
+        util.debug(self.__format_call(function, args))
+        self.__trace_fresult(result, runtime)
+
+    def __format_call(self, function, args):
+        args = repr(args)
+        if args.endswith(',)'):
+            args = args[:-2] + ')'
+        try:
+            module = function.__module__.replace('gevent._socketcommon', 'gevent')
+            name = function.__name__
+            return '%s:%s%s' % (module, name, args)
+        except AttributeError:
+            return function + args
+
+    def __trace_fresult(self, result, seconds):
+        if isinstance(result, Exception):
+            msg = '  -=>  raised %r' % (result, )
+        else:
+            msg = '  -=>  returned %r' % (result, )
+        time_ms = ' %.2fms' % (seconds * 1000.0, )
+        space = 80 - len(msg) - len(time_ms)
+        if space > 0:
+            space = ' ' * space
+        else:
+            space = ''
+        util.debug(msg + space + time_ms)
+
+    if not TRACE:
+        def run_resolver(self, function, func_args):
+            now = time()
+            return self.__run_resolver(function, func_args), time() - now
+    else:
+        def run_resolver(self, function, func_args):
+            self.trace(self.__format_call(function, func_args))
+            delta = time()
+            result = self.__run_resolver(function, func_args)
+            delta = time() - delta
+            self.__trace_fresult(result, delta)
+            return result, delta
 
     def setUp(self):
         super(TestCase, self).setUp()
@@ -263,19 +264,17 @@ class TestCase(greentest.TestCase):
             return type(result1) is not type(result2)
         return repr(result1) != repr(result2)
 
-    def _test(self, func, *args):
-        gevent_func = getattr(gevent_socket, func)
-        real_func = monkey.get_original('socket', func)
-        real_result, time_real = run(real_func, *args)
-        gevent_result, time_gevent = run(gevent_func, *args)
-        if util.QUIET and self.should_log_results(real_result, gevent_result):
-            util.log('')
-            trace_call(real_result, time_real, real_func, *args)
-            trace_call(gevent_result, time_gevent, gevent_func, *args)
-        self.assertEqualResults(real_result, gevent_result, func)
+    def _test(self, func_name, *args):
+        gevent_func = getattr(gevent_socket, func_name)
+        real_func = monkey.get_original('socket', func_name)
 
-        if self.verbose_dns and time_gevent > time_real + 0.01 and time_gevent > 0.02:
-            msg = 'gevent:%s%s took %dms versus %dms stdlib' % (func, args, time_gevent * 1000.0, time_real * 1000.0)
+        tester = getattr(self, '_run_test_' + func_name, self._run_test_generic)
+        result = tester(func_name, real_func, gevent_func, args)
+        _real_result, time_real, gevent_result, time_gevent = result
+
+        if self.verbose_dns and time_gevent > time_real + 0.02 and time_gevent > 0.03:
+            msg = 'gevent:%s%s took %dms versus %dms stdlib' % (
+                func_name, args, time_gevent * 1000.0, time_real * 1000.0)
 
             if time_gevent > time_real + 1:
                 word = 'VERY'
@@ -285,6 +284,16 @@ class TestCase(greentest.TestCase):
             util.log('\nWARNING: %s slow: %s', word, msg, color='warning')
 
         return gevent_result
+
+    def _run_test_generic(self, func_name, real_func, gevent_func, func_args):
+        real_result, time_real = self.run_resolver(real_func, func_args)
+        gevent_result, time_gevent = self.run_resolver(gevent_func, func_args)
+        if util.QUIET and self.should_log_results(real_result, gevent_result):
+            util.log('')
+            self.__trace_call(real_result, time_real, real_func, func_args)
+            self.__trace_call(gevent_result, time_gevent, gevent_func, func_args)
+        self.assertEqualResults(real_result, gevent_result, func_name)
+        return real_result, time_real, gevent_result, time_gevent
 
     def _normalize_result(self, result, func_name):
         norm_name = '_normalize_result_' + func_name
@@ -551,15 +560,30 @@ TestEtcHosts.populate_tests()
 
 
 class TestGeventOrg(TestCase):
+    # For this test to work correctly, it needs to resolve to
+    # an address with a single A record; round-robin DNS and multiple A records
+    # may mess it up (subsequent requests---and we always make two---may return
+    # unequal results). We used to use gevent.org, but that now has multiple A records;
+    # trying www.gevent.org which is a CNAME to readthedocs.org then worked, but it became
+    # an alias for python-gevent.readthedocs.org, which is an alias for readthedocs.io,
+    # and which also has multiple addresses. So we run the resolver twice to try to get
+    # the different answers, if needed.
+    HOSTNAME = 'www.gevent.org'
 
-    HOSTNAME = 'python-gevent.readthedocs.org'
 
-# For this test to work correctly, it needs to resolve to
-# an address with a single A record; round-robin DNS and multiple A records
-# may mess it up (subsequent requests---and we always make two---may return
-# unequal results). We used to use gevent.org, but that now has multiple A records;
-# trying www.gevent.org which is a CNAME to readthedocs.org then worked, but it became
-# an alias for python-gevent.readthedocs.org, which is an alias for readthedocs.io.
+    if RESOLVER_NOT_SYSTEM:
+        def _normalize_result_gethostbyname(self, result):
+            if result == '104.17.33.82':
+                result = '104.17.32.82'
+            return result
+
+        def _normalize_result_gethostbyname_ex(self, result):
+            result = super(TestGeventOrg, self)._normalize_result_gethostbyname_ex(result)
+            if result[0] == 'python-gevent.readthedocs.org':
+                result = ('readthedocs.io', ) + result[1:]
+            return result
+
+
 add(TestGeventOrg, TestGeventOrg.HOSTNAME)
 
 
@@ -571,21 +595,11 @@ class TestFamily(TestCase):
             cls._result = socket.getaddrinfo(TestGeventOrg.HOSTNAME, None)
         return cls._result
 
-    @unittest.skip(
-        "In April 2020, the system resolvers started returning INET6 answers on macOS and Travis "
-        "whereas gevent only returns INET (presumably the RTD configuration changed). "
-    )
     def test_inet(self):
-        self.assertEqualResults(
-            self.getresult(),
-            gevent_socket.getaddrinfo(TestGeventOrg.HOSTNAME, None, socket.AF_INET),
-            'getaddrinfo')
+        self._test('getaddrinfo', TestGeventOrg.HOSTNAME, None, socket.AF_INET)
 
     def test_unspec(self):
-        self.assertEqualResults(
-            self.getresult(),
-            gevent_socket.getaddrinfo(TestGeventOrg.HOSTNAME, None, socket.AF_UNSPEC),
-            'getaddrinfo')
+        self._test('getaddrinfo', TestGeventOrg.HOSTNAME, None, socket.AF_UNSPEC)
 
     def test_badvalue(self):
         self._test('getaddrinfo', TestGeventOrg.HOSTNAME, None, 255)
@@ -646,7 +660,10 @@ class Test_getaddrinfo(TestCase):
         self.assertIs(af, socket.AF_INET)
 
 class TestInternational(TestCase):
-    pass
+    if PY2:
+        # We expect these to raise UnicodeEncodeError, which is a
+        # subclass of ValueError
+        REAL_ERRORS = set(TestCase.REAL_ERRORS) - {ValueError,}
 
 # dns python can actually resolve these: it uses
 # the 2008 version of idna encoding, whereas on Python 2,

@@ -142,9 +142,9 @@ def _ipv6_inet_aton(text,
 
 
 def _is_addr(host, parse=_ipv4_inet_aton):
-    if not host:
+    if not host or not isinstance(host, hostname_types):
         return False
-    assert isinstance(host, hostname_types), repr(host)
+
     try:
         parse(host)
     except AddressSyntaxError:
@@ -158,7 +158,7 @@ is_ipv4_addr = _is_addr
 
 def is_ipv6_addr(host):
     # Return True if host is a valid IPv6 address
-    if host:
+    if host and isinstance(host, hostname_types):
         s = '%' if isinstance(host, str) else b'%'
         host = host.split(s, 1)[0]
     return _is_addr(host, _ipv6_inet_aton)

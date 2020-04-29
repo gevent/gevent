@@ -393,13 +393,17 @@ class Resolver(AbstractResolver):
         aliases = self._resolver.hosts_resolver.getaliases(hostname)
         net_resolver = self._resolver.network_resolver
         rdtype = _family_to_rdtype(family)
-        while True:
+        while 1:
             try:
                 ans = net_resolver.query(hostname, dns.rdatatype.CNAME, rdtype)
             except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.resolver.NoNameservers):
                 break
             except dTimeout:
                 break
+            except AttributeError as ex:
+                if hostname is None or isinstance(hostname, int):
+                    raise TypeError(ex)
+                raise
             else:
                 aliases.extend(str(rr.target) for rr in ans.rrset)
                 hostname = ans[0].target

@@ -318,7 +318,7 @@ class Resolver(AbstractResolver):
                     raise
 
     def _getnameinfo(self, sockaddr, flags):
-        if not isinstance(flags, int):
+        if not isinstance(flags, integer_types):
             raise TypeError('an integer is required')
         if not isinstance(sockaddr, tuple):
             raise TypeError('getnameinfo() argument 1 must be a tuple')
@@ -331,7 +331,7 @@ class Resolver(AbstractResolver):
             raise TypeError('sockaddr[0] must be a string, not %s' % type(address).__name__)
 
         port = sockaddr[1]
-        if not isinstance(port, int):
+        if not isinstance(port, integer_types):
             raise TypeError('port must be an integer, not %s' % type(port))
 
         if len(sockaddr) > 2:
@@ -340,7 +340,7 @@ class Resolver(AbstractResolver):
             if flowinfo > 0xfffff:
                 raise OverflowError("getnameinfo(): flowinfo must be 0-1048575.")
 
-        result = self._getaddrinfo(address, str(sockaddr[1]),
+        result = self._getaddrinfo(address, port,
                                    family=AF_UNSPEC, socktype=SOCK_DGRAM, fill_in_type_proto=False)
         if len(result) != 1:
             raise error('sockaddr resolved to multiple addresses')
