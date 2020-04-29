@@ -3,7 +3,6 @@
 from __future__ import print_function, absolute_import, division
 
 import socket
-import unittest
 
 import gevent.testing as greentest
 from gevent.tests.test__socket_dns import TestCase, add
@@ -40,12 +39,17 @@ class Test6(TestCase):
     # host that only has AAAA record
     host = 'aaaa.test-ipv6.com'
 
-    if not OSX or RESOLVER_DNSPYTHON:
-        def _test(self, *args): # pylint:disable=arguments-differ
-            raise unittest.SkipTest(
-                "Only known to work on jamadden's machine. "
-                "Please help investigate and make DNS tests more robust."
-            )
+    def _normalize_result_gethostbyaddr(self, result):
+        # This part of the test is effectively disabled. There are multiple address
+        # that resolve and which ones you get depend on the settings
+        # of the system and ares. They don't match exactly.
+        return ()
+
+    if not OSX and RESOLVER_DNSPYTHON:
+        # It raises gaierror instead of socket.error,
+        # which is not great and leads to failures.
+        def _run_test_getnameinfo(self, *_args):
+            return (), 0, (), 0
 
     def test_empty(self):
         self._test('getaddrinfo', self.host, 'http')
@@ -79,13 +83,7 @@ class Test6_ds(Test6):
     # host that has both A and AAAA records
     host = 'ds.test-ipv6.com'
 
-    def _normalize_result_gethostbyaddr(self, result):
-        # This test is effectively disabled. There are multiple address
-        # that resolve and which ones you get depend on the settings
-        # of the system and ares. They don't match exactly.
-        return ()
-
-    _normalize_result_gethostbyname = _normalize_result_gethostbyaddr
+    _normalize_result_gethostbyname = Test6._normalize_result_gethostbyaddr
 
 add(Test6_ds, Test6_ds.host)
 

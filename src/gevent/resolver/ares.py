@@ -6,6 +6,7 @@ from __future__ import absolute_import, print_function, division
 import os
 
 from _socket import getaddrinfo as native_getaddrinfo
+from _socket import gethostbyname_ex as native_gethostbyname_ex
 from _socket import gaierror
 from _socket import error
 
@@ -151,17 +152,29 @@ class Resolver(AbstractResolver):
         hostname = _resolve_special(hostname, family)
         return self.gethostbyname_ex(hostname, family)[-1][0]
 
+    HOSTNAME_ENCODING = 'idna' if PY3 else 'ascii'
+    _LOCAL_HOSTNAMES = (
+        b'localhost',
+        b'ip6-localhost',
+    )
+
+    _LOCAL_AND_BROADCAST_HOSTNAMES = _LOCAL_HOSTNAMES + (
+        b'255.255.255.255',
+    )
+
+    def _hostname_to_bytes(self, hostname):
+        if isinstance(hostname, text_type):
+            hostname = hostname.encode(self.HOSTNAME_ENCODING)
+        elif not isinstance(hostname, (bytes, bytearray)):
+            raise TypeError('Expected str, bytes or bytearray, not %s' % type(hostname).__name__)
+
+        return bytes(hostname)
+
     def gethostbyname_ex(self, hostname, family=AF_INET):
-        if PY3:
-            if isinstance(hostname, str):
-                hostname = hostname.encode('idna')
-            elif not isinstance(hostname, (bytes, bytearray)):
-                raise TypeError('Expected es(idna), not %s' % type(hostname).__name__)
-        else:
-            if isinstance(hostname, text_type):
-                hostname = hostname.encode('ascii')
-            elif not isinstance(hostname, str):
-                raise TypeError('Expected string, not %s' % type(hostname).__name__)
+        hostname = self._hostname_to_bytes(hostname)
+
+        if hostname in self._LOCAL_AND_BROADCAST_HOSTNAMES:
+            return native_gethostbyname_ex(hostname)
 
         while True:
             ares = self.cares
@@ -174,11 +187,6 @@ class Resolver(AbstractResolver):
                 return result
             except gaierror:
                 if ares is self.cares:
-                    if hostname == b'255.255.255.255':
-                        # The stdlib handles this case in 2.7 and 3.x, but ares does not.
-                        # It is tested by test_socket.py in 3.4.
-                        # HACK: So hardcode the expected return.
-                        return ('255.255.255.255', [], ['255.255.255.255'])
                     raise
                 # "self.cares is not ares" means channel was destroyed (because we were forked)
 
@@ -198,8 +206,8 @@ class Resolver(AbstractResolver):
         # pylint:disable=too-many-locals,too-many-branches
         if isinstance(host, text_type):
             host = host.encode('idna')
-        if not isinstance(host, bytes) or (flags & AI_NUMERICHOST) or host in (
-                b'localhost', b'ip6-localhost'):
+
+        if not isinstance(host, bytes) or (flags & AI_NUMERICHOST) or host in self._LOCAL_HOSTNAMES:
             # XXX: Now that we're using ares_getaddrinfo, how much of this is still
             # necessary?
             # this handles cases which do not require network access
@@ -247,6 +255,7 @@ class Resolver(AbstractResolver):
             # ever. It's at least supposed to do that if they were given as
             # hints, but it doesn't (https://github.com/c-ares/c-ares/issues/317)
             # Sigh.
+            # The SOL_* constants are another (older?) name for IPPROTO_*
             if socktype:
                 hard_type_proto = [
                     (socktype, SOL_TCP if socktype == SOCK_STREAM else SOL_UDP),
@@ -284,16 +293,7 @@ class Resolver(AbstractResolver):
                     raise
 
     def _gethostbyaddr(self, ip_address):
-        if PY3:
-            if isinstance(ip_address, str):
-                ip_address = ip_address.encode('idna')
-            elif not isinstance(ip_address, (bytes, bytearray)):
-                raise TypeError('Expected es(idna), not %s' % type(ip_address).__name__)
-        else:
-            if isinstance(ip_address, text_type):
-                ip_address = ip_address.encode('ascii')
-            elif not isinstance(ip_address, str):
-                raise TypeError('Expected string, not %s' % type(ip_address).__name__)
+        ip_address = self._hostname_to_bytes(ip_address)
 
         waiter = Waiter(self.hub)
         try:
@@ -322,30 +322,9 @@ class Resolver(AbstractResolver):
                 if ares is self.cares:
                     raise
 
-    def _getnameinfo(self, sockaddr, flags):
-        if not isinstance(flags, integer_types):
-            raise TypeError('an integer is required')
-        if not isinstance(sockaddr, tuple):
-            raise TypeError('getnameinfo() argument 1 must be a tuple')
+    def _getnameinfo(self, hostname, port, sockaddr, flags):
 
-        address = sockaddr[0]
-        if not PY3 and isinstance(address, text_type):
-            address = address.encode('ascii')
-
-        if not isinstance(address, string_types):
-            raise TypeError('sockaddr[0] must be a string, not %s' % type(address).__name__)
-
-        port = sockaddr[1]
-        if not isinstance(port, integer_types):
-            raise TypeError('port must be an integer, not %s' % type(port))
-
-        if len(sockaddr) > 2:
-            # Must be IPv6: (host, port, [flowinfo, [scopeid]])
-            flowinfo = sockaddr[2]
-            if flowinfo > 0xfffff:
-                raise OverflowError("getnameinfo(): flowinfo must be 0-1048575.")
-
-        result = self._getaddrinfo(address, port,
+        result = self._getaddrinfo(hostname, port,
                                    family=AF_UNSPEC, socktype=SOCK_DGRAM, fill_in_type_proto=False)
         if len(result) != 1:
             raise error('sockaddr resolved to multiple addresses')
@@ -375,10 +354,39 @@ class Resolver(AbstractResolver):
         return node, service or '0'
 
     def getnameinfo(self, sockaddr, flags):
+        if not isinstance(flags, integer_types):
+            raise TypeError('an integer is required')
+        if not isinstance(sockaddr, tuple):
+            raise TypeError('getnameinfo() argument 1 must be a tuple')
+
+        address = sockaddr[0]
+        address = self._hostname_to_bytes(sockaddr[0])
+
+        port = sockaddr[1]
+        if not isinstance(port, integer_types):
+            raise TypeError('port must be an integer, not %s' % type(port))
+
+        if port >= 65536:
+            # System resolvers do different things with an
+            # out-of-bound port; macOS CPython 3.8 raises ``gaierror: [Errno 8]
+            # nodename nor servname provided, or not known``, while
+            # manylinux CPython 2.7 appears to ignore it and raises ``error:
+            # sockaddr resolved to multiple addresses``. TravisCI, at least ot
+            # one point, successfully resolved www.gevent.org to ``(readthedocs.org, '0')``.
+            # But c-ares 1.16 would raise ``gaierror(25, 'ARES_ESERVICE: unknown')``.
+            # Doing this appears to get the expected results.
+            port = 0
+
+        if len(sockaddr) > 2:
+            # Must be IPv6: (host, port, [flowinfo, [scopeid]])
+            flowinfo = sockaddr[2]
+            if flowinfo > 0xfffff:
+                raise OverflowError("getnameinfo(): flowinfo must be 0-1048575.")
+
         while True:
             ares = self.cares
             try:
-                return self._getnameinfo(sockaddr, flags)
+                return self._getnameinfo(address, port, sockaddr, flags)
             except gaierror:
                 if ares is self.cares:
                     raise

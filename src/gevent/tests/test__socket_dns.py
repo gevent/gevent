@@ -265,6 +265,11 @@ class TestCase(greentest.TestCase):
         return repr(result1) != repr(result2)
 
     def _test(self, func_name, *args):
+        """
+        Runs the function *func_name* with *args* and compares gevent and the system.
+
+        Returns the gevent result.
+        """
         gevent_func = getattr(gevent_socket, func_name)
         real_func = monkey.get_original('socket', func_name)
 
@@ -330,22 +335,38 @@ class TestCase(greentest.TestCase):
         # On some systems, the hostname can get caps
         return (result[0].lower(), [], ips)
 
-    IGNORE_CANONICAL_NAME = RESOLVER_ARES # It tends to return them even when not asked for
+    NORMALIZE_GAI_IGNORE_CANONICAL_NAME = RESOLVER_ARES # It tends to return them even when not asked for
     if not RESOLVER_NOT_SYSTEM:
         def _normalize_result_getaddrinfo(self, result):
             return result
     else:
         def _normalize_result_getaddrinfo(self, result):
+            # Result is a list
+            # (family, socktype, proto, canonname, sockaddr)
+            # e.g.,
+            # (AF_INET, SOCK_STREAM, IPPROTO_TCP, 'readthedocs.io', (127.0.0.1, 80))
+
             # On Python 3, the builtin resolver can return SOCK_RAW results, but
             # c-ares doesn't do that. So we remove those if we find them.
-            if hasattr(socket, 'SOCK_RAW') and isinstance(result, list):
-                result = [x for x in result if x[1] != socket.SOCK_RAW]
-            if self.IGNORE_CANONICAL_NAME:
+            # Likewise, on certain Linux systems, even on Python 2, IPPROTO_SCTP (132)
+            # results may be returned --- but that may not even have a constant in the
+            # socket module! So to be safe, we strip out anything that's not
+            # SOCK_STREAM or SOCK_DGRAM
+            if isinstance(result, list):
+                result = [
+                    x
+                    for x in result
+                    if x[1] in (socket.SOCK_STREAM, socket.SOCK_DGRAM)
+                    and x[2] in (socket.IPPROTO_TCP, socket.IPPROTO_UDP)
+                ]
+
+            if self.NORMALIZE_GAI_IGNORE_CANONICAL_NAME:
                 result = [
                     (family, kind, proto, '', addr)
                     for family, kind, proto, _, addr
                     in result
                 ]
+
             if isinstance(result, list):
                 result.sort()
             return result
@@ -593,33 +614,38 @@ class TestGeventOrg(TestCase):
             return result
 
     def test_AI_CANONNAME(self):
-        self.IGNORE_CANONICAL_NAME = False
-        result = self._test('getaddrinfo',
-                            # host
-                            TestGeventOrg.HOSTNAME,
-                            # port
-                            None,
-                            # family
-                            socket.AF_INET,
-                            # type
-                            0,
-                            # proto
-                            0,
-                            # flags
-                            socket.AI_CANONNAME)
-        self.assertEqual(result[0][3], 'readthedocs.io')
+        # Not all systems support AI_CANONNAME; notably tha manylinux
+        # resolvers *sometimes* do not. Specifically, sometimes they
+        # provide the canonical name *only* on the first result.
+
+        args = (
+            # host
+            TestGeventOrg.HOSTNAME,
+            # port
+            None,
+            # family
+            socket.AF_INET,
+            # type
+            0,
+            # proto
+            0,
+            # flags
+            socket.AI_CANONNAME
+        )
+        gevent_result = gevent_socket.getaddrinfo(*args)
+        self.assertEqual(gevent_result[0][3], 'readthedocs.io')
+        real_result = socket.getaddrinfo(*args)
+
+        self.NORMALIZE_GAI_IGNORE_CANONICAL_NAME = not all(r[3] for r in real_result)
+        try:
+            self.assertEqualResults(real_result, gevent_result, 'getaddrinfo')
+        finally:
+            del self.NORMALIZE_GAI_IGNORE_CANONICAL_NAME
 
 add(TestGeventOrg, TestGeventOrg.HOSTNAME)
 
 
 class TestFamily(TestCase):
-    maxDiff = None
-    @classmethod
-    def getresult(cls):
-        if not hasattr(cls, '_result'):
-            cls._result = socket.getaddrinfo(TestGeventOrg.HOSTNAME, None)
-        return cls._result
-
     def test_inet(self):
         self._test('getaddrinfo', TestGeventOrg.HOSTNAME, None, socket.AF_INET)
 
@@ -840,10 +866,6 @@ class TestInvalidPort(TestCase):
     def test_typeerror_str(self):
         self._test('getnameinfo', ('www.gevent.org', 'x'), 0)
 
-    @unittest.skipIf(RESOLVER_DNSPYTHON,
-                     "System resolvers do funny things with this: macOS raises gaierror, "
-                     "Travis CI returns (readthedocs.org, '0'). It's hard to match that exactly. "
-                     "dnspython raises OverflowError.")
     def test_overflow_port_too_large(self):
         self._test('getnameinfo', ('www.gevent.org', 65536), 0)
 

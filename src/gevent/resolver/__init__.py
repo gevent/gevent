@@ -2,8 +2,8 @@
 
 from _socket import gaierror
 from _socket import error
-from _socket import getservbyname
-from _socket import getaddrinfo
+from _socket import getservbyname as native_getservbyname
+from _socket import getaddrinfo as native_getaddrinfo
 from _socket import SOCK_STREAM
 from _socket import SOCK_DGRAM
 from _socket import SOL_TCP
@@ -34,21 +34,21 @@ def _lookup_port(port, socktype):
                 if socktype == 0:
                     origport = port
                     try:
-                        port = getservbyname(port, 'tcp')
+                        port = native_getservbyname(port, 'tcp')
                         socktypes.append(SOCK_STREAM)
                     except error:
-                        port = getservbyname(port, 'udp')
+                        port = native_getservbyname(port, 'udp')
                         socktypes.append(SOCK_DGRAM)
                     else:
                         try:
-                            if port == getservbyname(origport, 'udp'):
+                            if port == native_getservbyname(origport, 'udp'):
                                 socktypes.append(SOCK_DGRAM)
                         except error:
                             pass
                 elif socktype == SOCK_STREAM:
-                    port = getservbyname(port, 'tcp')
+                    port = native_getservbyname(port, 'tcp')
                 elif socktype == SOCK_DGRAM:
-                    port = getservbyname(port, 'udp')
+                    port = native_getservbyname(port, 'udp')
                 else:
                     raise gaierror(EAI_SERVICE, 'Servname not supported for ai_socktype')
             except error as ex:
@@ -74,8 +74,8 @@ def _resolve_special(hostname, family):
     if not isinstance(hostname, hostname_types):
         raise TypeError("argument 1 must be str, bytes or bytearray, not %s" % (type(hostname),))
 
-    if hostname == '':
-        result = getaddrinfo(None, 0, family, SOCK_DGRAM, 0, AI_PASSIVE)
+    if hostname in (u'', b''):
+        result = native_getaddrinfo(None, 0, family, SOCK_DGRAM, 0, AI_PASSIVE)
         if len(result) != 1:
             raise error('wildcard resolved to multiple address')
         return result[0][4][0]
