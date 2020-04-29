@@ -330,16 +330,25 @@ class TestCase(greentest.TestCase):
         # On some systems, the hostname can get caps
         return (result[0].lower(), [], ips)
 
-    def _normalize_result_getaddrinfo(self, result):
-        if not RESOLVER_NOT_SYSTEM:
+    IGNORE_CANONICAL_NAME = RESOLVER_ARES # It tends to return them even when not asked for
+    if not RESOLVER_NOT_SYSTEM:
+        def _normalize_result_getaddrinfo(self, result):
             return result
-        # On Python 3, the builtin resolver can return SOCK_RAW results, but
-        # c-ares doesn't do that. So we remove those if we find them.
-        if hasattr(socket, 'SOCK_RAW') and isinstance(result, list):
-            result = [x for x in result if x[1] != socket.SOCK_RAW]
-        if isinstance(result, list):
-            result.sort()
-        return result
+    else:
+        def _normalize_result_getaddrinfo(self, result):
+            # On Python 3, the builtin resolver can return SOCK_RAW results, but
+            # c-ares doesn't do that. So we remove those if we find them.
+            if hasattr(socket, 'SOCK_RAW') and isinstance(result, list):
+                result = [x for x in result if x[1] != socket.SOCK_RAW]
+            if self.IGNORE_CANONICAL_NAME:
+                result = [
+                    (family, kind, proto, '', addr)
+                    for family, kind, proto, _, addr
+                    in result
+                ]
+            if isinstance(result, list):
+                result.sort()
+            return result
 
     def _normalize_result_getnameinfo(self, result):
         return result
@@ -583,6 +592,22 @@ class TestGeventOrg(TestCase):
                 result = ('readthedocs.io', ) + result[1:]
             return result
 
+    def test_AI_CANONNAME(self):
+        self.IGNORE_CANONICAL_NAME = False
+        result = self._test('getaddrinfo',
+                            # host
+                            TestGeventOrg.HOSTNAME,
+                            # port
+                            None,
+                            # family
+                            socket.AF_INET,
+                            # type
+                            0,
+                            # proto
+                            0,
+                            # flags
+                            socket.AI_CANONNAME)
+        self.assertEqual(result[0][3], 'readthedocs.io')
 
 add(TestGeventOrg, TestGeventOrg.HOSTNAME)
 

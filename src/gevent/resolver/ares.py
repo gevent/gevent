@@ -90,6 +90,9 @@ class Resolver(AbstractResolver):
       ``getaddrinfo``; unknown flags are ignored. System-specific flags
       such as ``AI_V4MAPPED_CFG`` are not supported.
 
+    - ``getaddrinfo`` may return canonical names even without the ``AI_CANONNAME``
+      being set.
+
     .. caution::
 
         This module is considered extremely experimental on PyPy, and
@@ -101,6 +104,10 @@ class Resolver(AbstractResolver):
        that version of c-ares, domains ending in ``.onion`` `are never
        resolved <https://github.com/c-ares/c-ares/issues/196>`_ or even
        sent to the DNS server.
+
+    .. versionchanged:: NEXT
+       ``getaddrinfo`` is now implemented using the native c-ares function
+       from c-ares 1.16 or newer.
 
     .. _c-ares: http://c-ares.haxx.se
     """
@@ -185,8 +192,6 @@ class Resolver(AbstractResolver):
     ):
         """
         Returns a list ``(family, socktype, proto, canonname, sockaddr)``
-
-        TODO: Implement canonical names.
 
         :raises gaierror: If no results are found.
         """

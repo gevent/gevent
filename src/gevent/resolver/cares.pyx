@@ -535,8 +535,11 @@ cdef class channel:
                               int timeouts,
                               cares.ares_addrinfo* result):
         cdef cares.ares_addrinfo_node* nodes
+        cdef cares.ares_addrinfo_cname* cnames
         cdef sockaddr_in* sadr4
         cdef sockaddr_in6* sadr6
+        cdef object canonname = ''
+
         cdef channel channel
         cdef object callback
         # INET6_ADDRSTRLEN is 46, but we can't use that named constant
@@ -559,6 +562,19 @@ cdef class channel:
             if status != cares.ARES_SUCCESS:
                 callback(Result(None, gaierror(status, strerror(status))))
                 return
+            if result.cnames:
+                # These tend to come in pairs:
+                #
+                # alias: www.gevent.org name: python-gevent.readthedocs.org
+                # alias: python-gevent.readthedocs.org name: readthedocs.io
+                #
+                # The standard library returns the last name so we do too.
+
+                cnames = result.cnames
+                while cnames:
+                    canonname = _as_str(cnames.name)
+                    cnames = cnames.next
+
             nodes = result.nodes
             while nodes:
                 if nodes.ai_family == AF_INET:
@@ -584,7 +600,7 @@ cdef class channel:
                     nodes.ai_family,
                     nodes.ai_socktype,
                     nodes.ai_protocol,
-                    '',
+                    canonname,
                     sockaddr,
                 ))
                 nodes = nodes.ai_next
