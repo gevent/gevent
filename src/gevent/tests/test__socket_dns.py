@@ -306,40 +306,43 @@ class TestCase(greentest.TestCase):
             return getattr(self, norm_name)(result)
         return result
 
-    def _normalize_result_gethostbyname_ex(self, result):
-        # Often the second and third part of the tuple (hostname, aliaslist, ipaddrlist)
-        # can be in different orders if we're hitting different servers,
-        # or using the native and ares resolvers due to load-balancing techniques.
-        # We sort them.
-        if not RESOLVER_NOT_SYSTEM or isinstance(result, BaseException):
-            return result
-        # result[1].sort() # we wind up discarding this
-
-        # On Py2 in test_russion_gethostbyname_ex, this
-        # is actually an integer, for some reason. In TestLocalhost.tets__ip6_localhost,
-        # the result isn't this long (maybe an error?).
-        try:
-            result[2].sort()
-        except AttributeError:
-            pass
-        except IndexError:
-            return result
-        # On some systems, a random alias is found in the aliaslist
-        # by the system resolver, but not by cares, and vice versa. We deem the aliaslist
-        # unimportant and discard it.
-        # On some systems (Travis CI), the ipaddrlist for 'localhost' can come back
-        # with two entries 127.0.0.1 (presumably two interfaces?) for c-ares
-        ips = result[2]
-        if ips == ['127.0.0.1', '127.0.0.1']:
-            ips = ['127.0.0.1']
-        # On some systems, the hostname can get caps
-        return (result[0].lower(), [], ips)
 
     NORMALIZE_GAI_IGNORE_CANONICAL_NAME = RESOLVER_ARES # It tends to return them even when not asked for
     if not RESOLVER_NOT_SYSTEM:
         def _normalize_result_getaddrinfo(self, result):
             return result
+        def _normalize_result_gethostbyname_ex(self, result):
+            return result
     else:
+        def _normalize_result_gethostbyname_ex(self, result):
+            # Often the second and third part of the tuple (hostname, aliaslist, ipaddrlist)
+            # can be in different orders if we're hitting different servers,
+            # or using the native and ares resolvers due to load-balancing techniques.
+            # We sort them.
+            if isinstance(result, BaseException):
+                return result
+            # result[1].sort() # we wind up discarding this
+
+            # On Py2 in test_russion_gethostbyname_ex, this
+            # is actually an integer, for some reason. In TestLocalhost.tets__ip6_localhost,
+            # the result isn't this long (maybe an error?).
+            try:
+                result[2].sort()
+            except AttributeError:
+                pass
+            except IndexError:
+                return result
+            # On some systems, a random alias is found in the aliaslist
+            # by the system resolver, but not by cares, and vice versa. We deem the aliaslist
+            # unimportant and discard it.
+            # On some systems (Travis CI), the ipaddrlist for 'localhost' can come back
+            # with two entries 127.0.0.1 (presumably two interfaces?) for c-ares
+            ips = result[2]
+            if ips == ['127.0.0.1', '127.0.0.1']:
+                ips = ['127.0.0.1']
+            # On some systems, the hostname can get caps
+            return (result[0].lower(), [], ips)
+
         def _normalize_result_getaddrinfo(self, result):
             # Result is a list
             # (family, socktype, proto, canonname, sockaddr)
@@ -387,13 +390,27 @@ class TestCase(greentest.TestCase):
             return (result[0], [], result[2])
         return result
 
-    def assertEqualResults(self, real_result, gevent_result, func):
-        errors = (socket.gaierror, socket.herror, TypeError)
-        if isinstance(real_result, errors) and isinstance(gevent_result, errors):
+    def _compare_exceptions(self, real_result, gevent_result):
+        msg = ('system:', repr(real_result), 'gevent:', repr(gevent_result))
+        self.assertIs(type(gevent_result), type(real_result), msg)
+        if isinstance(real_result, TypeError):
+            return
+
+        self.assertEqual(real_result.args, gevent_result.args, msg)
+        if hasattr(real_result, 'errno'):
+            self.assertEqual(real_result.errno, gevent_result.errno)
+
+    if RESOLVER_DNSPYTHON:
+        def _compare_exceptions(self, real_result, gevent_result):
             if type(real_result) is not type(gevent_result):
                 util.log('WARNING: error type mismatch: %r (gevent) != %r (stdlib)',
                          gevent_result, real_result,
                          color='warning')
+
+    def assertEqualResults(self, real_result, gevent_result, func):
+        errors = (socket.gaierror, socket.herror, TypeError)
+        if isinstance(real_result, errors) and isinstance(gevent_result, errors):
+            self._compare_exceptions(real_result, gevent_result)
             return
 
         real_result = self._normalize_result(real_result, func)
@@ -490,15 +507,13 @@ class TestLocalhost(TestCase):
 
 add(
     TestLocalhost, 'ip6-localhost',
-    skip=greentest.RUNNING_ON_TRAVIS,
-    skip_reason="ares fails here, for some reason, presumably a badly "
-    "configured /etc/hosts"
+    skip=RESOLVER_DNSPYTHON, # XXX: Fix these.
+    skip_reason="Can return gaierror(-2)"
 )
 add(
     TestLocalhost, 'localhost',
     skip=greentest.RUNNING_ON_TRAVIS,
-    skip_reason="Beginning Dec 1 2017, ares started returning ip6-localhost "
-    "instead of localhost"
+    skip_reason="Can return gaierror(-2)"
 )
 
 
@@ -519,9 +534,9 @@ class Test127001(TestCase):
 
 add(
     Test127001, '127.0.0.1',
-    skip=greentest.RUNNING_ON_TRAVIS,
-    skip_reason="Beginning Dec 1 2017, ares started returning ip6-localhost "
-    "instead of localhost"
+    # skip=RESOLVER_DNSPYTHON,
+    # skip_reason="Beginning Dec 1 2017, ares started returning ip6-localhost "
+    # "instead of localhost"
 )
 
 
@@ -529,7 +544,7 @@ add(
 class TestBroadcast(TestCase):
     switch_expected = False
 
-    if RESOLVER_NOT_SYSTEM:
+    if RESOLVER_DNSPYTHON:
         # ares and dnspython raises errors for broadcasthost/255.255.255.255
 
         @unittest.skip('ares raises errors for broadcasthost/255.255.255.255')

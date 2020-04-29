@@ -5,6 +5,9 @@ import os
 test_filename = sys.argv[1]
 del sys.argv[1]
 
+if test_filename == 'test_urllib2_localnet.py' and os.environ.get('APPVEYOR'):
+    os.environ['GEVENT_DEBUG'] = 'TRACE'
+
 print('Running with patch_all(): %s' % (test_filename,))
 
 from gevent import monkey

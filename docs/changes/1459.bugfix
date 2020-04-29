@@ -1,0 +1,2 @@
+The c-ares resolver now raises exceptions much more consistently with
+the standard resolver. Types and errnos are more likely to match.

@@ -3,6 +3,7 @@
 from __future__ import print_function, absolute_import, division
 
 import socket
+import unittest
 
 import gevent.testing as greentest
 from gevent.tests.test__socket_dns import TestCase, add
@@ -50,6 +51,11 @@ class Test6(TestCase):
         # which is not great and leads to failures.
         def _run_test_getnameinfo(self, *_args):
             return (), 0, (), 0
+
+    def _run_test_gethostbyname(self, *_args):
+        raise unittest.SkipTest("gethostbyname[_ex] does not support IPV6")
+
+    _run_test_gethostbyname_ex = _run_test_gethostbyname
 
     def test_empty(self):
         self._test('getaddrinfo', self.host, 'http')

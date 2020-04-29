@@ -8,12 +8,14 @@ import os
 from _socket import getaddrinfo as native_getaddrinfo
 from _socket import gethostbyname_ex as native_gethostbyname_ex
 from _socket import gaierror
+from _socket import herror
 from _socket import error
+from _socket import EAI_NONAME
 
-from gevent._compat import string_types
 from gevent._compat import text_type
 from gevent._compat import integer_types
 from gevent._compat import PY3
+from gevent._compat import MAC
 
 from gevent.hub import Waiter
 from gevent.hub import get_hub
@@ -75,7 +77,9 @@ class Resolver(AbstractResolver):
       the hosts file.
 
     - This implementation may raise ``gaierror(4)`` where the
-      system implementation would raise ``herror(1)``.
+      system implementation would raise ``herror(1)`` or vice versa,
+      with different error numbers. However, after 2020-04, this should be
+      much reduced.
 
     - The results for ``localhost`` may be different. In
       particular, some system resolvers will return more results
@@ -109,6 +113,10 @@ class Resolver(AbstractResolver):
     .. versionchanged:: NEXT
        ``getaddrinfo`` is now implemented using the native c-ares function
        from c-ares 1.16 or newer.
+
+    .. versionchanged:: NEXT
+        Now ``herror`` and ``gaierror`` are raised more consistently with
+        the standard library resolver, and have more consistent errno values.
 
     .. _c-ares: http://c-ares.haxx.se
     """
@@ -160,6 +168,13 @@ class Resolver(AbstractResolver):
 
     _LOCAL_AND_BROADCAST_HOSTNAMES = _LOCAL_HOSTNAMES + (
         b'255.255.255.255',
+        b'<broadcast>',
+    )
+
+    EAI_NONAME_MSG = (
+        'nodename nor servname provided, or not known'
+        if MAC else
+        'Name or service not known'
     )
 
     def _hostname_to_bytes(self, hostname):
@@ -183,10 +198,16 @@ class Resolver(AbstractResolver):
                 ares.gethostbyname(waiter, hostname, family)
                 result = waiter.get()
                 if not result[-1]:
-                    raise gaierror(-5, 'No address associated with hostname')
+                    raise herror(EAI_NONAME, self.EAI_NONAME_MSG)
                 return result
-            except gaierror:
+            except herror as ex:
                 if ares is self.cares:
+                    if ex.args[0] == 1:
+                        # Somewhere along the line, the internal
+                        # implementation of gethostbyname_ex changed to invoke
+                        # getaddrinfo() as a first pass, much like we do for ``getnameinfo()``;
+                        # this means it raises a different error for not-found hosts.
+                        raise gaierror(EAI_NONAME, self.EAI_NONAME_MSG)
                     raise
                 # "self.cares is not ares" means channel was destroyed (because we were forked)
 
@@ -248,7 +269,7 @@ class Resolver(AbstractResolver):
         result = waiter.get()
 
         if not result:
-            raise gaierror(-5, 'No address associated with hostname')
+            raise gaierror(EAI_NONAME, self.EAI_NONAME_MSG)
 
         if fill_in_type_proto:
             # c-ares 1.16 DOES NOT fill in socktype or proto in the results,
@@ -318,7 +339,7 @@ class Resolver(AbstractResolver):
             ares = self.cares
             try:
                 return self._gethostbyaddr(ip_address)
-            except gaierror:
+            except herror:
                 if ares is self.cares:
                     raise
 
@@ -347,8 +368,8 @@ class Resolver(AbstractResolver):
             # requested, node or service will be NULL ". Python 2
             # allows that for the service, but Python 3 raises
             # an error. This is tested by test_socket in py 3.4
-            err = gaierror('nodename nor servname provided, or not known')
-            err.errno = 8
+            err = gaierror(EAI_NONAME, self.EAI_NONAME_MSG)
+            err.errno = EAI_NONAME
             raise err
 
         return node, service or '0'
