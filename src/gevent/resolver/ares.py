@@ -7,6 +7,8 @@ import os
 
 from _socket import getaddrinfo as native_getaddrinfo
 from _socket import gethostbyname_ex as native_gethostbyname_ex
+from _socket import gethostbyname as native_gethostbyname
+from _socket import gethostbyaddr as native_gethostbyaddr
 from _socket import gaierror
 from _socket import herror
 from _socket import error
@@ -157,6 +159,14 @@ class Resolver(AbstractResolver):
         self.fork_watcher.stop()
 
     def gethostbyname(self, hostname, family=AF_INET):
+        # The native ``gethostbyname`` and ``gethostbyname_ex`` have some different
+        # behaviour with special names. Notably, ``gethostbyname`` will handle
+        # both "<broadcast>" and "255.255.255.255", while ``gethostbyname_ex`` refuses to
+        # handle those; they result in different errors, too. So we can't
+        # pass those throgh.
+        hostname = self._hostname_to_bytes(hostname)
+        if hostname in self._LOCAL_AND_BROADCAST_HOSTNAMES:
+            return native_gethostbyname(hostname)
         hostname = _resolve_special(hostname, family)
         return self.gethostbyname_ex(hostname, family)[-1][0]
 
@@ -187,8 +197,9 @@ class Resolver(AbstractResolver):
 
     def gethostbyname_ex(self, hostname, family=AF_INET):
         hostname = self._hostname_to_bytes(hostname)
-
         if hostname in self._LOCAL_AND_BROADCAST_HOSTNAMES:
+            # The broadcast specials aren't handled here, but they may produce
+            # special errors that are hard to replicate across all systems.
             return native_gethostbyname_ex(hostname)
 
         while True:
@@ -314,7 +325,8 @@ class Resolver(AbstractResolver):
                     raise
 
     def _gethostbyaddr(self, ip_address):
-        ip_address = self._hostname_to_bytes(ip_address)
+        if ip_address in self._LOCAL_AND_BROADCAST_HOSTNAMES:
+            return native_gethostbyaddr(ip_address)
 
         waiter = Waiter(self.hub)
         try:
@@ -335,6 +347,7 @@ class Resolver(AbstractResolver):
 
     def gethostbyaddr(self, ip_address):
         ip_address = _resolve_special(ip_address, AF_UNSPEC)
+        ip_address = self._hostname_to_bytes(ip_address)
         while True:
             ares = self.cares
             try:
