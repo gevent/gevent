@@ -9,7 +9,6 @@ import gevent.testing as greentest
 from gevent.tests.test__socket_dns import TestCase, add
 
 from gevent.testing.sysinfo import OSX
-from gevent.testing.sysinfo import RESOLVER_NOT_SYSTEM
 from gevent.testing.sysinfo import RESOLVER_DNSPYTHON
 from gevent.testing.sysinfo import PYPY
 
@@ -73,9 +72,10 @@ class Test6(TestCase):
 class Test6_google(Test6):
     host = 'ipv6.google.com'
 
-    if greentest.RUNNING_ON_CI and RESOLVER_NOT_SYSTEM:
+    if greentest.RUNNING_ON_CI:
         # Disabled, there are multiple possibilities
-        # and we can get different ones, rarely.
+        # and we can get different ones. Even the system resolvers
+        # can go round-robin and provide different answers.
         def _normalize_result_getnameinfo(self, result):
             return ()
 
