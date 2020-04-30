@@ -479,6 +479,7 @@ class Resolver(AbstractResolver):
         except gaierror as ex:
             if ex.errno == EAI_NONAME:
                 raise herror(1, "Unknown host")
+            raise
 
     # Things that need proper error handling
     getnameinfo = AbstractResolver.fixup_gaierror(AbstractResolver.getnameinfo)
