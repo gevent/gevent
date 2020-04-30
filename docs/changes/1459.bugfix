@@ -12,3 +12,10 @@ DNSPython resolver also raises ``socket.error``.
 
 In addition, several other small discrepancies were addressed,
 including handling of localhost and broadcast host names.
+
+.. note:: This has been tested on Linux (CentOS and Ubuntu), macOS,
+          and Windows. It hasn't been tested on other platforms, so
+          results are unknown for them. The c-ares support, in
+          particular, is using some additional socket functions and
+          defines. Please let the maintainers know if this introduces
+          issues.
