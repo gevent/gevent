@@ -9,9 +9,8 @@ import gevent.testing as greentest
 from gevent.tests.test__socket_dns import TestCase, add
 
 from gevent.testing.sysinfo import OSX
-from gevent.testing.sysinfo import RESOLVER_NOT_SYSTEM
 from gevent.testing.sysinfo import RESOLVER_DNSPYTHON
-
+from gevent.testing.sysinfo import PYPY
 
 
 # We can't control the DNS servers on CI (or in general...)
@@ -40,12 +39,22 @@ class Test6(TestCase):
     # host that only has AAAA record
     host = 'aaaa.test-ipv6.com'
 
-    if not OSX or RESOLVER_DNSPYTHON:
-        def _test(self, *args): # pylint:disable=arguments-differ
-            raise unittest.SkipTest(
-                "Only known to work on jamadden's machine. "
-                "Please help investigate and make DNS tests more robust."
-            )
+    def _normalize_result_gethostbyaddr(self, result):
+        # This part of the test is effectively disabled. There are multiple address
+        # that resolve and which ones you get depend on the settings
+        # of the system and ares. They don't match exactly.
+        return ()
+
+    if not OSX and RESOLVER_DNSPYTHON:
+        # It raises gaierror instead of socket.error,
+        # which is not great and leads to failures.
+        def _run_test_getnameinfo(self, *_args):
+            return (), 0, (), 0
+
+    def _run_test_gethostbyname(self, *_args):
+        raise unittest.SkipTest("gethostbyname[_ex] does not support IPV6")
+
+    _run_test_gethostbyname_ex = _run_test_gethostbyname
 
     def test_empty(self):
         self._test('getaddrinfo', self.host, 'http')
@@ -63,12 +72,16 @@ class Test6(TestCase):
 class Test6_google(Test6):
     host = 'ipv6.google.com'
 
-    def _normalize_result_getnameinfo(self, result):
-        if greentest.RUNNING_ON_CI and RESOLVER_NOT_SYSTEM:
-            # Disabled, there are multiple possibilities
-            # and we can get different ones, rarely.
+    if greentest.RUNNING_ON_CI:
+        # Disabled, there are multiple possibilities
+        # and we can get different ones. Even the system resolvers
+        # can go round-robin and provide different answers.
+        def _normalize_result_getnameinfo(self, result):
             return ()
-        return result
+
+        if PYPY:
+            # PyPy tends to be especially problematic in that area.
+            _normalize_result_getaddrinfo = _normalize_result_getnameinfo
 
 add(Test6, Test6.host)
 add(Test6_google, Test6_google.host)
@@ -79,13 +92,7 @@ class Test6_ds(Test6):
     # host that has both A and AAAA records
     host = 'ds.test-ipv6.com'
 
-    def _normalize_result_gethostbyaddr(self, result):
-        # This test is effectively disabled. There are multiple address
-        # that resolve and which ones you get depend on the settings
-        # of the system and ares. They don't match exactly.
-        return ()
-
-    _normalize_result_gethostbyname = _normalize_result_gethostbyaddr
+    _normalize_result_gethostbyname = Test6._normalize_result_gethostbyaddr
 
 add(Test6_ds, Test6_ds.host)
 

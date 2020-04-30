@@ -16,8 +16,11 @@ from cpython.mem cimport PyMem_Malloc
 from cpython.mem cimport PyMem_Free
 from libc.string cimport memset
 
+from gevent._compat import MAC
+
 import _socket
 from _socket import gaierror
+from _socket import herror
 
 
 __all__ = ['channel']
@@ -46,6 +49,31 @@ cdef extern from *:
 #ifdef HAVE_NETDB_H
 #include <netdb.h>
 #endif
+
+    #ifndef EAI_ADDRFAMILY
+    #define EAI_ADDRFAMILY -1
+    #endif
+
+    #ifndef EAI_BADHINTS
+    #define EAI_BADHINTS -2
+    #endif
+
+    #ifndef EAI_NODATA
+    #define EAI_NODATA -3
+    #endif
+
+    #ifndef EAI_OVERFLOW
+    #define EAI_OVERFLOW -4
+    #endif
+
+    #ifndef EAI_PROTOCOL
+    #define EAI_PROTOCOL -5
+    #endif
+
+    #ifndef EAI_SYSTEM
+    #define EAI_SYSTEM
+    #endif
+
     """
 
 cdef extern from "ares.h":
@@ -98,7 +126,7 @@ cdef int NI_NAMEREQD = _socket.NI_NAMEREQD
 cdef int NI_DGRAM = _socket.NI_DGRAM
 
 
-_ares_errors = dict([
+cdef dict _ares_errors = dict([
     (cares.ARES_SUCCESS, 'ARES_SUCCESS'),
 
     (cares.ARES_EADDRGETNETWORKPARAMS, 'ARES_EADDRGETNETWORKPARAMS'),
@@ -128,9 +156,67 @@ _ares_errors = dict([
     (cares.ARES_ETIMEOUT, 'ARES_ETIMEOUT'),
 ])
 
+cdef dict _ares_to_gai_system = {
+    cares.ARES_EBADFAMILY: cares.EAI_ADDRFAMILY,
+    cares.ARES_EBADFLAGS:  cares.EAI_BADFLAGS,
+    cares.ARES_EBADHINTS:  cares.EAI_BADHINTS,
+    cares.ARES_ENOMEM:     cares.EAI_MEMORY,
+    cares.ARES_ENONAME:    cares.EAI_NONAME,
+    cares.ARES_ENOTFOUND:  cares.EAI_NONAME,
+    cares.ARES_ENOTIMP:    cares.EAI_FAMILY,
+    # While EAI_NODATA ("No address associated with nodename") might
+    # seem to be the natural mapping, typical resolvers actually
+    # return EAI_NONAME in that same situation; I've yet to find EAI_NODATA
+    # in a test.
+    cares.ARES_ENODATA:    cares.EAI_NONAME,
+    # This one gets raised for unknown port/service names.
+    cares.ARES_ESERVICE:   cares.EAI_NONAME if MAC else cares.EAI_SERVICE,
+}
 
-cpdef strerror(code):
-    return '%s: %s' % (_ares_errors.get(code) or code, cares.ares_strerror(code))
+cdef _gevent_gai_strerror(code):
+    cdef const char* err_str
+    cdef object result = None
+    cdef int system
+    try:
+        system = _ares_to_gai_system[code]
+    except KeyError:
+        err_str = cares.ares_strerror(code)
+        result = '%s: %s' % (_ares_errors.get(code) or code, _as_str(err_str))
+    else:
+        err_str = cares.gai_strerror(system)
+        result = _as_str(err_str)
+    return result
+
+cdef object _gevent_gaierror_from_status(int ares_status):
+    cdef object code = _ares_to_gai_system.get(ares_status, ares_status)
+    cdef object message = _gevent_gai_strerror(ares_status)
+    return gaierror(code, message)
+
+cdef dict _ares_to_host_system = {
+    cares.ARES_ENONAME:    cares.HOST_NOT_FOUND,
+    cares.ARES_ENOTFOUND:  cares.HOST_NOT_FOUND,
+    cares.ARES_ENODATA:    cares.NO_DATA,
+}
+
+cdef _gevent_herror_strerror(code):
+    cdef const char* err_str
+    cdef object result = None
+    cdef int system
+    try:
+        system = _ares_to_host_system[code]
+    except KeyError:
+        err_str = cares.ares_strerror(code)
+        result = '%s: %s' % (_ares_errors.get(code) or code, _as_str(err_str))
+    else:
+        err_str = cares.hstrerror(system)
+        result = _as_str(err_str)
+    return result
+
+
+cdef object _gevent_herror_from_status(int ares_status):
+    cdef object code = _ares_to_host_system.get(ares_status, ares_status)
+    cdef object message = _gevent_herror_strerror(ares_status)
+    return herror(code, message)
 
 
 class InvalidIP(ValueError):
@@ -217,29 +303,6 @@ cdef list _parse_h_addr_list(hostent* host):
     return result
 
 
-cdef void gevent_ares_host_callback(void *arg, int status, int timeouts, hostent* host):
-    cdef channel channel
-    cdef object callback
-    channel, callback = <tuple>arg
-    Py_DECREF(<tuple>arg)
-    cdef object host_result
-    try:
-        if status or not host:
-            callback(Result(None, gaierror(status, strerror(status))))
-        else:
-            try:
-                host_result = ares_host_result(host.h_addrtype,
-                                               (_as_str(host.h_name),
-                                                _parse_h_aliases(host),
-                                                _parse_h_addr_list(host)))
-            except:
-                callback(Result(None, sys.exc_info()[1]))
-            else:
-                callback(Result(host_result))
-    except:
-        channel.loop.handle_error(callback, *sys.exc_info())
-
-
 cdef object _as_str(const char* val):
     if not val:
         return None
@@ -258,7 +321,7 @@ cdef void gevent_ares_nameinfo_callback(void *arg, int status, int timeouts, cha
     cdef object service
     try:
         if status:
-            callback(Result(None, gaierror(status, strerror(status))))
+            callback(Result(None, _gevent_gaierror_from_status(status)))
         else:
             node = _as_str(c_node)
             service = _as_str(c_service)
@@ -328,10 +391,10 @@ cdef class channel:
 
         cdef int result = cares.ares_library_init(cares.ARES_LIB_INIT_ALL)  # ARES_LIB_INIT_WIN32 -DUSE_WINSOCK?
         if result:
-            raise gaierror(result, strerror(result))
+            raise gaierror(result, _gevent_gai_strerror(result))
         result = cares.ares_init_options(&channel, &options, optmask)
         if result:
-            raise gaierror(result, strerror(result))
+            raise gaierror(result, _gevent_gai_strerror(result))
         self._timer = loop.timer(TIMEOUT, TIMEOUT)
         self._watchers = {}
         self.channel = channel
@@ -398,7 +461,7 @@ cdef class channel:
                 c_servers[length - 1].next = NULL
                 index = cares.ares_set_servers(self.channel, c_servers)
                 if index:
-                    raise ValueError(strerror(index))
+                    raise ValueError(_gevent_gai_strerror(index))
             finally:
                 PyMem_Free(c_servers)
 
@@ -449,6 +512,30 @@ cdef class channel:
             write_fd = cares.ARES_SOCKET_BAD
         cares.ares_process_fd(self.channel, read_fd, write_fd)
 
+    @staticmethod
+    cdef void _gethostbyname_or_byaddr_cb(void *arg, int status, int timeouts, hostent* host):
+        cdef channel channel
+        cdef object callback
+        channel, callback = <tuple>arg
+        Py_DECREF(<tuple>arg)
+        cdef object host_result
+        try:
+            if status or not host:
+                callback(Result(None, _gevent_herror_from_status(status)))
+            else:
+                try:
+                    host_result = ares_host_result(host.h_addrtype,
+                                                   (_as_str(host.h_name),
+                                                    _parse_h_aliases(host),
+                                                    _parse_h_addr_list(host)))
+                except:
+                    callback(Result(None, sys.exc_info()[1]))
+                else:
+                    callback(Result(host_result))
+        except:
+            channel.loop.handle_error(callback, *sys.exc_info())
+
+
     def gethostbyname(self, object callback, char* name, int family=AF_INET):
         if not self.channel:
             raise gaierror(cares.ARES_EDESTRUCTION, 'this ares channel has been destroyed')
@@ -456,7 +543,7 @@ cdef class channel:
         cdef object arg = (self, callback)
         Py_INCREF(arg)
         cares.ares_gethostbyname(self.channel, name, family,
-                                 <void*>gevent_ares_host_callback, <void*>arg)
+                                 <void*>channel._gethostbyname_or_byaddr_cb, <void*>arg)
 
     def gethostbyaddr(self, object callback, char* addr):
         if not self.channel:
@@ -475,7 +562,8 @@ cdef class channel:
             raise InvalidIP(repr(addr))
         cdef object arg = (self, callback)
         Py_INCREF(arg)
-        cares.ares_gethostbyaddr(self.channel, addr_packed, length, family, <void*>gevent_ares_host_callback, <void*>arg)
+        cares.ares_gethostbyaddr(self.channel, addr_packed, length, family,
+                                 <void*>channel._gethostbyname_or_byaddr_cb, <void*>arg)
 
     cpdef _getnameinfo(self, object callback, tuple sockaddr, int flags):
         if not self.channel:
@@ -488,8 +576,8 @@ cdef class channel:
         if not PyTuple_Check(sockaddr):
             raise TypeError('expected a tuple, got %r' % (sockaddr, ))
         PyArg_ParseTuple(sockaddr, "si|ii", &hostp, &port, &flowinfo, &scope_id)
-        if port < 0 or port > 65535:
-            raise gaierror(-8, 'Invalid value for port: %r' % port)
+        # if port < 0 or port > 65535:
+        #     raise gaierror(-8, 'Invalid value for port: %r' % port)
         cdef int length = _make_sockaddr(hostp, port, flowinfo, scope_id, &sa6)
         if length <= 0:
             raise InvalidIP(repr(hostp))
@@ -560,7 +648,7 @@ cdef class channel:
         addrs = []
         try:
             if status != cares.ARES_SUCCESS:
-                callback(Result(None, gaierror(status, strerror(status))))
+                callback(Result(None, _gevent_gaierror_from_status(status)))
                 return
             if result.cnames:
                 # These tend to come in pairs:

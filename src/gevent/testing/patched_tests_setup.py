@@ -17,6 +17,7 @@ from .sysinfo import RUNNING_ON_APPVEYOR as APPVEYOR
 from .sysinfo import RUNNING_ON_TRAVIS as TRAVIS
 from .sysinfo import RESOLVER_NOT_SYSTEM as ARES
 from .sysinfo import RESOLVER_ARES
+from .sysinfo import RESOLVER_DNSPYTHON
 from .sysinfo import RUNNING_ON_CI
 from .sysinfo import RUN_COVERAGE
 
@@ -1231,6 +1232,13 @@ if PY38:
             'test_ssl.BasicSocketTests.test_parse_cert_CVE_2013_4238',
         ]
 
+if RESOLVER_DNSPYTHON:
+    disabled_tests += [
+        # This does two things DNS python doesn't. First, it sends it
+        # capital letters and expects them to be returned lowercase.
+        # Second, it expects the symbolic scopeid to be stripped from the end.
+        'test_socket.GeneralModuleTests.test_getaddrinfo_ipv6_scopeid_symbolic',
+    ]
 
 # if 'signalfd' in os.environ.get('GEVENT_BACKEND', ''):
 #     # tests that don't interact well with signalfd

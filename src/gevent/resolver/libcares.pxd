@@ -7,6 +7,34 @@ cdef extern from "ares.h":
     struct hostent:
         pass
 
+    # Errors from getaddrinfo
+    int EAI_ADDRFAMILY # The specified network host does not have
+                       # any network addresses in the requested address family (Linux)
+
+    int EAI_AGAIN     # temporary failure in name resolution
+    int EAI_BADFLAGS  # invalid value for ai_flags
+    int EAI_BADHINTS  # invalid value for hints (macOS only)
+    int EAI_FAIL      # non-recoverable failure in name resolution
+    int EAI_FAMILY    # ai_family not supported
+    int EAI_MEMORY    # memory allocation failure
+    int EAI_NODATA    # The specified network host exists, but does not have
+                      # any network addresses defined. (Linux)
+    int EAI_NONAME    # hostname or servname not provided, or not known
+    int EAI_OVERFLOW  # argument buffer overflow (macOS only)
+    int EAI_PROTOCOL  # resolved protocol is unknown (macOS only)
+    int EAI_SERVICE   # servname not supported for ai_socktype
+    int EAI_SOCKTYPE  # ai_socktype not supported
+    int EAI_SYSTEM    # system error returned in errno (macOS and Linux)
+
+    char* gai_strerror(int ecode)
+
+    # Errors from gethostbyname and gethostbyaddr
+    int HOST_NOT_FOUND
+    int TRY_AGAIN
+    int NO_RECOVERY
+    int NO_DATA
+    char* hstrerror(int err)
+
     struct ares_options:
         int flags
         void* sock_state_cb

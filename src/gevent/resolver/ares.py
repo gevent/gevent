@@ -5,11 +5,11 @@ c-ares based hostname resolver.
 from __future__ import absolute_import, print_function, division
 import os
 
-from _socket import getaddrinfo as native_getaddrinfo
 from _socket import gaierror
+from _socket import herror
 from _socket import error
+from _socket import EAI_NONAME
 
-from gevent._compat import string_types
 from gevent._compat import text_type
 from gevent._compat import integer_types
 from gevent._compat import PY3
@@ -24,14 +24,13 @@ from gevent.socket import SOCK_DGRAM
 from gevent.socket import SOCK_STREAM
 from gevent.socket import SOL_TCP
 from gevent.socket import SOL_UDP
-from gevent.socket import AI_NUMERICHOST
+
 
 from gevent._config import config
 from gevent._config import AresSettingMixin
 
 from .cares import channel, InvalidIP # pylint:disable=import-error,no-name-in-module
 from . import _lookup_port as lookup_port
-from . import _resolve_special
 from . import AbstractResolver
 
 __all__ = ['Resolver']
@@ -71,10 +70,12 @@ class Resolver(AbstractResolver):
       if they are listed in the hosts file.
 
     - c-ares will not resolve ``broadcasthost``, even if listed in
-      the hosts file.
+      the hosts file prior to 2020-04-30.
 
     - This implementation may raise ``gaierror(4)`` where the
-      system implementation would raise ``herror(1)``.
+      system implementation would raise ``herror(1)`` or vice versa,
+      with different error numbers. However, after 2020-04-30, this should be
+      much reduced.
 
     - The results for ``localhost`` may be different. In
       particular, some system resolvers will return more results
@@ -108,6 +109,12 @@ class Resolver(AbstractResolver):
     .. versionchanged:: NEXT
        ``getaddrinfo`` is now implemented using the native c-ares function
        from c-ares 1.16 or newer.
+
+    .. versionchanged:: NEXT
+       Now ``herror`` and ``gaierror`` are raised more consistently with
+       the standard library resolver, and have more consistent errno values.
+
+       Handling of localhost and broadcast names is now more consistent.
 
     .. _c-ares: http://c-ares.haxx.se
     """
@@ -147,45 +154,31 @@ class Resolver(AbstractResolver):
             self.cares = None
         self.fork_watcher.stop()
 
-    def gethostbyname(self, hostname, family=AF_INET):
-        hostname = _resolve_special(hostname, family)
-        return self.gethostbyname_ex(hostname, family)[-1][0]
-
-    def gethostbyname_ex(self, hostname, family=AF_INET):
-        if PY3:
-            if isinstance(hostname, str):
-                hostname = hostname.encode('idna')
-            elif not isinstance(hostname, (bytes, bytearray)):
-                raise TypeError('Expected es(idna), not %s' % type(hostname).__name__)
-        else:
-            if isinstance(hostname, text_type):
-                hostname = hostname.encode('ascii')
-            elif not isinstance(hostname, str):
-                raise TypeError('Expected string, not %s' % type(hostname).__name__)
-
+    def _gethostbyname_ex(self, hostname_bytes, family):
         while True:
             ares = self.cares
             try:
                 waiter = Waiter(self.hub)
-                ares.gethostbyname(waiter, hostname, family)
+                ares.gethostbyname(waiter, hostname_bytes, family)
                 result = waiter.get()
                 if not result[-1]:
-                    raise gaierror(-5, 'No address associated with hostname')
+                    raise herror(EAI_NONAME, self.EAI_NONAME_MSG)
                 return result
-            except gaierror:
+            except herror as ex:
                 if ares is self.cares:
-                    if hostname == b'255.255.255.255':
-                        # The stdlib handles this case in 2.7 and 3.x, but ares does not.
-                        # It is tested by test_socket.py in 3.4.
-                        # HACK: So hardcode the expected return.
-                        return ('255.255.255.255', [], ['255.255.255.255'])
+                    if ex.args[0] == 1:
+                        # Somewhere along the line, the internal
+                        # implementation of gethostbyname_ex changed to invoke
+                        # getaddrinfo() as a first pass, much like we do for ``getnameinfo()``;
+                        # this means it raises a different error for not-found hosts.
+                        raise gaierror(EAI_NONAME, self.EAI_NONAME_MSG)
                     raise
                 # "self.cares is not ares" means channel was destroyed (because we were forked)
 
     def _lookup_port(self, port, socktype):
         return lookup_port(port, socktype)
 
-    def _getaddrinfo(
+    def __getaddrinfo(
             self, host, port,
             family=0, socktype=0, proto=0, flags=0,
             fill_in_type_proto=True
@@ -198,19 +191,6 @@ class Resolver(AbstractResolver):
         # pylint:disable=too-many-locals,too-many-branches
         if isinstance(host, text_type):
             host = host.encode('idna')
-        if not isinstance(host, bytes) or (flags & AI_NUMERICHOST) or host in (
-                b'localhost', b'ip6-localhost'):
-            # XXX: Now that we're using ares_getaddrinfo, how much of this is still
-            # necessary?
-            # this handles cases which do not require network access
-            # 1) host is None
-            # 2) host is of an invalid type
-            # 3) AI_NUMERICHOST flag is set
-            # 4) It's a well-known alias. TODO: This is special casing that we don't
-            #    really want to do. It's here because it resolves a discrepancy with the system
-            #    resolvers caught by test cases. In gevent 20.4.0, this only worked correctly on
-            #    Python 3 and not Python 2, by accident.
-            return native_getaddrinfo(host, port, family, socktype, proto, flags)
 
 
         if isinstance(port, text_type):
@@ -240,13 +220,14 @@ class Resolver(AbstractResolver):
         result = waiter.get()
 
         if not result:
-            raise gaierror(-5, 'No address associated with hostname')
+            raise gaierror(EAI_NONAME, self.EAI_NONAME_MSG)
 
         if fill_in_type_proto:
             # c-ares 1.16 DOES NOT fill in socktype or proto in the results,
             # ever. It's at least supposed to do that if they were given as
             # hints, but it doesn't (https://github.com/c-ares/c-ares/issues/317)
             # Sigh.
+            # The SOL_* constants are another (older?) name for IPPROTO_*
             if socktype:
                 hard_type_proto = [
                     (socktype, SOL_TCP if socktype == SOCK_STREAM else SOL_UDP),
@@ -274,33 +255,24 @@ class Resolver(AbstractResolver):
             ]
         return result
 
-    def getaddrinfo(self, host, port, family=0, socktype=0, proto=0, flags=0):
+    def _getaddrinfo(self, host_bytes, port, family, socktype, proto, flags):
         while True:
             ares = self.cares
             try:
-                return self._getaddrinfo(host, port, family, socktype, proto, flags)
+                return self.__getaddrinfo(host_bytes, port, family, socktype, proto, flags)
             except gaierror:
                 if ares is self.cares:
                     raise
 
-    def _gethostbyaddr(self, ip_address):
-        if PY3:
-            if isinstance(ip_address, str):
-                ip_address = ip_address.encode('idna')
-            elif not isinstance(ip_address, (bytes, bytearray)):
-                raise TypeError('Expected es(idna), not %s' % type(ip_address).__name__)
-        else:
-            if isinstance(ip_address, text_type):
-                ip_address = ip_address.encode('ascii')
-            elif not isinstance(ip_address, str):
-                raise TypeError('Expected string, not %s' % type(ip_address).__name__)
-
+    def __gethostbyaddr(self, ip_address):
         waiter = Waiter(self.hub)
         try:
             self.cares.gethostbyaddr(waiter, ip_address)
             return waiter.get()
         except InvalidIP:
-            result = self._getaddrinfo(ip_address, None, family=AF_UNSPEC, socktype=SOCK_DGRAM)
+            result = self._getaddrinfo(ip_address, None,
+                                       family=AF_UNSPEC, socktype=SOCK_DGRAM,
+                                       proto=0, flags=0)
             if not result:
                 raise
             _ip_address = result[0][-1][0]
@@ -312,41 +284,21 @@ class Resolver(AbstractResolver):
             self.cares.gethostbyaddr(waiter, _ip_address)
             return waiter.get()
 
-    def gethostbyaddr(self, ip_address):
-        ip_address = _resolve_special(ip_address, AF_UNSPEC)
+    def _gethostbyaddr(self, ip_address_bytes):
         while True:
             ares = self.cares
             try:
-                return self._gethostbyaddr(ip_address)
-            except gaierror:
+                return self.__gethostbyaddr(ip_address_bytes)
+            except herror:
                 if ares is self.cares:
                     raise
 
-    def _getnameinfo(self, sockaddr, flags):
-        if not isinstance(flags, integer_types):
-            raise TypeError('an integer is required')
-        if not isinstance(sockaddr, tuple):
-            raise TypeError('getnameinfo() argument 1 must be a tuple')
-
-        address = sockaddr[0]
-        if not PY3 and isinstance(address, text_type):
-            address = address.encode('ascii')
-
-        if not isinstance(address, string_types):
-            raise TypeError('sockaddr[0] must be a string, not %s' % type(address).__name__)
-
-        port = sockaddr[1]
-        if not isinstance(port, integer_types):
-            raise TypeError('port must be an integer, not %s' % type(port))
-
-        if len(sockaddr) > 2:
-            # Must be IPv6: (host, port, [flowinfo, [scopeid]])
-            flowinfo = sockaddr[2]
-            if flowinfo > 0xfffff:
-                raise OverflowError("getnameinfo(): flowinfo must be 0-1048575.")
-
-        result = self._getaddrinfo(address, port,
-                                   family=AF_UNSPEC, socktype=SOCK_DGRAM, fill_in_type_proto=False)
+    def __getnameinfo(self, hostname, port, sockaddr, flags):
+        result = self.__getaddrinfo(
+            hostname, port,
+            family=AF_UNSPEC, socktype=SOCK_DGRAM,
+            proto=0, flags=0,
+            fill_in_type_proto=False)
         if len(result) != 1:
             raise error('sockaddr resolved to multiple addresses')
 
@@ -368,17 +320,20 @@ class Resolver(AbstractResolver):
             # requested, node or service will be NULL ". Python 2
             # allows that for the service, but Python 3 raises
             # an error. This is tested by test_socket in py 3.4
-            err = gaierror('nodename nor servname provided, or not known')
-            err.errno = 8
+            err = gaierror(EAI_NONAME, self.EAI_NONAME_MSG)
+            err.errno = EAI_NONAME
             raise err
 
         return node, service or '0'
 
-    def getnameinfo(self, sockaddr, flags):
+    def _getnameinfo(self, address_bytes, port, sockaddr, flags):
         while True:
             ares = self.cares
             try:
-                return self._getnameinfo(sockaddr, flags)
+                return self.__getnameinfo(address_bytes, port, sockaddr, flags)
             except gaierror:
                 if ares is self.cares:
                     raise
+
+    # # Things that need proper error handling
+    # gethostbyaddr = AbstractResolver.convert_gaierror_to_herror(AbstractResolver.gethostbyaddr)

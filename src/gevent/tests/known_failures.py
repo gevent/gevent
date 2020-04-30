@@ -296,22 +296,6 @@ class Definitions(DefinitionsBase):
         run_alone=APPVEYOR,
     )
 
-    test__socket_dns = Flaky(
-        """
-        A few errors and differences:
-        AssertionError: ('255.255.255.255', 'http') != gaierror(-2,) # DNS Python
-        AssertionError: ('255.255.255.255', 'http') != gaierror(4, 'ARES_ENOTFOUND: Domain name not found')
-        AssertionError: OverflowError('port must be 0-65535.',) != ('readthedocs.org', '65535')
-        AssertionError: Lists differ:
-                (10, 1, 6, '', ('2607:f8b0:4004:810::200e', 80, 0L, 0L))
-                (10, 1, 6, '', ('2607:f8b0:4004:805::200e', 80, 0, 0))
-
-        Somehow it seems most of these are fixed with PyPy3.6-7 under dnspython,
-        (once we commented out TestHostname)?
-        """,
-        when=RESOLVER_NOT_SYSTEM | PY3
-    )
-
     test__monkey_sigchld_2 = Ignored(
         """
         This hangs for no apparent reason when run by the testrunner,

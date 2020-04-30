@@ -32,6 +32,7 @@ from gevent.testing.sysinfo import RESOLVER_NOT_SYSTEM
 from gevent.testing.sysinfo import RESOLVER_DNSPYTHON
 from gevent.testing.sysinfo import RESOLVER_ARES
 from gevent.testing.sysinfo import PY2
+from gevent.testing.sysinfo import PYPY
 import gevent.testing.timing
 
 
@@ -139,11 +140,11 @@ def add(klass, hostname, name=None,
             name = re.sub(r'[^\w]+', '_', repr(hostname))
         assert name, repr(hostname)
 
-    def test1(self):
+    def test_getaddrinfo_http(self):
         x = hostname() if call else hostname
         self._test('getaddrinfo', x, 'http')
-    test1.__name__ = 'test_%s_getaddrinfo' % name
-    _setattr(klass, test1.__name__, test1)
+    test_getaddrinfo_http.__name__ = 'test_%s_getaddrinfo_http' % name
+    _setattr(klass, test_getaddrinfo_http.__name__, test_getaddrinfo_http)
 
     def test_gethostbyname(self):
         x = hostname() if call else hostname
@@ -265,6 +266,11 @@ class TestCase(greentest.TestCase):
         return repr(result1) != repr(result2)
 
     def _test(self, func_name, *args):
+        """
+        Runs the function *func_name* with *args* and compares gevent and the system.
+
+        Returns the gevent result.
+        """
         gevent_func = getattr(gevent_socket, func_name)
         real_func = monkey.get_original('socket', func_name)
 
@@ -301,51 +307,72 @@ class TestCase(greentest.TestCase):
             return getattr(self, norm_name)(result)
         return result
 
-    def _normalize_result_gethostbyname_ex(self, result):
-        # Often the second and third part of the tuple (hostname, aliaslist, ipaddrlist)
-        # can be in different orders if we're hitting different servers,
-        # or using the native and ares resolvers due to load-balancing techniques.
-        # We sort them.
-        if not RESOLVER_NOT_SYSTEM or isinstance(result, BaseException):
-            return result
-        # result[1].sort() # we wind up discarding this
 
-        # On Py2 in test_russion_gethostbyname_ex, this
-        # is actually an integer, for some reason. In TestLocalhost.tets__ip6_localhost,
-        # the result isn't this long (maybe an error?).
-        try:
-            result[2].sort()
-        except AttributeError:
-            pass
-        except IndexError:
-            return result
-        # On some systems, a random alias is found in the aliaslist
-        # by the system resolver, but not by cares, and vice versa. We deem the aliaslist
-        # unimportant and discard it.
-        # On some systems (Travis CI), the ipaddrlist for 'localhost' can come back
-        # with two entries 127.0.0.1 (presumably two interfaces?) for c-ares
-        ips = result[2]
-        if ips == ['127.0.0.1', '127.0.0.1']:
-            ips = ['127.0.0.1']
-        # On some systems, the hostname can get caps
-        return (result[0].lower(), [], ips)
-
-    IGNORE_CANONICAL_NAME = RESOLVER_ARES # It tends to return them even when not asked for
+    NORMALIZE_GAI_IGNORE_CANONICAL_NAME = RESOLVER_ARES # It tends to return them even when not asked for
     if not RESOLVER_NOT_SYSTEM:
         def _normalize_result_getaddrinfo(self, result):
             return result
+        def _normalize_result_gethostbyname_ex(self, result):
+            return result
     else:
+        def _normalize_result_gethostbyname_ex(self, result):
+            # Often the second and third part of the tuple (hostname, aliaslist, ipaddrlist)
+            # can be in different orders if we're hitting different servers,
+            # or using the native and ares resolvers due to load-balancing techniques.
+            # We sort them.
+            if isinstance(result, BaseException):
+                return result
+            # result[1].sort() # we wind up discarding this
+
+            # On Py2 in test_russion_gethostbyname_ex, this
+            # is actually an integer, for some reason. In TestLocalhost.tets__ip6_localhost,
+            # the result isn't this long (maybe an error?).
+            try:
+                result[2].sort()
+            except AttributeError:
+                pass
+            except IndexError:
+                return result
+            # On some systems, a random alias is found in the aliaslist
+            # by the system resolver, but not by cares, and vice versa. We deem the aliaslist
+            # unimportant and discard it.
+            # On some systems (Travis CI), the ipaddrlist for 'localhost' can come back
+            # with two entries 127.0.0.1 (presumably two interfaces?) for c-ares
+            ips = result[2]
+            if ips == ['127.0.0.1', '127.0.0.1']:
+                ips = ['127.0.0.1']
+            # On some systems, the hostname can get caps
+            return (result[0].lower(), [], ips)
+
         def _normalize_result_getaddrinfo(self, result):
+            # Result is a list
+            # (family, socktype, proto, canonname, sockaddr)
+            # e.g.,
+            # (AF_INET, SOCK_STREAM, IPPROTO_TCP, 'readthedocs.io', (127.0.0.1, 80))
+            if isinstance(result, BaseException):
+                return result
+
             # On Python 3, the builtin resolver can return SOCK_RAW results, but
             # c-ares doesn't do that. So we remove those if we find them.
-            if hasattr(socket, 'SOCK_RAW') and isinstance(result, list):
-                result = [x for x in result if x[1] != socket.SOCK_RAW]
-            if self.IGNORE_CANONICAL_NAME:
+            # Likewise, on certain Linux systems, even on Python 2, IPPROTO_SCTP (132)
+            # results may be returned --- but that may not even have a constant in the
+            # socket module! So to be safe, we strip out anything that's not
+            # SOCK_STREAM or SOCK_DGRAM
+            if isinstance(result, list):
+                result = [
+                    x
+                    for x in result
+                    if x[1] in (socket.SOCK_STREAM, socket.SOCK_DGRAM)
+                    and x[2] in (socket.IPPROTO_TCP, socket.IPPROTO_UDP)
+                ]
+
+            if self.NORMALIZE_GAI_IGNORE_CANONICAL_NAME:
                 result = [
                     (family, kind, proto, '', addr)
                     for family, kind, proto, _, addr
                     in result
                 ]
+
             if isinstance(result, list):
                 result.sort()
             return result
@@ -366,17 +393,30 @@ class TestCase(greentest.TestCase):
             return (result[0], [], result[2])
         return result
 
-    def assertEqualResults(self, real_result, gevent_result, func):
-        errors = (socket.gaierror, socket.herror, TypeError)
-        if isinstance(real_result, errors) and isinstance(gevent_result, errors):
-            if type(real_result) is not type(gevent_result):
-                util.log('WARNING: error type mismatch: %r (gevent) != %r (stdlib)',
-                         gevent_result, real_result,
-                         color='warning')
+    def _compare_exceptions(self, real_result, gevent_result, func_name):
+        msg = (func_name, 'system:', repr(real_result), 'gevent:', repr(gevent_result))
+        self.assertIs(type(gevent_result), type(real_result), msg)
+        if isinstance(real_result, TypeError):
             return
 
-        real_result = self._normalize_result(real_result, func)
-        gevent_result = self._normalize_result(gevent_result, func)
+        if PYPY and isinstance(real_result, socket.herror):
+            # PyPy doesn't do errno or multiple arguments in herror;
+            # it just puts a string like 'host lookup failed: <thehost>';
+            # it must be doing that manually.
+            return
+
+        self.assertEqual(real_result.args, gevent_result.args, msg)
+        if hasattr(real_result, 'errno'):
+            self.assertEqual(real_result.errno, gevent_result.errno)
+
+    def assertEqualResults(self, real_result, gevent_result, func_name):
+        errors = (socket.gaierror, socket.herror, TypeError)
+        if isinstance(real_result, errors) and isinstance(gevent_result, errors):
+            self._compare_exceptions(real_result, gevent_result, func_name)
+            return
+
+        real_result = self._normalize_result(real_result, func_name)
+        gevent_result = self._normalize_result(gevent_result, func_name)
 
         real_result_repr = repr(real_result)
         gevent_result_repr = repr(gevent_result)
@@ -385,15 +425,27 @@ class TestCase(greentest.TestCase):
         if relaxed_is_equal(gevent_result, real_result):
             return
 
-        # If we're using the ares resolver, allow the real resolver to generate an
-        # error that the ares resolver actually gets an answer to.
-
+        # If we're using a different resolver, allow the real resolver to generate an
+        # error that the gevent resolver actually gets an answer to.
         if (
                 RESOLVER_NOT_SYSTEM
                 and isinstance(real_result, errors)
                 and not isinstance(gevent_result, errors)
         ):
             return
+
+        # On PyPy, socket.getnameinfo() can produce results even when the hostname resolves to
+        # multiple addresses, like www.gevent.org does. DNSPython (and c-ares?) don't do that,
+        # they refuse to pick a name and raise ``socket.error``
+        if (
+                RESOLVER_NOT_SYSTEM
+                and PYPY
+                and func_name == 'getnameinfo'
+                and isinstance(gevent_result, socket.error)
+                and not isinstance(real_result, socket.error)
+        ):
+            return
+
 
         # From 2.7 on, assertEqual does a better job highlighting the results than we would
         # because it calls assertSequenceEqual, which highlights the exact
@@ -411,24 +463,25 @@ add(TestTypeError, 25)
 class TestHostname(TestCase):
     NORMALIZE_GHBA_IGNORE_ALIAS = True
 
-    def _ares_normalize_name(self, result):
-        if RESOLVER_ARES and isinstance(result, tuple):
+    def __normalize_name(self, result):
+        if (RESOLVER_ARES or RESOLVER_DNSPYTHON) and isinstance(result, tuple):
             # The system resolver can return the FQDN, in the first result,
-            # when given certain configurations. But c-ares
-            # does not.
+            # when given certain configurations. But c-ares and dnspython
+            # do not.
             name = result[0]
             name = name.split('.', 1)[0]
             result = (name,) + result[1:]
         return result
+
     def _normalize_result_gethostbyaddr(self, result):
         result = TestCase._normalize_result_gethostbyaddr(self, result)
-        return self._ares_normalize_name(result)
+        return self.__normalize_name(result)
 
     def _normalize_result_getnameinfo(self, result):
         result = TestCase._normalize_result_getnameinfo(self, result)
         if PY2:
             # Not sure why we only saw this on Python 2
-            result = self._ares_normalize_name(result)
+            result = self.__normalize_name(result)
         return result
 
 add(
@@ -469,20 +522,36 @@ class TestLocalhost(TestCase):
 
 add(
     TestLocalhost, 'ip6-localhost',
-    skip=greentest.RUNNING_ON_TRAVIS,
-    skip_reason="ares fails here, for some reason, presumably a badly "
-    "configured /etc/hosts"
+    skip=RESOLVER_DNSPYTHON, # XXX: Fix these.
+    skip_reason="Can return gaierror(-2)"
 )
 add(
     TestLocalhost, 'localhost',
     skip=greentest.RUNNING_ON_TRAVIS,
-    skip_reason="Beginning Dec 1 2017, ares started returning ip6-localhost "
-    "instead of localhost"
+    skip_reason="Can return gaierror(-2)"
 )
+
+def dnspython_lenient_compare_exceptions(self, real_result, gevent_result, func_name):
+    try:
+        TestCase._compare_exceptions(self, real_result, gevent_result, func_name)
+    except AssertionError:
+        # Allow gethostbyaddr to raise different things in a few rare cases.
+        if (
+                func_name != 'gethostbyaddr'
+                or type(real_result) not in (socket.herror, socket.gaierror)
+                or type(gevent_result) not in (socket.herror, socket.gaierror)
+        ):
+            raise
+        util.log('WARNING: error type mismatch for %s: %r (gevent) != %r (stdlib)',
+                 func_name,
+                 gevent_result, real_result,
+                 color='warning')
 
 
 class TestNonexistent(TestCase):
-    pass
+    if RESOLVER_DNSPYTHON:
+        _compare_exceptions = dnspython_lenient_compare_exceptions
+
 
 add(TestNonexistent, 'nonexistentxxxyyy')
 
@@ -498,9 +567,9 @@ class Test127001(TestCase):
 
 add(
     Test127001, '127.0.0.1',
-    skip=greentest.RUNNING_ON_TRAVIS,
-    skip_reason="Beginning Dec 1 2017, ares started returning ip6-localhost "
-    "instead of localhost"
+    # skip=RESOLVER_DNSPYTHON,
+    # skip_reason="Beginning Dec 1 2017, ares started returning ip6-localhost "
+    # "instead of localhost"
 )
 
 
@@ -508,8 +577,9 @@ add(
 class TestBroadcast(TestCase):
     switch_expected = False
 
-    if RESOLVER_NOT_SYSTEM:
-        # ares and dnspython raises errors for broadcasthost/255.255.255.255
+    if RESOLVER_DNSPYTHON:
+        # dnspython raises errors for broadcasthost/255.255.255.255, but the system
+        # can resolve it.
 
         @unittest.skip('ares raises errors for broadcasthost/255.255.255.255')
         def test__broadcast__gethostbyaddr(self):
@@ -593,33 +663,38 @@ class TestGeventOrg(TestCase):
             return result
 
     def test_AI_CANONNAME(self):
-        self.IGNORE_CANONICAL_NAME = False
-        result = self._test('getaddrinfo',
-                            # host
-                            TestGeventOrg.HOSTNAME,
-                            # port
-                            None,
-                            # family
-                            socket.AF_INET,
-                            # type
-                            0,
-                            # proto
-                            0,
-                            # flags
-                            socket.AI_CANONNAME)
-        self.assertEqual(result[0][3], 'readthedocs.io')
+        # Not all systems support AI_CANONNAME; notably tha manylinux
+        # resolvers *sometimes* do not. Specifically, sometimes they
+        # provide the canonical name *only* on the first result.
+
+        args = (
+            # host
+            TestGeventOrg.HOSTNAME,
+            # port
+            None,
+            # family
+            socket.AF_INET,
+            # type
+            0,
+            # proto
+            0,
+            # flags
+            socket.AI_CANONNAME
+        )
+        gevent_result = gevent_socket.getaddrinfo(*args)
+        self.assertEqual(gevent_result[0][3], 'readthedocs.io')
+        real_result = socket.getaddrinfo(*args)
+
+        self.NORMALIZE_GAI_IGNORE_CANONICAL_NAME = not all(r[3] for r in real_result)
+        try:
+            self.assertEqualResults(real_result, gevent_result, 'getaddrinfo')
+        finally:
+            del self.NORMALIZE_GAI_IGNORE_CANONICAL_NAME
 
 add(TestGeventOrg, TestGeventOrg.HOSTNAME)
 
 
 class TestFamily(TestCase):
-    maxDiff = None
-    @classmethod
-    def getresult(cls):
-        if not hasattr(cls, '_result'):
-            cls._result = socket.getaddrinfo(TestGeventOrg.HOSTNAME, None)
-        return cls._result
-
     def test_inet(self):
         self._test('getaddrinfo', TestGeventOrg.HOSTNAME, None, socket.AF_INET)
 
@@ -631,6 +706,7 @@ class TestFamily(TestCase):
         self._test('getaddrinfo', TestGeventOrg.HOSTNAME, None, 255000)
         self._test('getaddrinfo', TestGeventOrg.HOSTNAME, None, -1)
 
+    @unittest.skipIf(RESOLVER_DNSPYTHON, "Raises the wrong errno")
     def test_badtype(self):
         self._test('getaddrinfo', TestGeventOrg.HOSTNAME, 'x')
 
@@ -690,12 +766,23 @@ class TestInternational(TestCase):
         # subclass of ValueError
         REAL_ERRORS = set(TestCase.REAL_ERRORS) - {ValueError,}
 
+        if RESOLVER_ARES:
+
+            def test_russian_getaddrinfo_http(self):
+                # And somehow, test_russion_getaddrinfo_http (``getaddrinfo(name, 'http')``)
+                # manages to work with recent versions of Python 2, but our preemptive encoding
+                # to ASCII causes it to fail with the c-ares resolver; but only that one test out of
+                # all of them.
+                self.skipTest("ares fails to encode.")
+
+
 # dns python can actually resolve these: it uses
 # the 2008 version of idna encoding, whereas on Python 2,
 # with the default resolver, it tries to encode to ascii and
 # raises a UnicodeEncodeError. So we get different results.
 add(TestInternational, u'президент.рф', 'russian',
-    skip=(PY2 and RESOLVER_DNSPYTHON), skip_reason="dnspython can actually resolve these")
+    skip=(PY2 and RESOLVER_DNSPYTHON),
+    skip_reason="dnspython can actually resolve these")
 add(TestInternational, u'президент.рф'.encode('idna'), 'idna')
 
 @skipWithoutExternalNetwork("Tries to resolve and compare hostnames/addrinfo")
@@ -754,13 +841,17 @@ class TestInterrupted_gethostbyname(gevent.testing.timing.AbstractGenericWaitTes
 
 
 class TestBadName(TestCase):
-    pass
+    if RESOLVER_DNSPYTHON:
+        _compare_exceptions = dnspython_lenient_compare_exceptions
+
 
 add(TestBadName, 'xxxxxxxxxxxx')
 
-
 class TestBadIP(TestCase):
-    pass
+
+    if RESOLVER_DNSPYTHON:
+        _compare_exceptions = dnspython_lenient_compare_exceptions
+
 
 add(TestBadIP, '1.2.3.400')
 
@@ -840,10 +931,6 @@ class TestInvalidPort(TestCase):
     def test_typeerror_str(self):
         self._test('getnameinfo', ('www.gevent.org', 'x'), 0)
 
-    @unittest.skipIf(RESOLVER_DNSPYTHON,
-                     "System resolvers do funny things with this: macOS raises gaierror, "
-                     "Travis CI returns (readthedocs.org, '0'). It's hard to match that exactly. "
-                     "dnspython raises OverflowError.")
     def test_overflow_port_too_large(self):
         self._test('getnameinfo', ('www.gevent.org', 65536), 0)
 
