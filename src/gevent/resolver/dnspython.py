@@ -477,7 +477,12 @@ class Resolver(AbstractResolver):
         try:
             return resolver._gethostbyaddr(ip_address_bytes)
         except gaierror as ex:
-            if ex.errno == EAI_NONAME:
+            if ex.args[0] == EAI_NONAME:
+                # Note: The system doesn't *always* raise herror;
+                # sometimes the original gaierror propagates through.
+                # It's impossible to say ahead of time or just based
+                # on the name which it should be. The herror seems to
+                # be by far the most common, though.
                 raise herror(1, "Unknown host")
             raise
 

@@ -392,8 +392,8 @@ class TestCase(greentest.TestCase):
             return (result[0], [], result[2])
         return result
 
-    def _compare_exceptions(self, real_result, gevent_result):
-        msg = ('system:', repr(real_result), 'gevent:', repr(gevent_result))
+    def _compare_exceptions(self, real_result, gevent_result, func_name):
+        msg = (func_name, 'system:', repr(real_result), 'gevent:', repr(gevent_result))
         self.assertIs(type(gevent_result), type(real_result), msg)
         if isinstance(real_result, TypeError):
             return
@@ -402,14 +402,14 @@ class TestCase(greentest.TestCase):
         if hasattr(real_result, 'errno'):
             self.assertEqual(real_result.errno, gevent_result.errno)
 
-    def assertEqualResults(self, real_result, gevent_result, func):
+    def assertEqualResults(self, real_result, gevent_result, func_name):
         errors = (socket.gaierror, socket.herror, TypeError)
         if isinstance(real_result, errors) and isinstance(gevent_result, errors):
-            self._compare_exceptions(real_result, gevent_result)
+            self._compare_exceptions(real_result, gevent_result, func_name)
             return
 
-        real_result = self._normalize_result(real_result, func)
-        gevent_result = self._normalize_result(gevent_result, func)
+        real_result = self._normalize_result(real_result, func_name)
+        gevent_result = self._normalize_result(gevent_result, func_name)
 
         real_result_repr = repr(real_result)
         gevent_result_repr = repr(gevent_result)
@@ -418,8 +418,8 @@ class TestCase(greentest.TestCase):
         if relaxed_is_equal(gevent_result, real_result):
             return
 
-        # If we're using the ares resolver, allow the real resolver to generate an
-        # error that the ares resolver actually gets an answer to.
+        # If we're using a different resolver, allow the real resolver to generate an
+        # error that the gevent resolver actually gets an answer to.
 
         if (
                 RESOLVER_NOT_SYSTEM
@@ -512,9 +512,27 @@ add(
     skip_reason="Can return gaierror(-2)"
 )
 
+def dnspython_lenient_compare_exceptions(self, real_result, gevent_result, func_name):
+    try:
+        TestCase._compare_exceptions(self, real_result, gevent_result, func_name)
+    except AssertionError:
+        # Allow gethostbyaddr to raise different things in a few rare cases.
+        if (
+                func_name != 'gethostbyaddr'
+                or type(real_result) not in (socket.herror, socket.gaierror)
+                or type(gevent_result) not in (socket.herror, socket.gaierror)
+        ):
+            raise
+        util.log('WARNING: error type mismatch for %s: %r (gevent) != %r (stdlib)',
+                 func_name,
+                 gevent_result, real_result,
+                 color='warning')
+
 
 class TestNonexistent(TestCase):
-    pass
+    if RESOLVER_DNSPYTHON:
+        _compare_exceptions = dnspython_lenient_compare_exceptions
+
 
 add(TestNonexistent, 'nonexistentxxxyyy')
 
@@ -803,13 +821,17 @@ class TestInterrupted_gethostbyname(gevent.testing.timing.AbstractGenericWaitTes
 
 
 class TestBadName(TestCase):
-    pass
+    if RESOLVER_DNSPYTHON:
+        _compare_exceptions = dnspython_lenient_compare_exceptions
+
 
 add(TestBadName, 'xxxxxxxxxxxx')
 
-
 class TestBadIP(TestCase):
-    pass
+
+    if RESOLVER_DNSPYTHON:
+        _compare_exceptions = dnspython_lenient_compare_exceptions
+
 
 add(TestBadIP, '1.2.3.400')
 
