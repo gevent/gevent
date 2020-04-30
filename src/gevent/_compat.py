@@ -43,6 +43,8 @@ else:
     native_path_types = string_types
     thread_mod_name = 'thread'
 
+hostname_types = tuple(set(string_types + (bytearray, bytes)))
+
 def NativeStrIO():
     import io
     return io.BytesIO() if str is bytes else io.StringIO()

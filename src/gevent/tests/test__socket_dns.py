@@ -139,11 +139,11 @@ def add(klass, hostname, name=None,
             name = re.sub(r'[^\w]+', '_', repr(hostname))
         assert name, repr(hostname)
 
-    def test1(self):
+    def test_getaddrinfo_http(self):
         x = hostname() if call else hostname
         self._test('getaddrinfo', x, 'http')
-    test1.__name__ = 'test_%s_getaddrinfo' % name
-    _setattr(klass, test1.__name__, test1)
+    test_getaddrinfo_http.__name__ = 'test_%s_getaddrinfo_http' % name
+    _setattr(klass, test_getaddrinfo_http.__name__, test_getaddrinfo_http)
 
     def test_gethostbyname(self):
         x = hostname() if call else hostname
@@ -348,6 +348,8 @@ class TestCase(greentest.TestCase):
             # (family, socktype, proto, canonname, sockaddr)
             # e.g.,
             # (AF_INET, SOCK_STREAM, IPPROTO_TCP, 'readthedocs.io', (127.0.0.1, 80))
+            if isinstance(result, BaseException):
+                return result
 
             # On Python 3, the builtin resolver can return SOCK_RAW results, but
             # c-ares doesn't do that. So we remove those if we find them.
@@ -400,13 +402,6 @@ class TestCase(greentest.TestCase):
         if hasattr(real_result, 'errno'):
             self.assertEqual(real_result.errno, gevent_result.errno)
 
-    if RESOLVER_DNSPYTHON:
-        def _compare_exceptions(self, real_result, gevent_result):
-            if type(real_result) is not type(gevent_result):
-                util.log('WARNING: error type mismatch: %r (gevent) != %r (stdlib)',
-                         gevent_result, real_result,
-                         color='warning')
-
     def assertEqualResults(self, real_result, gevent_result, func):
         errors = (socket.gaierror, socket.herror, TypeError)
         if isinstance(real_result, errors) and isinstance(gevent_result, errors):
@@ -449,24 +444,25 @@ add(TestTypeError, 25)
 class TestHostname(TestCase):
     NORMALIZE_GHBA_IGNORE_ALIAS = True
 
-    def _ares_normalize_name(self, result):
-        if RESOLVER_ARES and isinstance(result, tuple):
+    def __normalize_name(self, result):
+        if (RESOLVER_ARES or RESOLVER_DNSPYTHON) and isinstance(result, tuple):
             # The system resolver can return the FQDN, in the first result,
-            # when given certain configurations. But c-ares
-            # does not.
+            # when given certain configurations. But c-ares and dnspython
+            # do not.
             name = result[0]
             name = name.split('.', 1)[0]
             result = (name,) + result[1:]
         return result
+
     def _normalize_result_gethostbyaddr(self, result):
         result = TestCase._normalize_result_gethostbyaddr(self, result)
-        return self._ares_normalize_name(result)
+        return self.__normalize_name(result)
 
     def _normalize_result_getnameinfo(self, result):
         result = TestCase._normalize_result_getnameinfo(self, result)
         if PY2:
             # Not sure why we only saw this on Python 2
-            result = self._ares_normalize_name(result)
+            result = self.__normalize_name(result)
         return result
 
 add(
@@ -672,6 +668,7 @@ class TestFamily(TestCase):
         self._test('getaddrinfo', TestGeventOrg.HOSTNAME, None, 255000)
         self._test('getaddrinfo', TestGeventOrg.HOSTNAME, None, -1)
 
+    @unittest.skipIf(RESOLVER_DNSPYTHON, "Raises the wrong errno")
     def test_badtype(self):
         self._test('getaddrinfo', TestGeventOrg.HOSTNAME, 'x')
 
@@ -731,12 +728,23 @@ class TestInternational(TestCase):
         # subclass of ValueError
         REAL_ERRORS = set(TestCase.REAL_ERRORS) - {ValueError,}
 
+        if RESOLVER_ARES:
+
+            def test_russian_getaddrinfo_http(self):
+                # And somehow, test_russion_getaddrinfo_http (``getaddrinfo(name, 'http')``)
+                # manages to work with recent versions of Python 2, but our preemptive encoding
+                # to ASCII causes it to fail with the c-ares resolver; but only that one test out of
+                # all of them.
+                self.skipTest("ares fails to encode.")
+
+
 # dns python can actually resolve these: it uses
 # the 2008 version of idna encoding, whereas on Python 2,
 # with the default resolver, it tries to encode to ascii and
 # raises a UnicodeEncodeError. So we get different results.
 add(TestInternational, u'президент.рф', 'russian',
-    skip=(PY2 and RESOLVER_DNSPYTHON), skip_reason="dnspython can actually resolve these")
+    skip=(PY2 and RESOLVER_DNSPYTHON),
+    skip_reason="dnspython can actually resolve these")
 add(TestInternational, u'президент.рф'.encode('idna'), 'idna')
 
 @skipWithoutExternalNetwork("Tries to resolve and compare hostnames/addrinfo")
