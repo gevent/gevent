@@ -351,6 +351,10 @@ class Resolver(AbstractResolver):
         symbolic scope IDs in IPv6 addresses passed to ``getaddrinfo`` exhibits
         some differences.
 
+        On PyPy, ``getnameinfo`` can produce results when CPython raises
+        ``socket.error``, and gevent's DNSPython resolver also
+        raises ``socket.error``.
+
     .. caution::
 
         This resolver is experimental. It may be removed or modified in

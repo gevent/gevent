@@ -19,13 +19,14 @@ from _socket import gethostbyaddr as native_gethostbyaddr
 from _socket import gethostbyname as native_gethostbyname
 from _socket import gethostbyname_ex as native_gethostbyname_ex
 from _socket import getservbyname as native_getservbyname
-from _socket import herror
+
 
 from gevent._compat import string_types
 from gevent._compat import text_type
 from gevent._compat import hostname_types
 from gevent._compat import integer_types
 from gevent._compat import PY3
+from gevent._compat import PYPY
 from gevent._compat import MAC
 
 from gevent.resolver._addresses import is_ipv6_addr
@@ -245,14 +246,14 @@ class AbstractResolver(object):
         address = sockaddr[0]
         address = self._hostname_to_bytes(sockaddr[0])
 
-        if address in self._LOCAL_HOSTNAMES:
+        if address in self._LOCAL_AND_BROADCAST_HOSTNAMES:
             return native_getnameinfo(sockaddr, flags)
 
         port = sockaddr[1]
         if not isinstance(port, integer_types):
             raise TypeError('port must be an integer, not %s' % type(port))
 
-        if port >= 65536:
+        if not PYPY and port >= 65536:
             # System resolvers do different things with an
             # out-of-bound port; macOS CPython 3.8 raises ``gaierror: [Errno 8]
             # nodename nor servname provided, or not known``, while
@@ -260,8 +261,12 @@ class AbstractResolver(object):
             # sockaddr resolved to multiple addresses``. TravisCI, at least ot
             # one point, successfully resolved www.gevent.org to ``(readthedocs.org, '0')``.
             # But c-ares 1.16 would raise ``gaierror(25, 'ARES_ESERVICE: unknown')``.
-            # Doing this appears to get the expected results.
+            # Doing this appears to get the expected results on CPython
             port = 0
+        if PYPY and (port < 0 or port >= 65536):
+            # PyPy seems to always be strict about that and produce the same results
+            # on all platforms.
+            raise OverflowError("port must be 0-65535.")
 
         if len(sockaddr) > 2:
             # Must be IPv6: (host, port, [flowinfo, [scopeid]])

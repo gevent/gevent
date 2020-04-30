@@ -11,7 +11,7 @@ from gevent.tests.test__socket_dns import TestCase, add
 from gevent.testing.sysinfo import OSX
 from gevent.testing.sysinfo import RESOLVER_NOT_SYSTEM
 from gevent.testing.sysinfo import RESOLVER_DNSPYTHON
-
+from gevent.testing.sysinfo import PYPY
 
 
 # We can't control the DNS servers on CI (or in general...)
@@ -73,12 +73,15 @@ class Test6(TestCase):
 class Test6_google(Test6):
     host = 'ipv6.google.com'
 
-    def _normalize_result_getnameinfo(self, result):
-        if greentest.RUNNING_ON_CI and RESOLVER_NOT_SYSTEM:
-            # Disabled, there are multiple possibilities
-            # and we can get different ones, rarely.
+    if greentest.RUNNING_ON_CI and RESOLVER_NOT_SYSTEM:
+        # Disabled, there are multiple possibilities
+        # and we can get different ones, rarely.
+        def _normalize_result_getnameinfo(self, result):
             return ()
-        return result
+
+        if PYPY:
+            # PyPy tends to be especially problematic in that area.
+            _normalize_result_getaddrinfo = _normalize_result_getnameinfo
 
 add(Test6, Test6.host)
 add(Test6_google, Test6_google.host)

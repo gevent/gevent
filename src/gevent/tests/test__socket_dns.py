@@ -32,6 +32,7 @@ from gevent.testing.sysinfo import RESOLVER_NOT_SYSTEM
 from gevent.testing.sysinfo import RESOLVER_DNSPYTHON
 from gevent.testing.sysinfo import RESOLVER_ARES
 from gevent.testing.sysinfo import PY2
+from gevent.testing.sysinfo import PYPY
 import gevent.testing.timing
 
 
@@ -398,6 +399,12 @@ class TestCase(greentest.TestCase):
         if isinstance(real_result, TypeError):
             return
 
+        if PYPY and isinstance(real_result, socket.herror):
+            # PyPy doesn't do errno or multiple arguments in herror;
+            # it just puts a string like 'host lookup failed: <thehost>';
+            # it must be doing that manually.
+            return
+
         self.assertEqual(real_result.args, gevent_result.args, msg)
         if hasattr(real_result, 'errno'):
             self.assertEqual(real_result.errno, gevent_result.errno)
@@ -420,13 +427,25 @@ class TestCase(greentest.TestCase):
 
         # If we're using a different resolver, allow the real resolver to generate an
         # error that the gevent resolver actually gets an answer to.
-
         if (
                 RESOLVER_NOT_SYSTEM
                 and isinstance(real_result, errors)
                 and not isinstance(gevent_result, errors)
         ):
             return
+
+        # On PyPy, socket.getnameinfo() can produce results even when the hostname resolves to
+        # multiple addresses, like www.gevent.org does. DNSPython (and c-ares?) don't do that,
+        # they refuse to pick a name and raise ``socket.error``
+        if (
+                RESOLVER_NOT_SYSTEM
+                and PYPY
+                and func_name == 'getnameinfo'
+                and isinstance(gevent_result, socket.error)
+                and not isinstance(real_result, socket.error)
+        ):
+            return
+
 
         # From 2.7 on, assertEqual does a better job highlighting the results than we would
         # because it calls assertSequenceEqual, which highlights the exact
@@ -559,7 +578,8 @@ class TestBroadcast(TestCase):
     switch_expected = False
 
     if RESOLVER_DNSPYTHON:
-        # ares and dnspython raises errors for broadcasthost/255.255.255.255
+        # dnspython raises errors for broadcasthost/255.255.255.255, but the system
+        # can resolve it.
 
         @unittest.skip('ares raises errors for broadcasthost/255.255.255.255')
         def test__broadcast__gethostbyaddr(self):
