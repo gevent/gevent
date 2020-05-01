@@ -8,6 +8,6 @@ As part of this, certain parts of the c-ares extension were adapted to
 use modern Cython idioms.
 
 A few minor errors and discrepancies were fixed as well, such as
-``gethostbyaddr(''localhost')`` working on Python 3 and failing on
+``gethostbyaddr('localhost')`` working on Python 3 and failing on
 Python 2. The DNSpython resolver now raises the expected TypeError in
 more cases instead of an AttributeError.
