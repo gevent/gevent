@@ -106,11 +106,11 @@ class Resolver(AbstractResolver):
        resolved <https://github.com/c-ares/c-ares/issues/196>`_ or even
        sent to the DNS server.
 
-    .. versionchanged:: NEXT
+    .. versionchanged:: 20.5.0
        ``getaddrinfo`` is now implemented using the native c-ares function
        from c-ares 1.16 or newer.
 
-    .. versionchanged:: NEXT
+    .. versionchanged:: 20.5.0
        Now ``herror`` and ``gaierror`` are raised more consistently with
        the standard library resolver, and have more consistent errno values.
 

@@ -6,6 +6,64 @@
 
 .. towncrier release notes start
 
+20.5.0 (2020-05-01)
+===================
+
+
+Features
+--------
+
+- Update bundled c-ares to version 1.16.0. `Changes <https://c-ares.haxx.se/changelog.html>`_.
+  See :issue:`1588`.
+- Update all the bundled ``config.guess`` and ``config.sub`` scripts.
+  See :issue:`1589`.
+- Update bundled libuv from 1.34.0 to 1.36.0.
+  See :issue:`1597`.
+
+
+Bugfixes
+--------
+
+- Use ``ares_getaddrinfo`` instead of a manual lookup.
+
+  This requires c-ares 1.16.0.
+
+  Note that this may change the results, in particular their order.
+
+  As part of this, certain parts of the c-ares extension were adapted to
+  use modern Cython idioms.
+
+  A few minor errors and discrepancies were fixed as well, such as
+  ``gethostbyaddr('localhost')`` working on Python 3 and failing on
+  Python 2. The DNSpython resolver now raises the expected TypeError in
+  more cases instead of an AttributeError.
+  See :issue:`1012`.
+- The c-ares and DNSPython resolvers now raise exceptions much more
+  consistently with the standard resolver. Types and errnos are
+  substantially more likely to match what the standard library produces.
+
+  Depending on the system and configuration, results may not match
+  exactly, at least with DNSPython. There are still some rare cases
+  where the system resolver can raise ``herror`` but DNSPython will
+  raise ``gaierror`` or vice versa. There doesn't seem to be a
+  deterministic way to account for this. On PyPy, ``getnameinfo`` can
+  produce results when CPython raises ``socket.error``, and gevent's
+  DNSPython resolver also raises ``socket.error``.
+
+  In addition, several other small discrepancies were addressed,
+  including handling of localhost and broadcast host names.
+
+  .. note:: This has been tested on Linux (CentOS and Ubuntu), macOS,
+            and Windows. It hasn't been tested on other platforms, so
+            results are unknown for them. The c-ares support, in
+            particular, is using some additional socket functions and
+            defines. Please let the maintainers know if this introduces
+            issues.
+  See :issue:`1459`.
+
+
+----
+
 
 20.04.0 (2020-04-22)
 ====================

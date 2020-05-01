@@ -362,7 +362,7 @@ class Resolver(AbstractResolver):
 
     .. versionadded:: 1.3a2
 
-    .. versionchanged:: NEXT
+    .. versionchanged:: 20.5.0
        The errors raised are now much more consistent with those
        raised by the standard library resolvers.
 
