@@ -205,6 +205,10 @@ elif sys.platform.startswith('aix'):
         _libuv_source('unix/aix.c'),
         _libuv_source('unix/aix-common.c'),
     ]
+elif sys.platform.startswith('haiku'): # untested
+    LIBUV_SOURCES += [
+        _libuv_source('unix/haiku.c')
+    ]
 
 
 LIBUV_MACROS = [

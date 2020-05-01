@@ -23,7 +23,7 @@ files::
 
 
 Check if 'config.guess' and/or 'config.sub' went backwards in time
-(the 'timestamp' and copyright dates'). If so, revert it (or update
+(the 'timestamp' and 'copyright' dates). If so, revert it (or update
 from the latest source
 http://git.savannah.gnu.org/gitweb/?p=config.git;a=tree )
 
@@ -62,7 +62,7 @@ Updating libuv
 - Clean up the libuv tree, and apply the patches to libuv (this whole
   sequence is meant to be copied and pasted into the terminal)::
 
-    export LIBUV_VER=v1.27.0
+    export LIBUV_VER=v1.36.0
 
     cd deps/
     wget https://dist.libuv.org/dist/$LIBUV_VER/libuv-$LIBUV_VER.tar.gz

@@ -205,6 +205,20 @@ static ssize_t uv__fs_fdatasync(uv_fs_t* req) {
 }
 
 
+UV_UNUSED(static struct timespec uv__fs_to_timespec(double time)) {
+  struct timespec ts;
+  ts.tv_sec  = time;
+  ts.tv_nsec = (uint64_t)(time * 1000000) % 1000000 * 1000;
+  return ts;
+}
+
+UV_UNUSED(static struct timeval uv__fs_to_timeval(double time)) {
+  struct timeval tv;
+  tv.tv_sec  = time;
+  tv.tv_usec = (uint64_t)(time * 1000000) % 1000000;
+  return tv;
+}
+
 static ssize_t uv__fs_futime(uv_fs_t* req) {
 #if defined(__linux__)                                                        \
     || defined(_AIX71)                                                        \
@@ -213,10 +227,8 @@ static ssize_t uv__fs_futime(uv_fs_t* req) {
    * for the sake of consistency with other platforms.
    */
   struct timespec ts[2];
-  ts[0].tv_sec  = req->atime;
-  ts[0].tv_nsec = (uint64_t)(req->atime * 1000000) % 1000000 * 1000;
-  ts[1].tv_sec  = req->mtime;
-  ts[1].tv_nsec = (uint64_t)(req->mtime * 1000000) % 1000000 * 1000;
+  ts[0] = uv__fs_to_timespec(req->atime);
+  ts[1] = uv__fs_to_timespec(req->mtime);
 #if defined(__ANDROID_API__) && __ANDROID_API__ < 21
   return utimensat(req->file, NULL, ts, 0);
 #else
@@ -230,10 +242,8 @@ static ssize_t uv__fs_futime(uv_fs_t* req) {
     || defined(__OpenBSD__)                                                   \
     || defined(__sun)
   struct timeval tv[2];
-  tv[0].tv_sec  = req->atime;
-  tv[0].tv_usec = (uint64_t)(req->atime * 1000000) % 1000000;
-  tv[1].tv_sec  = req->mtime;
-  tv[1].tv_usec = (uint64_t)(req->mtime * 1000000) % 1000000;
+  tv[0] = uv__fs_to_timeval(req->atime);
+  tv[1] = uv__fs_to_timeval(req->mtime);
 # if defined(__sun)
   return futimesat(req->file, NULL, tv);
 # else
@@ -259,10 +269,29 @@ static ssize_t uv__fs_mkdtemp(uv_fs_t* req) {
 }
 
 
+static int (*uv__mkostemp)(char*, int);
+
+
+static void uv__mkostemp_initonce(void) {
+  /* z/os doesn't have RTLD_DEFAULT but that's okay
+   * because it doesn't have mkostemp(O_CLOEXEC) either.
+   */
+#ifdef RTLD_DEFAULT
+  uv__mkostemp = (int (*)(char*, int)) dlsym(RTLD_DEFAULT, "mkostemp");
+
+  /* We don't care about errors, but we do want to clean them up.
+   * If there has been no error, then dlerror() will just return
+   * NULL.
+   */
+  dlerror();
+#endif  /* RTLD_DEFAULT */
+}
+
+
 static int uv__fs_mkstemp(uv_fs_t* req) {
+  static uv_once_t once = UV_ONCE_INIT;
   int r;
 #ifdef O_CLOEXEC
-  int (*mkostemp_function)(char*, int);
   static int no_cloexec_support;
 #endif
   static const char pattern[] = "XXXXXX";
@@ -284,30 +313,23 @@ static int uv__fs_mkstemp(uv_fs_t* req) {
     return -1;
   }
 
+  uv_once(&once, uv__mkostemp_initonce);
+
 #ifdef O_CLOEXEC
-  if (no_cloexec_support == 0) {
-    *(int**)(&mkostemp_function) = dlsym(RTLD_DEFAULT, "mkostemp");
+  if (no_cloexec_support == 0 && uv__mkostemp != NULL) {
+    r = uv__mkostemp(path, O_CLOEXEC);
 
-    /* We don't care about errors, but we do want to clean them up.
-       If there has been no error, then dlerror() will just return
-       NULL. */
-    dlerror();
+    if (r >= 0)
+      return r;
 
-    if (mkostemp_function != NULL) {
-      r = mkostemp_function(path, O_CLOEXEC);
+    /* If mkostemp() returns EINVAL, it means the kernel doesn't
+       support O_CLOEXEC, so we just fallback to mkstemp() below. */
+    if (errno != EINVAL)
+      return r;
 
-      if (r >= 0)
-        return r;
-
-      /* If mkostemp() returns EINVAL, it means the kernel doesn't
-         support O_CLOEXEC, so we just fallback to mkstemp() below. */
-      if (errno != EINVAL)
-        return r;
-
-      /* We set the static variable so that next calls don't even
-         try to use mkostemp. */
-      no_cloexec_support = 1;
-    }
+    /* We set the static variable so that next calls don't even
+       try to use mkostemp. */
+    no_cloexec_support = 1;
   }
 #endif  /* O_CLOEXEC */
 
@@ -654,7 +676,6 @@ static ssize_t uv__fs_readlink(uv_fs_t* req) {
   ssize_t maxlen;
   ssize_t len;
   char* buf;
-  char* newbuf;
 
 #if defined(_POSIX_PATH_MAX) || defined(PATH_MAX)
   maxlen = uv__fs_pathmax_size(req->path);
@@ -698,14 +719,10 @@ static ssize_t uv__fs_readlink(uv_fs_t* req) {
 
   /* Uncommon case: resize to make room for the trailing nul byte. */
   if (len == maxlen) {
-    newbuf = uv__realloc(buf, len + 1);
+    buf = uv__reallocf(buf, len + 1);
 
-    if (newbuf == NULL) {
-      uv__free(buf);
+    if (buf == NULL)
       return -1;
-    }
-
-    buf = newbuf;
   }
 
   buf[len] = '\0';
@@ -965,10 +982,8 @@ static ssize_t uv__fs_utime(uv_fs_t* req) {
    * for the sake of consistency with other platforms.
    */
   struct timespec ts[2];
-  ts[0].tv_sec  = req->atime;
-  ts[0].tv_nsec = (uint64_t)(req->atime * 1000000) % 1000000 * 1000;
-  ts[1].tv_sec  = req->mtime;
-  ts[1].tv_nsec = (uint64_t)(req->mtime * 1000000) % 1000000 * 1000;
+  ts[0] = uv__fs_to_timespec(req->atime);
+  ts[1] = uv__fs_to_timespec(req->mtime);
   return utimensat(AT_FDCWD, req->path, ts, 0);
 #elif defined(__APPLE__)                                                      \
     || defined(__DragonFly__)                                                 \
@@ -977,10 +992,8 @@ static ssize_t uv__fs_utime(uv_fs_t* req) {
     || defined(__NetBSD__)                                                    \
     || defined(__OpenBSD__)
   struct timeval tv[2];
-  tv[0].tv_sec  = req->atime;
-  tv[0].tv_usec = (uint64_t)(req->atime * 1000000) % 1000000;
-  tv[1].tv_sec  = req->mtime;
-  tv[1].tv_usec = (uint64_t)(req->mtime * 1000000) % 1000000;
+  tv[0] = uv__fs_to_timeval(req->atime);
+  tv[1] = uv__fs_to_timeval(req->mtime);
   return utimes(req->path, tv);
 #elif defined(_AIX)                                                           \
     && !defined(_AIX71)
@@ -996,6 +1009,31 @@ static ssize_t uv__fs_utime(uv_fs_t* req) {
   atr.att_mtime = req->mtime;
   atr.att_atime = req->atime;
   return __lchattr((char*) req->path, &atr, sizeof(atr));
+#else
+  errno = ENOSYS;
+  return -1;
+#endif
+}
+
+
+static ssize_t uv__fs_lutime(uv_fs_t* req) {
+#if defined(__linux__)            ||                                           \
+    defined(_AIX71)               ||                                           \
+    defined(__sun)                ||                                           \
+    defined(__HAIKU__)
+  struct timespec ts[2];
+  ts[0] = uv__fs_to_timespec(req->atime);
+  ts[1] = uv__fs_to_timespec(req->mtime);
+  return utimensat(AT_FDCWD, req->path, ts, AT_SYMLINK_NOFOLLOW);
+#elif defined(__APPLE__)          ||                                          \
+      defined(__DragonFly__)      ||                                          \
+      defined(__FreeBSD__)        ||                                          \
+      defined(__FreeBSD_kernel__) ||                                          \
+      defined(__NetBSD__)
+  struct timeval tv[2];
+  tv[0] = uv__fs_to_timeval(req->atime);
+  tv[1] = uv__fs_to_timeval(req->mtime);
+  return lutimes(req->path, tv);
 #else
   errno = ENOSYS;
   return -1;
@@ -1125,7 +1163,28 @@ static ssize_t uv__fs_copyfile(uv_fs_t* req) {
 
   if (fchmod(dstfd, src_statsbuf.st_mode) == -1) {
     err = UV__ERR(errno);
+#ifdef __linux__
+    if (err != UV_EPERM)
+      goto out;
+
+    {
+      struct statfs s;
+
+      /* fchmod() on CIFS shares always fails with EPERM unless the share is
+       * mounted with "noperm". As fchmod() is a meaningless operation on such
+       * shares anyway, detect that condition and squelch the error.
+       */
+      if (fstatfs(dstfd, &s) == -1)
+        goto out;
+
+      if (s.f_type != /* CIFS */ 0xFF534D42u)
+        goto out;
+    }
+
+    err = 0;
+#else  /* !__linux__ */
     goto out;
+#endif  /* !__linux__ */
   }
 
 #ifdef FICLONE
@@ -1495,6 +1554,7 @@ static void uv__fs_work(struct uv__work* w) {
     X(FSYNC, uv__fs_fsync(req));
     X(FTRUNCATE, ftruncate(req->file, req->off));
     X(FUTIME, uv__fs_futime(req));
+    X(LUTIME, uv__fs_lutime(req));
     X(LSTAT, uv__fs_lstat(req->path, &req->statbuf));
     X(LINK, link(req->path, req->new_path));
     X(MKDIR, mkdir(req->path, req->mode));
@@ -1676,6 +1736,19 @@ int uv_fs_futime(uv_loop_t* loop,
                  uv_fs_cb cb) {
   INIT(FUTIME);
   req->file = file;
+  req->atime = atime;
+  req->mtime = mtime;
+  POST;
+}
+
+int uv_fs_lutime(uv_loop_t* loop,
+                 uv_fs_t* req,
+                 const char* path,
+                 double atime,
+                 double mtime,
+                 uv_fs_cb cb) {
+  INIT(LUTIME);
+  PATH;
   req->atime = atime;
   req->mtime = mtime;
   POST;

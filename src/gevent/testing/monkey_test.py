@@ -14,19 +14,31 @@ from gevent import monkey
 # Only test the default set of patch arguments.
 monkey.patch_all()
 
-from .sysinfo import RUNNING_ON_APPVEYOR
-from .sysinfo import PY37
-from .sysinfo import PYPY3
+from .sysinfo import PY3
+from .sysinfo import PY36
 from .patched_tests_setup import disable_tests_in_source
 from . import support
 from . import resources
 from . import SkipTest
 from . import util
 
-if (RUNNING_ON_APPVEYOR and PY37) or PYPY3:
-    # 3.7 added a stricter mode for thread cleanup.
-    # It appears to be unstable on Windows (at least appveyor)
-    # and PyPy3
+
+# This uses the internal built-in function ``_thread._count()``,
+# which we don't monkey-patch, so it returns inaccurate information.
+def threading_setup():
+    if PY3:
+        return (1, ())
+    return (1,)
+# This then tries to wait for that value to return to its original value;
+# but if we started worker threads that can never happen.
+def threading_cleanup(*_args):
+    return
+support.threading_setup = threading_setup
+support.threading_cleanup = threading_cleanup
+
+if PY36:
+    # On all versions of Python 3.6+, this also uses ``_thread._count()``,
+    # meaning it suffers from inaccuracies,
     # and test_socket.py constantly fails with an extra thread
     # on some random test. We disable it entirely.
     # XXX: Figure out how to make a *definition* in ./support.py actually
