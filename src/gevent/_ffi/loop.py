@@ -92,7 +92,7 @@ class AbstractCallbacks(object):
           :func:`_python_handle_error` to deal with it. The Python watcher
           object will have the exception tuple saved in ``_exc_info``.
         - 1
-          Everything went according to plan. You should check to see if the libev
+          Everything went according to plan. You should check to see if the native
           watcher is still active, and call :func:`python_stop` if it is not. This will
           clean up the memory. Finding the watcher still active at the event loop level,
           but not having stopped itself at the gevent level is a buggy scenario and
@@ -182,8 +182,9 @@ class AbstractCallbacks(object):
                     and the_watcher in the_watcher.loop._keepaliveset
                     and the_watcher._watcher is orig_ffi_watcher):
                 # It didn't stop itself, *and* it didn't stop itself, reset
-                # its watcher, and start itself again. libuv's io watchers MAY
-                # do that.
+                # its watcher, and start itself again. libuv's io watchers
+                # multiplex and may do this.
+
                 # The normal, expected scenario when we find the watcher still
                 # in the keepaliveset is that it is still active at the event loop
                 # level, so we don't expect that python_stop gets called.
