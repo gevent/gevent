@@ -442,7 +442,7 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
                 self._ptr = libev.ev_loop_new(c_flags)
                 if not self._ptr:
                     raise SystemError("ev_loop_new(%s) failed" % (c_flags, ))
-            if default or __SYSERR_CALLBACK is None:
+            if default or SYSERR_CALLBACK is None:
                 set_syserr_cb(self._handle_syserr)
 
         # Mark as not destroyed
@@ -514,7 +514,7 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
             # Mark as destroyed
             libev.ev_set_userdata(ptr, NULL)
             self._stop_watchers(ptr)
-            if __SYSERR_CALLBACK == self._handle_syserr:
+            if SYSERR_CALLBACK == self._handle_syserr:
                 set_syserr_cb(None)
             libev.ev_loop_destroy(ptr)
 
@@ -835,7 +835,7 @@ cdef bint _watcher_start(watcher self, object callback, tuple args) except -1:
     self.args = args
     _libev_unref(self)
     _python_incref(self)
-    self.__ss.start(self.loop._ptr, self.__watcher)
+    self._w_ss.start(self.loop._ptr, self._w_watcher)
     return 1
 
 cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Type]:
@@ -845,7 +845,7 @@ cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Ty
     cdef object _callback
     cdef public tuple args
 
-    # By keeping a __watcher cached, the size of the io and timer
+    # By keeping a _w_watcher cached, the size of the io and timer
     # structs becomes 152 bytes and child is 160 and stat is 512 (when
     # the start_and_stop is inlined). On 64-bit macOS CPython 2.7. I
     # hoped that using libev's data pointer and allocating the
@@ -860,7 +860,7 @@ cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Ty
     # IO           | 120 | 152  | 160
     # Child        | 128 | 160  | 168
     # Stat         | 480 | 512  | 512
-    cdef libev.ev_watcher* __watcher
+    cdef libev.ev_watcher* _w_watcher
 
     # By inlining the start_and_stop struct, instead of taking the address
     # of a static struct or using the watcher's data pointer, we
@@ -870,7 +870,7 @@ cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Ty
     # better cache locality. (Then again, we're bigger).
     # Right now we're going for size, so we use the pointer. IO/Timer objects
     # are then 144 bytes.
-    cdef start_and_stop* __ss
+    cdef start_and_stop* _w_ss
 
     ## Int members
 
@@ -884,12 +884,12 @@ cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Ty
     cdef readonly unsigned int _flags
 
     def __init__(self, loop loop, ref=True, priority=None):
-        if not self.__watcher or not self.__ss.start or not self.__ss.stop:
+        if not self._w_watcher or not self._w_ss.start or not self._w_ss.stop:
             raise ValueError("Cannot construct a bare watcher")
         self.loop = loop
         self._flags = 0 if ref else FLAG_WATCHER_UNREF_BEFORE_START
         if priority is not None:
-            libev.ev_set_priority(self.__watcher, priority)
+            libev.ev_set_priority(self._w_watcher, priority)
 
     @property
     def ref(self):
@@ -912,7 +912,7 @@ cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Ty
             if not self.ref:
                return  # ref is already False
             self._flags |= FLAG_WATCHER_UNREF_BEFORE_START
-            if not self._flags & FLAG_WATCHER_NEEDS_EVREF and libev.ev_is_active(self.__watcher):
+            if not self._flags & FLAG_WATCHER_NEEDS_EVREF and libev.ev_is_active(self._w_watcher):
                libev.ev_unref(self.loop._ptr)
                self._flags |= FLAG_WATCHER_NEEDS_EVREF
 
@@ -928,22 +928,22 @@ cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Ty
 
     @property
     def priority(self):
-        return libev.ev_priority(self.__watcher)
+        return libev.ev_priority(self._w_watcher)
 
     @priority.setter
     def priority(self, int priority):
-        cdef libev.ev_watcher* w = self.__watcher
+        cdef libev.ev_watcher* w = self._w_watcher
         if libev.ev_is_active(w):
            raise AttributeError("Cannot set priority of an active watcher")
         libev.ev_set_priority(w, priority)
 
     @property
     def active(self):
-        return True if libev.ev_is_active(self.__watcher) else False
+        return True if libev.ev_is_active(self._w_watcher) else False
 
     @property
     def pending(self):
-        return True if libev.ev_is_pending(self.__watcher) else False
+        return True if libev.ev_is_pending(self._w_watcher) else False
 
     def start(self, object callback, *args):
         _watcher_start(self, callback, args)
@@ -955,7 +955,7 @@ cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Ty
         # so this is safe.
         self._callback = None
         self.args = None
-        self.__ss.stop(self.loop._ptr, self.__watcher)
+        self._w_ss.stop(self.loop._ptr, self._w_watcher)
         _python_decref(self)
 
     def feed(self, int revents, object callback, *args):
@@ -963,7 +963,7 @@ cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Ty
         self.callback = callback
         self.args = args
         _libev_unref(self)
-        libev.ev_feed_event(self.loop._ptr, self.__watcher, revents)
+        libev.ev_feed_event(self.loop._ptr, self._w_watcher, revents)
         _python_incref(self)
 
     def __repr__(self):
@@ -974,7 +974,7 @@ cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Ty
             result = "<%s at 0x%x native=0x%x%s" % (
                 self.__class__.__name__,
                 id(self),
-                <unsigned long>self.__watcher,
+                <unsigned long>self._w_watcher,
                 format
             )
             if self.active:
@@ -1024,8 +1024,8 @@ cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
         # All the vfd_functions are no-ops on POSIX
         cdef int vfd = libev.vfd_open(fd)
         libev.ev_io_init(&self._watcher, <void *>gevent_callback_io, vfd, events)
-        self.__watcher = <libev.ev_watcher*>&self._watcher
-        self.__ss = &io_ss
+        self._w_watcher = <libev.ev_watcher*>&self._watcher
+        self._w_ss = &io_ss
 
     def __dealloc__(self):
         libev.vfd_free(self._watcher.fd)
@@ -1069,8 +1069,8 @@ cdef public class timer(watcher) [object PyGeventTimerObject, type PyGeventTimer
         if repeat < 0.0:
             raise ValueError("repeat must be positive or zero: %r" % repeat)
         libev.ev_timer_init(&self._watcher, <void *>gevent_callback_timer, after, repeat)
-        self.__watcher = <libev.ev_watcher*>&self._watcher
-        self.__ss = &timer_ss
+        self._w_watcher = <libev.ev_watcher*>&self._watcher
+        self._w_ss = &timer_ss
 
     def __init__(self, loop loop, double after=0.0, double repeat=0.0, ref=True, priority=None):
         watcher.__init__(self, loop, ref, priority)
@@ -1114,8 +1114,8 @@ cdef public class signal(watcher) [object PyGeventSignalObject, type PyGeventSig
         # 2) "libev: a signal must not be attached to two different loops"
         #    we probably could check that in LIBEV_EMBED mode, but not in general
         libev.ev_signal_init(&self._watcher, <void *>gevent_callback_signal, signalnum)
-        self.__watcher = <libev.ev_watcher*>&self._watcher
-        self.__ss = &signal_ss
+        self._w_watcher = <libev.ev_watcher*>&self._watcher
+        self._w_ss = &signal_ss
 
     def __init__(self, loop loop, int signalnum, ref=True, priority=None):
         watcher.__init__(self, loop, ref, priority)
@@ -1130,8 +1130,8 @@ cdef public class idle(watcher) [object PyGeventIdleObject, type PyGeventIdle_Ty
 
     def __cinit__(self, loop loop, ref=True, priority=None):
         libev.ev_idle_init(&self._watcher, <void*>gevent_callback_idle)
-        self.__watcher = <libev.ev_watcher*>&self._watcher
-        self.__ss = &idle_ss
+        self._w_watcher = <libev.ev_watcher*>&self._watcher
+        self._w_ss = &idle_ss
 
 
 
@@ -1143,8 +1143,8 @@ cdef public class prepare(watcher) [object PyGeventPrepareObject, type PyGeventP
 
     def __cinit__(self, loop loop, ref=True, priority=None):
         libev.ev_prepare_init(&self._watcher, <void*>gevent_callback_prepare)
-        self.__watcher = <libev.ev_watcher*>&self._watcher
-        self.__ss = &prepare_ss
+        self._w_watcher = <libev.ev_watcher*>&self._watcher
+        self._w_ss = &prepare_ss
 
 
 
@@ -1156,8 +1156,8 @@ cdef public class check(watcher) [object PyGeventCheckObject, type PyGeventCheck
 
     def __cinit__(self, loop loop, ref=True, priority=None):
         libev.ev_check_init(&self._watcher, <void*>gevent_callback_check)
-        self.__watcher = <libev.ev_watcher*>&self._watcher
-        self.__ss = &check_ss
+        self._w_watcher = <libev.ev_watcher*>&self._watcher
+        self._w_ss = &check_ss
 
 
 
@@ -1169,8 +1169,8 @@ cdef public class fork(watcher) [object PyGeventForkObject, type PyGeventFork_Ty
 
     def __cinit__(self, loop loop, ref=True, priority=None):
         libev.ev_fork_init(&self._watcher, <void*>gevent_callback_fork)
-        self.__watcher = <libev.ev_watcher*>&self._watcher
-        self.__ss = &fork_ss
+        self._w_watcher = <libev.ev_watcher*>&self._watcher
+        self._w_ss = &fork_ss
 
 
 cdef start_and_stop async_ss = make_ss(<void*>libev.ev_async_start, <void*>libev.ev_async_stop)
@@ -1186,8 +1186,8 @@ cdef public class async_(watcher) [object PyGeventAsyncObject, type PyGeventAsyn
 
     def __cinit__(self, loop loop, ref=True, priority=None):
         libev.ev_async_init(&self._watcher, <void*>gevent_callback_async)
-        self.__watcher = <libev.ev_watcher*>&self._watcher
-        self.__ss = &async_ss
+        self._w_watcher = <libev.ev_watcher*>&self._watcher
+        self._w_ss = &async_ss
 
 
     def send(self):
@@ -1209,8 +1209,8 @@ cdef public class child(watcher) [object PyGeventChildObject, type PyGeventChild
             raise TypeError('child watchers are only available on the default loop')
         libev.gevent_install_sigchld_handler()
         libev.ev_child_init(&self._watcher, <void *>gevent_callback_child, pid, trace)
-        self.__watcher = <libev.ev_watcher*>&self._watcher
-        self.__ss = &child_ss
+        self._w_watcher = <libev.ev_watcher*>&self._watcher
+        self._w_ss = &child_ss
 
     def __init__(self, loop loop, int pid, bint trace=0, ref=True):
         watcher.__init__(self, loop, ref, None)
@@ -1260,8 +1260,8 @@ cdef public class stat(watcher) [object PyGeventStatObject, type PyGeventStat_Ty
             paths = <bytes>path
             self._paths = paths
         libev.ev_stat_init(&self._watcher, <void *>gevent_callback_stat, <char*>paths, interval)
-        self.__watcher = <libev.ev_watcher*>&self._watcher
-        self.__ss = &stat_ss
+        self._w_watcher = <libev.ev_watcher*>&self._watcher
+        self._w_ss = &stat_ss
 
     def __init__(self, loop loop, str path, float interval=0.0, ref=True, priority=None):
         watcher.__init__(self, loop, ref, priority)
@@ -1285,12 +1285,12 @@ cdef public class stat(watcher) [object PyGeventStatObject, type PyGeventStat_Ty
 
 
 
-__SYSERR_CALLBACK = None
+cdef object SYSERR_CALLBACK = None
 
 
 cdef void _syserr_cb(char* msg) with gil:
     try:
-        __SYSERR_CALLBACK(msg, errno)
+        SYSERR_CALLBACK(msg, errno)
     except:
         set_syserr_cb(None)
         print_exc = getattr(traceback, 'print_exc', None)
@@ -1299,13 +1299,13 @@ cdef void _syserr_cb(char* msg) with gil:
 
 
 cpdef set_syserr_cb(callback):
-    global __SYSERR_CALLBACK
+    global SYSERR_CALLBACK
     if callback is None:
         libev.ev_set_syserr_cb(NULL)
-        __SYSERR_CALLBACK = None
+        SYSERR_CALLBACK = None
     elif callable(callback):
         libev.ev_set_syserr_cb(<void*>_syserr_cb)
-        __SYSERR_CALLBACK = callback
+        SYSERR_CALLBACK = callback
     else:
         raise TypeError('Expected callable or None, got %r' % (callback, ))
 

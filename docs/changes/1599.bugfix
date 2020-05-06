@@ -1,0 +1,4 @@
+gevent can now be built using Cython 3.0a2 and newer.
+
+The libev extension was incompatible with this. As part of this,
+certain internal, undocumented names have been changed.

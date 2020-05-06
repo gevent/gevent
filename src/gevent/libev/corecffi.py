@@ -255,7 +255,7 @@ class loop(AbstractLoop):
             ptr = libev.ev_loop_new(c_flags)
             if not ptr:
                 raise SystemError("ev_loop_new(%s) failed" % (c_flags, ))
-        if default or globals()["__SYSERR_CALLBACK"] is None:
+        if default or SYSERR_CALLBACK is None:
             set_syserr_cb(self._handle_syserr)
 
         # Mark this loop as being used.
@@ -299,7 +299,7 @@ class loop(AbstractLoop):
         if self._ptr:
             super(loop, self).destroy()
             # pylint:disable=comparison-with-callable
-            if globals()["__SYSERR_CALLBACK"] == self._handle_syserr:
+            if globals()["SYSERR_CALLBACK"] == self._handle_syserr:
                 set_syserr_cb(None)
 
 
@@ -425,23 +425,23 @@ class loop(AbstractLoop):
 def _syserr_cb(msg):
     try:
         msg = ffi.string(msg)
-        __SYSERR_CALLBACK(msg, ffi.errno)
+        SYSERR_CALLBACK(msg, ffi.errno)
     except:
         set_syserr_cb(None)
         raise  # let cffi print the traceback
 
 
 def set_syserr_cb(callback):
-    global __SYSERR_CALLBACK
+    global SYSERR_CALLBACK
     if callback is None:
         libev.ev_set_syserr_cb(ffi.NULL)
-        __SYSERR_CALLBACK = None
+        SYSERR_CALLBACK = None
     elif callable(callback):
         libev.ev_set_syserr_cb(libev._syserr_cb)
-        __SYSERR_CALLBACK = callback
+        SYSERR_CALLBACK = callback
     else:
         raise TypeError('Expected callable or None, got %r' % (callback, ))
 
-__SYSERR_CALLBACK = None
+SYSERR_CALLBACK = None
 
 LIBEV_EMBED = libev.LIBEV_EMBED
