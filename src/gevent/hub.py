@@ -35,6 +35,7 @@ from gevent._compat import thread_mod_name
 from gevent._util import readproperty
 from gevent._util import Lazy
 from gevent._util import gmctime
+from gevent._util import _NONE as _FINISHED
 from gevent._ident import IdentRegistry
 
 from gevent._hub_local import get_hub
@@ -57,6 +58,7 @@ iwait = _hub_primitives.iwait_on_objects
 from gevent.exceptions import LoopExit
 
 from gevent._waiter import Waiter
+
 
 # Need the real get_ident. We're imported early enough (by gevent/__init__.py)
 # that we can be sure nothing is monkey patched yet.
@@ -618,14 +620,38 @@ class Hub(WaitOperationsGreenlet):
                 loop.run()
             finally:
                 loop.error_handler = None  # break the refcount cycle
+
+            # this function must never return, as it will cause switch() in the parent greenlet
+            # to return an unexpected value
+            # It is still possible to kill this greenlet with throw. However, in that case
+            # switching to it is no longer safe, as switch will return immediately.
+
+            # However, there's a problem with simply doing `self.parent.throw()` and never actually
+            # exiting this greenlet: The greenlet tends to stay alive. This is because throwing
+            # the exception captures stack frames (regardless of what we do with the argument)
+            # and those get saved. In addition to this object having `gr_frame` pointing to this
+            # method, which contains ``self``, which is a cycle.
+            #
+            # To properly clean this up from join(), we have a
+            # two-step protocol. First, we throw the exception, as
+            # normal. If we were blocked in ``join()`` waiting to come
+            # back here, it sends us a sentinel value that tells us,
+            # no, really, you should exit, and we return. Further
+            # calls to ``join`` will still succeed. Attempting to
+            # switch back to this object is undefined, as always.
+
             debug = []
             if hasattr(loop, 'debug'):
                 debug = loop.debug()
-            self.parent.throw(LoopExit('This operation would block forever', self, debug))
-        # this function must never return, as it will cause switch() in the parent greenlet
-        # to return an unexpected value
-        # It is still possible to kill this greenlet with throw. However, in that case
-        # switching to it is no longer safe, as switch will return immediately
+            loop = None
+
+            x = self.parent.throw(LoopExit(
+                'This operation would block forever',
+                self,
+                debug
+            ))
+            if x is _FINISHED:
+                return
 
     def start_periodic_monitoring_thread(self):
         if self.periodic_monitoring_thread is None and GEVENT_CONFIG.monitor_thread:
@@ -668,8 +694,16 @@ class Hub(WaitOperationsGreenlet):
 
         try:
             try:
+                # Switch to the hub greenlet and let it continue.
+                # Since we're the parent greenlet of the hub, when it exits
+                # by `parent.throw(LoopExit)`, control will resume here.
+                # If the timer elapses, however, ``waiter.switch()`` is called and
+                # again control resumes here, but without an exception.
                 waiter.get()
             except LoopExit:
+                # Control will immediately be returned to this greenlet.
+                # We can't use ``self.switch`` because it doesn't take parameters.
+                RawGreenlet.switch(self, _FINISHED)
                 return True
         finally:
             if timeout is not None:
