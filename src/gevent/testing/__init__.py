@@ -28,9 +28,21 @@ import unittest
 # It's important to do this ASAP, because if we're monkey patched,
 # then importing things like the standard library test.support can
 # need to construct the hub (to check for IPv6 support using a socket).
+# We can't do it in the testrunner, as the testrunner spaws new, unrelated
+# processes.
 from .hub import QuietHub
 import gevent.hub
 gevent.hub.set_default_hub_class(QuietHub)
+
+try:
+    import faulthandler
+except ImportError:
+    # The backport isn't installed.
+    pass
+else:
+    # Enable faulthandler for stack traces. We have to do this here
+    # for the same reasons as above.
+    faulthandler.enable()
 
 from .sysinfo import VERBOSE
 from .sysinfo import WIN

@@ -18,7 +18,23 @@ from gevent._ffi import _dbg
 
 # A set of uv_handle_t* CFFI objects. Kept around
 # to keep the memory alive until libuv is done with them.
-_closing_watchers = set()
+class _ClosingWatchers(dict):
+    __slots__ = ()
+
+    def remove(self, obj):
+        try:
+            del self[obj]
+        except KeyError: # pragma: no cover
+            # This has been seen to happen if the module is executed twice
+            # and so the callback doesn't match the storage seen by watcher objects.
+            print(
+                'gevent error: Unable to remove closing watcher from keepaliveset. '
+                'Has the module state been corrupted or executed more than once?',
+                file=sys.stderr
+            )
+
+_closing_watchers = _ClosingWatchers()
+
 
 # In debug mode, it would be nice to be able to clear the memory of
 # the watcher (its size determined by
@@ -136,7 +152,7 @@ class watcher(_base.watcher):
             # and trying to close it results in libuv terminating the process.
             # Sigh. Same thing if it's already in the process of being
             # closed.
-            _closing_watchers.add(ffi_watcher)
+            _closing_watchers[ffi_handle_watcher] = ffi_watcher
             libuv.uv_close(ffi_watcher, libuv._uv_close_callback)
 
     def _watcher_ffi_set_init_ref(self, ref):

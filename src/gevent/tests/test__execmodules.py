@@ -40,4 +40,7 @@ class Test(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    # This should not be combined with other tests in the same process
+    # because it messes with global shared state.
+    # pragma: testrunner-no-combine
     main()

@@ -483,19 +483,19 @@ class loop(AbstractLoop):
             val = _callbacks.python_callback(handle, arg)
             if val == -1: # Failure.
                 _callbacks.python_handle_error(handle, arg)
-            elif val == 1: # Success
+            elif val == 1: # Success, and we may need to close the Python watcher.
                 if not libuv.uv_is_active(watcher_ptr):
-                    # The callback closed the watcher in C. Good.
-                    # It's supposed to also reset the pointer to NULL at
+                    # The callback closed the native watcher resources. Good.
+                    # It's *supposed* to also reset the .data handle to NULL at
                     # that same time. If it resets it to something else, we're
                     # re-using the same watcher object, and that's not correct either.
-                    # Prevoiusly we checked for that case, but we shouldn't need to.
+                    # On Windows in particular, if the .data handle is changed because
+                    # the IO multiplexer is being restarted, trying to dereference the
+                    # *old* handle can crash with an FFI error.
                     handle_after_callback = watcher_ptr.data
                     try:
-                        if handle_after_callback:
+                        if handle_after_callback and handle_after_callback == handle:
                             _callbacks.python_stop(handle_after_callback)
-                        if handle_after_callback != handle:
-                            _callbacks.python_stop(handle)
                     finally:
                         watcher_ptr.data = ffi.NULL
         return True
