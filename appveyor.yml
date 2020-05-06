@@ -172,7 +172,7 @@ build_script:
   # Build the compiled extension
   # Try to get some things that don't wind up in the pip cache as
   # built wheels if they're built during an isolated build.
-  - "%CMD_IN_ENV% %PYEXE% -m pip install -U --pre wheel cython setuptools cffi"
+  - "%CMD_IN_ENV% %PYEXE% -m pip install -U wheel cython setuptools cffi"
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -m pip install -U -e .[test]
 
 test_script:

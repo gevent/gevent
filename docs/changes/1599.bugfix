@@ -2,3 +2,6 @@ gevent can now be built using Cython 3.0a2 and newer.
 
 The libev extension was incompatible with this. As part of this,
 certain internal, undocumented names have been changed.
+
+However, up through at least 3.0a4 compiling with Cython 3 results in
+gevent's test for memory leaks failing.
