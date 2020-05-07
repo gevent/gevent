@@ -397,18 +397,21 @@ class loop(AbstractLoop):
             del self._fork_watchers
             del self._child_watchers
 
-
+    _HandleState = namedtuple("HandleState",
+                              ['handle',
+                               'type',
+                               'watcher',
+                               'ref',
+                               'active',
+                               'closing'])
     def debug(self):
         """
         Return all the handles that are open and their ref status.
         """
-        handle_state = namedtuple("HandleState",
-                                  ['handle',
-                                   'type',
-                                   'watcher',
-                                   'ref',
-                                   'active',
-                                   'closing'])
+        if not self.ptr:
+            return ["Loop has been destroyed"]
+
+        handle_state = self._HandleState
         handles = []
 
         # XXX: Convert this to a modern callback.
