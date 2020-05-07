@@ -26,6 +26,11 @@ class TestJoin(unittest.TestCase):
         import threading
         import gc
         from gevent._greenlet_primitives import get_reachable_greenlets
+        def _clean():
+            for _ in range(2):
+                while gc.collect():
+                    pass
+        _clean()
         count_before = len(get_reachable_greenlets())
 
         def thread_main():
@@ -37,17 +42,15 @@ class TestJoin(unittest.TestCase):
             hub.destroy(destroy_loop=True)
             del hub
 
-        def tester():
-            t = threading.Thread(target=thread_main)
+        def tester(main):
+            t = threading.Thread(target=main)
             t.start()
             t.join()
 
-            while gc.collect():
-                pass
-
+            _clean()
 
         for _ in range(10):
-            tester()
+            tester(thread_main)
 
         del tester
         del thread_main
@@ -57,9 +60,9 @@ class TestJoin(unittest.TestCase):
             # We could be off by exactly 1. Not entirely clear where.
             # But it only happens the first time.
             count_after -= 1
+        # If we were run in multiple process, our count could actually have
+        # gone down due to the GC's we did.
         self.assertEqual(count_after, count_before)
-
-
 
 
 if __name__ == '__main__':

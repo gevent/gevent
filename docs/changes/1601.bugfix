@@ -1,0 +1,11 @@
+Destroying a hub after joining it didn't necessarily clean up all
+resources associated with the hub, especially if the hub had been
+created in a secondary thread that was exiting. The hub and its parent
+greenlet could be kept alive.
+
+Now, destroying a hub drops the reference to the hub and ensures it
+cannot be switched to again. (Though using a new blocking API call may
+still create a new hub.)
+
+Joining a hub also cleans up some (small) memory resources that might
+have stuck around for longer before as well.

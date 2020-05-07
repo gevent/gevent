@@ -15,8 +15,6 @@ from greenlet import greenlet as RawGreenlet
 from greenlet import getcurrent
 from greenlet import GreenletExit
 
-
-
 __all__ = [
     'getcurrent',
     'GreenletExit',
@@ -35,7 +33,6 @@ from gevent._compat import thread_mod_name
 from gevent._util import readproperty
 from gevent._util import Lazy
 from gevent._util import gmctime
-from gevent._util import _NONE as _FINISHED
 from gevent._ident import IdentRegistry
 
 from gevent._hub_local import get_hub
@@ -621,37 +618,43 @@ class Hub(WaitOperationsGreenlet):
             finally:
                 loop.error_handler = None  # break the refcount cycle
 
-            # this function must never return, as it will cause switch() in the parent greenlet
-            # to return an unexpected value
-            # It is still possible to kill this greenlet with throw. However, in that case
-            # switching to it is no longer safe, as switch will return immediately.
-
-            # However, there's a problem with simply doing `self.parent.throw()` and never actually
-            # exiting this greenlet: The greenlet tends to stay alive. This is because throwing
-            # the exception captures stack frames (regardless of what we do with the argument)
-            # and those get saved. In addition to this object having `gr_frame` pointing to this
-            # method, which contains ``self``, which is a cycle.
+            # This function must never return, as it will cause
+            # switch() in the parent greenlet to return an unexpected
+            # value. This can show up as unexpected failures e.g.,
+            # from Waiters raising AssertionError or MulitpleWaiter
+            # raising invalid IndexError.
             #
-            # To properly clean this up from join(), we have a
-            # two-step protocol. First, we throw the exception, as
-            # normal. If we were blocked in ``join()`` waiting to come
-            # back here, it sends us a sentinel value that tells us,
-            # no, really, you should exit, and we return. Further
-            # calls to ``join`` will still succeed. Attempting to
-            # switch back to this object is undefined, as always.
+            # It is still possible to kill this greenlet with throw.
+            # However, in that case switching to it is no longer safe,
+            # as switch will return immediately.
+            #
+            # Note that there's a problem with simply doing
+            # ``self.parent.throw()`` and never actually exiting this
+            # greenlet: The greenlet tends to stay alive. This is
+            # because throwing the exception captures stack frames
+            # (regardless of what we do with the argument) and those
+            # get saved. In addition to this object having
+            # ``gr_frame`` pointing to this method, which contains
+            # ``self``, which points to the parent, and both of which point to
+            # an internal thread state dict that points back to the current greenlet for the thread,
+            # which is likely to be the parent: a cycle.
+            #
+            # We can't have ``join()`` tell us to finish, because we
+            # need to be able to resume after this throw. The only way
+            # to dispose of the greenlet is to use ``self.destroy()``.
 
             debug = []
             if hasattr(loop, 'debug'):
                 debug = loop.debug()
             loop = None
 
-            x = self.parent.throw(LoopExit(
-                'This operation would block forever',
-                self,
-                debug
-            ))
-            if x is _FINISHED:
-                return
+            self.parent.throw(LoopExit('This operation would block forever',
+                                       self,
+                                       debug))
+            # Execution could resume here if another blocking API call is made
+            # in the same thread and the hub hasn't been destroyed, so clean
+            # up anything left.
+            debug = None
 
     def start_periodic_monitoring_thread(self):
         if self.periodic_monitoring_thread is None and GEVENT_CONFIG.monitor_thread:
@@ -674,13 +677,20 @@ class Hub(WaitOperationsGreenlet):
         return self.periodic_monitoring_thread
 
     def join(self, timeout=None):
-        """Wait for the event loop to finish. Exits only when there are
-        no more spawned greenlets, started servers, active timeouts or watchers.
+        """
+        Wait for the event loop to finish. Exits only when there
+        are no more spawned greenlets, started servers, active
+        timeouts or watchers.
 
-        If *timeout* is provided, wait no longer for the specified number of seconds.
+        .. caution:: This doesn't clean up all resources associated
+           with the hub. For that, see :meth:`destroy`.
 
-        Returns True if exited because the loop finished execution.
-        Returns False if exited because of timeout expired.
+        :param float timeout: If *timeout* is provided, wait no longer
+            than the specified number of seconds.
+
+        :return: `True` if this method returns because the loop
+                 finished execution. Or `False` if the timeout
+                 expired.
         """
         assert getcurrent() is self.parent, "only possible from the MAIN greenlet"
         if self.dead:
@@ -702,21 +712,38 @@ class Hub(WaitOperationsGreenlet):
                 waiter.get()
             except LoopExit:
                 # Control will immediately be returned to this greenlet.
-                # We can't use ``self.switch`` because it doesn't take parameters.
-                RawGreenlet.switch(self, _FINISHED)
                 return True
         finally:
+            # Clean up as much junk as we can. There is a small cycle in the frames,
+            # and it won't be GC'd.
+            # this greenlet -> this frame
+            # this greenlet -> the exception that was thrown
+            # the exception that was thrown -> a bunch of other frames, including this frame.
+            # some frame calling self.run() -> self
+            del waiter # this frame -> waiter -> self
+            del self # this frame -> self
             if timeout is not None:
                 timeout.stop()
                 timeout.close()
+            del timeout
         return False
 
     def destroy(self, destroy_loop=None):
         """
         Destroy this hub and clean up its resources.
 
-        If you manually create hubs, you *should* call this
+        If you manually create hubs, or you use a hub or the gevent
+        blocking API from multiple native threads, you *should* call this
         method before disposing of the hub object reference.
+
+        Once this is done, it is impossible to continue running the
+        hub. Attempts to use the blocking gevent API with pre-existing
+        objects from this native thread and bound to this hub will fail.
+
+        .. versionchanged:: NEXT
+            Ensure that Python stack frames and greenlets referenced by this
+            hub are cleaned up. This guarantees that switching to the hub again
+            is not safe after this. (It was never safe, but it's even less safe.)
         """
         if self.periodic_monitoring_thread is not None:
             self.periodic_monitoring_thread.kill()
@@ -727,6 +754,19 @@ class Hub(WaitOperationsGreenlet):
         if self._threadpool is not None:
             self._threadpool.kill()
             del self._threadpool
+
+        # Let the frame be cleaned up by causing the run() function to
+        # exit. This is the only way to guarantee that the hub itself
+        # and the main greenlet, if this was a secondary thread, get
+        # cleaned up. Otherwise there are likely to be reference
+        # cycles still around. We MUST do this before we destroy the
+        # loop; if we destroy the loop and then switch into the hub,
+        # things will go VERY, VERY wrong.
+        try:
+            self.throw(GreenletExit)
+        except LoopExit:
+            pass
+
         if destroy_loop is None:
             destroy_loop = not self.loop.default
         if destroy_loop:
@@ -739,10 +779,10 @@ class Hub(WaitOperationsGreenlet):
             # thread.
             set_loop(self.loop)
 
-
         self.loop = None
         if _get_hub() is self:
             set_hub(None)
+
 
 
     # XXX: We can probably simplify the resolver and threadpool properties.
