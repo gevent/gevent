@@ -189,7 +189,7 @@ class loop(AbstractLoop):
                              self.SIGNAL_CHECK_INTERVAL_MS)
         libuv.uv_unref(self._signal_idle)
 
-    def _run_callbacks(self):
+    def __check_and_die(self):
         if not self.ptr:
             # We've been destroyed during the middle of self.run().
             # This method is being called into from C, and it's not
@@ -198,6 +198,8 @@ class loop(AbstractLoop):
             # handle is invalid.") So switch to the parent greenlet.
             getcurrent().parent.throw(LoopExit('Destroyed during run'))
 
+    def _run_callbacks(self):
+        self.__check_and_die()
         # Manually handle fork watchers.
         curpid = os.getpid()
         if curpid != self._pid:
@@ -574,6 +576,7 @@ class loop(AbstractLoop):
         return result
 
     def now(self):
+        self.__check_and_die()
         # libuv's now is expressed as an integer number of
         # milliseconds, so to get it compatible with time.time units
         # that this method is supposed to return, we have to divide by 1000.0
@@ -581,6 +584,7 @@ class loop(AbstractLoop):
         return now / 1000.0
 
     def update_now(self):
+        self.__check_and_die()
         libuv.uv_update_time(self.ptr)
 
     def fileno(self):
