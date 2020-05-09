@@ -10,6 +10,9 @@ from collections import namedtuple
 from operator import delitem
 import signal
 
+from gevent import getcurrent
+from gevent.exceptions import LoopExit
+
 from gevent._ffi import _dbg # pylint: disable=unused-import
 from gevent._ffi.loop import AbstractLoop
 from gevent._ffi.loop import assign_standard_callbacks
@@ -187,6 +190,14 @@ class loop(AbstractLoop):
         libuv.uv_unref(self._signal_idle)
 
     def _run_callbacks(self):
+        if not self.ptr:
+            # We've been destroyed during the middle of self.run().
+            # This method is being called into from C, and it's not
+            # safe to go back to C (Windows in particular can abort
+            # the process with "GetQueuedCompletionStatusEx: (6) The
+            # handle is invalid.") So switch to the parent greenlet.
+            getcurrent().parent.throw(LoopExit('Destroyed during run'))
+
         # Manually handle fork watchers.
         curpid = os.getpid()
         if curpid != self._pid:
