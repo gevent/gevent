@@ -262,12 +262,13 @@ class Discovery(object):
             coverage=False,
             package=None,
             config=None,
+            allow_combine=True,
     ):
         self.config = config or {}
         self.ignore = set(ignored or ())
         self.tests = tests
         self.configured_test_options = config.get('TEST_FILE_OPTIONS', set())
-
+        self.allow_combine = allow_combine
         if ignore_files:
             ignore_files = ignore_files.split(',')
             for f in ignore_files:
@@ -281,12 +282,13 @@ class Discovery(object):
             self.package_dir = _dir_from_package_name(package)
 
     class Discovered(object):
-        def __init__(self, package, configured_test_options, ignore, config):
+        def __init__(self, package, configured_test_options, ignore, config, allow_combine):
             self.orig_dir = os.getcwd()
             self.configured_run_alone = config['RUN_ALONE']
             self.configured_failing_tests = config['FAILING_TESTS']
             self.package = package
             self.configured_test_options = configured_test_options
+            self.allow_combine = allow_combine
             self.ignore = ignore
 
             self.to_import = []
@@ -343,7 +345,8 @@ class Discovery(object):
 
         def __can_monkey_combine(self, filename, contents):
             return (
-                not self.__has_config(filename)
+                self.allow_combine
+                and not self.__has_config(filename)
                 and self.__makes_simple_monkey_patch(contents)
                 and self.__file_allows_monkey_combine(contents)
                 and self.__file_allows_combine(contents)
@@ -356,7 +359,8 @@ class Discovery(object):
 
         def __can_nonmonkey_combine(self, filename, contents):
             return (
-                not self.__has_config(filename)
+                self.allow_combine
+                and not self.__has_config(filename)
                 and self.__makes_no_monkey_patch(contents)
                 and self.__file_allows_combine(contents)
                 and self.__calls_unittest_main_toplevel(contents)
@@ -485,7 +489,7 @@ class Discovery(object):
     def discovered(self):
         tests = self.tests
         discovered = self.Discovered(self.package, self.configured_test_options,
-                                     self.ignore, self.config)
+                                     self.ignore, self.config, self.allow_combine)
 
         # We need to glob relative names, our config is based on filenames still
         with self._in_dir(self.package_dir):
@@ -684,7 +688,7 @@ def main():
     parser.add_argument('--discover', action='store_true')
     parser.add_argument('--full', action='store_true')
     parser.add_argument('--config', default='known_failures.py')
-    parser.add_argument('--failfast', action='store_true')
+    parser.add_argument('--failfast', '-x', action='store_true')
     parser.add_argument("--coverage", action="store_true")
     parser.add_argument("--quiet", action="store_true", default=True)
     parser.add_argument("--verbose", action="store_false", dest='quiet')
@@ -694,6 +698,10 @@ def main():
         "--processes", "-j", default=DEFAULT_NWORKERS, type=int,
         help="Use up to the given number of parallel processes to execute tests. "
         "Defaults to %(default)s."
+    )
+    parser.add_argument(
+        '--no-combine', default=True, action='store_false',
+        help="Do not combine tests into process groups."
     )
     parser.add_argument('-u', '--use', metavar='RES1,RES2,...',
                         action='store', type=parse_resources,
@@ -773,6 +781,7 @@ def main():
         coverage=coverage,
         package=options.package,
         config=config,
+        allow_combine=options.no_combine,
     )
     if options.discover:
         for cmd, options in tests:
