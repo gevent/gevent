@@ -22,57 +22,66 @@ start_new_thread, Lock, get_thread_ident, = monkey.get_original(thread_mod_name,
 ])
 
 
-# pylint 2.0.dev2 things collections.dequeue.popleft() doesn't return
-# pylint:disable=assignment-from-no-return
-
 class _Condition(object):
     # pylint:disable=method-hidden
 
+    __slots__ = (
+        '_lock',
+        '_waiters',
+    )
+
     def __init__(self, lock):
-        self.__lock = lock
-        self.__waiters = []
+        self._lock = lock
+        self._waiters = []
 
         # No need to special case for _release_save and
         # _acquire_restore; those are only used for RLock, and
         # we don't use those.
 
     def __enter__(self):
-        return self.__lock.__enter__()
+        return self._lock.__enter__()
 
     def __exit__(self, t, v, tb):
-        return self.__lock.__exit__(t, v, tb)
+        return self._lock.__exit__(t, v, tb)
 
     def __repr__(self):
-        return "<Condition(%s, %d)>" % (self.__lock, len(self.__waiters))
+        return "<Condition(%s, %d)>" % (self._lock, len(self._waiters))
 
-    def wait(self):
+    def wait(self, wait_lock):
+        # TODO: It would be good to support timeouts here so that we can
+        # let idle threadpool threads die. Under Python 3, ``Lock.acquire``
+        # has that ability, but Python 2 doesn't expose that. We could use
+        # libuv's ``uv_cond_wait`` to implement this whole class and get timeouts
+        # everywhere.
+
         # This variable is for the monitoring utils to know that
         # this is an idle frame and shouldn't be counted.
         gevent_threadpool_worker_idle = True # pylint:disable=unused-variable
 
-        # Our __lock MUST be owned, but we don't check that.
-        waiter = Lock()
-        waiter.acquire()
-        self.__waiters.append(waiter)
-        self.__lock.release()
+        # Our ``_lock`` MUST be owned, but we don't check that.
+        # The ``wait_lock`` must be *un*owned.
+        wait_lock.acquire()
+        self._waiters.append(wait_lock)
+        self._lock.release()
 
         try:
-            waiter.acquire() # Block on the native lock
+            wait_lock.acquire() # Block on the native lock
         finally:
-            self.__lock.acquire()
+            self._lock.acquire()
 
-        # just good form to release the lock we're holding before it goes
-        # out of scope
-        waiter.release()
+        wait_lock.release()
 
     def notify_one(self):
         # The lock SHOULD be owned, but we don't check that.
         try:
-            waiter = self.__waiters.pop()
+            waiter = self._waiters.pop()
         except IndexError:
             # Nobody around
             pass
         else:
+            # The owner of the ``waiter`` is blocked on
+            # acquiring it again, so when we ``release`` it, it
+            # is free to be scheduled and resume.
             waiter.release()
 
 
@@ -138,14 +147,25 @@ class Queue(object):
             self.unfinished_tasks += 1
             self._not_empty.notify_one()
 
-    def get(self):
+    def get(self, cookie):
         """Remove and return an item from the queue.
         """
         with self._mutex:
             while not self._queue:
-                self._not_empty.wait()
+                # Temporarily release our mutex and wait for someone
+                # to wake us up. There *should* be an item in the queue
+                # after that.
+                self._not_empty.wait(cookie)
             item = self._queue.popleft()
             return item
+
+    def allocate_cookie(self):
+        """
+        Create and return the *cookie* to pass to `get()`.
+
+        Each thread that will use `get` needs a distinct cookie.
+        """
+        return Lock()
 
     def kill(self):
         """

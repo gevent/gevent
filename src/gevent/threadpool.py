@@ -42,7 +42,8 @@ def _format_hub(hub):
 
 class _WorkerGreenlet(RawGreenlet):
     # Exists to produce a more useful repr for worker pool
-    # threads/greenlets.
+    # threads/greenlets, and manage the communication of the worker
+    # thread with the threadpool.
 
     # Inform the gevent.util.GreenletTree that this should be
     # considered the root (for printing purposes)
@@ -56,6 +57,9 @@ class _WorkerGreenlet(RawGreenlet):
     _hub_of_worker = None
     # The hub of the threadpool we're working for. Just for info.
     _hub = None
+
+    # A cookie passed to task_queue.get()
+    _task_queue_cookie = None
 
     def __init__(self, threadpool):
         # Construct in the main thread (owner of the threadpool)
@@ -76,8 +80,8 @@ class _WorkerGreenlet(RawGreenlet):
         self._stderr = stderr
         # We can capture the task_queue; even though it can change if the threadpool
         # is re-innitted, we won't be running in that case
-        self._task_queue = threadpool.task_queue
-
+        self._task_queue = threadpool.task_queue # type:gevent._threading.Queue
+        self._task_queue_cookie = self._task_queue.allocate_cookie()
         self._unregister_worker = threadpool._unregister_worker
 
         threadpool._register_worker(self)
@@ -131,6 +135,7 @@ class _WorkerGreenlet(RawGreenlet):
             name = co.co_name
             print('  File "%s", line %d, in %s' % (filename, lineno, name),
                   file=stderr)
+            tb = tb.tb_next
 
     def __run_task(self, func, args, kwargs, thread_result):
         try:
@@ -146,20 +151,24 @@ class _WorkerGreenlet(RawGreenlet):
         exc_info = sys.exc_info
         fixup_hub_before_block = self.__fixup_hub_before_block
         task_queue_get = self._task_queue.get
+        task_queue_cookie = self._task_queue_cookie
         run_task = self.__run_task
         task_queue_done = self._task_queue.task_done
-        try:
+        try: # pylint:disable=too-many-nested-blocks
             while 1: # tiny bit faster than True on Py2
                 fixup_hub_before_block()
 
-                task = task_queue_get()
+                task = task_queue_get(task_queue_cookie)
                 try:
                     if task is None:
                         return
 
                     run_task(*task)
+                except:
+                    task = repr(task)
+                    raise
                 finally:
-                    task = None
+                    task = None if not isinstance(task, str) else task
                     task_queue_done()
         except Exception as e: # pylint:disable=broad-except
             print(
@@ -179,12 +188,13 @@ class _WorkerGreenlet(RawGreenlet):
             self._unregister_worker(self)
             self._unregister_worker = lambda _: None
             self._task_queue = None
+            self._task_queue_cookie = None
 
-            if hub_of_worker is not None:
-                hub_of_worker.destroy(True)
+        if hub_of_worker is not None:
+            hub_of_worker.destroy(True)
 
     def __repr__(self, _format_hub=_format_hub):
-        return "<ThreadPoolWorker at 0x%x thread_ident=0x%x hub=%s>" % (
+        return "<ThreadPoolWorker at 0x%x thread_ident=0x%x threadpool-hub=%s>" % (
             id(self),
             self._thread_ident,
             _format_hub(self._hub)
