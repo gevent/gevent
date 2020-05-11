@@ -32,26 +32,25 @@ class TestSignal(greentest.TestCase):
 
     def test_alarm(self):
         sig = gevent.signal_handler(signal.SIGALRM, raise_Expected)
-        assert sig.ref is False, repr(sig.ref)
+        self.assertFalse(sig.ref)
         sig.ref = True
-        assert sig.ref is True
+        self.assertTrue(sig.ref)
         sig.ref = False
+
+        def test():
+            signal.alarm(1)
+            with self.assertRaises(Expected) as exc:
+                gevent.sleep(2)
+
+            ex = exc.exception
+            self.assertEqual(str(ex), 'TestSignal')
+
         try:
-            signal.alarm(1)
-            try:
-                gevent.sleep(2)
-                raise AssertionError('must raise Expected')
-            except Expected as ex:
-                assert str(ex) == 'TestSignal', ex
-            # also let's check that alarm is persistent
-            signal.alarm(1)
-            try:
-                gevent.sleep(2)
-                raise AssertionError('must raise Expected')
-            except Expected as ex:
-                assert str(ex) == 'TestSignal', ex
+            test()
+            # also let's check that the handler stays installed.
+            test()
         finally:
-            sig.cancel() # pylint:disable=no-member
+            sig.cancel()
 
 
     @greentest.skipIf((greentest.PY3

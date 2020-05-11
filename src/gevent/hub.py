@@ -222,7 +222,8 @@ class signal(object):
 
     This returns an object with the useful method ``cancel``, which,
     when called, will prevent future deliveries of *signalnum* from
-    calling *handler*.
+    calling *handler*. It's best to keep the returned object alive
+    until you call ``cancel``.
 
     .. note::
 
@@ -235,6 +236,10 @@ class signal(object):
 
         The ``handler`` argument is required to
         be callable at construction time.
+
+    .. versionchanged:: NEXT
+       The ``cancel`` method now properly cleans up all native resources,
+       and drops references to all the arguments of this function.
     """
     # This is documented as a function, not a class,
     # so we're free to change implementation details.
@@ -247,27 +252,39 @@ class signal(object):
 
         self.hub = _get_hub_noargs()
         self.watcher = self.hub.loop.signal(signalnum, ref=False)
-        self.watcher.start(self._start)
         self.handler = handler
         self.args = args
         self.kwargs = kwargs
         if self.greenlet_class is None:
             from gevent import Greenlet
+            type(self).greenlet_class = Greenlet
             self.greenlet_class = Greenlet
 
-    def _get_ref(self):
-        return self.watcher.ref
+        self.watcher.start(self._start)
 
-    def _set_ref(self, value):
-        self.watcher.ref = value
-
-    ref = property(_get_ref, _set_ref)
-    del _get_ref, _set_ref
+    ref = property(
+        lambda self: self.watcher.ref,
+        lambda self, nv: setattr(self.watcher, 'ref', nv)
+    )
 
     def cancel(self):
-        self.watcher.stop()
+        if self.watcher is not None:
+            self.watcher.stop()
+            # Must close the watcher at a deterministic time, otherwise
+            # when CFFI reclaims the memory, the native loop might still
+            # have some reference to it; if anything tries to touch it
+            # we can wind up writing to memory that is no longer valid,
+            # leading to a wide variety of crashes.
+            self.watcher.close()
+        self.watcher = None
+        self.handler = None
+        self.args = None
+        self.kwargs = None
+        self.hub = None
+        self.greenlet_class = None
 
     def _start(self):
+        # TODO: Maybe this should just be Greenlet.spawn()?
         try:
             greenlet = self.greenlet_class(self.handle)
             greenlet.switch()
