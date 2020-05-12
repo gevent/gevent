@@ -132,6 +132,10 @@ static void gevent_zero_loop(uv_loop_t* handle)
     memset(handle, 0, sizeof(uv_loop_t));
 }
 
+/***
+ * Allocation functions
+ */
+
 #include "_ffi/alloc.c"
 
 static void* _gevent_uv_malloc(size_t size)
@@ -168,6 +172,50 @@ static void gevent_set_uv_alloc()
                          _gevent_uv_calloc,
                          _gevent_uv_free);
 }
+
+/***
+ * Utility Functions
+ */
+#ifdef __APPLE__
+#include <mach/mach.h>
+#include <mach/mach_time.h>
+#include <pthread.h>
+
+// based on code from libuv
+static void gevent_move_pthread_to_realtime_scheduling_class(pthread_t pthread)
+{
+    mach_timebase_info_data_t timebase_info;
+    mach_timebase_info(&timebase_info);
+
+    const uint64_t NANOS_PER_MSEC = 1000000ULL;
+    double clock2abs = ((double)timebase_info.denom / (double)timebase_info.numer) * NANOS_PER_MSEC;
+
+    thread_time_constraint_policy_data_t policy;
+    policy.period = 0;
+    policy.computation = (uint32_t)(5 * clock2abs); // 5 ms of work
+    policy.constraint = (uint32_t)(10 * clock2abs);
+    policy.preemptible = FALSE;
+
+    int kr = thread_policy_set(
+        pthread_mach_thread_np(pthread),
+        THREAD_TIME_CONSTRAINT_POLICY,
+        (thread_policy_t)&policy,
+        THREAD_TIME_CONSTRAINT_POLICY_COUNT);
+
+    if (kr != KERN_SUCCESS) {
+        mach_error("thread_policy_set:", kr);
+        exit(1);
+    }
+}
+
+static void gevent_test_setup()
+{
+    gevent_move_pthread_to_realtime_scheduling_class(pthread_self());
+}
+#else
+static void gevent_test_setup() {}
+#endif
+
 
 #ifdef __clang__
 #pragma clang diagnostic pop
