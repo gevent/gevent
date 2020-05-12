@@ -115,10 +115,10 @@ for var in "$@"; do
             install 3.8.2 python3.8 3.8.d
             ;;
         pypy2.7)
-            install pypy2.7-7.3.0 pypy2.7 pypy2.7.d
+            install pypy2.7-7.3.1 pypy2.7 pypy2.7.d
             ;;
         pypy3.6)
-            install pypy3.6-7.3.0 pypy3.6 pypy3.6.d
+            install pypy3.6-7.3.1 pypy3.6 pypy3.6.d
             ;;
     esac
 done
