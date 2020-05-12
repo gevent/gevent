@@ -601,7 +601,7 @@ if PY2:
             'test_ssl.ContextTests.test_options',
         ]
 
-if PYPY and sys.pypy_version_info[:3] == (7, 3, 0): # pylint:disable=no-member
+if PYPY and sys.pypy_version_info[:2] == (7, 3): # pylint:disable=no-member
 
     if OSX:
         disabled_tests += [
@@ -613,6 +613,15 @@ if PYPY and sys.pypy_version_info[:3] == (7, 3, 0): # pylint:disable=no-member
             'test_ssl.ThreadedTests.test_default_ecdh_curve',
         ]
 
+if PYPY3 and TRAVIS:
+    disabled_tests += [
+        # If socket.SOCK_CLOEXEC is defined, this creates a socket
+        # and tests its type with ``sock.type & socket.SOCK_CLOEXEC``
+        # We have a ``@property`` for ``type`` that takes care of
+        # ``SOCK_NONBLOCK`` on Linux, but otherwise it's just a pass-through.
+        # This started failing with PyPy 7.3.1 and it's not clear why.
+        'test_socket.InheritanceTest.test_SOCK_CLOEXEC',
+    ]
 
 def _make_run_with_original(mod_name, func_name):
     @contextlib.contextmanager

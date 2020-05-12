@@ -395,3 +395,4 @@ static void gevent_zero_prepare(uv_prepare_t* handle);
 static void gevent_zero_check(uv_check_t* handle);
 static void gevent_zero_loop(uv_loop_t* handle);
 static void gevent_set_uv_alloc();
+static void gevent_test_setup();

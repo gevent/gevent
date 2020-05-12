@@ -44,6 +44,14 @@ else:
     # for the same reasons as above.
     faulthandler.enable()
 
+try:
+    from gevent.libuv import _corecffi
+except ImportError:
+    pass
+else:
+    _corecffi.lib.gevent_test_setup() # pylint:disable=no-member
+    del _corecffi
+
 from .sysinfo import VERBOSE
 from .sysinfo import WIN
 from .sysinfo import LINUX
