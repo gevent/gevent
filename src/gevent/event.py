@@ -22,31 +22,54 @@ def _get_linkable():
 locals()['AbstractLinkable'] = _get_linkable()
 del _get_linkable
 
-# Sadly, something about the way we have to "import" AbstractLinkable
-# breaks pylint's inference of slots, even though they're declared
-# right here.
-# pylint:disable=assigning-non-slot
 
 class Event(AbstractLinkable): # pylint:disable=undefined-variable
-    """A synchronization primitive that allows one greenlet to wake up one or more others.
-    It has the same interface as :class:`threading.Event` but works across greenlets.
+    """
+    A synchronization primitive that allows one greenlet to wake up
+    one or more others. It has the same interface as
+    :class:`threading.Event` but works across greenlets.
 
-    An event object manages an internal flag that can be set to true with the
-    :meth:`set` method and reset to false with the :meth:`clear` method. The :meth:`wait` method
-    blocks until the flag is true.
+    An event object manages an internal flag that can be set to true
+    with the :meth:`set` method and reset to false with the
+    :meth:`clear` method. The :meth:`wait` method blocks until the
+    flag is true; as soon as the flag is set to true, all greenlets
+    that are currently blocked in a call to :meth:`wait` will be scheduled
+    to awaken.
+
+    Note that the flag may be cleared and set many times before
+    any individual greenlet runs; all the greenlet can know for sure is that the
+    flag was set *at least once* while it was waiting.
+    If the greenlet cares whether the flag is still
+    set, it must check with :meth:`ready` and possibly call back into
+    :meth:`wait` again.
 
     .. note::
-        The order and timing in which waiting greenlets are awakened is not determined.
-        As an implementation note, in gevent 1.1 and 1.0, waiting greenlets are awakened in a
-        undetermined order sometime *after* the current greenlet yields to the event loop.  Other greenlets
-        (those not waiting to be awakened) may run between the current greenlet yielding and
-        the waiting greenlets being awakened. These details may change in the future.
+
+        The exact order and timing in which waiting greenlets are awakened is not determined.
+
+        Once the event is set, other greenlets may run before any waiting greenlets
+        are awakened.
+
+        While the code here will awaken greenlets in the order in which they
+        waited, each such greenlet that runs may in turn cause other greenlets
+        to run.
+
+        These details may change in the future.
 
     .. versionchanged:: 1.5a3
-       Waiting greenlets are now awakened in the order in which they waited.
+
+        Waiting greenlets are now awakened in
+        the order in which they waited.
+
     .. versionchanged:: 1.5a3
-       The low-level ``rawlink`` method (most users won't use this) now automatically
-       unlinks waiters before calling them.
+
+        The low-level ``rawlink`` method (most users won't use this) now
+        automatically unlinks waiters before calling them.
+
+    .. versionchanged:: NEXT
+
+        Callers to ``wait`` that find the event already set will now run
+        after any other waiters that had to block. See :issue:`1520`.
     """
 
     __slots__ = ('_flag',)
@@ -107,11 +130,11 @@ class Event(AbstractLinkable): # pylint:disable=undefined-variable
 
     def wait(self, timeout=None):
         """
-        Block until the internal flag is true.
+        Block until this object is :meth:`ready`.
 
         If the internal flag is true on entry, return immediately. Otherwise,
         block until another thread (greenlet) calls :meth:`set` to set the flag to true,
-        or until the optional timeout occurs.
+        or until the optional *timeout* expires.
 
         When the *timeout* argument is present and not ``None``, it should be a
         floating point number specifying a timeout for the operation in seconds

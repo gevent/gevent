@@ -25,7 +25,7 @@ class TestEventWait(AbstractGenericWaitTestCase):
         str(Event())
 
 
-class TestWaitEvent(AbstractGenericWaitTestCase):
+class TestGeventWaitOnEvent(AbstractGenericWaitTestCase):
 
     def wait(self, timeout):
         gevent.wait([Event()], timeout=timeout)
@@ -245,6 +245,32 @@ class TestEventBasics(greentest.TestCase):
         self.assertIs(e, r())
         del e
         del r
+
+    def test_wait_while_notifying(self):
+        # If someone calls wait() on an Event that is
+        # ready, and notifying other waiters, that new
+        # waiter still runs at the end, but this does not
+        # require a trip around the event loop.
+        # See https://github.com/gevent/gevent/issues/1520
+        event = Event()
+        results = []
+
+        def wait_then_append(arg):
+            event.wait()
+            results.append(arg)
+
+        gevent.spawn(wait_then_append, 1)
+        gevent.spawn(wait_then_append, 2)
+        gevent.idle()
+        self.assertEqual(2, event.linkcount())
+        check = gevent.get_hub().loop.check()
+        check.start(results.append, 4)
+        event.set()
+        wait_then_append(3)
+        self.assertEqual(results, [1, 2, 3])
+        # Note that the check event DID NOT run.
+        check.stop()
+        check.close()
 
 
 del AbstractGenericGetTestCase

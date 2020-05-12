@@ -81,14 +81,6 @@ class AbstractLinkable(object):
         # Instances must define this
         raise NotImplementedError
 
-    def _check_and_notify(self):
-        # If this object is ready to be notified, begin the process.
-        if self.ready() and self._links and not self._notifier:
-            if self.hub is None:
-                self.hub = get_hub()
-
-            self._notifier = self.hub.loop.run_callback(self._notify_links)
-
     def rawlink(self, callback):
         """
         Register a callback to call when this object is ready.
@@ -116,45 +108,77 @@ class AbstractLinkable(object):
             # But we can't set it to None in case it was actually running.
             self._notifier.stop()
 
-    def _notify_links(self):
-        # We release self._notifier here. We are called by it
-        # at the end of the loop, and it is now false in a boolean way (as soon
-        # as this method returns).
+    def _check_and_notify(self):
+        # If this object is ready to be notified, begin the process.
+        if self.ready() and self._links and not self._notifier:
+            if self.hub is None:
+                self.hub = get_hub()
+
+            self._notifier = self.hub.loop.run_callback(self._notify_links, [])
+
+    def _notify_link_list(self, links):
+        # The core of the _notify_links method to notify
+        # links in order. Lets the ``links`` list be mutated,
+        # and only notifies up to the last item in the list, in case
+        # objects are added to it.
+        only_while_ready = not self._notify_all
+        final_link = links[-1]
+        done = set() # of ids
+        while links: # remember this can be mutated
+            if only_while_ready and not self.ready():
+                break
+
+            link = links.pop(0) # Cython optimizes using list internals
+            id_link = id(link)
+            if id_link not in done:
+                # XXX: JAM: What was I thinking? This doesn't make much sense,
+                # there's a good chance `link` will be deallocated, and its id() will
+                # be free to be reused.
+                done.add(id_link)
+                try:
+                    link(self)
+                except: # pylint:disable=bare-except
+                    # We're running in the hub, errors must not escape.
+                    self.hub.handle_error((link, self), *sys.exc_info())
+
+            if link is final_link:
+                break
+
+    def _notify_links(self, arrived_while_waiting):
+        # ``arrived_while_waiting`` is a list of greenlet.switch methods
+        # to call. These were objects that called wait() while we were processing,
+        # and which would have run *before* those that had actually waited
+        # and blocked. Instead of returning True immediately, we add them to this
+        # list so they wait their turn.
+
+        # We release self._notifier here when done invoking links.
+        # The object itself becomes false in a boolean way as soon
+        # as this method returns.
         notifier = self._notifier
         # Early links are allowed to remove later links, and links
-        # are allowed to add more links.
+        # are allowed to add more links, thus we must not
+        # make a copy of our the ``_links`` list, we must traverse it and
+        # mutate in place.
         #
         # We were ready() at the time this callback was scheduled; we
         # may not be anymore, and that status may change during
         # callback processing. Some of our subclasses (Event) will
         # want to notify everyone who was registered when the status
         # became true that it was once true, even though it may not be
-        # anymore. In that case, we must not keep notifying anyone that's
+        # any more. In that case, we must not keep notifying anyone that's
         # newly added after that, even if we go ready again.
-        final_link = self._links[-1]
-        only_while_ready = not self._notify_all
-        done = set() # of ids
+
         try:
-            while self._links: # remember this can be mutated
-                if only_while_ready and not self.ready():
-                    break
+            self._notify_link_list(self._links)
 
-                link = self._links.pop(0) # Cython optimizes using list internals
+            # Now, those that arrived after we had begun the notification
+            # process. Follow the same rules, stop with those that are
+            # added so far to prevent starvation.
+            if arrived_while_waiting:
+                self._notify_link_list(arrived_while_waiting)
 
-                id_link = id(link)
-                if id_link not in done:
-                    # XXX: JAM: What was I thinking? This doesn't make much sense,
-                    # there's a good chance `link` will be deallocated, and its id() will
-                    # be free to be reused.
-                    done.add(id_link)
-                    try:
-                        link(self)
-                    except: # pylint:disable=bare-except
-                        # We're running in the hub, errors must not escape.
-                        self.hub.handle_error((link, self), *sys.exc_info())
-
-                if link is final_link:
-                    break
+                # Anything left needs to go back on the main list.
+                self._links.extend(arrived_while_waiting)
         finally:
             # We should not have created a new notifier even if callbacks
             # released us because we loop through *all* of our links on the
@@ -203,7 +227,17 @@ class AbstractLinkable(object):
 
     def _wait(self, timeout=None):
         if self.ready():
-            return self._wait_return_value(False, False)
+            result = self._wait_return_value(False, False) # pylint:disable=assignment-from-none
+            if self._notifier:
+                # We're already notifying waiters; one of them must have run
+                # and switched to us.
+                switch = getcurrent().switch # pylint:disable=undefined-variable
+                self._notifier.args[0].append(switch)
+                switch_result = self.hub.switch()
+                if switch_result is not self: # pragma: no cover
+                    raise InvalidSwitchError('Invalid switch into Event.wait(): %r' % (result, ))
+
+            return result
 
         gotit = self._wait_core(timeout)
         return self._wait_return_value(True, gotit)
