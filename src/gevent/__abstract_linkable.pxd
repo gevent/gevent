@@ -42,13 +42,19 @@ cdef class AbstractLinkable(object):
    cdef list _links
    cdef bint _notify_all
 
+   cpdef linkcount(self)
    cpdef rawlink(self, callback)
    cpdef bint ready(self)
    cpdef unlink(self, callback)
 
    cdef _check_and_notify(self)
+
    @cython.nonecheck(False)
-   cpdef _notify_links(self)
+   cdef _notify_link_list(self, list links)
+
+   @cython.nonecheck(False)
+   cpdef _notify_links(self, list arrived_while_waiting)
+
    cdef _wait_core(self, timeout, catch=*)
    cdef _wait_return_value(self, waited, wait_success)
    cdef _wait(self, timeout=*)
