@@ -652,7 +652,7 @@ def _setup_environ(debug=False):
             # dns.zone uses some raw regular expressions
             # without the r'' syntax, leading to DeprecationWarning: invalid
             # escape sequence. This is fixed in 2.0 (Python 3 only).
-            'ignore:::dns.zone',
+            'ignore:::dns.zone:',
         ])
 
     if 'PYTHONFAULTHANDLER' not in os.environ:
