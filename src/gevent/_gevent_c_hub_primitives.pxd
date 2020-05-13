@@ -1,10 +1,10 @@
 cimport cython
 
-from gevent.__greenlet_primitives cimport SwitchOutGreenletWithLoop
-from gevent.__hub_local cimport get_hub_noargs as get_hub
+from gevent._gevent_c_greenlet_primitives cimport SwitchOutGreenletWithLoop
+from gevent._gevent_c_hub_local cimport get_hub_noargs as get_hub
 
-from gevent.__waiter cimport Waiter
-from gevent.__waiter cimport MultipleWaiter
+from gevent._gevent_c_waiter cimport Waiter
+from gevent._gevent_c_waiter cimport MultipleWaiter
 
 cdef InvalidSwitchError
 cdef _waiter

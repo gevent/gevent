@@ -1,7 +1,7 @@
 cimport cython
 
-from gevent.__hub_local cimport get_hub_noargs as get_hub
-from gevent.__abstract_linkable cimport AbstractLinkable
+from gevent._gevent_c_hub_local cimport get_hub_noargs as get_hub
+from gevent._gevent_c_abstract_linkable cimport AbstractLinkable
 
 cdef _None
 cdef reraise

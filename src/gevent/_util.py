@@ -75,9 +75,19 @@ def copy_globals(source,
 
 def import_c_accel(globs, cname):
     """
-    Import the C-accelerator for the __name__
+    Import the C-accelerator for the *cname*
     and copy its globals.
+
+    The *cname* should be hardcoded to match the expected
+    C accelerator module.
+
+    Unless PURE_PYTHON is set (in the environment or automatically
+    on PyPy), then the C-accelerator is required.
     """
+    if not cname.startswith('gevent._gevent_c'):
+        # Old module code that hasn't been updated yet.
+        cname = cname.replace('gevent._',
+                              'gevent._gevent_c')
 
     name = globs.get('__name__')
 

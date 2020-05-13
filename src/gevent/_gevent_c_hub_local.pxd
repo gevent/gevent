@@ -1,4 +1,4 @@
-from gevent.__greenlet_primitives cimport SwitchOutGreenletWithLoop
+from gevent._gevent_c_greenlet_primitives cimport SwitchOutGreenletWithLoop
 
 cdef _threadlocal
 

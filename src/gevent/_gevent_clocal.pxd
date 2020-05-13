@@ -1,7 +1,7 @@
 # cython: auto_pickle=False
 
 cimport cython
-from gevent._greenlet cimport Greenlet
+from gevent._gevent_cgreenlet cimport Greenlet
 
 cdef bint _PYPY
 cdef ref

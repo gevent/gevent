@@ -828,9 +828,9 @@ class TestCExt(greentest.TestCase): # pragma: no cover (we only do coverage on p
 
     def test_c_extension(self):
         self.assertEqual(greenlet.Greenlet.__module__,
-                         'gevent._greenlet')
+                         'gevent._gevent_cgreenlet')
         self.assertEqual(greenlet.SpawnedLink.__module__,
-                         'gevent._greenlet')
+                         'gevent._gevent_cgreenlet')
 
 @greentest.skipWithCExtensions("Needs pure python")
 class TestPure(greentest.TestCase):

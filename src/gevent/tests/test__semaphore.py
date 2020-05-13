@@ -91,7 +91,7 @@ class TestCExt(greentest.TestCase):
 
     def test_c_extension(self):
         self.assertEqual(Semaphore.__module__,
-                         'gevent.__semaphore')
+                         'gevent._gevent_c_semaphore')
 
 
 class SwitchWithFixedHash(object):
