@@ -636,7 +636,7 @@ def _setup_environ(debug=False):
             # 'U' is deprecated, so ignore warnings from site.py
             'ignore:::site:',
             # pkgutil on Python 2 complains about missing __init__.py
-            'ignore:::pkgutil',
+            'ignore:::pkgutil:',
             # importlib/_bootstrap.py likes to spit out "ImportWarning:
             # can't resolve package from __spec__ or __package__, falling
             # back on __name__ and __path__". I have no idea what that means, but it seems harmless
