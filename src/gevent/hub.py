@@ -531,19 +531,23 @@ class Hub(WaitOperationsGreenlet):
         if not issubclass(type, self.NOT_ERROR):
             self.print_exception(context, type, value, tb)
         if context is None or issubclass(type, self.SYSTEM_ERROR):
-            self.handle_system_error(type, value)
+            self.handle_system_error(type, value, tb)
 
-    def handle_system_error(self, type, value):
+    def handle_system_error(self, type, value, tb=None):
         """
         Called from `handle_error` when the exception type is determined
         to be a :attr:`system error <SYSTEM_ERROR>`.
 
         System errors cause the exception to be raised in the main
         greenlet (the parent of this hub).
+
+        .. versionchanged:: NEXT
+           Allow passing the traceback to associate with the
+           exception if it is rethrown into the main greenlet.
         """
         current = getcurrent()
         if current is self or current is self.parent or self.loop is None:
-            self.parent.throw(type, value)
+            self.parent.throw(type, value, tb)
         else:
             # in case system error was handled and life goes on
             # switch back to this greenlet as well
@@ -553,7 +557,7 @@ class Hub(WaitOperationsGreenlet):
             except: # pylint:disable=bare-except
                 traceback.print_exc(file=self.exception_stream)
             try:
-                self.parent.throw(type, value)
+                self.parent.throw(type, value, tb)
             finally:
                 if cb is not None:
                     cb.stop()

@@ -79,8 +79,11 @@ class Event(AbstractLinkable): # pylint:disable=undefined-variable
         self._flag = False
 
     def __str__(self):
-        return '<%s %s _links[%s]>' % (self.__class__.__name__, (self._flag and 'set') or 'clear',
-                                       self.linkcount())
+        return '<%s %s _links[%s]>' % (
+            self.__class__.__name__,
+            'set' if self._flag else 'clear',
+            self.linkcount()
+        )
 
     def is_set(self):
         """Return true if and only if the internal flag is true."""

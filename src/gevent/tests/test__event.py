@@ -272,6 +272,17 @@ class TestEventBasics(greentest.TestCase):
         check.stop()
         check.close()
 
+    def test_gevent_wait_twice_when_already_set(self):
+        event = Event()
+        event.set()
+        # First one works fine.
+        result = gevent.wait([event])
+        self.assertEqual(result, [event])
+        # Second one used to fail with an AssertionError,
+        # now it passes
+        result = gevent.wait([event])
+        self.assertEqual(result, [event])
+
 
 del AbstractGenericGetTestCase
 del AbstractGenericWaitTestCase
