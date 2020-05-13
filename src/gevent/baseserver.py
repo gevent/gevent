@@ -98,7 +98,7 @@ class BaseServer(object):
     #: This is equivalent to libuv's `uv_tcp_simultaneous_accepts
     #: <http://docs.libuv.org/en/v1.x/tcp.html#c.uv_tcp_simultaneous_accepts>`_
     #: value. Setting the environment variable UV_TCP_SINGLE_ACCEPT to a true value
-    #: (usually 1) changes the default to 1.
+    #: (usually 1) changes the default to 1 (in libuv only; this does not affect gevent).
     max_accept = 100
 
     _spawn = Greenlet.spawn
