@@ -101,11 +101,14 @@ class AbstractLinkable(object):
         except ValueError:
             pass
 
-        if not self._links and self._notifier is not None:
-            # If we currently have one queued, de-queue it.
+        if not self._links and self._notifier is not None and self._notifier.pending:
+            # If we currently have one queued, but not running, de-queue it.
             # This will break a reference cycle.
             # (self._notifier -> self._notify_links -> self)
-            # But we can't set it to None in case it was actually running.
+            # If it's actually running, though, (and we're here as a result of callbacks)
+            # we don't want to change it; it needs to finish what its doing
+            # so we don't attempt to start a fresh one or swap it out from underneath the
+            # _notify_links method.
             self._notifier.stop()
 
     def _check_and_notify(self):
@@ -170,7 +173,6 @@ class AbstractLinkable(object):
 
         try:
             self._notify_link_list(self._links)
-
             # Now, those that arrived after we had begun the notification
             # process. Follow the same rules, stop with those that are
             # added so far to prevent starvation.

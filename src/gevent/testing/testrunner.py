@@ -627,7 +627,6 @@ def _setup_environ(debug=False):
             and (not sys.warnoptions
                  # Python 3.7 goes from [] to ['default'] for nothing
                  or sys.warnoptions == ['default'])):
-
         # action:message:category:module:line
         os.environ['PYTHONWARNINGS'] = ','.join([
             # Enable default warnings such as ResourceWarning.
@@ -650,6 +649,10 @@ def _setup_environ(debug=False):
             # dns.hash itself is being deprecated, importing it raises the warning;
             # we don't import it, but dnspython still does
             'ignore:::dns.hash:',
+            # dns.zone uses some raw regular expressions
+            # without the r'' syntax, leading to DeprecationWarning: invalid
+            # escape sequence. This is fixed in 2.0 (Python 3 only).
+            'ignore:::dns.zone:',
         ])
 
     if 'PYTHONFAULTHANDLER' not in os.environ:

@@ -469,7 +469,12 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
                 cb = self._callbacks.popleft()
 
                 libev.ev_unref(self._ptr)
-                gevent_call(self, cb) # XXX: Why is this a C callback, not cython?
+                # On entry, this will set cb.callback to None,
+                # changing cb.pending from True to False; on exit,
+                # this will set cb.args to None, changing bool(cb)
+                # from True to False.
+                # XXX: Why is this a C callback, not cython?
+                gevent_call(self, cb)
                 count -= 1
 
                 if count == 0 and self._callbacks.head is not None:
