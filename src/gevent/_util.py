@@ -216,6 +216,14 @@ implementer = implementer
 Attribute = Attribute
 
 
+###
+# Release automation.
+#
+# Most of this is to integrate zest.releaser with towncrier. There is
+# a plugin package that can do the same:
+# https://github.com/collective/zestreleaser.towncrier
+###
+
 def prereleaser_middle(data): # pragma: no cover
     """
     zest.releaser prerelease middle hook for gevent.
@@ -300,3 +308,18 @@ def prereleaser_middle(data): # pragma: no cover
             print("Replaced version NEXT in", path)
             with open(path, 'wb') as f:
                 f.write(new_contents)
+
+def postreleaser_before(data): # pragma: no cover
+    """
+    Prevents zest.releaser from modifying the CHANGES.rst to add the
+    'no changes yet' section; towncrier is in charge of CHANGES.rst.
+
+    Needs zest.releaser 6.15.0.
+    """
+    if data['name'] != 'gevent':
+        # We are specified in ``setup.cfg``, not ``setup.py``, so we do not
+        # come into play for other projects, only this one. We shouldn't
+        # need this check, but there it is.
+        return
+
+    data['update_history'] = False
