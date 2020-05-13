@@ -152,7 +152,7 @@ test
 .. _`pip`: https://pip.pypa.io/en/stable/installing/
 .. _`wheels`: http://pythonwheels.com
 .. _`gevent 1.5`: whatsnew_1_5.html
-.. _`Installing From Source`: http://gevent.org/development/installing_from_source.html
+.. _`Installing From Source`: https://www.gevent.org/development/installing_from_source.html
 
 .. _`cffi`: https://cffi.readthedocs.io
 .. _`limitations in libev`: http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#WIN32_PLATFORM_LIMITATIONS_AND_WORKA
