@@ -1,7 +1,7 @@
 cimport cython
-from gevent._greenlet cimport Greenlet
-from gevent.__semaphore cimport Semaphore
-from gevent._queue cimport UnboundQueue
+from gevent._gevent_cgreenlet cimport Greenlet
+from gevent._gevent_c_semaphore cimport Semaphore
+from gevent._gevent_cqueue cimport UnboundQueue
 
 @cython.freelist(100)
 @cython.internal

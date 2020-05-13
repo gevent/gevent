@@ -1,6 +1,6 @@
 cimport cython
 
-from gevent.__abstract_linkable cimport AbstractLinkable
+from gevent._gevent_c_abstract_linkable cimport AbstractLinkable
 cdef Timeout
 
 

@@ -71,7 +71,7 @@ class TestCExt(greentest.TestCase):
 
     def test_c_extension(self):
         self.assertEqual(IdentRegistry.__module__,
-                         'gevent.__ident')
+                         'gevent._gevent_c_ident')
 
 
 

@@ -8,7 +8,7 @@
 # that's a new feature that we don't need or want to allow in a gevent
 # point release.
 
-# cython: emit_code_comments=False, auto_pickle=False
+# cython: emit_code_comments=False, auto_pickle=False, language_level=3str
 
 # NOTE: We generally cannot use the Cython IF directive as documented
 # at
@@ -19,6 +19,9 @@
 # C file for all platforms so that end users that don't use a binary
 # wheel don't have to sit through cythonpp and other steps the Makefile does.
 # See https://github.com/gevent/gevent/issues/1076
+# We compile in 3str mode, which should mean we get absolute import
+# by default.
+from __future__ import absolute_import
 
 cimport cython
 cimport libev
@@ -33,14 +36,11 @@ cdef extern from "Python.h":
     int    Py_ReprEnter(object)
     void   Py_ReprLeave(object)
 
-# Work around lack of absolute_import in Cython
-# Note for PY3: not doing so will leave reference to locals() on import
-# (reproducible under Python 3.3, not under Python 3.4; see test__refcount_core.py)
-sys = __import__('sys', level=0)
-os = __import__('os', level=0)
-traceback = __import__('traceback', level=0)
-signalmodule = __import__('signal', level=0)
-getswitchinterval = __import__('gevent', level=0).getswitchinterval
+import sys
+import os
+import traceback
+import signal as signalmodule
+from gevent import getswitchinterval
 
 
 __all__ = ['get_version',

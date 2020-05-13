@@ -1,10 +1,10 @@
 # cython: auto_pickle=False
 
 cimport cython
-from gevent.__ident cimport IdentRegistry
-from gevent.__hub_local cimport get_hub_noargs as get_hub
-from gevent.__waiter cimport Waiter
-from gevent.__greenlet_primitives cimport SwitchOutGreenletWithLoop
+from gevent._gevent_c_ident cimport IdentRegistry
+from gevent._gevent_c_hub_local cimport get_hub_noargs as get_hub
+from gevent._gevent_c_waiter cimport Waiter
+from gevent._gevent_c_greenlet_primitives cimport SwitchOutGreenletWithLoop
 
 cdef bint _PYPY
 cdef sys_getframe

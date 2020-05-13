@@ -414,7 +414,7 @@ class TestCExt(greentest.TestCase): # pragma: no cover
 
     def test_c_extension(self):
         self.assertEqual(local.__module__,
-                         'gevent._local')
+                         'gevent._gevent_clocal')
 
 @greentest.skipWithCExtensions("Needs pure-python")
 class TestPure(greentest.TestCase):

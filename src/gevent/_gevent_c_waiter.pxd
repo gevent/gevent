@@ -1,7 +1,7 @@
 cimport cython
 
-from gevent.__greenlet_primitives cimport SwitchOutGreenletWithLoop
-from gevent.__hub_local cimport get_hub_noargs as get_hub
+from gevent._gevent_c_greenlet_primitives cimport SwitchOutGreenletWithLoop
+from gevent._gevent_c_hub_local cimport get_hub_noargs as get_hub
 
 cdef sys
 cdef ConcurrentObjectUseError

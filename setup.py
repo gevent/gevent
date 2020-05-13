@@ -48,81 +48,89 @@ from _setupares import ARES
 
 CORE = cythonize1(build_libev_extension())
 
-# Get access to the greenlet header file.
+# Modules that we cythonize for performance.
+# Be careful not to use simple names for these modules,
+# as the non-static symbols cython generates do not include
+# the module name. Thus an extension of 'gevent._queue'
+# results in symbols like 'PyInit__queue', which is the same
+# symbol used by the standard library _queue accelerator module.
+# The name of the .pxd file must match the local name of the accelerator
+# extension; however, sadly, the generated .c and .html files will
+# still use the same name as the .py source.
 
-SEMAPHORE = Extension(name="gevent.__semaphore",
+SEMAPHORE = Extension(name="gevent._gevent_c_semaphore",
                       sources=["src/gevent/_semaphore.py"],
-                      depends=['src/gevent/__semaphore.pxd'],
+                      depends=['src/gevent/_gevent_c_semaphore.pxd'],
                       include_dirs=get_include_dirs())
 
 
-LOCAL = Extension(name="gevent._local",
+LOCAL = Extension(name="gevent._gevent_clocal",
                   sources=["src/gevent/local.py"],
-                  depends=['src/gevent/_local.pxd'],
+                  depends=['src/gevent/_gevent_clocal.pxd'],
                   include_dirs=get_include_dirs())
 
 
-GREENLET = Extension(name="gevent._greenlet",
+GREENLET = Extension(name="gevent._gevent_cgreenlet",
                      sources=[
                          "src/gevent/greenlet.py",
                      ],
                      depends=[
-                         'src/gevent/_greenlet.pxd',
-                         'src/gevent/__ident.pxd',
+                         'src/gevent/_gevent_cgreenlet.pxd',
+                         'src/gevent/_gevent_c_ident.pxd',
                          'src/gevent/_ident.py'
                      ],
                      include_dirs=get_include_dirs())
 
-ABSTRACT_LINKABLE = Extension(name="gevent.__abstract_linkable",
+ABSTRACT_LINKABLE = Extension(name="gevent._gevent_c_abstract_linkable",
                               sources=["src/gevent/_abstract_linkable.py"],
-                              depends=['src/gevent/__abstract_linkable.pxd'],
+                              depends=['src/gevent/_gevent_c_abstract_linkable.pxd'],
                               include_dirs=get_include_dirs())
 
 
-IDENT = Extension(name="gevent.__ident",
+IDENT = Extension(name="gevent._gevent_c_ident",
                   sources=["src/gevent/_ident.py"],
-                  depends=['src/gevent/__ident.pxd'],
+                  depends=['src/gevent/_gevent_c_ident.pxd'],
                   include_dirs=get_include_dirs())
 
 
-IMAP = Extension(name="gevent.__imap",
+IMAP = Extension(name="gevent._gevent_c_imap",
                  sources=["src/gevent/_imap.py"],
-                 depends=['src/gevent/__imap.pxd'],
+                 depends=['src/gevent/_gevent_c_imap.pxd'],
                  include_dirs=get_include_dirs())
 
-EVENT = Extension(name="gevent._event",
+EVENT = Extension(name="gevent._gevent_cevent",
                   sources=["src/gevent/event.py"],
-                  depends=['src/gevent/_event.pxd'],
+                  depends=['src/gevent/_gevent_cevent.pxd'],
                   include_dirs=get_include_dirs())
 
-QUEUE = Extension(name="gevent._queue",
+QUEUE = Extension(name="gevent._gevent_cqueue",
                   sources=["src/gevent/queue.py"],
-                  depends=['src/gevent/_queue.pxd'],
+                  depends=['src/gevent/_gevent_cqueue.pxd'],
                   include_dirs=get_include_dirs())
 
-HUB_LOCAL = Extension(name="gevent.__hub_local",
+HUB_LOCAL = Extension(name="gevent._gevent_c_hub_local",
                       sources=["src/gevent/_hub_local.py"],
-                      depends=['src/gevent/__hub_local.pxd'],
+                      depends=['src/gevent/_gevent_c_hub_local.pxd'],
                       include_dirs=get_include_dirs())
 
-WAITER = Extension(name="gevent.__waiter",
+WAITER = Extension(name="gevent._gevent_c_waiter",
                    sources=["src/gevent/_waiter.py"],
-                   depends=['src/gevent/__waiter.pxd'],
+                   depends=['src/gevent/_gevent_c_waiter.pxd'],
                    include_dirs=get_include_dirs())
 
-HUB_PRIMITIVES = Extension(name="gevent.__hub_primitives",
+HUB_PRIMITIVES = Extension(name="gevent._gevent_c_hub_primitives",
                            sources=["src/gevent/_hub_primitives.py"],
-                           depends=['src/gevent/__hub_primitives.pxd'],
+                           depends=['src/gevent/_gevent_c_hub_primitives.pxd'],
                            include_dirs=get_include_dirs())
 
-GLT_PRIMITIVES = Extension(name="gevent.__greenlet_primitives",
+GLT_PRIMITIVES = Extension(name="gevent._gevent_c_greenlet_primitives",
                            sources=["src/gevent/_greenlet_primitives.py"],
-                           depends=['src/gevent/__greenlet_primitives.pxd'],
+                           depends=['src/gevent/_gevent_c_greenlet_primitives.pxd'],
                            include_dirs=get_include_dirs())
 
-TRACER = Extension(name="gevent.__tracer",
+TRACER = Extension(name="gevent._gevent_c_tracer",
                    sources=["src/gevent/_tracer.py"],
-                   depends=['src/gevent/__tracer.pxd'],
+                   depends=['src/gevent/_gevent_c_tracer.pxd'],
                    include_dirs=get_include_dirs())
 
 

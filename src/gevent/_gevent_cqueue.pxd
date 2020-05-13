@@ -1,7 +1,7 @@
 cimport cython
-from gevent.__waiter cimport Waiter
-from gevent._event cimport Event
-from gevent.__hub_local cimport get_hub_noargs as get_hub
+from gevent._gevent_c_waiter cimport Waiter
+from gevent._gevent_cevent cimport Event
+from gevent._gevent_c_hub_local cimport get_hub_noargs as get_hub
 
 cdef bint _greenlet_imported
 cdef _heappush
