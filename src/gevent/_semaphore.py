@@ -1,4 +1,12 @@
 # cython: auto_pickle=False,embedsignature=True,always_allow_keywords=False
+###
+# This file is ``gevent._semaphore`` so that it can be compiled by Cython
+# individually. However, this is not the place to import from. Everyone,
+# gevent internal code included, must import from ``gevent.lock``.
+# The only exception are .pxd files which need access to the
+# C code; the PURE_PYTHON things that have to happen and which are
+# handled in ``gevent.lock``, do not apply to them.
+###
 from __future__ import print_function, absolute_import, division
 
 __all__ = [
@@ -44,6 +52,10 @@ class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
        The low-level ``rawlink`` method (most users won't use this) now automatically
        unlinks waiters before calling them.
     """
+
+    __slots__ = (
+        'counter',
+    )
 
     def __init__(self, value=1, hub=None):
         if value < 0:

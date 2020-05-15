@@ -57,4 +57,4 @@ cdef class AbstractLinkable(object):
 
    cdef _wait_core(self, timeout, catch=*)
    cdef _wait_return_value(self, waited, wait_success)
-   cdef _wait(self, timeout=*)
+   cpdef _wait(self, timeout=*)

@@ -1,3 +1,9 @@
+###
+# This file is test__semaphore.py only for organization purposes.
+# The public API,
+# and the *only* correct place to import Semaphore --- even in tests ---
+# is ``gevent.lock``, never ``gevent._semaphore``.
+##
 from __future__ import print_function
 from __future__ import absolute_import
 
@@ -6,16 +12,9 @@ import weakref
 import gevent
 import gevent.exceptions
 from gevent.lock import Semaphore
-from gevent.thread import allocate_lock
 
 import gevent.testing as greentest
 
-try:
-    from _thread import allocate_lock as std_allocate_lock
-except ImportError: # Py2
-    from thread import allocate_lock as std_allocate_lock
-
-# pylint:disable=broad-except
 
 class TestSemaphore(greentest.TestCase):
 
@@ -67,24 +66,54 @@ class TestSemaphore(greentest.TestCase):
         s = Semaphore()
         gevent.wait([s])
 
-class TestLock(greentest.TestCase):
 
-    def test_release_unheld_lock(self):
-        std_lock = std_allocate_lock()
-        g_lock = allocate_lock()
+class TestAcquireContended(greentest.TestCase):
+    # Tests that the object can be acquired correctly across
+    # multiple threads.
+    # Used as a base class.
+
+    # See https://github.com/gevent/gevent/issues/1437
+
+    def _makeOne(self):
+        # Create an object that is associated with the current hub. If
+        # we don't do this now, it gets initialized lazily the first
+        # time it would have to block, which, in the event of threads,
+        # would be from an arbitrary thread.
+        return Semaphore(1, gevent.get_hub())
+
+
+    def test_acquire_in_one_then_another(self):
+        from gevent import monkey
+        self.assertFalse(monkey.is_module_patched('threading'))
+        import sys
+        import threading
+
+        sem = self._makeOne()
+        # Make future acquires block
+        print("acquiring", sem)
+        sem.acquire()
+
+        exc_info = []
+
+        def thread_main():
+            # XXX: When this is fixed, this will have to be modified
+            # to avoid deadlock, but being careful to still test
+            # the initial conditions (e.g., that this doesn't throw;
+            # we can't pass block=False because that bypasses the part
+            # that would throw.)
+            try:
+                sem.acquire()
+            except:
+                exc_info[:] = sys.exc_info()
+
+        t = threading.Thread(target=thread_main)
+        t.start()
+        t.join()
+
         try:
-            std_lock.release()
-            self.fail("Should have thrown an exception")
-        except Exception as e:
-            std_exc = e
-
-        try:
-            g_lock.release()
-            self.fail("Should have thrown an exception")
-        except Exception as e:
-            g_exc = e
-        self.assertIsInstance(g_exc, type(std_exc))
-
+            self.assertEqual(exc_info, [])
+        finally:
+            exc_info = None
 
 @greentest.skipOnPurePython("Needs C extension")
 class TestCExt(greentest.TestCase):

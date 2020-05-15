@@ -11,7 +11,7 @@ from __future__ import division
 from __future__ import print_function
 
 
-from gevent import _semaphore
+from gevent import lock
 from gevent import queue
 
 
@@ -21,7 +21,7 @@ __all__ = [
 ]
 
 locals()['Greenlet'] = __import__('gevent').Greenlet
-locals()['Semaphore'] = _semaphore.Semaphore
+locals()['Semaphore'] = lock.Semaphore
 locals()['UnboundQueue'] = queue.UnboundQueue
 
 

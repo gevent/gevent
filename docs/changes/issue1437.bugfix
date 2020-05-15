@@ -1,0 +1,3 @@
+The underlying Semaphore always behaves in an atomic fashion (as if
+the GIL was not released) when PURE_PYTHON is set. Previously, it only
+correctly did so on PyPy.
