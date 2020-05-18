@@ -7,6 +7,7 @@ from __future__ import print_function
 from gevent._util import _NONE
 from gevent._compat import reraise
 from gevent._tblib import dump_traceback, load_traceback
+from gevent._hub_local import get_hub_noargs as get_hub
 
 from gevent.timeout import Timeout
 
