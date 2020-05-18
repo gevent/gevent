@@ -1,3 +1,9 @@
+Make gevent locks that are monkey-patched work across native
+threads as well as across greenlets within a single thread. This
+is expensive, and not a recommended programming pattern, but it can
+happen when using the threadpool. Locks that are only used in a single
+thread do not take a performance hit.
+
 The underlying Semaphore always behaves in an atomic fashion (as if
 the GIL was not released) when PURE_PYTHON is set. Previously, it only
 correctly did so on PyPy.

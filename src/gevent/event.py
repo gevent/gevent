@@ -326,6 +326,9 @@ class AsyncResult(AbstractLinkable): # pylint:disable=undefined-variable
             # Not ready and not blocking, so immediately timeout
             raise Timeout()
 
+        if self.hub is None: # pylint:disable=access-member-before-definition
+            self.hub = get_hub() # pylint:disable=attribute-defined-outside-init
+
         # Wait, raising a timeout that elapses
         self._wait_core(timeout, ())
 

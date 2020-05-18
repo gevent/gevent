@@ -1199,6 +1199,9 @@ cdef public class async_(watcher) [object PyGeventAsyncObject, type PyGeventAsyn
         _check_loop(self.loop)
         libev.ev_async_send(self.loop._ptr, &self._watcher)
 
+    def send_ignoring_arg(self, _ignored):
+        return self.send()
+
 async = async_
 
 cdef start_and_stop child_ss = make_ss(<void*>libev.ev_child_start, <void*>libev.ev_child_stop)

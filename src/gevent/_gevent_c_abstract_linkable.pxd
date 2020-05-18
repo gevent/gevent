@@ -48,6 +48,8 @@ cdef class AbstractLinkable(object):
    cpdef unlink(self, callback)
 
    cdef _check_and_notify(self)
+   cdef __wait_to_be_notified(self, bint rawlink)
+   cdef __unlink_all(self, obj)
 
    @cython.nonecheck(False)
    cdef _notify_link_list(self, list links)
@@ -55,6 +57,9 @@ cdef class AbstractLinkable(object):
    @cython.nonecheck(False)
    cpdef _notify_links(self, list arrived_while_waiting)
 
+   cpdef _drop_lock_for_switch_out(self)
+   cpdef _acquire_lock_for_switch_in(self)
+
    cdef _wait_core(self, timeout, catch=*)
    cdef _wait_return_value(self, waited, wait_success)
-   cpdef _wait(self, timeout=*)
+   cdef _wait(self, timeout=*)

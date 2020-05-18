@@ -554,6 +554,15 @@ class AsyncMixin(object):
     def send(self):
         raise NotImplementedError()
 
+    def send_ignoring_arg(self, _ignored):
+        """
+        Calling compatibility with ``greenlet.switch(arg)``
+        as used by waiters that have ``rawlink``.
+
+        This is an advanced method, not usually needed.
+        """
+        return self.send()
+
     @property
     def pending(self):
         raise NotImplementedError()
