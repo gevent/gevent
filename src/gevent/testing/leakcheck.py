@@ -89,7 +89,6 @@ class _RefCountChecker(object):
             return False
         return True
 
-
     def _growth(self):
         return objgraph.growth(limit=None, peak_stats=self.peak_stats, filter=self._ignore_object_p)
 
@@ -198,14 +197,15 @@ class _RefCountChecker(object):
 
 
 def wrap_refcount(method):
-    if objgraph is None:
-        import warnings
-        warnings.warn("objgraph not available, leakchecks disabled")
-        return method
 
-    if getattr(method, 'ignore_leakcheck', False):
-        return method
-
+    if objgraph is None or getattr(method, 'ignore_leakcheck', False):
+        if objgraph is None:
+            import warnings
+            warnings.warn("objgraph not available, leakchecks disabled")
+        @wraps(method)
+        def _method_skipped_during_leakcheck(self, *_args, **_kwargs):
+            self.skipTest("This method ignored during leakchecks")
+        return _method_skipped_during_leakcheck
 
     @wraps(method)
     def wrapper(self, *args, **kwargs): # pylint:disable=too-many-branches

@@ -282,7 +282,6 @@ def release_then_spawn(sem, should_quit):
 
 class TestSemaphoreFair(greentest.TestCase):
 
-    @greentest.ignores_leakcheck
     def test_fair_or_hangs(self):
         # If the lock isn't fair, this hangs, spinning between
         # the last two greenlets.
@@ -301,6 +300,12 @@ class TestSemaphoreFair(greentest.TestCase):
         self.assertTrue(keep_going2.dead, keep_going2)
         self.assertFalse(keep_going1.dead, keep_going1)
 
+        sem.release()
+        keep_going1.kill()
+        keep_going2.kill()
+        exiting.kill()
+
+        gevent.idle()
 
 if __name__ == '__main__':
     greentest.main()
