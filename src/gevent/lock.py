@@ -127,7 +127,7 @@ class _AtomicSemaphoreMixin(object):
     # on exit. acquire and wait can call _wait, which must release it on entry
     # and re-acquire it for them on exit.
     #
-    # Note that this does *NOT* make semaphores safe to use from multiple threads
+    # Note that this does *NOT*, in-and-of itself, make semaphores safe to use from multiple threads
     def __init__(self, *args, **kwargs):
         self._lock_lock = _OwnedLock()
         super(_AtomicSemaphoreMixin, self).__init__(*args, **kwargs)
@@ -271,8 +271,12 @@ class RLock(object):
         '__weakref__',
     )
 
-    def __init__(self):
-        self._block = Semaphore(1)
+    def __init__(self, hub=None):
+        """
+        .. versionchanged:: NEXT
+           Add the ``hub`` argument.
+        """
+        self._block = Semaphore(1, hub)
         self._owner = None
         self._count = 0
 

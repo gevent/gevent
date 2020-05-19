@@ -110,14 +110,24 @@ class TestSemaphoreMultiThread(greentest.TestCase):
 
         t = threading.Thread(target=thread_main)
         t.start()
-        while not thread_running.is_set():
-            thread_running.wait(timing.LARGE_TICK * 5)
+        thread_running.wait(10) # implausibly large time
         if release:
             sem.release()
             # Spin the loop to be sure the release gets through.
-            gevent.idle()
-            thread_acquired.wait(timing.LARGE_TICK * 5)
+            # (Release schedules the notifier to run, and when the
+            # notifier run it sends the async notification to the
+            # other thread. Depending on exactly where we are in the
+            # event loop, and the limit to the number of callbacks
+            # that get run (including time-based) the notifier may or
+            # may not be immediately ready to run, so this can take up
+            # to two iterations.)
+            for _ in range(3):
+                gevent.idle()
+                if thread_acquired.wait(timing.LARGE_TICK):
+                    break
+
             self.assertEqual(acquired, [True])
+
 
         thread_acquired.wait(timing.LARGE_TICK * 5)
         try:

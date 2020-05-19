@@ -11,6 +11,7 @@ from __future__ import print_function
 import sys
 
 from gevent._hub_local import get_hub_noargs as get_hub
+from gevent._hub_local import get_hub_if_exists
 
 from gevent.exceptions import InvalidSwitchError
 from gevent.timeout import Timeout
@@ -84,8 +85,9 @@ class AbstractLinkable(object):
         # we don't want to do get_hub() here to allow defining module-level objects
         # without initializing the hub. However, for multiple-thread safety, as soon
         # as a waiting method is entered, even if it won't have to wait, we
-        # grab the hub.
-        self.hub = hub
+        # need to grab the hub and assign ownership. For that reason, if the hub
+        # is present, we'll go ahead and take it.
+        self.hub = hub if hub is not None else get_hub_if_exists()
 
     def linkcount(self):
         # For testing: how many objects are linked to this one?
@@ -125,12 +127,24 @@ class AbstractLinkable(object):
             # _notify_links method.
             self._notifier.stop()
 
+    def _capture_hub(self, create):
+        # Subclasses should call this as the first action from any
+        # public method that could, in theory, block and switch
+        # to the hub. This may release the GIL.
+        if self.hub is None:
+            # This next line might release the GIL.
+            current_hub = get_hub() if create else get_hub_if_exists()
+            if current_hub is None:
+                return
+            # We have the GIL again. Did anything change? If so,
+            # we lost the race.
+            if self.hub is None:
+                self.hub = current_hub
+
     def _check_and_notify(self):
         # If this object is ready to be notified, begin the process.
         if self.ready() and self._links and not self._notifier:
-            if self.hub is None:
-                self.hub = get_hub()
-
+            self._capture_hub(True) # Must create, we need it.
             self._notifier = self.hub.loop.run_callback(self._notify_links, [])
 
     def _notify_link_list(self, links):
@@ -153,7 +167,11 @@ class AbstractLinkable(object):
                 # be free to be reused.
                 done.add(id_link)
                 try:
-                    link(self)
+                    self._drop_lock_for_switch_out()
+                    try:
+                        link(self)
+                    finally:
+                        self._acquire_lock_for_switch_in()
                 except: # pylint:disable=bare-except
                     # We're running in the hub, errors must not escape.
                     self.hub.handle_error((link, self), *sys.exc_info())
@@ -208,7 +226,6 @@ class AbstractLinkable(object):
             # free up thread affinity? In case of a pathological situation where
             # one object was used from one thread once & first,  but usually is
             # used by another thread.
-
         # Now we may be ready or not ready. If we're ready, which
         # could have happened during the last link we called, then we
         # must have more links than we started with. We need to schedule the
@@ -267,6 +284,7 @@ class AbstractLinkable(object):
                 self.rawlink(send)
             else:
                 self._notifier.args[0].append(send)
+
             watcher.start(getcurrent().switch, self) # pylint:disable=undefined-variable
             break
 
@@ -276,7 +294,6 @@ class AbstractLinkable(object):
                 self.rawlink(resume_this_greenlet)
             else:
                 self._notifier.args[0].append(resume_this_greenlet)
-
         try:
             self._drop_lock_for_switch_out()
             result = current_hub.switch() # Probably releases
@@ -345,8 +362,7 @@ class AbstractLinkable(object):
         the conditions laid out in the class documentation are met.
         """
         # Watch where we could potentially release the GIL.
-        if self.hub is None: # no release
-            self.hub = get_hub() # might releases.
+        self._capture_hub(True) # Must create, we must have an owner. Might release
 
         if self.ready(): # *might* release, if overridden in Python.
             result = self._wait_return_value(False, False) # pylint:disable=assignment-from-none

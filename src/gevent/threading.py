@@ -203,7 +203,8 @@ if hasattr(__threading__, '_CRLock'):
     # which in turn used _allocate_lock. Now, it wants to use
     # threading._CRLock, which is imported from _thread.RLock and as such
     # is implemented in C. So it bypasses our _allocate_lock function.
-    # Fortunately they left the Python fallback in place.
+    # Fortunately they left the Python fallback in place and use it
+    # if the imported _CRLock is None; this arranges for that to be the case.
 
     # This was also backported to PyPy 2.7-7.0
     assert PY3 or PYPY, "Unsupported Python version"

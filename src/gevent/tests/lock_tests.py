@@ -435,7 +435,7 @@ class BaseSemaphoreTests(BaseTestCase):
     def test_constructor(self):
         self.assertRaises(ValueError, self.semtype, value=-1)
         # Py3 doesn't have sys.maxint
-        self.assertRaises(ValueError, self.semtype,
+        self.assertRaises((ValueError, OverflowError), self.semtype,
                           value=-getattr(sys, 'maxint', getattr(sys, 'maxsize', None)))
 
     def test_acquire(self):

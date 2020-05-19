@@ -2,6 +2,7 @@ cimport cython
 
 from gevent._gevent_c_greenlet_primitives cimport SwitchOutGreenletWithLoop
 from gevent._gevent_c_hub_local cimport get_hub_noargs as get_hub
+from gevent._gevent_c_hub_local cimport get_hub_if_exists
 
 cdef InvalidSwitchError
 cdef Timeout
@@ -48,8 +49,9 @@ cdef class AbstractLinkable(object):
    cpdef unlink(self, callback)
 
    cdef _check_and_notify(self)
+   cdef void _capture_hub(self, bint create)
    cdef __wait_to_be_notified(self, bint rawlink)
-   cdef __unlink_all(self, obj)
+   cdef void __unlink_all(self, obj) # suppress exceptions
 
    @cython.nonecheck(False)
    cdef _notify_link_list(self, list links)
