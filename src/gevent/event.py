@@ -7,7 +7,6 @@ from __future__ import print_function
 from gevent._util import _NONE
 from gevent._compat import reraise
 from gevent._tblib import dump_traceback, load_traceback
-from gevent._hub_local import get_hub_noargs as get_hub
 
 from gevent.timeout import Timeout
 
@@ -327,8 +326,7 @@ class AsyncResult(AbstractLinkable): # pylint:disable=undefined-variable
             # Not ready and not blocking, so immediately timeout
             raise Timeout()
 
-        if self.hub is None: # pylint:disable=access-member-before-definition
-            self.hub = get_hub() # pylint:disable=attribute-defined-outside-init
+        self._capture_hub(True)
 
         # Wait, raising a timeout that elapses
         self._wait_core(timeout, ())
