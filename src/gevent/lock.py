@@ -10,8 +10,12 @@ infinite bounds (:class:`DummySemaphore`), along with a reentrant lock
 from __future__ import absolute_import
 
 from gevent.hub import getcurrent
-from gevent._compat import PYPY
-from gevent._semaphore import Semaphore, BoundedSemaphore # pylint:disable=no-name-in-module,import-error
+from gevent._compat import PURE_PYTHON
+# This is the one exception to the rule of where to
+# import Semaphore, obviously
+from gevent import monkey
+from gevent._semaphore import Semaphore
+from gevent._semaphore import BoundedSemaphore
 
 
 __all__ = [
@@ -24,112 +28,148 @@ __all__ = [
 # On PyPy, we don't compile the Semaphore class with Cython. Under
 # Cython, each individual method holds the GIL for its entire
 # duration, ensuring that no other thread can interrupt us in an
-# unsafe state (only when we _do_wait do we call back into Python and
-# allow switching threads). Simulate that here through the use of a manual
-# lock. (We use a separate lock for each semaphore to allow sys.settrace functions
-# to use locks *other* than the one being traced.)
-if PYPY:
-    # TODO: Need to use monkey.get_original?
-    try:
-        from _thread import allocate_lock as _allocate_lock # pylint:disable=import-error,useless-suppression
-        from _thread import get_ident as _get_ident # pylint:disable=import-error,useless-suppression
-    except ImportError:
-        # Python 2
-        from thread import allocate_lock as _allocate_lock # pylint:disable=import-error,useless-suppression
-        from thread import get_ident as _get_ident # pylint:disable=import-error,useless-suppression
-    _sem_lock = _allocate_lock()
+# unsafe state (only when we _wait do we call back into Python and
+# allow switching threads; this is broken down into the
+# _drop_lock_for_switch_out and _acquire_lock_for_switch_in methods).
+# Simulate that here through the use of a manual lock. (We use a
+# separate lock for each semaphore to allow sys.settrace functions to
+# use locks *other* than the one being traced.) This, of course, must
+# also hold for PURE_PYTHON mode when no optional C extensions are
+# used.
 
-    def untraceable(f):
-        # Don't allow re-entry to these functions in a single thread, as can
-        # happen if a sys.settrace is used
-        def wrapper(self):
-            me = _get_ident()
-            try:
-                count = self._locking[me]
-            except KeyError:
-                count = self._locking[me] = 1
-            else:
-                count = self._locking[me] = count + 1
-            if count:
+_allocate_lock, _get_ident = monkey.get_original(
+    ('_thread', 'thread'),
+    ('allocate_lock', 'get_ident')
+)
+
+
+class _OwnedLock(object):
+    __slots__ = (
+        '_owner',
+        '_block',
+        '_locking',
+        '_count',
+    )
+    # Don't allow re-entry to these functions in a single thread, as can
+    # happen if a sys.settrace is used.
+    #
+    # This is essentially a variant of the (pure-Python) RLock from the
+    # standard library.
+    def __init__(self):
+        self._owner = None
+        self._block = _allocate_lock()
+        self._locking = {}
+        self._count = 0
+
+
+    def __begin(self):
+        # Return (me, count) if we should proceed, otherwise return
+        # None. The function should exit in that case.
+        # In either case, it must call __end.
+        me = _get_ident()
+        try:
+            count = self._locking[me]
+        except KeyError:
+            count = self._locking[me] = 1
+        else:
+            count = self._locking[me] = count + 1
+        return (me, count) if not count else (None, None)
+
+    def __end(self, me, count):
+        if me is None:
+            return
+        count = count - 1
+        if not count:
+            del self._locking[me]
+        else:
+            self._locking[me] = count
+
+    def __enter__(self):
+        me, lock_count = self.__begin()
+        try:
+            if me is None:
                 return
 
-            try:
-                return f(self)
-            finally:
-                count = count - 1
-                if not count:
-                    del self._locking[me]
-                else:
-                    self._locking[me] = count
-        return wrapper
-
-    class _OwnedLock(object):
-
-        def __init__(self):
-            self._owner = None
-            self._block = _allocate_lock()
-            self._locking = {}
-            self._count = 0
-
-        @untraceable
-        def acquire(self):
-            me = _get_ident()
             if self._owner == me:
                 self._count += 1
                 return
 
-            self._owner = me
             self._block.acquire()
+            self._owner = me
             self._count = 1
+        finally:
+            self.__end(me, lock_count)
 
-        @untraceable
-        def release(self):
+    def __exit__(self, t, v, tb):
+        self.release()
+
+    acquire = __enter__
+
+    def release(self):
+        me, lock_count = self.__begin()
+        try:
+            if me is None:
+                return
+
             self._count = count = self._count - 1
             if not count:
-                self._block.release()
                 self._owner = None
+                self._block.release()
+        finally:
+            self.__end(me, lock_count)
 
+
+class _AtomicSemaphoreMixin(object):
+    # Behaves as though the GIL was held for the duration of acquire, wait,
+    # and release, just as if we were in Cython.
+    #
     # acquire, wait, and release all acquire the lock on entry and release it
-    # on exit. acquire and wait can call _do_wait, which must release it on entry
+    # on exit. acquire and wait can call _wait, which must release it on entry
     # and re-acquire it for them on exit.
-    class _around(object):
-        __slots__ = ('before', 'after')
-
-        def __init__(self, before, after):
-            self.before = before
-            self.after = after
-
-        def __enter__(self):
-            self.before()
-
-        def __exit__(self, t, v, tb):
-            self.after()
-
-    def _decorate(func, cmname):
-        # functools.wrap?
-        def wrapped(self, *args, **kwargs):
-            with getattr(self, cmname):
-                return func(self, *args, **kwargs)
-        return wrapped
-
-    Semaphore._py3k_acquire = Semaphore.acquire = _decorate(Semaphore.acquire, '_lock_locked')
-    Semaphore.release = _decorate(Semaphore.release, '_lock_locked')
-    Semaphore.wait = _decorate(Semaphore.wait, '_lock_locked')
-    Semaphore._wait = _decorate(Semaphore._wait, '_lock_unlocked')
-
-    _Sem_init = Semaphore.__init__
-
+    #
+    # Note that this does *NOT*, in-and-of itself, make semaphores safe to use from multiple threads
     def __init__(self, *args, **kwargs):
-        l = self._lock_lock = _OwnedLock()
-        self._lock_locked = _around(l.acquire, l.release)
-        self._lock_unlocked = _around(l.release, l.acquire)
+        self._lock_lock = _OwnedLock()
+        super(_AtomicSemaphoreMixin, self).__init__(*args, **kwargs)
 
-        _Sem_init(self, *args, **kwargs)
+    def _acquire_lock_for_switch_in(self):
+        self._lock_lock.acquire()
 
-    Semaphore.__init__ = __init__
+    def _drop_lock_for_switch_out(self):
+        self._lock_lock.release()
 
-    del _decorate
-    del untraceable
+    def _notify_links(self, arrived_while_waiting):
+        with self._lock_lock:
+            return super(_AtomicSemaphoreMixin, self)._notify_links(arrived_while_waiting)
+
+    def release(self):
+        with self._lock_lock:
+            return super(_AtomicSemaphoreMixin, self).release()
+
+    def acquire(self, blocking=True, timeout=None):
+        with self._lock_lock:
+            return super(_AtomicSemaphoreMixin, self).acquire(blocking, timeout)
+
+    _py3k_acquire = acquire
+
+    def wait(self, timeout=None):
+        with self._lock_lock:
+            return super(_AtomicSemaphoreMixin, self).wait(timeout)
+
+class _AtomicSemaphore(_AtomicSemaphoreMixin, Semaphore):
+    __slots__ = (
+        '_lock_lock',
+    )
+
+class _AtomicBoundedSemaphore(_AtomicSemaphoreMixin, BoundedSemaphore):
+    __slots__ = (
+        '_lock_lock',
+    )
+
+
+if PURE_PYTHON:
+    Semaphore = _AtomicSemaphore
+    BoundedSemaphore = _AtomicBoundedSemaphore
 
 
 class DummySemaphore(object):
@@ -231,8 +271,12 @@ class RLock(object):
         '__weakref__',
     )
 
-    def __init__(self):
-        self._block = Semaphore(1)
+    def __init__(self, hub=None):
+        """
+        .. versionchanged:: NEXT
+           Add the ``hub`` argument.
+        """
+        self._block = Semaphore(1, hub)
         self._owner = None
         self._count = 0
 

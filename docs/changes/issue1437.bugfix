@@ -1,0 +1,19 @@
+Make gevent locks that are monkey-patched usually work across native
+threads as well as across greenlets within a single thread. Locks that
+are only used in a single thread do not take a performance hit. While
+cross-thread locking is relatively expensive, and not a recommended
+programming pattern, it can happen unwittingly, for example when
+using the threadpool and ``logging``.
+
+Before, cross-thread lock uses might succeed, or, if the lock was
+contended, raise ``greenlet.error``. Now, in the contended case, if
+the lock has been acquired by the main thread at least once, it should
+correctly block in any thread, cooperating with the event loop of both
+threads. In certain (hopefully rare) cases, it might be possible for
+contended case to raise ``LoopExit`` when previously it would have
+raised ``greenlet.error``; if these cases are a practical concern,
+please open an issue.
+
+Also, the underlying Semaphore always behaves in an atomic fashion (as
+if the GIL was not released) when PURE_PYTHON is set. Previously, it
+only correctly did so on PyPy.

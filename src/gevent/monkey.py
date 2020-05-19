@@ -250,7 +250,9 @@ def get_original(mod_name, item_name):
     retrieved.
 
     :param str mod_name: The name of the standard library module,
-        e.g., ``'socket'``.
+        e.g., ``'socket'``. Can also be a sequence of standard library
+        modules giving alternate names to try, e.g., ``('thread', '_thread')``;
+        the first importable module will supply all *item_name* items.
     :param item_name: A string or sequence of strings naming the
         attribute(s) on the module ``mod_name`` to return.
 
@@ -258,10 +260,22 @@ def get_original(mod_name, item_name):
              ``item_name`` or a sequence of original values if a
              sequence was passed.
     """
+    mod_names = [mod_name] if isinstance(mod_name, string_types) else mod_name
     if isinstance(item_name, string_types):
-        return _get_original(mod_name, [item_name])[0]
-    return _get_original(mod_name, item_name)
+        item_names = [item_name]
+        unpack = True
+    else:
+        item_names = item_name
+        unpack = False
 
+    for mod in mod_names:
+        try:
+            result = _get_original(mod, item_names)
+        except ImportError:
+            if mod is mod_names[-1]:
+                raise
+        else:
+            return result[0] if unpack else result
 
 _NONE = object()
 

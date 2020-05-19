@@ -23,10 +23,17 @@ native_thread = None
 
 class Test(greentest.TestCase):
 
+    @classmethod
+    def tearDownClass(cls):
+        global native_thread
+        if native_thread is not None:
+            native_thread.stop(1)
+            native_thread = None
+
     def test_main_thread(self):
         current = threading.current_thread()
-        self.assertFalse(isinstance(current, threading._DummyThread))
-        self.assertTrue(isinstance(current, monkey.get_original('threading', 'Thread')))
+        self.assertNotIsInstance(current, threading._DummyThread)
+        self.assertIsInstance(current, monkey.get_original('threading', 'Thread'))
         # in 3.4, if the patch is incorrectly done, getting the repr
         # of the thread fails
         repr(current)
@@ -36,6 +43,9 @@ class Test(greentest.TestCase):
 
     @greentest.ignores_leakcheck # because it can't be run multiple times
     def test_join_native_thread(self):
+        if native_thread is None or not native_thread.do_run: # pragma: no cover
+            self.skipTest("native_thread already closed")
+
         self.assertTrue(native_thread.is_alive())
 
         native_thread.stop(timeout=1)
@@ -48,6 +58,7 @@ class Test(greentest.TestCase):
 
 if __name__ == '__main__':
     native_thread = NativeThread()
+    native_thread.daemon = True
     native_thread.start()
 
     # Only patch after we're running

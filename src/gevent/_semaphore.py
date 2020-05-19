@@ -1,4 +1,12 @@
 # cython: auto_pickle=False,embedsignature=True,always_allow_keywords=False
+###
+# This file is ``gevent._semaphore`` so that it can be compiled by Cython
+# individually. However, this is not the place to import from. Everyone,
+# gevent internal code included, must import from ``gevent.lock``.
+# The only exception are .pxd files which need access to the
+# C code; the PURE_PYTHON things that have to happen and which are
+# handled in ``gevent.lock``, do not apply to them.
+###
 from __future__ import print_function, absolute_import, division
 
 __all__ = [
@@ -45,11 +53,15 @@ class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
        unlinks waiters before calling them.
     """
 
+    __slots__ = (
+        'counter',
+    )
+
     def __init__(self, value=1, hub=None):
-        if value < 0:
+        self.counter = value
+        if self.counter < 0: # Do the check after Cython native int conversion
             raise ValueError("semaphore initial value must be >= 0")
         super(Semaphore, self).__init__(hub)
-        self.counter = value
         self._notify_all = False
 
     def __str__(self):
@@ -151,6 +163,12 @@ class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
            raise a ``Timeout`` exception, if some other caller had already started a timer.)
         """
         if self.counter > 0:
+            # We conceptually now belong to the hub of
+            # the thread that called this, even though we didn't
+            # have to block. Note that we cannot force it to be created
+            # yet, because Semaphore is used by importlib.ModuleLock
+            # which is used when importing the hub itself!
+            self._capture_hub(False)
             self.counter -= 1
             return True
 

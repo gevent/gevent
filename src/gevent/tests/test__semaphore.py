@@ -1,3 +1,9 @@
+###
+# This file is test__semaphore.py only for organization purposes.
+# The public API,
+# and the *only* correct place to import Semaphore --- even in tests ---
+# is ``gevent.lock``, never ``gevent._semaphore``.
+##
 from __future__ import print_function
 from __future__ import absolute_import
 
@@ -6,16 +12,9 @@ import weakref
 import gevent
 import gevent.exceptions
 from gevent.lock import Semaphore
-from gevent.thread import allocate_lock
 
 import gevent.testing as greentest
-
-try:
-    from _thread import allocate_lock as std_allocate_lock
-except ImportError: # Py2
-    from thread import allocate_lock as std_allocate_lock
-
-# pylint:disable=broad-except
+from gevent.testing import timing
 
 class TestSemaphore(greentest.TestCase):
 
@@ -67,24 +66,154 @@ class TestSemaphore(greentest.TestCase):
         s = Semaphore()
         gevent.wait([s])
 
-class TestLock(greentest.TestCase):
 
-    def test_release_unheld_lock(self):
-        std_lock = std_allocate_lock()
-        g_lock = allocate_lock()
+class TestSemaphoreMultiThread(greentest.TestCase):
+    # Tests that the object can be acquired correctly across
+    # multiple threads.
+    # Used as a base class.
+
+    # See https://github.com/gevent/gevent/issues/1437
+
+    def _makeOne(self):
+        # Create an object that is associated with the current hub. If
+        # we don't do this now, it gets initialized lazily the first
+        # time it would have to block, which, in the event of threads,
+        # would be from an arbitrary thread.
+        return Semaphore(1, gevent.get_hub())
+
+    def _makeThreadMain(self, thread_running, thread_acquired, sem,
+                        acquired, exc_info,
+                        **thread_acquire_kwargs):
+        from gevent._hub_local import get_hub_if_exists
+        import sys
+
+        def thread_main():
+            thread_running.set()
+            try:
+                acquired.append(
+                    sem.acquire(**thread_acquire_kwargs)
+                )
+            except:
+                exc_info[:] = sys.exc_info()
+                raise # Print
+            finally:
+                hub = get_hub_if_exists()
+                if hub is not None:
+                    hub.join()
+                    hub.destroy(destroy_loop=True)
+                thread_acquired.set()
+        return thread_main
+
+    def _do_test_acquire_in_one_then_another(self, release=True, **thread_acquire_kwargs):
+        from gevent import monkey
+        self.assertFalse(monkey.is_module_patched('threading'))
+
+        import threading
+        thread_running = threading.Event()
+        thread_acquired = threading.Event()
+
+        sem = self._makeOne()
+        # Make future acquires block
+        sem.acquire()
+
+        exc_info = []
+        acquired = []
+
+        t = threading.Thread(target=self._makeThreadMain(
+            thread_running, thread_acquired, sem,
+            acquired, exc_info,
+            **thread_acquire_kwargs
+        ))
+        t.start()
+        thread_running.wait(10) # implausibly large time
+        if release:
+            sem.release()
+            # Spin the loop to be sure the release gets through.
+            # (Release schedules the notifier to run, and when the
+            # notifier run it sends the async notification to the
+            # other thread. Depending on exactly where we are in the
+            # event loop, and the limit to the number of callbacks
+            # that get run (including time-based) the notifier may or
+            # may not be immediately ready to run, so this can take up
+            # to two iterations.)
+            for _ in range(3):
+                gevent.idle()
+                if thread_acquired.wait(timing.LARGE_TICK):
+                    break
+
+            self.assertEqual(acquired, [True])
+
+        thread_acquired.wait(timing.LARGE_TICK * 5)
         try:
-            std_lock.release()
-            self.fail("Should have thrown an exception")
-        except Exception as e:
-            std_exc = e
+            self.assertEqual(exc_info, [])
+        finally:
+            exc_info = None
 
-        try:
-            g_lock.release()
-            self.fail("Should have thrown an exception")
-        except Exception as e:
-            g_exc = e
-        self.assertIsInstance(g_exc, type(std_exc))
+        return sem, acquired
 
+    def test_acquire_in_one_then_another(self):
+        self._do_test_acquire_in_one_then_another(release=True)
+
+    def test_acquire_in_one_then_another_timed(self):
+        sem, acquired_in_thread = self._do_test_acquire_in_one_then_another(
+            release=False,
+            timeout=timing.SMALLEST_RELIABLE_DELAY)
+        self.assertEqual([False], acquired_in_thread)
+        # This doesn't, of course, notify anything, because
+        # the waiter has given up.
+        sem.release()
+        notifier = getattr(sem, '_notifier', None)
+        self.assertIsNone(notifier)
+
+    def test_acquire_in_one_wait_greenlet_wait_thread_gives_up(self):
+        # The waiter in the thread both arrives and gives up while
+        # the notifier is already running...or at least, that's what
+        # we'd like to arrange, but the _notify_links function doesn't
+        # drop the GIL/object lock, so the other thread is stuck and doesn't
+        # actually get to call into the acquire method.
+
+        from gevent import monkey
+        self.assertFalse(monkey.is_module_patched('threading'))
+
+        import threading
+
+
+        sem = self._makeOne()
+        # Make future acquires block
+        sem.acquire()
+
+        def greenlet_one():
+            ack = sem.acquire()
+            # We're running in the notifier function right now. It switched to
+            # us.
+            thread.start()
+            gevent.sleep(timing.LARGE_TICK)
+            return ack
+
+        exc_info = []
+        acquired = []
+
+
+
+        glet = gevent.spawn(greenlet_one)
+        thread = threading.Thread(target=self._makeThreadMain(
+            threading.Event(), threading.Event(),
+            sem,
+            acquired, exc_info,
+            timeout=timing.LARGE_TICK
+        ))
+        gevent.idle()
+        sem.release()
+        glet.join()
+        thread.join(timing.LARGE_TICK)
+
+        self.assertEqual(glet.value, True)
+        self.assertEqual([], exc_info)
+        self.assertEqual([False], acquired)
+
+    # XXX: Need a test with multiple greenlets in a non-primary
+    # thread. Things should work, just very slowly; instead of moving through
+    # greenlet.switch(), they'll be moving with async watchers.
 
 @greentest.skipOnPurePython("Needs C extension")
 class TestCExt(greentest.TestCase):
@@ -153,7 +282,6 @@ def release_then_spawn(sem, should_quit):
 
 class TestSemaphoreFair(greentest.TestCase):
 
-    @greentest.ignores_leakcheck
     def test_fair_or_hangs(self):
         # If the lock isn't fair, this hangs, spinning between
         # the last two greenlets.
@@ -172,6 +300,12 @@ class TestSemaphoreFair(greentest.TestCase):
         self.assertTrue(keep_going2.dead, keep_going2)
         self.assertFalse(keep_going1.dead, keep_going1)
 
+        sem.release()
+        keep_going1.kill()
+        keep_going2.kill()
+        exiting.kill()
+
+        gevent.idle()
 
 if __name__ == '__main__':
     greentest.main()

@@ -326,6 +326,8 @@ class AsyncResult(AbstractLinkable): # pylint:disable=undefined-variable
             # Not ready and not blocking, so immediately timeout
             raise Timeout()
 
+        self._capture_hub(True)
+
         # Wait, raising a timeout that elapses
         self._wait_core(timeout, ())
 
