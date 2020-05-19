@@ -81,20 +81,11 @@ class TestSemaphoreMultiThread(greentest.TestCase):
         # would be from an arbitrary thread.
         return Semaphore(1, gevent.get_hub())
 
-    def test_acquire_in_one_then_another(self, release=True, **thread_acquire_kwargs):
-        from gevent import monkey
-        self.assertFalse(monkey.is_module_patched('threading'))
+    def _makeThreadMain(self, thread_running, thread_acquired, sem,
+                        acquired, exc_info,
+                        **thread_acquire_kwargs):
+        from gevent._hub_local import get_hub_if_exists
         import sys
-        import threading
-        thread_running = threading.Event()
-        thread_acquired = threading.Event()
-
-        sem = self._makeOne()
-        # Make future acquires block
-        sem.acquire()
-
-        exc_info = []
-        acquired = []
 
         def thread_main():
             thread_running.set()
@@ -106,9 +97,33 @@ class TestSemaphoreMultiThread(greentest.TestCase):
                 exc_info[:] = sys.exc_info()
                 raise # Print
             finally:
+                hub = get_hub_if_exists()
+                if hub is not None:
+                    hub.join()
+                    hub.destroy(destroy_loop=True)
                 thread_acquired.set()
+        return thread_main
 
-        t = threading.Thread(target=thread_main)
+    def _do_test_acquire_in_one_then_another(self, release=True, **thread_acquire_kwargs):
+        from gevent import monkey
+        self.assertFalse(monkey.is_module_patched('threading'))
+
+        import threading
+        thread_running = threading.Event()
+        thread_acquired = threading.Event()
+
+        sem = self._makeOne()
+        # Make future acquires block
+        sem.acquire()
+
+        exc_info = []
+        acquired = []
+
+        t = threading.Thread(target=self._makeThreadMain(
+            thread_running, thread_acquired, sem,
+            acquired, exc_info,
+            **thread_acquire_kwargs
+        ))
         t.start()
         thread_running.wait(10) # implausibly large time
         if release:
@@ -128,19 +143,21 @@ class TestSemaphoreMultiThread(greentest.TestCase):
 
             self.assertEqual(acquired, [True])
 
-
         thread_acquired.wait(timing.LARGE_TICK * 5)
         try:
             self.assertEqual(exc_info, [])
         finally:
             exc_info = None
+
         return sem, acquired
 
+    def test_acquire_in_one_then_another(self):
+        self._do_test_acquire_in_one_then_another(release=True)
+
     def test_acquire_in_one_then_another_timed(self):
-        sem, acquired_in_thread = self.test_acquire_in_one_then_another(
+        sem, acquired_in_thread = self._do_test_acquire_in_one_then_another(
             release=False,
             timeout=timing.SMALLEST_RELIABLE_DELAY)
-
         self.assertEqual([False], acquired_in_thread)
         # This doesn't, of course, notify anything, because
         # the waiter has given up.
@@ -157,8 +174,9 @@ class TestSemaphoreMultiThread(greentest.TestCase):
 
         from gevent import monkey
         self.assertFalse(monkey.is_module_patched('threading'))
-        import sys
+
         import threading
+
 
         sem = self._makeOne()
         # Make future acquires block
@@ -175,17 +193,15 @@ class TestSemaphoreMultiThread(greentest.TestCase):
         exc_info = []
         acquired = []
 
-        def thread_main():
-            try:
-                acquired.append(
-                    sem.acquire(timeout=timing.LARGE_TICK)
-                )
-            except:
-                exc_info[:] = sys.exc_info()
-                raise # Print
+
 
         glet = gevent.spawn(greenlet_one)
-        thread = threading.Thread(target=thread_main)
+        thread = threading.Thread(target=self._makeThreadMain(
+            threading.Event(), threading.Event(),
+            sem,
+            acquired, exc_info,
+            timeout=timing.LARGE_TICK
+        ))
         gevent.idle()
         sem.release()
         glet.join()
