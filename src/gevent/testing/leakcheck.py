@@ -207,6 +207,7 @@ def wrap_refcount(method):
             self.skipTest("This method ignored during leakchecks")
         return _method_skipped_during_leakcheck
 
+
     @wraps(method)
     def wrapper(self, *args, **kwargs): # pylint:disable=too-many-branches
         if getattr(self, 'ignore_leakcheck', False):
