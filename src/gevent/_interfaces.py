@@ -16,10 +16,11 @@ from __future__ import print_function
 
 import sys
 
-from gevent._util import Interface
-from gevent._util import Attribute
+from zope.interface import Interface
+from zope.interface import Attribute
 
 # pylint:disable=no-method-argument, unused-argument, no-self-argument
+# pylint:disable=inherit-non-class
 
 __all__ = [
     'ILoop',

@@ -10,6 +10,8 @@ from collections import namedtuple
 from operator import delitem
 import signal
 
+from zope.interface import implementer
+
 from gevent import getcurrent
 from gevent.exceptions import LoopExit
 
@@ -17,7 +19,6 @@ from gevent._ffi import _dbg # pylint: disable=unused-import
 from gevent._ffi.loop import AbstractLoop
 from gevent._ffi.loop import assign_standard_callbacks
 from gevent._ffi.loop import AbstractCallbacks
-from gevent._util import implementer
 from gevent._interfaces import ILoop
 from gevent.libuv import _corecffi # pylint:disable=no-name-in-module,import-error
 

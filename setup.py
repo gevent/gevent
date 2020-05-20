@@ -211,7 +211,18 @@ CFFI_REQUIRES = [
 ]
 
 
-install_requires = greenlet_requires + CFFI_REQUIRES
+install_requires = greenlet_requires + CFFI_REQUIRES + [
+    # For event notification.
+    'zope.event',
+    # For event definitions, and our own interfaces; those should
+    # ultimately be published, but at this writing only the event
+    # interfaces are.
+    'zope.interface',
+    # setuptools is also used (via pkg_resources) for event
+    # notifications. It's a hard dependency of zope.interface
+    # anyway.
+    'setuptools',
+]
 
 # We use headers from greenlet, so it needs to be installed before we
 # can compile. If it isn't already installed before we start
@@ -284,8 +295,9 @@ EXTRA_DNSPYTHON = [
     'idna',
 ]
 EXTRA_EVENTS = [
-    'zope.event',
-    'zope.interface',
+    # No longer does anything, but the extra must stay around
+    # to avoid breaking install scripts.
+    # Remove this in 2021.
 ]
 
 EXTRA_PSUTIL_DEPS = [

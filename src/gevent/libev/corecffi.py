@@ -14,7 +14,8 @@ __all__ = [
     'loop',
 ]
 
-from gevent._util import implementer
+from zope.interface import implementer
+
 from gevent._interfaces import ILoop
 
 from gevent.libev import _corecffi # pylint:disable=no-name-in-module,import-error
