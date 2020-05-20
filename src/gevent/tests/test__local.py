@@ -7,6 +7,8 @@ from gevent import monkey; monkey.patch_all()
 from threading import local
 from threading import Thread
 
+from zope import interface
+
 try:
     from collections.abc import Mapping
 except ImportError:
@@ -379,12 +381,7 @@ class TestGeventLocal(greentest.TestCase):
         x = LocalWithClassMethod()
         self.assertIs(LocalWithClassMethod, x.a_classmethod())
 
-try:
-    from zope import interface
-except ImportError:
-    interface = None
 
-@greentest.skipIf(interface is None, "Needs zope.interface")
 class TestLocalInterface(greentest.TestCase):
     __timeout__ = None
 

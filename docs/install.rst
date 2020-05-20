@@ -117,8 +117,7 @@ fall back to doing this if no binary wheel is available. See
 Extra Dependencies
 ==================
 
-gevent has no runtime dependencies outside the standard library,
-greenlet, and (on some platforms) `cffi`_. However, there are a number
+There are a number
 of additional libraries that extend gevent's functionality and will be
 used if they are available. All of these may be installed using
 `setuptools extras
@@ -126,9 +125,13 @@ used if they are available. All of these may be installed using
 as named below, e.g., ``pip install gevent[events]``.
 
 events
-    Configurable event support using `zope.event
-    <https://pypi.org/project/zope.event>`_ is highly recommended for
-    configurable event support.
+    In versions of gevent up to and including 20.5.0, this provided configurable
+    event support using `zope.event
+    <https://pypi.org/project/zope.event>`_ and was highly
+    recommended.
+
+    In versions after that, this extra is empty and does nothing. It
+    will be removed in gevent 21.0.
 
 dnspython
     Enables the new pure-Python resolver, backed by `dnspython

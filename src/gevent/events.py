@@ -11,13 +11,13 @@ parameter, the event object).
 Higher level frameworks may take this foundation and build richer
 models on it.
 
-If :mod:`zope.event` is installed, then it will be used to provide the
-functionality of `notify` and `subscribers`. See
-:mod:`zope.event.classhandler` for a simple class-based approach to
-subscribing to a filtered list of events, and see `zope.component
+:mod:`zope.event` will be used to provide the functionality of
+`notify` and `subscribers`. See :mod:`zope.event.classhandler` for a
+simple class-based approach to subscribing to a filtered list of
+events, and see `zope.component
 <https://zopecomponent.readthedocs.io/en/latest/event.html>`_ for a
-much higher-level, flexible system. If you are using one of these systems,
-you generally will not want to directly modify `subscribers`.
+much higher-level, flexible system. If you are using one of these
+systems, you generally will not want to directly modify `subscribers`.
 
 .. versionadded:: 1.3b1
 """
@@ -61,60 +61,48 @@ __all__ = [
     'GeventDidPatchAllEvent',
 ]
 
-# pylint:disable=no-self-argument
+# pylint:disable=no-self-argument,inherit-non-class
+import platform
+
+from zope.interface import Interface
+from zope.interface import Attribute
+from zope.interface import implementer
+
+from zope.event import subscribers
+from zope.event import notify
+
+from pkg_resources import iter_entry_points
+
+#: Applications may register for notification of events by appending a
+#: callable to the ``subscribers`` list.
+#:
+#: Each subscriber takes a single argument, which is the event object
+#: being published.
+#:
+#: Exceptions raised by subscribers will be propagated *without* running
+#: any remaining subscribers.
+#:
+#: This is an alias for `zope.event.subscribers`; prefer to use
+#: that attribute directly.
+subscribers = subscribers
 
 try:
-    from zope.event import subscribers
-    from zope.event import notify
-except ImportError:
-    #: Applications may register for notification of events by appending a
-    #: callable to the ``subscribers`` list.
-    #:
-    #: Each subscriber takes a single argument, which is the event object
-    #: being published.
-    #:
-    #: Exceptions raised by subscribers will be propagated *without* running
-    #: any remaining subscribers.
-    subscribers = []
+    # Cache the platform info. pkg_resources uses
+    # platform.machine() for environment markers, and
+    # platform.machine() wants to call os.popen('uname'), which is
+    # broken on Py2 when the gevent child signal handler is
+    # installed. (see test__monkey_sigchild_2.py)
+    platform.uname()
+except: # pylint:disable=bare-except
+    pass
+finally:
+    del platform
 
-    def notify(event):
-        """
-        Notify all subscribers of ``event``.
-        """
-        for subscriber in subscribers:
-            subscriber(event)
-
-notify = notify # export
-try:
-    # pkg_resources is technically optional, we don't
-    # list a hard dependency on it.
-    __import__('pkg_resources')
-except ImportError:
-    notify_and_call_entry_points = notify
-else:
-    from pkg_resources import iter_entry_points
-    import platform
-    try:
-        # Cache the platform info. pkg_resources uses
-        # platform.machine() for environment markers, and
-        # platform.machine() wants to call os.popen('uname'), which is
-        # broken on Py2 when the gevent child signal handler is
-        # installed. (see test__monkey_sigchild_2.py)
-        platform.uname()
-    except: # pylint:disable=bare-except
-        pass
-    finally:
-        del platform
-
-    def notify_and_call_entry_points(event):
-        notify(event)
-        for plugin in iter_entry_points(event.ENTRY_POINT_NAME):
-            subscriber = plugin.load()
-            subscriber(event)
-
-from gevent._util import Interface
-from gevent._util import implementer
-from gevent._util import Attribute
+def notify_and_call_entry_points(event):
+    notify(event)
+    for plugin in iter_entry_points(event.ENTRY_POINT_NAME):
+        subscriber = plugin.load()
+        subscriber(event)
 
 
 class IPeriodicMonitorThread(Interface):
