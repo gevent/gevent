@@ -1,8 +1,8 @@
 diff --git a/deps/c-ares/Makefile.in b/deps/c-ares/Makefile.in
-index 28d12c03..b6e9d95d 100644
+index 33a6f627..ad201713 100644
 --- a/deps/c-ares/Makefile.in
 +++ b/deps/c-ares/Makefile.in
-@@ -731,61 +731,7 @@ HHEADERS = ares.h			\
+@@ -746,63 +746,7 @@ HHEADERS = ares.h			\
    ares_setup.h				\
    setup_once.h
  
@@ -17,8 +17,10 @@ index 28d12c03..b6e9d95d 100644
 -  ares_free_data.3			\
 -  ares_free_hostent.3			\
 -  ares_free_string.3			\
+-  ares_freeaddrinfo.3			\
 -  ares_get_servers.3			\
 -  ares_get_servers_ports.3		\
+-  ares_getaddrinfo.3			\
 -  ares_gethostbyaddr.3			\
 -  ares_gethostbyname.3			\
 -  ares_gethostbyname_file.3		\
@@ -66,10 +68,10 @@ index 28d12c03..b6e9d95d 100644
  HTMLPAGES = ares_cancel.html		\
    ares_create_query.html		\
 diff --git a/deps/c-ares/Makefile.inc b/deps/c-ares/Makefile.inc
-index 30e00461..d2701c83 100644
+index f65df1f5..1499168a 100644
 --- a/deps/c-ares/Makefile.inc
 +++ b/deps/c-ares/Makefile.inc
-@@ -75,61 +75,7 @@ HHEADERS = ares.h			\
+@@ -80,63 +80,7 @@ HHEADERS = ares.h			\
    ares_setup.h				\
    setup_once.h
  
@@ -84,8 +86,10 @@ index 30e00461..d2701c83 100644
 -  ares_free_data.3			\
 -  ares_free_hostent.3			\
 -  ares_free_string.3			\
+-  ares_freeaddrinfo.3			\
 -  ares_get_servers.3			\
 -  ares_get_servers_ports.3		\
+-  ares_getaddrinfo.3			\
 -  ares_gethostbyaddr.3			\
 -  ares_gethostbyname.3			\
 -  ares_gethostbyname_file.3		\
