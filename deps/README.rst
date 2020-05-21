@@ -62,7 +62,7 @@ Updating libuv
 - Clean up the libuv tree, and apply the patches to libuv (this whole
   sequence is meant to be copied and pasted into the terminal)::
 
-    export LIBUV_VER=v1.36.0
+    export LIBUV_VER=v1.38.0
 
     cd deps/
     wget https://dist.libuv.org/dist/$LIBUV_VER/libuv-$LIBUV_VER.tar.gz
@@ -76,12 +76,18 @@ Updating libuv
     rm -rf libuv/test/*.[ch] libuv/test/test.gyp # must leave the fixtures/ dir
     rm -rf libuv/tools
     rm -f libuv/android-configure*
-
+    rm -f libuv/uv_win_longpath.manifest
 
 At this point there might be new files in libuv that need added to git
 and the build process. Evaluate those and add them to git and to
 ``src/gevent/libuv/_corecffi_build.py`` as needed. Then check if there
 are changes to the build system (e.g., the .gyp files) that need to be
 accounted for in our build file.
+
+.. caution::
+
+   Pay special attention to the m4 directory. New .m4 files that need
+   to be added may not actually show up in git output. See
+   https://github.com/libuv/libuv/issues/2862
 
 - Follow the same 'config.guess' and 'config.sub' steps as libev.
