@@ -228,7 +228,8 @@ jobs:
         - pushd deps/libev && ./configure -C --prefix=$BUILD_LIBS && make install && popd
         - pushd deps/c-ares && ./configure -C --prefix=$BUILD_LIBS && make -j4 install && popd
         - autoconf --version
-        - pushd deps/libuv && ./autogen.sh && sed -n 12680,12690p configure && ./configure -C --disable-static --prefix=$BUILD_LIBS && make -j4 install && popd
+        - automake --version
+        - pushd deps/libuv && ./autogen.sh && ./configure -C --disable-static --prefix=$BUILD_LIBS && make -j4 install && popd
         # libev builds a manpage each time, and it includes today's date, so it frequently changes.
         # delete to avoid repacking the archive
         - rm -rf $BUILD_LIBS/share/man/
