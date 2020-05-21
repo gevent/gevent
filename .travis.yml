@@ -7,7 +7,7 @@
 # python: one day so making the migration simpler). "shell" and
 # "minimal" are aliases.
 language: shell
-dist: bionic
+dist: xenial
 group: travis_latest
 os:
   - linux
