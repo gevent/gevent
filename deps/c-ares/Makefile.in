@@ -208,7 +208,7 @@ libcares_la_OBJECTS = $(am_libcares_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
-am__v_lt_1 =
+am__v_lt_1 = 
 libcares_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(libcares_la_CFLAGS) \
 	$(CFLAGS) $(libcares_la_LDFLAGS) $(LDFLAGS) -o $@
@@ -247,12 +247,12 @@ am__v_P_1 = :
 AM_V_GEN = $(am__v_GEN_@AM_V@)
 am__v_GEN_ = $(am__v_GEN_@AM_DEFAULT_V@)
 am__v_GEN_0 = @echo "  GEN     " $@;
-am__v_GEN_1 =
+am__v_GEN_1 = 
 AM_V_at = $(am__v_at_@AM_V@)
 am__v_at_ = $(am__v_at_@AM_DEFAULT_V@)
 am__v_at_0 = @
-am__v_at_1 =
-DEFAULT_INCLUDES =
+am__v_at_1 = 
+DEFAULT_INCLUDES = 
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ./$(DEPDIR)/acountry-acountry.Po \
@@ -330,7 +330,7 @@ LTCOMPILE = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 AM_V_CC = $(am__v_CC_@AM_V@)
 am__v_CC_ = $(am__v_CC_@AM_DEFAULT_V@)
 am__v_CC_0 = @echo "  CC      " $@;
-am__v_CC_1 =
+am__v_CC_1 = 
 CCLD = $(CC)
 LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
@@ -338,7 +338,7 @@ LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
-am__v_CCLD_1 =
+am__v_CCLD_1 = 
 SOURCES = $(libcares_la_SOURCES) $(acountry_SOURCES) $(adig_SOURCES) \
 	$(ahost_SOURCES)
 DIST_SOURCES = $(libcares_la_SOURCES) $(acountry_SOURCES) \
@@ -611,7 +611,7 @@ MSVCFILES = vc/vc6aws.dsw vc/acountry/vc6acountry.dsp vc/adig/vc6adig.dsp	\
  msvc_ver.inc
 
 @CURLDEBUG_FALSE@PROGS = ahost adig acountry
-@CURLDEBUG_TRUE@PROGS =
+@CURLDEBUG_TRUE@PROGS = 
 
 # adig and ahost are just sample programs and thus not mentioned with the
 # regular sources and headers
@@ -636,7 +636,7 @@ CARES_VERSION_INFO = -version-info 6:0:4
 # If either revision or age are omitted, they default to 0. Also note that age
 # must be less than or equal to the current interface number.
 #
-# Here are a set of rules to help you update your library version information:
+# Here are a set of rules to help you update your library version information: 
 #
 # 1.Start with version information of 0:0:0 for each libtool library.
 #
@@ -656,7 +656,7 @@ CARES_VERSION_INFO = -version-info 6:0:4
 # 6.If any interfaces have been removed since the last public release, then
 # set age to 0. (c:r:a=0)
 #
-AM_LDFLAGS =
+AM_LDFLAGS = 
 libcares_la_LDFLAGS_EXTRA = $(am__append_1) $(am__append_2) \
 	$(am__append_3)
 libcares_la_LDFLAGS = $(AM_LDFLAGS) $(libcares_la_LDFLAGS_EXTRA) \
@@ -746,7 +746,63 @@ HHEADERS = ares.h			\
   ares_setup.h				\
   setup_once.h
 
-MANPAGES =
+MANPAGES = ares_cancel.3		\
+  ares_create_query.3			\
+  ares_destroy.3			\
+  ares_destroy_options.3		\
+  ares_dup.3				\
+  ares_expand_name.3			\
+  ares_expand_string.3			\
+  ares_fds.3				\
+  ares_free_data.3			\
+  ares_free_hostent.3			\
+  ares_free_string.3			\
+  ares_freeaddrinfo.3			\
+  ares_get_servers.3			\
+  ares_get_servers_ports.3		\
+  ares_getaddrinfo.3			\
+  ares_gethostbyaddr.3			\
+  ares_gethostbyname.3			\
+  ares_gethostbyname_file.3		\
+  ares_getnameinfo.3			\
+  ares_getsock.3			\
+  ares_inet_ntop.3			\
+  ares_inet_pton.3			\
+  ares_init.3				\
+  ares_init_options.3			\
+  ares_library_cleanup.3		\
+  ares_library_init.3			\
+  ares_library_init_android.3		\
+  ares_library_initialized.3		\
+  ares_mkquery.3			\
+  ares_parse_a_reply.3			\
+  ares_parse_aaaa_reply.3		\
+  ares_parse_mx_reply.3			\
+  ares_parse_naptr_reply.3		\
+  ares_parse_ns_reply.3			\
+  ares_parse_ptr_reply.3		\
+  ares_parse_soa_reply.3		\
+  ares_parse_srv_reply.3		\
+  ares_parse_txt_reply.3		\
+  ares_process.3			\
+  ares_query.3				\
+  ares_save_options.3			\
+  ares_search.3				\
+  ares_send.3				\
+  ares_set_local_dev.3			\
+  ares_set_local_ip4.3			\
+  ares_set_local_ip6.3			\
+  ares_set_servers.3			\
+  ares_set_servers_csv.3		\
+  ares_set_servers_ports.3		\
+  ares_set_servers_ports_csv.3		\
+  ares_set_socket_callback.3		\
+  ares_set_socket_configure_callback.3	\
+  ares_set_socket_functions.3		\
+  ares_set_sortlist.3			\
+  ares_strerror.3			\
+  ares_timeout.3			\
+  ares_version.3
 
 HTMLPAGES = ares_cancel.html		\
   ares_create_query.html		\
@@ -943,7 +999,7 @@ ares_config.h: stamp-h1
 stamp-h1: $(srcdir)/ares_config.h.in $(top_builddir)/config.status
 	@rm -f stamp-h1
 	cd $(top_builddir) && $(SHELL) ./config.status ares_config.h
-$(srcdir)/ares_config.h.in: @MAINTAINER_MODE_TRUE@ $(am__configure_deps)
+$(srcdir)/ares_config.h.in: @MAINTAINER_MODE_TRUE@ $(am__configure_deps) 
 	($(am__cd) $(top_srcdir) && $(AUTOHEADER))
 	rm -f stamp-h1
 	touch $@
@@ -1005,18 +1061,18 @@ clean-libLTLIBRARIES:
 	  rm -f $${locs}; \
 	}
 
-libcares.la: $(libcares_la_OBJECTS) $(libcares_la_DEPENDENCIES) $(EXTRA_libcares_la_DEPENDENCIES)
+libcares.la: $(libcares_la_OBJECTS) $(libcares_la_DEPENDENCIES) $(EXTRA_libcares_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(libcares_la_LINK) -rpath $(libdir) $(libcares_la_OBJECTS) $(libcares_la_LIBADD) $(LIBS)
 
-acountry$(EXEEXT): $(acountry_OBJECTS) $(acountry_DEPENDENCIES) $(EXTRA_acountry_DEPENDENCIES)
+acountry$(EXEEXT): $(acountry_OBJECTS) $(acountry_DEPENDENCIES) $(EXTRA_acountry_DEPENDENCIES) 
 	@rm -f acountry$(EXEEXT)
 	$(AM_V_CCLD)$(acountry_LINK) $(acountry_OBJECTS) $(acountry_LDADD) $(LIBS)
 
-adig$(EXEEXT): $(adig_OBJECTS) $(adig_DEPENDENCIES) $(EXTRA_adig_DEPENDENCIES)
+adig$(EXEEXT): $(adig_OBJECTS) $(adig_DEPENDENCIES) $(EXTRA_adig_DEPENDENCIES) 
 	@rm -f adig$(EXEEXT)
 	$(AM_V_CCLD)$(adig_LINK) $(adig_OBJECTS) $(adig_LDADD) $(LIBS)
 
-ahost$(EXEEXT): $(ahost_OBJECTS) $(ahost_DEPENDENCIES) $(EXTRA_ahost_DEPENDENCIES)
+ahost$(EXEEXT): $(ahost_OBJECTS) $(ahost_DEPENDENCIES) $(EXTRA_ahost_DEPENDENCIES) 
 	@rm -f ahost$(EXEEXT)
 	$(AM_V_CCLD)$(ahost_LINK) $(ahost_OBJECTS) $(ahost_LDADD) $(LIBS)
 

@@ -1,6 +1,6 @@
 AC_PREREQ(2.57)
 
-AC_INIT([c-ares], [1.16.0],
+AC_INIT([c-ares], [1.16.1],
   [c-ares mailing list: http://cool.haxx.se/mailman/listinfo/c-ares])
 
 XC_OVR_ZZ50
@@ -354,27 +354,12 @@ if test "$HAVE_GETHOSTBYNAME" != "1"; then
   AC_MSG_ERROR([couldn't find libraries for gethostbyname()])
 fi
 
-dnl resolv lib for iPhone
+dnl resolv lib for Apple (MacOS and iOS)
 AS_IF([test "x$host_vendor" = "xapple"], [
-  AC_MSG_CHECKING([for iPhone target])
-  AC_COMPILE_IFELSE([
-    AC_LANG_PROGRAM([[
-#include "TargetConditionals.h"
-    ]], [[
-#if TARGET_OS_IPHONE == 0
-#error Not an iPhone target
-#endif
-return 0;
-    ]])
-  ],[
-    AC_MSG_RESULT([yes])
-    AC_SEARCH_LIBS([res_servicename], [resolv], [
-      AC_DEFINE([CARES_USE_LIBRESOLV], [1], [Use resolver library to configure cares])
-    ], [
-      AC_MSG_ERROR([Unable to find libresolv which is required for iPhone targets])
-    ])
-  ],[
-    AC_MSG_RESULT([no])
+  AC_SEARCH_LIBS([res_servicename], [resolv], [
+    AC_DEFINE([CARES_USE_LIBRESOLV], [1], [Use resolver library to configure cares])
+  ], [
+    AC_MSG_ERROR([Unable to find libresolv which is required for iPhone targets])
   ])
 ])
 

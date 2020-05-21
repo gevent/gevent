@@ -1,5 +1,97 @@
    Changelog for the c-ares project. Generated with git2changes.pl
 
+Version 1.16.1 (11 May 2020)
+
+Brad House (11 May 2020)
+- c-ares 1.16.1 release prep
+
+- update travis to use xcode11.4
+
+- Prevent possible double-free in ares_getaddrinfo() if ares_destroy() is called
+  
+  In the event that ares_destroy() is called prior to ares_getaddrinfo() completing,
+  it would result in an invalid read and double-free due to calling end_hquery() twice.
+  
+  Reported By: Jann Horn @ Google Project Zero
+
+GitHub (30 Apr 2020)
+- [shelley vohr brought this change]
+
+  fix: windows UNICODE incompatibilities with ares_getaddrinfo (#328)
+  
+  Fixes the following compatibility issues:
+  * Use RegQueryValueExA instead of RegQueryValueEx
+  * Use ExpandEnvironmentStringsA instead of ExpandEnvironmentStrings
+  * Use RegOpenKeyExA instead of RegOpenKeyExA
+  * Use GetWindowsDirectoryA instead of GetWindowsDirectoryA
+  
+  Fix By: Shelley Vohr (@codebytere)
+  Closes: #327
+
+Brad House (13 Apr 2020)
+- travis: CloudFlare does not allow T_ANY requests, so live tests that use it fail.  Disable.
+
+- travis: bump macos image to the latest
+
+- cast-align warnings are false for struct sockaddr, silence
+  
+  Create a macro to silence false cast-align warnings when casting
+  struct sockaddr * to struct sockaddr_in * and struct sockaddr_in6 *.
+  
+  Fix By: Brad House (@bradh352)
+
+- MacOS: Enable libresolv support for retrieving DNS servers like iOS does.
+
+GitHub (10 Apr 2020)
+- [Dmitry Igrishin brought this change]
+
+  CMake: Populate the INCLUDE_DIRECTORIES property of installed targets (#323)
+  
+  Populate the INCLUDE_DIRECTORIES property of installed targets
+  
+  Fix By: Dmitry Igrishin (@dmitigr)
+
+Brad House (10 Apr 2020)
+- travis: make valgrind use cmake for tests
+
+- dont try to use libtool to run valgrind
+
+- valgrind requires libtool installed to wrap tests
+
+- scan build 7
+
+- fix travis live test
+
+- add debug for travis
+
+- try without sudo
+
+- attempt to modernize travis build environment
+
+GitHub (6 Apr 2020)
+- [Teemu R brought this change]
+
+  Allow TXT records on CHAOS qclass (#321)
+  
+  Some DNS servers intentionally "misuse" the obsoleted CHAOS (CH) qclass to provide things like `version.bind`, `version.server`, `authors.bind`, `hostname.bind` and `id.server`.
+  
+  C-ares was not allowing such use cases.
+  
+  Fix By: Teemu R. (@rytilahti)
+
+Brad House (5 Apr 2020)
+- Remove warnings from ares_getaddrinfo.3 man page
+  
+  As reported in #319, non-standard macros of .IN were used.
+  Replace with .RS/.RE.
+  
+  Fixes: #319
+  Fix By: Brad House (@bradh352)
+
+- ares_getaddrinfo man page render better for man2html
+
+- update man pages to render better for man2html
+
 Version 1.16.0 (12 Mar 2020)
 
 Brad House (12 Mar 2020)
@@ -4629,45 +4721,3 @@ Daniel Stenberg (1 May 2009)
 
 Yang Tse (1 May 2009)
 - David McCreedy's "TPF-platform specific changes to various files" patch
-
-- Check definition of _XOPEN_SOURCE_EXTENDED with the compiler
-
-- Check if X/Open network library is required
-
-- cope with ares_build.h and ares_rules.h follow-up
-
-- Added some notes regarding ares_build.h
-
-- fix EOL
-
-- fix EOL
-
-- cope with ares_build.h and ares_rules.h
-
-- buildconf.bat for CVS-tree c-ares
-
-- Use 'unsigned int' instead of size_t attempting to avoid header inclusion
-
-- NetWare LibC's getpeername() third argument data type is size_t
-
-- Remove temporary debug tracing for ares_socklen_t Windows targets
-
-- ares_socklen_t follow-up
-
-- ares_build.h Windows follow-up
-
-- Add temporary debug tracing for ares_socklen_t Windows targets
-
-- ares_build.h NetWare follow-up
-
-- ares_build.h NetWare attempt
-
-- Initial step towards a configure time ares_socklen_t definition
-
-- ignore stamp-h*
-
-- Added CARES_INCLUDES_SYS_TYPES
-
-- Initial step towards a configure time curl_socklen_t definition
-
-- avoid use of alloca()
