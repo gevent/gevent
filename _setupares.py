@@ -32,8 +32,8 @@ CARES_EMBED = should_embed('c-ares')
 
 # See #616, trouble building for a 32-bit python on a 64-bit platform
 # (Linux).
-_config_cflags = distutils.sysconfig.get_config_var("CFLAGS")
-cflags = _config_cflags + ((' ' + os.environ['CFLAGS']) if 'CFLAGS' in os.environ else '')
+_config_cflags = distutils.sysconfig.get_config_var("CFLAGS") or ''
+cflags = _config_cflags + ((' ' + os.environ['CFLAGS']) if os.environ.get("CFLAGS") else '')
 cflags = ('CFLAGS="%s"' % (cflags,)) if cflags else ''
 
 
