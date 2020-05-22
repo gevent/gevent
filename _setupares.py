@@ -17,7 +17,6 @@ import distutils.sysconfig  # to get CFLAGS to pass into c-ares configure script
 from _setuputils import WIN
 from _setuputils import quoted_dep_abspath
 from _setuputils import system
-from _setuputils import make_universal_header
 from _setuputils import should_embed
 from _setuputils import LIBRARIES
 from _setuputils import DEFINE_MACROS
@@ -31,24 +30,24 @@ from _setuputils import get_include_dirs
 
 CARES_EMBED = should_embed('c-ares')
 
+# See #616, trouble building for a 32-bit python on a 64-bit platform
+# (Linux).
+_config_cflags = distutils.sysconfig.get_config_var("CFLAGS")
+cflags = _config_cflags + ((' ' + os.environ['CFLAGS']) if 'CFLAGS' in os.environ else '')
+cflags = ('CFLAGS="%s"' % (cflags,)) if cflags else ''
 
-# See #616, trouble building for a 32-bit python against a 64-bit platform
-_config_vars = distutils.sysconfig.get_config_var("CFLAGS")
-if _config_vars and "m32" in _config_vars:
-    _m32 = 'CFLAGS="' + os.getenv('CFLAGS', '') + ' -m32" '
-else:
-    _m32 = ''
 
 # Use -r, not -e, for support of old solaris. See
 # https://github.com/gevent/gevent/issues/777
 ares_configure_command = ' '.join([
     "(cd ", quoted_dep_abspath('c-ares'),
     " && if [ -r ares_build.h ]; then cp ares_build.h ares_build.h.orig; fi ",
-    " && sh ./configure --disable-dependency-tracking -C " + _m32 + "CONFIG_COMMANDS= ",
+    " && sh ./configure --disable-dependency-tracking -C " + cflags,
     " && cp ares_config.h ares_build.h \"$OLDPWD\" ",
     " && cat ares_build.h ",
     " && if [ -r ares_build.h.orig ]; then mv ares_build.h.orig ares_build.h; fi)",
-    "> configure-output.txt"])
+    "> configure-output.txt"
+])
 
 
 
@@ -79,9 +78,6 @@ def configure_ares(bext, ext):
             with open('configure-output.txt', 'r') as t:
                 print(t.read(), file=sys.stderr)
             raise
-        if sys.platform == 'darwin':
-            make_universal_header('ares_build.h', 'CARES_SIZEOF_LONG')
-            make_universal_header('ares_config.h', 'SIZEOF_LONG', 'SIZEOF_SIZE_T', 'SIZEOF_TIME_T')
     finally:
         os.chdir(cwd)
 
@@ -116,6 +112,10 @@ if CARES_EMBED:
         ARES.define_macros += [('HAVE_CONFIG_H', '')]
         if sys.platform != 'darwin':
             ARES.libraries += ['rt']
+        else:
+            # libresolv dependency introduced in
+            # c-ares 1.16.1.
+            ARES.libraries += ['resolv']
     ARES.define_macros += [('CARES_EMBED', '1')]
 else:
     ARES.libraries.append('cares')
