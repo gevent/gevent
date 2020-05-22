@@ -135,24 +135,6 @@ def should_embed(dep_name):
 
 ## Headers
 
-def make_universal_header(filename, *defines):
-    defines = [('#define %s ' % define, define) for define in defines]
-    with open(filename, 'r') as f:
-        lines = f.read().split('\n')
-    ifdef = 0
-    with open(filename, 'w') as f:
-        for line in lines:
-            if line.startswith('#ifdef'):
-                ifdef += 1
-            elif line.startswith('#endif'):
-                ifdef -= 1
-            elif not ifdef:
-                for prefix, define in defines:
-                    if line.startswith(prefix):
-                        line = '#ifdef __LP64__\n#define %s 8\n#else\n#define %s 4\n#endif' % (define, define)
-                        break
-            print(line, file=f)
-
 def get_include_dirs(*extra_paths):
     """
     Return additional include directories that might be needed to

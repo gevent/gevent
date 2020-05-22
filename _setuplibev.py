@@ -8,7 +8,6 @@ it shouldn't attempt to cythonize anything.
 
 from __future__ import print_function, absolute_import, division
 
-import sys
 import os.path
 
 from _setuputils import Extension
@@ -17,7 +16,6 @@ from _setuputils import system
 from _setuputils import dep_abspath
 from _setuputils import quoted_dep_abspath
 from _setuputils import WIN
-from _setuputils import make_universal_header
 from _setuputils import LIBRARIES
 from _setuputils import DEFINE_MACROS
 from _setuputils import glob_many
@@ -55,9 +53,6 @@ def configure_libev(build_command=None, extension=None): # pylint:disable=unused
         return
 
     system(libev_configure_command)
-    if sys.platform == 'darwin':
-        make_universal_header(config_path,
-                              'SIZEOF_LONG', 'SIZEOF_SIZE_T', 'SIZEOF_TIME_T')
 
 
 def build_extension():

@@ -69,6 +69,11 @@
 #define INADDR_NONE 0xffffffff
 #endif
 
+/* By using a double cast, we can get rid of the bogus warning of
+ * warning: cast from 'const struct sockaddr *' to 'const struct sockaddr_in6 *' increases required alignment from 1 to 4 [-Wcast-align]
+ */
+#define CARES_INADDR_CAST(type, var) ((type)((void *)var))
+
 static const char *usage      = "acountry [-?hdv] {host|addr} ...\n";
 static const char  nerd_fmt[] = "%u.%u.%u.%u.zz.countries.nerd.dk";
 static const char *nerd_ver1  = nerd_fmt + 14;  /* .countries.nerd.dk */
@@ -233,7 +238,7 @@ static void callback(void *arg, int status, int timeouts, struct hostent *host)
   if (!cname)
     printf("Failed to get CNAME for %s\n", name);
   else
-    find_country_from_cname(cname, *(struct in_addr*)host->h_addr);
+    find_country_from_cname(cname, *(CARES_INADDR_CAST(struct in_addr *, host->h_addr)));
 }
 
 /*
