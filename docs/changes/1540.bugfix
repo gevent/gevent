@@ -1,5 +1,0 @@
-Using ``gevent.wait`` on an ``Event`` more than once, when that Event
-is already set, could previously raise an AssertionError.
-
-As part of this, exceptions raised in the main greenlet will now
-include a more complete traceback from the failing greenlet.

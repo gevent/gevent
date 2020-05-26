@@ -1,2 +1,0 @@
-Rename gevent's C accelerator extension modules using a prefix to
-avoid clashing with other C extensions.

@@ -1,3 +1,0 @@
-Avoid closing the same Python libuv watcher IO object twice. Under
-some circumstances (only seen on Windows), that could lead to program
-crashes.

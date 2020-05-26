@@ -273,7 +273,7 @@ class RLock(object):
 
     def __init__(self, hub=None):
         """
-        .. versionchanged:: NEXT
+        .. versionchanged:: 20.5.1
            Add the ``hub`` argument.
         """
         self._block = Semaphore(1, hub)

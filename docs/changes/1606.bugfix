@@ -1,3 +1,0 @@
-Fix some potential crashes under libuv when using
-``gevent.signal_handler``. The crashes were seen running the test
-suite and were non-deterministic.

@@ -237,7 +237,7 @@ class signal(object):
         The ``handler`` argument is required to
         be callable at construction time.
 
-    .. versionchanged:: NEXT
+    .. versionchanged:: 20.5.1
        The ``cancel`` method now properly cleans up all native resources,
        and drops references to all the arguments of this function.
     """
@@ -541,7 +541,7 @@ class Hub(WaitOperationsGreenlet):
         System errors cause the exception to be raised in the main
         greenlet (the parent of this hub).
 
-        .. versionchanged:: NEXT
+        .. versionchanged:: 20.5.1
            Allow passing the traceback to associate with the
            exception if it is rethrown into the main greenlet.
         """
@@ -761,7 +761,7 @@ class Hub(WaitOperationsGreenlet):
         hub. Attempts to use the blocking gevent API with pre-existing
         objects from this native thread and bound to this hub will fail.
 
-        .. versionchanged:: NEXT
+        .. versionchanged:: 20.5.1
             Ensure that Python stack frames and greenlets referenced by this
             hub are cleaned up. This guarantees that switching to the hub again
             is not safe after this. (It was never safe, but it's even less safe.)

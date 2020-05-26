@@ -6,6 +6,102 @@
 
 .. towncrier release notes start
 
+20.5.1 (2020-05-26)
+===================
+
+
+Features
+--------
+
+- Waiters on Event and Semaphore objects that call ``wait()`` or
+  ``acquire()``, respectively, that find the Event already set, or the
+  Semaphore available, no longer "cut in line" and run before any
+  previously scheduled greenlets. They now run in the order in which
+  they arrived, just as waiters that had to block in those methods do.
+  See :issue:`1520`.
+- Update tested PyPy version from 7.3.0 to 7.3.1 on Linux.
+  See :issue:`1569`.
+- Make ``zope.interface``, ``zope.event`` and (by extension)
+  ``setuptools`` required dependencies. The ``events`` install extra now
+  does nothing and will be removed in 2021.
+  See :issue:`1619`.
+- Update bundled libuv from 1.36.0 to 1.38.0.
+  See :issue:`1621`.
+- Update bundled c-ares from 1.16.0 to 1.16.1.
+
+  On macOS, stop trying to adjust c-ares headers to make them
+  universal.
+  See :issue:`1624`.
+
+
+Bugfixes
+--------
+
+- Make gevent locks that are monkey-patched usually work across native
+  threads as well as across greenlets within a single thread. Locks that
+  are only used in a single thread do not take a performance hit. While
+  cross-thread locking is relatively expensive, and not a recommended
+  programming pattern, it can happen unwittingly, for example when
+  using the threadpool and ``logging``.
+
+  Before, cross-thread lock uses might succeed, or, if the lock was
+  contended, raise ``greenlet.error``. Now, in the contended case, if
+  the lock has been acquired by the main thread at least once, it should
+  correctly block in any thread, cooperating with the event loop of both
+  threads. In certain (hopefully rare) cases, it might be possible for
+  contended case to raise ``LoopExit`` when previously it would have
+  raised ``greenlet.error``; if these cases are a practical concern,
+  please open an issue.
+
+  Also, the underlying Semaphore always behaves in an atomic fashion (as
+  if the GIL was not released) when PURE_PYTHON is set. Previously, it
+  only correctly did so on PyPy.
+  See :issue:`issue1437`.
+- Rename gevent's C accelerator extension modules using a prefix to
+  avoid clashing with other C extensions.
+  See :issue:`1480`.
+- Using ``gevent.wait`` on an ``Event`` more than once, when that Event
+  is already set, could previously raise an AssertionError.
+
+  As part of this, exceptions raised in the main greenlet will now
+  include a more complete traceback from the failing greenlet.
+  See :issue:`1540`.
+- Avoid closing the same Python libuv watcher IO object twice. Under
+  some circumstances (only seen on Windows), that could lead to program
+  crashes.
+  See :issue:`1587`.
+- gevent can now be built using Cython 3.0a5 and newer. The PyPI
+  distribution uses this version.
+
+  The libev extension was incompatible with this. As part of this,
+  certain internal, undocumented names have been changed.
+
+  (Technically, gevent can be built with Cython 3.0a2 and above.
+  However, up through 3.0a4 compiling with Cython 3 results in
+  gevent's test for memory leaks failing. See `this Cython issue
+  <https://github.com/cython/cython/issues/3578>`_.)
+  See :issue:`1599`.
+- Destroying a hub after joining it didn't necessarily clean up all
+  resources associated with the hub, especially if the hub had been
+  created in a secondary thread that was exiting. The hub and its parent
+  greenlet could be kept alive.
+
+  Now, destroying a hub drops the reference to the hub and ensures it
+  cannot be switched to again. (Though using a new blocking API call may
+  still create a new hub.)
+
+  Joining a hub also cleans up some (small) memory resources that might
+  have stuck around for longer before as well.
+  See :issue:`1601`.
+- Fix some potential crashes under libuv when using
+  ``gevent.signal_handler``. The crashes were seen running the test
+  suite and were non-deterministic.
+  See :issue:`1606`.
+
+
+----
+
+
 20.5.0 (2020-05-01)
 ===================
 

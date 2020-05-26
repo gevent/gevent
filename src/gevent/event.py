@@ -66,7 +66,7 @@ class Event(AbstractLinkable): # pylint:disable=undefined-variable
         The low-level ``rawlink`` method (most users won't use this) now
         automatically unlinks waiters before calling them.
 
-    .. versionchanged:: NEXT
+    .. versionchanged:: 20.5.1
 
         Callers to ``wait`` that find the event already set will now run
         after any other waiters that had to block. See :issue:`1520`.
