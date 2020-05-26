@@ -160,6 +160,7 @@ install:
   # powershell because the annoying 'DEPRECATION:blahblahblah 2.7 blahblahblah'
   # breaks powershell.
   - "%CMD_IN_ENV% %PYEXE% -mensurepip -U --user"
+  - "%CMD_IN_ENV% %PYEXE% -mpip install -U --user pip"
 
   - ps: "if(Test-Path(\"${env:PYTHON}\\bin\")) {ls ${env:PYTHON}\\bin;}"
   - ps: "if(Test-Path(\"${env:PYTHON}\\Scripts\")) {ls ${env:PYTHON}\\Scripts;}"
@@ -196,11 +197,8 @@ artifacts:
   # Archive the generated wheel package in the ci.appveyor.com build report.
   - path: dist\gevent*whl
 
-#on_success:
-#  - TODO: upload the content of dist/*.whl to a public wheelhouse
-#
 
 deploy_script:
-  - ps: if ($env:APPVEYOR_REPO_TAG -eq $TRUE) { pip install twine; twine upload --skip-existing dist/* }
+  - ps: if ($env:APPVEYOR_REPO_TAG -eq $TRUE) { pip install twine; twine upload --skip-existing dist/gevent* }
 
 deploy: on
