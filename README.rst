@@ -15,12 +15,13 @@
 
 Read the documentation online at http://www.gevent.org.
 
-Post feedback and issues on the `bug tracker`_, `mailing list`_, blog_
-and `twitter (@gevent)`_.
+Post issues on the `bug tracker`_, discuss and ask open ended
+questions on the `mailing list`_, and find announcements and
+information on the blog_ and `twitter (@gevent)`_.
 
 .. include:: docs/install.rst
 
-.. _bug tracker: https://github.com/gevent/gevent/wiki/Projects
+.. _bug tracker: https://github.com/gevent/gevent/issues
 .. _mailing list: http://groups.google.com/group/gevent
-.. _blog: http://blog.gevent.org
+.. _blog: https://dev.nextthought.com/blog/categories/gevent.html
 .. _twitter (@gevent): http://twitter.com/gevent

@@ -6,12 +6,6 @@
 
 .. towncrier release notes start
 
-20.5.1 (unreleased)
-===================
-
-- Nothing changed yet.
-
-
 20.5.0 (2020-05-01)
 ===================
 
