@@ -637,11 +637,17 @@ def _setup_environ(debug=False):
         #   option is performed.
         # - action is one of : ignore, default, all, module, once, error
 
-        os.environ['PYTHONWARNINGS'] = ','.join([
-            # Enable default warnings such as ResourceWarning.
+        # Enable default warnings such as ResourceWarning.
+        # ResourceWarning doesn't exist on Py2, so don't put it
+        # in there to avoid a warnnig.
+        defaults = [
             'default',
             'default::DeprecationWarning',
-            'default::ResourceWarning',
+        ]
+        if not PY2:
+            defaults.append('default::ResourceWarning')
+
+        os.environ['PYTHONWARNINGS'] = ','.join(defaults + [
             # On Python 3[.6], the system site.py module has
             # "open(fullname, 'rU')" which produces the warning that
             # 'U' is deprecated, so ignore warnings from site.py
