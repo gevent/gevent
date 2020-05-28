@@ -1,0 +1,3 @@
+Forking a process that had use the threadpool to run tasks that
+created their own hub would fail to clean up the threadpool by raising
+``greenlet.error``.

@@ -14,6 +14,7 @@ import traceback
 from greenlet import greenlet as RawGreenlet
 from greenlet import getcurrent
 from greenlet import GreenletExit
+from greenlet import error as GreenletError
 
 __all__ = [
     'getcurrent',
@@ -755,16 +756,22 @@ class Hub(WaitOperationsGreenlet):
 
         If you manually create hubs, or you use a hub or the gevent
         blocking API from multiple native threads, you *should* call this
-        method before disposing of the hub object reference.
+        method before disposing of the hub object reference. Ideally,
+        this should be called from the same thread running the hub, but
+        it can be called from other threads after that thread has exited.
 
         Once this is done, it is impossible to continue running the
         hub. Attempts to use the blocking gevent API with pre-existing
         objects from this native thread and bound to this hub will fail.
 
         .. versionchanged:: 20.5.1
-            Ensure that Python stack frames and greenlets referenced by this
+            Attempt to ensure that Python stack frames and greenlets referenced by this
             hub are cleaned up. This guarantees that switching to the hub again
             is not safe after this. (It was never safe, but it's even less safe.)
+
+            Note that this only works if the hub is destroyed in the same thread it
+            is running in. If the hub is destroyed by a different thread
+            after a ``fork()``, for example, expect some garbage to leak.
         """
         if self.periodic_monitoring_thread is not None:
             self.periodic_monitoring_thread.kill()
@@ -786,6 +793,12 @@ class Hub(WaitOperationsGreenlet):
         try:
             self.throw(GreenletExit)
         except LoopExit:
+            # Expected.
+            pass
+        except GreenletError:
+            # Must be coming from a different thread.
+            # Note that python stack frames are likely to leak
+            # in this case.
             pass
 
         if destroy_loop is None:
