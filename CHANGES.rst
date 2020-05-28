@@ -6,6 +6,22 @@
 
 .. towncrier release notes start
 
+20.5.2 (2020-05-28)
+===================
+
+
+Bugfixes
+--------
+
+- Forking a process that had use the threadpool to run tasks that
+  created their own hub would fail to clean up the threadpool by raising
+  ``greenlet.error``.
+  See :issue:`1631`.
+
+
+----
+
+
 20.5.1 (2020-05-26)
 ===================
 
