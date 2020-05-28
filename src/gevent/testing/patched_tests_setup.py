@@ -1273,6 +1273,14 @@ if OSX:
         'test_socket.RecvmsgIntoTCPTest.testRecvmsgIntoGenerator',
     ]
 
+    if RUNNING_ON_CI:
+
+        disabled_tests += [
+            # These sometime timeout. Cannot reproduce locally.
+            'test_ftp.TestTLS_FTPClassMixin.test_mlsd',
+            'test_ftp.TestTLS_FTPClassMixin.test_retrlines_too_long',
+        ]
+
     if RESOLVER_ARES and PY38 and not RUNNING_ON_CI:
         disabled_tests += [
             # When updating to 1.16.0 this was seen locally, but not on CI.

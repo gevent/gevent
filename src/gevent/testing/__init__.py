@@ -55,6 +55,7 @@ else:
 from .sysinfo import VERBOSE
 from .sysinfo import WIN
 from .sysinfo import LINUX
+from .sysinfo import OSX
 from .sysinfo import LIBUV
 from .sysinfo import CFFI_BACKEND
 from .sysinfo import DEBUG
@@ -110,6 +111,7 @@ from .skipping import skipWithoutResource
 from .skipping import skipWithoutExternalNetwork
 from .skipping import skipOnPy2
 from .skipping import skipOnManylinux
+from .skipping import skipOnMacOnCI
 
 from .exception import ExpectedException
 
@@ -177,15 +179,4 @@ mock = mock
 
 
 # zope.interface
-try:
-    from zope.interface import verify
-except ImportError:
-    class verify(object):
-
-        @staticmethod
-        def verifyObject(*_):
-            import warnings
-            warnings.warn("zope.interface is not installed; not verifying")
-            return
-
-verify = verify
+from zope.interface import verify

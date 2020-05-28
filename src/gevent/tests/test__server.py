@@ -134,6 +134,11 @@ class TestCase(greentest.TestCase):
         fd.write(('GET %s HTTP/1.0\r\n\r\n' % url).encode('latin-1'))
         fd.flush()
 
+    LOCAL_CONN_REFUSED_ERRORS = ()
+    if greentest.OSX:
+        # A kernel bug in OS X sometimes results in this
+        LOCAL_CONN_REFUSED_ERRORS = (errno.EPROTOTYPE,)
+
     def assertConnectionRefused(self):
         with self.assertRaises(socket.error) as exc:
             with self.makefile() as conn:
@@ -142,7 +147,7 @@ class TestCase(greentest.TestCase):
         ex = exc.exception
         self.assertIn(ex.args[0],
                       (errno.ECONNREFUSED, errno.EADDRNOTAVAIL,
-                       errno.ECONNRESET, errno.ECONNABORTED),
+                       errno.ECONNRESET, errno.ECONNABORTED) + self.LOCAL_CONN_REFUSED_ERRORS,
                       (ex, ex.args))
 
     def assert500(self):

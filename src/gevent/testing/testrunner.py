@@ -623,14 +623,25 @@ def print_list(lst):
         util.log(' - %s', name)
 
 def _setup_environ(debug=False):
-    if ('PYTHONWARNINGS' not in os.environ
+    def not_set(key):
+        return not bool(os.environ.get(key))
+
+    if (not_set('PYTHONWARNINGS')
             and (not sys.warnoptions
                  # Python 3.7 goes from [] to ['default'] for nothing
                  or sys.warnoptions == ['default'])):
         # action:message:category:module:line
+
+        # - when a warning matches
+        #   more than one option, the action for the last matching
+        #   option is performed.
+        # - action is one of : ignore, default, all, module, once, error
+
         os.environ['PYTHONWARNINGS'] = ','.join([
             # Enable default warnings such as ResourceWarning.
             'default',
+            'default::DeprecationWarning',
+            'default::ResourceWarning',
             # On Python 3[.6], the system site.py module has
             # "open(fullname, 'rU')" which produces the warning that
             # 'U' is deprecated, so ignore warnings from site.py
@@ -655,22 +666,22 @@ def _setup_environ(debug=False):
             'ignore:::dns.zone:',
         ])
 
-    if 'PYTHONFAULTHANDLER' not in os.environ:
+    if not_set('PYTHONFAULTHANDLER'):
         os.environ['PYTHONFAULTHANDLER'] = 'true'
 
-    if 'GEVENT_DEBUG' not in os.environ and debug:
+    if not_set('GEVENT_DEBUG') and debug:
         os.environ['GEVENT_DEBUG'] = 'debug'
 
-    if 'PYTHONTRACEMALLOC' not in os.environ and debug:
+    if not_set('PYTHONTRACEMALLOC') and debug:
         # This slows the tests down quite a bit. Reserve
         # for debugging.
         os.environ['PYTHONTRACEMALLOC'] = '10'
 
-    if 'PYTHONDEVMODE' not in os.environ:
+    if not_set('PYTHONDEVMODE'):
         # Python 3.7 and above.
         os.environ['PYTHONDEVMODE'] = '1'
 
-    if 'PYTHONMALLOC' not in os.environ and debug:
+    if not_set('PYTHONMALLOC') and debug:
         # Python 3.6 and above.
         # This slows the tests down some, but
         # can detect memory corruption. Unfortunately
@@ -682,6 +693,24 @@ def _setup_environ(debug=False):
         os.environ['PYTHONMALLOC'] = 'default'
         os.environ['PYTHONDEVMODE'] = ''
 
+    interesting_envs = {
+        k: os.environ[k]
+        for k in os.environ
+        if k.startswith(('PYTHON', 'GEVENT'))
+    }
+    widest_k = max(len(k) for k in interesting_envs)
+    for k, v in sorted(interesting_envs.items()):
+        util.log('%*s\t=\t%s', widest_k, k, v, color="debug")
+
+    util.run(
+        [
+            sys.executable,
+            '-c',
+            'from __future__ import print_function; '
+            'import sys; print("sys.warnoptions:\t", sys.warnoptions)',
+        ],
+        # Don't log the beginning and end of the subprocess.
+        quiet=True, nested=True)
 
 def main():
     # pylint:disable=too-many-locals,too-many-statements
