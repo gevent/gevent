@@ -631,7 +631,17 @@ def _setup_environ(debug=False):
                  # Python 3.7 goes from [] to ['default'] for nothing
                  or sys.warnoptions == ['default'])):
         # action:message:category:module:line
+
+        # - when a warning matches
+        #   more than one option, the action for the last matching
+        #   option is performed.
+        # - action is one of : ignore, default, all, module, once, error
+
         os.environ['PYTHONWARNINGS'] = ','.join([
+            # Enable default warnings such as ResourceWarning.
+            'default',
+            'default::DeprecationWarning',
+            'default::ResourceWarning',
             # On Python 3[.6], the system site.py module has
             # "open(fullname, 'rU')" which produces the warning that
             # 'U' is deprecated, so ignore warnings from site.py
@@ -654,8 +664,6 @@ def _setup_environ(debug=False):
             # without the r'' syntax, leading to DeprecationWarning: invalid
             # escape sequence. This is fixed in 2.0 (Python 3 only).
             'ignore:::dns.zone:',
-            # Enable default warnings such as ResourceWarning.
-            'default',
         ])
 
     if not_set('PYTHONFAULTHANDLER'):
