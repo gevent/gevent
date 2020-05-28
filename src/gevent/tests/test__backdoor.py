@@ -86,6 +86,10 @@ class Test(greentest.TestCase):
         self.assertEqual(line, '')
         conn.close()
 
+    @greentest.skipOnMacOnCI(
+        "Sometimes fails to get the right answers; "
+        "https://travis-ci.org/github/gevent/gevent/jobs/692184822"
+    )
     @greentest.skipOnLibuvOnTravisOnCPython27(
         "segfaults; "
         "See https://github.com/gevent/gevent/pull/1156")

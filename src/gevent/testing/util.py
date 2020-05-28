@@ -377,7 +377,7 @@ def run(command, **kwargs): # pylint:disable=too-many-locals
         assert 'stdout' not in kwargs and 'stderr' not in kwargs, kwargs
         kwargs['stderr'] = subprocess.STDOUT
         kwargs['stdout'] = subprocess.PIPE
-    popen = start(command, quiet=nested, **kwargs)
+    popen = start(command, quiet=quiet, **kwargs)
     name = popen.name
 
     try:

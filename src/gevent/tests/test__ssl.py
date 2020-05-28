@@ -49,11 +49,16 @@ class TestSSL(test__socket.TestTCP):
     # to send a very large amount to make it timeout
     _test_sendall_data = data_sent = b'hello' * 100000000
 
-    test_sendall_array = greentest.skipOnManylinux("Sometimes misses data")(
-        test__socket.TestTCP.test_sendall_array
+    test_sendall_array = greentest.skipOnMacOnCI("Sometimes misses data")(
+        greentest.skipOnManylinux("Sometimes misses data")(
+            test__socket.TestTCP.test_sendall_array
+        )
     )
-    test_sendall_str = greentest.skipOnManylinux("Sometimes misses data")(
-        test__socket.TestTCP.test_sendall_str
+
+    test_sendall_str = greentest.skipOnMacOnCI("Sometimes misses data")(
+        greentest.skipOnManylinux("Sometimes misses data")(
+            test__socket.TestTCP.test_sendall_str
+        )
     )
 
     @greentest.skipOnWindows("Not clear why we're skipping")
