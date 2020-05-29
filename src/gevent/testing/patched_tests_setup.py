@@ -30,6 +30,7 @@ from .sysinfo import PY35
 from .sysinfo import PY36
 from .sysinfo import PY37
 from .sysinfo import PY38
+from .sysinfo import PY39
 
 from .sysinfo import WIN
 from .sysinfo import OSX
@@ -239,8 +240,17 @@ disabled_tests = [
     # the exact signatures (because Python 2 doesn't support the syntax)
     'test_context.ContextTest.test_context_new_1',
     'test_context.ContextTest.test_context_var_new_1',
-
 ]
+
+if OSX:
+    disabled_tests += [
+        # These are timing dependent, and sometimes run into the OS X
+        # kernel bug leading to 'Protocol wrong type for socket'.
+        # See discussion at https://github.com/benoitc/gunicorn/issues/1487
+        'test_ssl.SimpleBackgroundTests.test_connect_capath',
+        'test_ssl.SimpleBackgroundTests.test_connect_with_context',
+    ]
+
 
 if 'thread' in os.getenv('GEVENT_FILE', ''):
     disabled_tests += [
@@ -1288,6 +1298,17 @@ if OSX:
             #             != ('ff02::1de:c0:face:8d', 1234, 0, 1)
             'test_socket.GeneralModuleTests.test_getaddrinfo_ipv6_scopeid_symbolic',
         ]
+
+if PY39:
+
+    disabled_tests += [
+        # Depends on exact details of the repr. Eww.
+        'test_subprocess.ProcessTestCase.test_repr',
+        # Tries to wait for the process without using Popen APIs, and expects the
+        # ``returncode`` attribute to stay None. But we have already hooked SIGCHLD, so
+        # we see and set the ``returncode``; there is no way to wait that doesn't do that.
+        'test_subprocess.POSIXProcessTestTest.test_send_signal_race',
+    ]
 
 # Now build up the data structure we'll use to actually find disabled tests
 # to avoid a linear scan for every file (it seems the list could get quite large)

@@ -47,10 +47,14 @@ from wsgiref.validate import validator
 import gevent.testing as greentest
 import gevent
 from gevent.testing import PY3, PYPY
+from gevent.testing.exception import ExpectedException
 from gevent import socket
 from gevent import pywsgi
 from gevent.pywsgi import Input
 
+
+class ExpectedAssertionError(ExpectedException, AssertionError):
+    """An expected assertion error"""
 
 CONTENT_LENGTH = 'Content-Length'
 CONN_ABORTED_ERRORS = greentest.CONN_ABORTED_ERRORS
@@ -90,11 +94,7 @@ def iread_chunks(fd):
     while True:
         line = fd.readline()
         chunk_size = line.strip()
-        try:
-            chunk_size = int(chunk_size, 16)
-        except:
-            print('Failed to parse chunk size: %r' % line)
-            raise
+        chunk_size = int(chunk_size, 16)
         if chunk_size == 0:
             crlf = fd.read(2)
             assert crlf == b'\r\n', repr(crlf)
@@ -173,21 +173,18 @@ class Response(object):
             if isinstance(content_length, int):
                 content_length = str(content_length)
             self.assertHeader('Content-Length', content_length)
-        try:
-            if 'chunked' in headers.get('Transfer-Encoding', ''):
-                if CONTENT_LENGTH in headers:
-                    print("WARNING: server used chunked transfer-encoding despite having Content-Length header (libevent 1.x's bug)")
-                self.chunks = list(iread_chunks(fd))
-                self.body = b''.join(self.chunks)
-            elif CONTENT_LENGTH in headers:
-                num = int(headers[CONTENT_LENGTH])
-                self.body = fd.read(num)
-            else:
-                self.body = fd.read()
-        except:
-            print('Response.read failed to read the body:\n%s' % self)
-            import traceback; traceback.print_exc()
-            raise
+
+        if 'chunked' in headers.get('Transfer-Encoding', ''):
+            if CONTENT_LENGTH in headers:
+                print("WARNING: server used chunked transfer-encoding despite having Content-Length header (libevent 1.x's bug)")
+            self.chunks = list(iread_chunks(fd))
+            self.body = b''.join(self.chunks)
+        elif CONTENT_LENGTH in headers:
+            num = int(headers[CONTENT_LENGTH])
+            self.body = fd.read(num)
+        else:
+            self.body = fd.read()
+
         if body is not None:
             self.assertBody(body)
         if chunks is not None:
@@ -210,15 +207,23 @@ class TestCase(greentest.TestCase):
     # So use the hostname.
     connect_addr = greentest.DEFAULT_LOCAL_HOST_ADDR
 
+    class handler_class(pywsgi.WSGIHandler):
+        ApplicationError = ExpectedAssertionError
+
     def init_logger(self):
         import logging
-        logger = logging.getLogger('gevent.pywsgi')
+        logger = logging.getLogger('gevent.tests.pywsgi')
+        logger.setLevel(logging.CRITICAL)
         return logger
 
     def init_server(self, application):
         logger = self.logger = self.init_logger()
-        self.server = pywsgi.WSGIServer((self.listen_addr, 0), application,
-                                        log=logger, error_log=logger)
+        self.server = pywsgi.WSGIServer(
+            (self.listen_addr, 0),
+            application,
+            log=logger, error_log=logger,
+            handler_class=self.handler_class,
+        )
 
     def setUp(self):
         application = self.application
@@ -1125,12 +1130,10 @@ class TestBody304(TestCase):
     def test_err(self):
         with self.makefile() as fd:
             fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
-            try:
+            with self.assertRaises(AssertionError) as exc:
                 read_http(fd)
-            except AssertionError as ex:
-                self.assertEqual(str(ex), 'The 304 response must have no body')
-            else:
-                raise AssertionError('AssertionError must be raised')
+            ex = exc.exception
+            self.assertEqual(str(ex), 'The 304 response must have no body')
 
 
 class TestWrite304(TestCase):
@@ -1142,9 +1145,9 @@ class TestWrite304(TestCase):
         self.error_raised = False
         try:
             write('body')
-        except AssertionError:
+        except AssertionError as ex:
             self.error_raised = True
-            raise
+            raise ExpectedAssertionError(*ex.args)
 
     def test_err(self):
         with self.makefile() as fd:
@@ -1465,7 +1468,8 @@ class TestInvalidEnviron(TestCase):
         for key, value in environ.items():
             if key in ('CONTENT_LENGTH', 'CONTENT_TYPE') or key.startswith('HTTP_'):
                 if key != 'HTTP_HOST':
-                    raise AssertionError('Unexpected environment variable: %s=%r' % (key, value))
+                    raise ExpectedAssertionError('Unexpected environment variable: %s=%r' % (
+                        key, value))
         start_response('200 OK', [])
         return []
 
@@ -1493,36 +1497,30 @@ class TestInvalidHeadersDropped(TestCase):
             read_http(fd)
 
 
-class Handler(pywsgi.WSGIHandler):
-
-    def read_requestline(self):
-        data = self.rfile.read(7)
-        if data[0] == b'<'[0]: # py3: indexing bytes returns ints. sigh.
-            # Returning nothing stops handle_one_request()
-            # Note that closing or even deleting self.socket() here
-            # can lead to the read side throwing Connection Reset By Peer,
-            # depending on the Python version and OS
-            data += self.rfile.read(15)
-            if data.lower() == b'<policy-file-request/>':
-                self.socket.sendall(b'HELLO')
-            else:
-                self.log_error('Invalid request: %r', data)
-            return None
-        return data + self.rfile.readline()
-
-
 class TestHandlerSubclass(TestCase):
 
     validator = None
 
+    class handler_class(TestCase.handler_class):
+
+        def read_requestline(self):
+            data = self.rfile.read(7)
+            if data[0] == b'<'[0]: # py3: indexing bytes returns ints. sigh.
+                # Returning nothing stops handle_one_request()
+                # Note that closing or even deleting self.socket() here
+                # can lead to the read side throwing Connection Reset By Peer,
+                # depending on the Python version and OS
+                data += self.rfile.read(15)
+                if data.lower() == b'<policy-file-request/>':
+                    self.socket.sendall(b'HELLO')
+                else:
+                    self.log_error('Invalid request: %r', data)
+                return None
+            return data + self.rfile.readline()
+
     def application(self, environ, start_response):
         start_response('200 OK', [])
         return []
-
-    def init_server(self, application):
-        self.server = pywsgi.WSGIServer((self.listen_addr, 0),
-                                        application,
-                                        handler_class=Handler)
 
     def test(self):
         with self.makefile() as fd:
@@ -1645,14 +1643,12 @@ class TestInputRaw(greentest.BaseTestCase):
     def test_32bit_overflow(self):
         # https://github.com/gevent/gevent/issues/289
         # Should not raise an OverflowError on Python 2
-        print("BEGIN 32bit")
         data = b'asdf\nghij\n'
         long_data = b'a' * (pywsgi.MAX_REQUEST_LINE + 10)
         long_data += b'\n'
         data = data + long_data
         partial_data = b'qjk\n' # Note terminating \n
         n = 25 * 1000000000
-        print("N", n, "Data len", len(data))
         if hasattr(n, 'bit_length'):
             self.assertEqual(n.bit_length(), 35)
         if not PY3 and not PYPY:

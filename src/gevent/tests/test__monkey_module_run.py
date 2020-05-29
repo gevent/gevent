@@ -86,12 +86,12 @@ class TestRun(greentest.TestCase):
         self._run_package(module=True)
 
     def test_issue_302(self):
-        lines = self._run(os.path.join('monkey_package', 'issue302monkey.py'))
+        monkey_lines = self._run(os.path.join('monkey_package', 'issue302monkey.py'))
 
-        self.assertEqual(lines[0].strip(), u'True')
-        lines[1] = lines[1].replace(u'\\', u'/') # windows path
-        self.assertEqual(lines[1].strip(), u'monkey_package/issue302monkey.py')
-        self.assertEqual(lines[2].strip(), u'True', lines)
+        self.assertEqual(monkey_lines[0].strip(), u'True')
+        monkey_lines[1] = monkey_lines[1].replace(u'\\', u'/') # windows path
+        self.assertTrue(monkey_lines[1].strip().endswith(u'monkey_package/issue302monkey.py'))
+        self.assertEqual(monkey_lines[2].strip(), u'True', monkey_lines)
 
     # These three tests all sometimes fail on Py2 on CI, writing
     # to stderr:

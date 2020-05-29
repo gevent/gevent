@@ -381,6 +381,10 @@ class ThreadTests(unittest.TestCase):
         # ignored.
         # self.assertEqual(stderr, "")
 
+    @greentest.skipIf(
+        not(hasattr(sys, 'getcheckinterval')),
+        "Needs sys.getcheckinterval"
+    )
     def test_enumerate_after_join(self):
         # Try hard to trigger #1703448: a thread is still returned in
         # threading.enumerate() after it has been join()ed.
@@ -388,7 +392,8 @@ class ThreadTests(unittest.TestCase):
         import warnings
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', DeprecationWarning)
-            # get/set checkinterval are deprecated in Python 3
+            # get/set checkinterval are deprecated in Python 3,
+            # and removed in Python 3.9
             old_interval = sys.getcheckinterval()
             try:
                 for i in xrange(1, 100):

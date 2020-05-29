@@ -54,12 +54,15 @@ def application(env, start_response):
     if env['QUERY_STRING']:
         path += '?' + env['QUERY_STRING']
     path = path.lstrip('/')
+
     if (method, path) == ('GET', ''):
         start_response('200 OK', [('Content-Type', 'text/html')])
         return [FORM]
-    elif method == 'GET':
+
+    if method == 'GET':
         return proxy(path, start_response, proxy_url)
-    elif (method, path) == ('POST', ''):
+
+    if (method, path) == ('POST', ''):
         key, value = env['wsgi.input'].read().strip().split(b'=')
         assert key == b'url', repr(key)
         value = _as_str(value)
@@ -75,13 +78,16 @@ def proxy(path, start_response, proxy_url):
     # pylint:disable=too-many-locals
     if '://' not in path:
         path = 'http://' + path
+
     try:
         try:
             response = urllib2.urlopen(path)
         except urllib2.HTTPError as ex:
             response = ex
         print('%s: %s %s' % (path, response.code, response.msg))
-        headers = [(k, v) for (k, v) in response.headers.items() if k not in drop_headers]
+        # Beginning in Python 3.8, headers aren't guaranteed to arrive in
+        # lowercase; we must do so ourself.
+        headers = [(k, v) for (k, v) in response.headers.items() if k.lower() not in DROP_HEADERS]
         scheme, netloc, path, _params, _query, _fragment = urlparse(path)
         host = (scheme or 'http') + '://' + netloc
     except Exception as ex: # pylint:disable=broad-except
@@ -94,6 +100,7 @@ def proxy(path, start_response, proxy_url):
         error_str = '<h1>%s</h1><h2>%s</h2><pre>%s</pre>' % (error_str, escape(path), escape(tb))
         return [_as_bytes(error_str)]
     else:
+        print("Returning", headers)
         start_response('%s %s' % (response.code, response.msg), headers)
         data = response.read()
         data = fix_links(data, proxy_url, host)
@@ -110,7 +117,8 @@ def join(url1, *rest):
         if url2.startswith(b'/'):
             return join(url1 + url2[1:], *rest)
         return join(url1 + url2, *rest)
-    elif url2.startswith(b'/'):
+
+    if url2.startswith(b'/'):
         return join(url1 + url2, *rest)
 
     return join(url1 + b'/' + url2, *rest)
@@ -136,7 +144,11 @@ def fix_links(data, proxy_url, host_url):
 _link_re_1 = re.compile(br'''(?P<before>(href|src|action)\s*=\s*)(?P<quote>['"])(?P<url>[^#].*?)(?P=quote)''')
 _link_re_2 = re.compile(br'''(?P<before>(href|src|action)\s*=\s*)(?P<url>[^'"#>][^ >]*)''')
 
-drop_headers = ['transfer-encoding', 'set-cookie']
+# The lowercase names of headers that we will *NOT* forward.
+DROP_HEADERS = {
+    'transfer-encoding',
+    'set-cookie'
+}
 
 FORM = b"""<html><head>
 <title>Web Proxy - gevent example</title></head><body>

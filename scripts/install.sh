@@ -114,6 +114,9 @@ for var in "$@"; do
         3.8)
             install 3.8.2 python3.8 3.8.d
             ;;
+        3.9)
+            install 3.9-dev python3.9 3.9.d
+            ;;
         pypy2.7)
             install pypy2.7-7.3.1 pypy2.7 pypy2.7.d
             ;;

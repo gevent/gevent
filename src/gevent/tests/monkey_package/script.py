@@ -14,6 +14,7 @@ def use_import():
     return dedent("    text")
 
 if __name__ == '__main__':
-    print(__file__)
+    import os.path
+    print(os.path.abspath(__file__))
     print(__name__)
     print(use_import())

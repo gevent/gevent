@@ -65,6 +65,7 @@ PY35 = None
 PY36 = None
 PY37 = None
 PY38 = None
+PY39 = None
 
 NON_APPLICABLE_SUFFIXES = ()
 if sys.version_info[0] >= 3:
@@ -80,6 +81,8 @@ if sys.version_info[0] >= 3:
         PY37 = True
     if sys.version_info[1] >= 8:
         PY38 = True
+    if sys.version_info[1] >= 9:
+        PY39 = True
 
 elif sys.version_info[0] == 2:
     # Any python 2

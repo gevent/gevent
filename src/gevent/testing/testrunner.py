@@ -91,6 +91,9 @@ class ResultCollector(object):
         return self
 
 
+class FailFast(Exception):
+    pass
+
 class Runner(object):
 
     TIME_WAIT_REAP = 0.1
@@ -125,7 +128,11 @@ class Runner(object):
             kwargs['quiet'] = self._quiet
         result = util.run(cmd, **kwargs)
         if not result and self._failfast:
-            sys.exit(1)
+            # Under Python 3.9 (maybe older versions?), raising the
+            # SystemExit here (a background thread belonging to the
+            # pool) doesn't seem to work well. It gets stuck waiting
+            # for a lock? The job never shows up as finished.
+            raise FailFast(cmd)
         self.results += result
 
     def _reap(self):
@@ -141,7 +148,10 @@ class Runner(object):
         return len(self._running_jobs)
 
     def _reap_all(self):
-        while self._reap() > 0:
+        util.log("Reaping %d jobs", len(self._running_jobs), color="debug")
+        while self._running_jobs:
+            if not self._reap():
+                break
             util.sleep(self.TIME_WAIT_REAP)
 
     def _spawn(self, pool, cmd, options):

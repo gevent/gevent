@@ -733,19 +733,21 @@ class WSGIHandler(object):
         else:
             self._sendall(data)
 
+    ApplicationError = AssertionError
+
     def write(self, data):
         # The write() callable we return from start_response.
         # https://www.python.org/dev/peps/pep-3333/#the-write-callable
         # Supposed to do pretty much the same thing as yielding values
         # from the application's return.
         if self.code in (304, 204) and data:
-            raise AssertionError('The %s response must have no body' % self.code)
+            raise self.ApplicationError('The %s response must have no body' % self.code)
 
         if self.headers_sent:
             self._write(data)
         else:
             if not self.status:
-                raise AssertionError("The application did not call start_response()")
+                raise self.ApplicationError("The application did not call start_response()")
             self._write_with_headers(data)
 
     def _write_with_headers(self, data):
@@ -870,7 +872,7 @@ class WSGIHandler(object):
                 msg = 'Invalid Content-Length for %s response: %r (must be absent or zero)' % (self.code, self.provided_content_length)
                 if PY3:
                     msg = msg.encode('latin-1')
-                raise AssertionError(msg)
+                raise self.ApplicationError(msg)
 
         return self.write
 
@@ -1017,7 +1019,7 @@ class WSGIHandler(object):
     def handle_error(self, t, v, tb):
         # Called for internal, unexpected errors, NOT invalid client input
         self._log_error(t, v, tb)
-        del tb
+        t = v = tb = None
         self._send_error_response_if_possible(500)
 
     def _handle_client_error(self, ex):

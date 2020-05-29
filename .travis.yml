@@ -61,6 +61,7 @@ env:
       - TRAVIS_PYTHON_VERSION=3.6
       - TRAVIS_PYTHON_VERSION=3.7
       - TRAVIS_PYTHON_VERSION=3.8
+      - TRAVIS_PYTHON_VERSION=3.9
       - TRAVIS_PYTHON_VERSION=pypy2.7
       - TRAVIS_PYTHON_VERSION=pypy3.6
       - TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0 GEVENTSETUP_EV_VERIFY=3
@@ -154,6 +155,8 @@ jobs:
     - os: osx
       env: TRAVIS_PYTHON_VERSION=3.5
     - os: osx
+      env: TRAVIS_PYTHON_VERSION=3.9
+    - os: osx
       env: TRAVIS_PYTHON_VERSION=pypy2.7
     - os: osx
       env: TRAVIS_PYTHON_VERSION=pypy3.6
@@ -174,7 +177,7 @@ jobs:
         # First, the build dependencies (see setup.cfg)
         # so that we don't have to use build isolation and can better use the cache;
         # Note that we can't use -U for cffi and greenlet on PyPy.
-        - &build-gevent-deps pip install -U setuptools wheel twine && pip install -U 'faulthandler; python_version == "2.7" and platform_python_implementation == "CPython"' 'cffi;platform_python_implementation=="CPython"' 'cython<3' 'greenlet;platform_python_implementation=="CPython"'
+        - &build-gevent-deps pip install -U setuptools wheel twine && pip install -U 'faulthandler; python_version == "2.7" and platform_python_implementation == "CPython"' 'cffi;platform_python_implementation=="CPython"' 'cython>=3.0a5' 'greenlet;platform_python_implementation=="CPython" and python_version <= "3.8"' 'git+https://github.com/python-greenlet/greenlet.git#egg=greenlet ; platform_python_implementation == "CPython" and python_version >= "3.9.0b1"'
         # Next, build the wheel *in place*. This helps ccache, and also lets us cache the configure
         # output (pip install uses a random temporary directory, making this difficult)
         - python setup.py bdist_wheel
@@ -194,6 +197,8 @@ jobs:
       env: TRAVIS_PYTHON_VERSION=3.6
     - <<: *build-gevent
       env: TRAVIS_PYTHON_VERSION=3.7
+    - <<: *build-gevent
+      env: TRAVIS_PYTHON_VERSION=3.9
     - <<: *build-gevent
       env: TRAVIS_PYTHON_VERSION=pypy2.7
     - <<: *build-gevent
@@ -281,8 +286,8 @@ jobs:
       # requirements file.
       install: pip install -U pylint
       script: python -m pylint --limit-inference-results=1 --rcfile=.pylintrc gevent
-      env: TRAVIS_PYTHON_VERSION=3.7
-      name: lint37
+      env: TRAVIS_PYTHON_VERSION=3.8
+      name: Run pylint on Python 3.8
 
     # Now the various functional test groups.
     # We organize these by interpreter, rather than functional test group,
@@ -295,64 +300,54 @@ jobs:
     - &test-ares-jobs
       stage: test
       script: GEVENT_RESOLVER=ares python -mgevent.tests --ignore tests_that_dont_use_resolver.txt
-      name: ares27
+      name: c-ares resolver (Python 2.7)
     # Run dnspython with coverage enabled, it's implemented in python whereas ares is C.
     # PyPy is supported.
     - &test-dnspython-jobs
       script: GEVENT_RESOLVER=dnspython python -mgevent.tests --coverage --ignore tests_that_dont_use_resolver.txt
-      name: dnspython27
+      name: dnspython resolver (Python 2.7)
     # Now test the alternate backends, starting with libuv-cffi, which should be present everywhere
     - &test-libuv-jobs
       script: GEVENT_LOOP=libuv python -mgevent.tests --coverage
-      name: libuv27
+      name: libuv backend (Python 2.7)
       # Next the libev-cffi backend, which is only needed on CPython (default on PyPy)
     - &test-libev-jobs
       script: GEVENT_LOOP=libev-cffi python -mgevent.tests --coverage
-      name: libev-cffi27
+      name: libev-cffi backend (Python 2.7)
     # No compiled cython modules on CPython, using the default backend. Get coverage here.
     # We should only need to run this for a single Python 2 and a Python 3
     - &test-pure-jobs
       script: PURE_PYTHON=1 python -mgevent.tests --coverage
-      name: pure27
+      name: No Cython modules (Python 2.7)
     # Run the leaktests; this seems to be extremely slow on Python 3.7
     # XXX: Figure out why. Can we reproduce locally?
     - &test-leak-jobs
       script: GEVENTTEST_LEAKCHECK=1 python -m gevent.tests --ignore tests_that_dont_do_leakchecks.txt
-      name: leak27
+      name: Checking for reference leaks (Python 2.7)
 
     # Now, in order of the matrix, tests for particular versions.
 
     # For the CPython interpreters, unless we have reason to expect
     # different behaviour across the versions (e.g., as measured by coverage)
-    # it's sufficient to test the alternate backend library for non-current versions;
-    # run the full suite on the current version.
-
-    # 3.6
-    - <<: *test-libuv-jobs
-      env: TRAVIS_PYTHON_VERSION=3.6
-      name: libuv36
-
-    # 3.7
-    - <<: *test-libuv-jobs
-      env: TRAVIS_PYTHON_VERSION=3.7
-      name: libuv37
+    # it's sufficient to run the full suite on the current version
+    # and oldest version.
 
     # 3.8
     - <<: *test-libuv-jobs
-      env: TRAVIS_PYTHON_VERSION=3.8
-      name: libuv38
+      env: TRAVIS_PYTHON_VERSION=3.9
+      name: libuv backend (Python 3.9)
     - <<: *test-libev-jobs
-      env: TRAVIS_PYTHON_VERSION=3.8
-      name: libev-cffi38
+      env: TRAVIS_PYTHON_VERSION=3.9
+      name: libev-cffi backend (Python 3.9)
     - <<: *test-ares-jobs
-      env: TRAVIS_PYTHON_VERSION=3.8
-      name: c-ares resolver on Python 3.8
+      env: TRAVIS_PYTHON_VERSION=3.9
+      name: c-ares resolver (Python 3.9)
     - <<: *test-dnspython-jobs
-      env: TRAVIS_PYTHON_VERSION=3.8
-      name: dnspython resolver on Python 3.8
+      env: TRAVIS_PYTHON_VERSION=3.9
+      name: dnspython resolver (Python 3.9)
     - <<: *test-pure-jobs
-      env: TRAVIS_PYTHON_VERSION=3.8
-      name: pure-Python on Python 3.8
+      env: TRAVIS_PYTHON_VERSION=3.9
+      name: No Cython modules (Python 3.9)
 
     # 2.7, no-embed. Run the tests that exercise the libraries we
     # linked to.
@@ -360,22 +355,22 @@ jobs:
       # This job exercises both the non-embedded ares resolver
       # and the non-embedded Cython libev loop.
       env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0 GEVENTSETUP_EV_VERIFY=3
-      name: ares27-noembed
+      name: c-ares resolver, external (Python 2.7)
     # These exercise the CFFI versions.
     - <<: *test-libuv-jobs
       env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0 GEVENTSETUP_EV_VERIFY=3
-      name: libuv27-noembed
+      name: libuv backend, external (Python 2.7)
     - <<: *test-libev-jobs
       env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0 GEVENTSETUP_EV_VERIFY=3
-      name: libev27-noembed
+      name: libev backend, external (Python 2.7)
 
     # PyPy 2.7
     - <<: *test-dnspython-jobs
       env: TRAVIS_PYTHON_VERSION=pypy2.7
-      name: dnspythonpypy27
+      name: dnspython resolver (PyPy 2.7)
     - <<: *test-libuv-jobs
       env: TRAVIS_PYTHON_VERSION=pypy2.7
-      name: libuvpypy27
+      name: libuv backend (PyPy 2.7)
 
 notifications:
   email: false

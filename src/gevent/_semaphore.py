@@ -224,6 +224,9 @@ class BoundedSemaphore(Semaphore):
             raise self._OVER_RELEASE_ERROR("Semaphore released too many times")
         return Semaphore.release(self)
 
+    def _at_fork_reinit(self):
+        super(BoundedSemaphore, self)._at_fork_reinit()
+        self.counter = self._initial_value
 
 
 # By building the semaphore with Cython under PyPy, we get
