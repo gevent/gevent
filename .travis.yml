@@ -329,26 +329,25 @@ jobs:
 
     # For the CPython interpreters, unless we have reason to expect
     # different behaviour across the versions (e.g., as measured by coverage)
-    # it's sufficient to run the full suite on the current version.
-
-    # XXX: Move these to 3.9 once the basic tests get worked out.
+    # it's sufficient to run the full suite on the current version
+    # and oldest version.
 
     # 3.8
     - <<: *test-libuv-jobs
-      env: TRAVIS_PYTHON_VERSION=3.8
+      env: TRAVIS_PYTHON_VERSION=3.9
       name: libuv38
     - <<: *test-libev-jobs
-      env: TRAVIS_PYTHON_VERSION=3.8
+      env: TRAVIS_PYTHON_VERSION=3.9
       name: libev-cffi38
     - <<: *test-ares-jobs
-      env: TRAVIS_PYTHON_VERSION=3.8
-      name: c-ares resolver on Python 3.8
+      env: TRAVIS_PYTHON_VERSION=3.9
+      name: c-ares resolver on Python 3.9
     - <<: *test-dnspython-jobs
-      env: TRAVIS_PYTHON_VERSION=3.8
-      name: dnspython resolver on Python 3.8
+      env: TRAVIS_PYTHON_VERSION=3.9
+      name: dnspython resolver on Python 3.9
     - <<: *test-pure-jobs
-      env: TRAVIS_PYTHON_VERSION=3.8
-      name: pure-Python on Python 3.8
+      env: TRAVIS_PYTHON_VERSION=3.9
+      name: pure-Python on Python 3.9
 
     # 2.7, no-embed. Run the tests that exercise the libraries we
     # linked to.
