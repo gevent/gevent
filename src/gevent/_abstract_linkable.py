@@ -220,7 +220,7 @@ class AbstractLinkable(object):
             # We should not have created a new notifier even if callbacks
             # released us because we loop through *all* of our links on the
             # same callback while self._notifier is still true.
-            assert self._notifier is notifier
+            assert self._notifier is notifier, (self._notifier, notifier)
             self._notifier = None
             # TODO: Maybe we should intelligently reset self.hub to
             # free up thread affinity? In case of a pathological situation where
@@ -384,9 +384,13 @@ class AbstractLinkable(object):
 
         It is also called from threading.py, ``_after_fork`` in
         ``_reset_internal_locks``, and that can hit ``Event`` objects.
-        Do we need to do anything?
-        """
 
+        Subclasses should reset themselves to an initial state. This
+        includes unlocking/releasing, if possible. This method detaches from the
+        previous hub and drops any existing notifier.
+        """
+        self.hub = None
+        self._notifier = None
 
 def _init():
     greenlet_init() # pylint:disable=undefined-variable

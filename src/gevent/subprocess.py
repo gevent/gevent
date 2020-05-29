@@ -37,6 +37,21 @@ import os
 import signal
 import sys
 import traceback
+# Python 3.9
+try:
+    from types import GenericAlias
+except ImportError:
+    GenericAlias = None
+
+try:
+    import grp
+except ImportError:
+    grp = None
+
+try:
+    import pwd
+except ImportError:
+    pwd = None
 
 from gevent.event import AsyncResult
 from gevent.hub import _get_hub_noargs as get_hub
@@ -571,7 +586,16 @@ class Popen(object):
     .. versionchanged:: 1.3a2
        Under Python 2, ``restore_signals`` defaults to ``False``. Previously it
        defaulted to ``True``, the same as it did in Python 3.
+
+    .. versionchanged:: NEXT
+       Add the *group*, *extra_groups*, *user*, and *umask* arguments. These
+       were added to Python 3.9, but are available in any gevent version, provided
+       the underlying platform support is present.
     """
+
+    if GenericAlias is not None:
+        # 3.9, annoying typing is creeping everywhere.
+        __class_getitem__ = classmethod(GenericAlias)
 
     # The value returned from communicate() when there was nothing to read.
     # Changes if we're in text mode or universal newlines mode.
@@ -590,6 +614,9 @@ class Popen(object):
                  encoding=None, errors=None,
                  # Added in 3.7. Not an ivar directly.
                  text=None,
+                 # Added in 3.9
+                 group=None, extra_groups=None, user=None,
+                 umask=-1,
                  # gevent additions
                  threadpool=None):
 
@@ -703,6 +730,7 @@ class Popen(object):
             # Python 3, so it's actually a unicode str
             self._communicate_empty_value = ''
 
+        uid, gid, gids = self.__handle_uids(user, group, extra_groups)
 
         if p2cwrite != -1:
             if PY3 and text_mode:
@@ -748,7 +776,9 @@ class Popen(object):
                                 p2cread, p2cwrite,
                                 c2pread, c2pwrite,
                                 errread, errwrite,
-                                restore_signals, start_new_session)
+                                restore_signals,
+                                gid, gids, uid, umask,
+                                start_new_session)
         except:
             # Cleanup if the child failed starting.
             # (gevent: New in python3, but reported as gevent bug in #347.
@@ -783,6 +813,81 @@ class Popen(object):
                 finally:
                     del exc_info
             raise
+
+    def __handle_uids(self, user, group, extra_groups):
+        gid = None
+        if group is not None:
+            if not hasattr(os, 'setregid'):
+                raise ValueError("The 'group' parameter is not supported on the "
+                                 "current platform")
+
+            if isinstance(group, str):
+                if grp is None:
+                    raise ValueError("The group parameter cannot be a string "
+                                     "on systems without the grp module")
+
+                gid = grp.getgrnam(group).gr_gid
+            elif isinstance(group, int):
+                gid = group
+            else:
+                raise TypeError("Group must be a string or an integer, not {}"
+                                .format(type(group)))
+
+            if gid < 0:
+                raise ValueError("Group ID cannot be negative, got %s" % gid)
+
+        gids = None
+        if extra_groups is not None:
+            if not hasattr(os, 'setgroups'):
+                raise ValueError("The 'extra_groups' parameter is not "
+                                 "supported on the current platform")
+
+            if isinstance(extra_groups, str):
+                raise ValueError("Groups must be a list, not a string")
+
+            gids = []
+            for extra_group in extra_groups:
+                if isinstance(extra_group, str):
+                    if grp is None:
+                        raise ValueError("Items in extra_groups cannot be "
+                                         "strings on systems without the "
+                                         "grp module")
+
+                    gids.append(grp.getgrnam(extra_group).gr_gid)
+                elif isinstance(extra_group, int):
+                    gids.append(extra_group)
+                else:
+                    raise TypeError("Items in extra_groups must be a string "
+                                    "or integer, not {}"
+                                    .format(type(extra_group)))
+
+            # make sure that the gids are all positive here so we can do less
+            # checking in the C code
+            for gid_check in gids:
+                if gid_check < 0:
+                    raise ValueError("Group ID cannot be negative, got %s" % (gid_check,))
+
+        uid = None
+        if user is not None:
+            if not hasattr(os, 'setreuid'):
+                raise ValueError("The 'user' parameter is not supported on "
+                                 "the current platform")
+
+            if isinstance(user, str):
+                if pwd is None:
+                    raise ValueError("The user parameter cannot be a string "
+                                     "on systems without the pwd module")
+
+                uid = pwd.getpwnam(user).pw_uid
+            elif isinstance(user, int):
+                uid = user
+            else:
+                raise TypeError("User must be a string or an integer")
+
+            if uid < 0:
+                raise ValueError("User ID cannot be negative, got %s" % (uid,))
+
+        return uid, gid, gids
 
     def __repr__(self):
         return '<%s at 0x%x pid=%r returncode=%r>' % (self.__class__.__name__, id(self), self.pid, self.returncode)
@@ -1029,7 +1134,9 @@ class Popen(object):
                            p2cread, p2cwrite,
                            c2pread, c2pwrite,
                            errread, errwrite,
-                           unused_restore_signals, unused_start_new_session):
+                           unused_restore_signals,
+                           unused_gid, unused_gids, unused_uid, unused_umask,
+                           unused_start_new_session):
             """Execute program (MS Windows version)"""
             # pylint:disable=undefined-variable
             assert not pass_fds, "pass_fds not supported on Windows."
@@ -1409,7 +1516,9 @@ class Popen(object):
                            p2cread, p2cwrite,
                            c2pread, c2pwrite,
                            errread, errwrite,
-                           restore_signals, start_new_session):
+                           restore_signals,
+                           gid, gids, uid, umask,
+                           start_new_session):
             """Execute program (POSIX version)"""
 
             if PY3 and isinstance(args, (str, bytes)):
@@ -1531,6 +1640,18 @@ class Popen(object):
                                 except OSError as e:
                                     e._failed_chdir = True
                                     raise
+
+                            # Python 3.9
+                            if umask >= 0:
+                                os.umask(umask)
+                            # XXX: CPython does _Py_RestoreSignals here.
+                            # Then setsid() based on ???
+                            if gids:
+                                os.setgroups(gids)
+                            if gid:
+                                os.setregid(gid, gid)
+                            if uid:
+                                os.setreuid(uid, uid)
 
                             if preexec_fn:
                                 preexec_fn()
@@ -1719,6 +1840,10 @@ class CompletedProcess(object):
        This first appeared in Python 3.5 and is available to all
        Python versions in gevent.
     """
+    if GenericAlias is not None:
+        # Sigh, 3.9 spreading typing stuff all over everything
+        __class_getitem__ = classmethod(GenericAlias)
+
     def __init__(self, args, returncode, stdout=None, stderr=None):
         self.args = args
         self.returncode = returncode
