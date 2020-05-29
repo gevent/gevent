@@ -139,6 +139,7 @@ class SSLContext(orig_SSLContext):
 
     if hasattr(orig_SSLContext, 'minimum_version'):
         # Like the above, added in 3.7
+        # pylint:disable=no-member
         @orig_SSLContext.minimum_version.setter
         def minimum_version(self, value):
             super(orig_SSLContext, orig_SSLContext).minimum_version.__set__(self, value)
