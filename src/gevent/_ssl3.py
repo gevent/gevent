@@ -6,9 +6,6 @@ For the documentation, refer to :mod:`ssl` module manual.
 
 This module implements cooperative SSL socket wrappers.
 """
-# Our import magic sadly makes this warning useless
-# pylint: disable=undefined-variable
-# pylint:disable=no-member
 
 from __future__ import absolute_import
 import ssl as __ssl__
@@ -16,6 +13,8 @@ import ssl as __ssl__
 _ssl = __ssl__._ssl
 
 import errno
+import sys
+
 from gevent.socket import socket, timeout_default
 from gevent.socket import error as socket_error
 from gevent.socket import timeout as _socket_timeout
@@ -31,12 +30,38 @@ __implements__ = [
     'get_server_certificate',
 ]
 
+# Manually import things we use so we get better linting.
+# Also, in the past (adding 3.9 support) it turned out we were
+# relying on certain global variables being defined in the ssl module
+# that weren't required to be there, e.g., AF_INET, which should be imported
+# from socket
+from socket import AF_INET
+from socket import SOCK_STREAM
+from socket import SO_TYPE
+from socket import SOL_SOCKET
+
+from ssl import SSLWantReadError
+from ssl import SSLWantWriteError
+from ssl import CERT_NONE
+from ssl import SSLError
+from ssl import SSL_ERROR_EOF
+from ssl import SSL_ERROR_WANT_READ
+from ssl import SSL_ERROR_WANT_WRITE
+from ssl import PROTOCOL_SSLv23
+from ssl import SSLObject
+from ssl import match_hostname
+from ssl import CHANNEL_BINDING_TYPES
+from ssl import CERT_REQUIRED
+from ssl import DER_cert_to_PEM_cert
+from ssl import create_connection
+
 # Import all symbols from Python's ssl.py, except those that we are implementing
 # and "private" symbols.
-__imports__ = copy_globals(__ssl__, globals(),
-                           # SSLSocket *must* subclass gevent.socket.socket; see issue 597
-                           names_to_ignore=__implements__ + ['socket'],
-                           dunder_names_to_keep=())
+__imports__ = copy_globals(
+    __ssl__, globals(),
+    # SSLSocket *must* subclass gevent.socket.socket; see issue 597
+    names_to_ignore=__implements__ + ['socket'],
+    dunder_names_to_keep=())
 
 __all__ = __implements__ + __imports__
 if 'namedtuple' in __all__:
@@ -143,7 +168,7 @@ class SSLContext(orig_SSLContext):
 
             __ssl__.SSLContext = orig_SSLContext
             try:
-                super(SSLContext, SSLContext)._msg_callback.__set__(self, value)
+                super(SSLContext, SSLContext)._msg_callback.__set__(self, value) # pylint:disable=no-member
             finally:
                 __ssl__.SSLContext = SSLContext
 
@@ -153,7 +178,7 @@ class SSLContext(orig_SSLContext):
         def sni_callback(self):
             result = super().sni_callback
             if isinstance(result, _Callback):
-                result = result.user_function
+                result = result.user_function # pylint:disable=no-member
             return result
         @sni_callback.setter
         def sni_callback(self, value):

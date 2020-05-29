@@ -73,6 +73,7 @@ import time
 from gevent._hub_local import get_hub_noargs as get_hub
 from gevent._compat import string_types, integer_types, PY3
 from gevent._compat import PY38
+from gevent._compat import PY39
 from gevent._compat import WIN as is_windows
 from gevent._compat import OSX as is_macos
 from gevent._util import copy_globals
@@ -81,6 +82,12 @@ if PY38:
     __imports__.extend([
         'create_server',
         'has_dualstack_ipv6',
+    ])
+
+if PY39:
+    __imports__.extend([
+        'recv_fds',
+        'send_fds',
     ])
 
 # pylint:disable=no-name-in-module,unused-import

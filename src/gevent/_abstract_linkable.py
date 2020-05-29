@@ -377,6 +377,17 @@ class AbstractLinkable(object):
         gotit = self._wait_core(timeout)
         return self._wait_return_value(True, gotit)
 
+    def _at_fork_reinit(self):
+        """
+        This method was added in Python 3.9 and is called by logging.py
+        ``_after_at_fork_child_reinit_locks`` on Lock objects.
+
+        It is also called from threading.py, ``_after_fork`` in
+        ``_reset_internal_locks``, and that can hit ``Event`` objects.
+        Do we need to do anything?
+        """
+
+
 def _init():
     greenlet_init() # pylint:disable=undefined-variable
 

@@ -61,6 +61,7 @@ env:
       - TRAVIS_PYTHON_VERSION=3.6
       - TRAVIS_PYTHON_VERSION=3.7
       - TRAVIS_PYTHON_VERSION=3.8
+      - TRAVIS_PYTHON_VERSION=3.9
       - TRAVIS_PYTHON_VERSION=pypy2.7
       - TRAVIS_PYTHON_VERSION=pypy3.6
       - TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0 GEVENTSETUP_EV_VERIFY=3
@@ -154,6 +155,8 @@ jobs:
     - os: osx
       env: TRAVIS_PYTHON_VERSION=3.5
     - os: osx
+      env: TRAVIS_PYTHON_VERSION=3.9
+    - os: osx
       env: TRAVIS_PYTHON_VERSION=pypy2.7
     - os: osx
       env: TRAVIS_PYTHON_VERSION=pypy3.6
@@ -174,7 +177,7 @@ jobs:
         # First, the build dependencies (see setup.cfg)
         # so that we don't have to use build isolation and can better use the cache;
         # Note that we can't use -U for cffi and greenlet on PyPy.
-        - &build-gevent-deps pip install -U setuptools wheel twine && pip install -U 'faulthandler; python_version == "2.7" and platform_python_implementation == "CPython"' 'cffi;platform_python_implementation=="CPython"' 'cython<3' 'greenlet;platform_python_implementation=="CPython"'
+        - &build-gevent-deps pip install -U setuptools wheel twine && pip install -U 'faulthandler; python_version == "2.7" and platform_python_implementation == "CPython"' 'cffi;platform_python_implementation=="CPython"' 'cython<3' 'greenlet;platform_python_implementation=="CPython" and python_version <= "3.8"' 'git+https://github.com/python-greenlet/greenlet.git#egg=greenlet ; platform_python_implementation == "CPython" and python_version >= "3.9.0b1"'
         # Next, build the wheel *in place*. This helps ccache, and also lets us cache the configure
         # output (pip install uses a random temporary directory, making this difficult)
         - python setup.py bdist_wheel
@@ -194,6 +197,8 @@ jobs:
       env: TRAVIS_PYTHON_VERSION=3.6
     - <<: *build-gevent
       env: TRAVIS_PYTHON_VERSION=3.7
+    - <<: *build-gevent
+      env: TRAVIS_PYTHON_VERSION=3.9
     - <<: *build-gevent
       env: TRAVIS_PYTHON_VERSION=pypy2.7
     - <<: *build-gevent
@@ -324,18 +329,9 @@ jobs:
 
     # For the CPython interpreters, unless we have reason to expect
     # different behaviour across the versions (e.g., as measured by coverage)
-    # it's sufficient to test the alternate backend library for non-current versions;
-    # run the full suite on the current version.
+    # it's sufficient to run the full suite on the current version.
 
-    # 3.6
-    - <<: *test-libuv-jobs
-      env: TRAVIS_PYTHON_VERSION=3.6
-      name: libuv36
-
-    # 3.7
-    - <<: *test-libuv-jobs
-      env: TRAVIS_PYTHON_VERSION=3.7
-      name: libuv37
+    # XXX: Move these to 3.9 once the basic tests get worked out.
 
     # 3.8
     - <<: *test-libuv-jobs

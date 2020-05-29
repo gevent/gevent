@@ -20,4 +20,8 @@ zest.releaser[recommended]
 # benchmarks use this
 pyperf >= 1.6.1
 
+# Python 3.9+ need a version of greenlet that
+# is currently unreleased.
+git+https://github.com/python-greenlet/greenlet.git#egg=greenlet ; platform_python_implementation == 'CPython' and python_version >= '3.9.0b1'
+
 -e .[test,docs]

@@ -152,7 +152,8 @@ class TestTree(greentest.TestCase):
 
     @greentest.ignores_leakcheck
     def test_tree(self):
-        tree, str_tree, tree_format = self._build_tree()
+        with gevent.get_hub().ignoring_expected_test_error():
+            tree, str_tree, tree_format = self._build_tree()
 
         self.assertTrue(tree.root)
 
@@ -191,8 +192,8 @@ class TestTree(greentest.TestCase):
     @greentest.ignores_leakcheck
     def test_tree_no_track(self):
         gevent.config.track_greenlet_tree = False
-        self._build_tree()
-
+        with gevent.get_hub().ignoring_expected_test_error():
+            self._build_tree()
 
     @greentest.ignores_leakcheck
     def test_forest_fake_parent(self):

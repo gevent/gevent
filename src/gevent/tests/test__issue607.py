@@ -29,13 +29,15 @@ class TestKillWithException(greentest.TestCase):
         assert isinstance(g.exception, ExpectedError)
 
     def test_kill_with_exception_after_started(self):
-        g = gevent.spawn(f)
-        g.join(0)
-        g.kill(ExpectedError)
-        assert not g.successful()
+        with gevent.get_hub().ignoring_expected_test_error():
+            g = gevent.spawn(f)
+            g.join(0)
+            g.kill(ExpectedError)
+
+        self.assertFalse(g.successful())
         self.assertRaises(ExpectedError, g.get)
-        assert g.value is None
-        assert isinstance(g.exception, ExpectedError)
+        self.assertIsNone(g.value)
+        self.assertIsInstance(g.exception, ExpectedError)
 
 
 if __name__ == '__main__':
