@@ -1,9 +1,13 @@
 clone_depth: 50
 max_jobs: 8
 shallow_clone: true
-build:
-  parallel: true
-  verbosity: minimal
+# Beginning May 29, 2020, having a `build` section
+# overrides the `build_script` section, causing
+# an error about no Visual Studio file for the default
+# 'MSBuild' mode.
+# build:
+#   parallel: true
+#   verbosity: minimal
 
 environment:
   global:
