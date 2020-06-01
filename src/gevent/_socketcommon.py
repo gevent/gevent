@@ -398,6 +398,19 @@ def _resolve_addr(sock, address):
     if sock.family not in _RESOLVABLE_FAMILIES or not isinstance(address, tuple):
         return address
     # address is (host, port) (ipv4) or (host, port, flowinfo, scopeid) (ipv6).
+    # If it's already resolved, no need to go through getaddrinfo() again.
+    # That can lose precision (e.g., on IPv6, it can lose scopeid). The standard library
+    # does this in socketmodule.c:setipaddr.
+    try:
+        if __socket__.inet_pton(sock.family, address[0]):
+            return address
+    except AttributeError: # pragma: no cover
+        # inet_pton might not be available.
+        pass
+    except __socket__.error:
+        # Not parseable, needs resolved.
+        pass
+
 
     # We don't pass the port to getaddrinfo because the C
     # socket module doesn't either (on some systems its

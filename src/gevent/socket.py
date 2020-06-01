@@ -75,6 +75,11 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
     must be a tuple of (host, port) for the socket to bind as a source
     address before making the connection. A host of '' or port 0 tells
     the OS to use the default.
+
+    .. versionchanged:: NEXT
+        If the host part of the address includes an IPv6 scope ID,
+        it will be used instead of ignored, if the platform supplies
+        :func:`socket.inet_pton`.
     """
 
     host, port = address
@@ -85,7 +90,7 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
         raise error("getaddrinfo returns an empty list")
 
     for res in addrs:
-        af, socktype, proto, _, sa = res
+        af, socktype, proto, _canonname, sa = res
         sock = None
         try:
             sock = socket(af, socktype, proto)

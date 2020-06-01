@@ -1,0 +1,2 @@
+``gevent.socket.create_connection`` and
+``gevent.socket.socket.connect`` no longer ignore IPv6 scope IDs.
