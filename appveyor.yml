@@ -4,7 +4,9 @@ shallow_clone: true
 build:
   parallel: true
   verbosity: minimal
-image: Visual Studio 2019
+# The VS 2019 image doesn't have
+# the MSVC needed for Python 2.7.
+image: Visual Studio 2015
 
 environment:
   global:

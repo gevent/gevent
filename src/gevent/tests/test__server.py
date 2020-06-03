@@ -311,6 +311,7 @@ class TestDefaultSpawn(TestCase):
         self.server = self.ServerSubClass(self.get_listener())
         self.assertNotAccepted()
 
+    @greentest.skipOnAppVeyor("Sometimes times out.")
     def test_subclass_with_socket(self):
         self.server = self.ServerSubClass(self.get_listener())
         # the connection won't be refused, because there exists a
