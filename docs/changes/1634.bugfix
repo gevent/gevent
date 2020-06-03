@@ -1,0 +1,9 @@
+``gevent.socket.create_connection`` and
+``gevent.socket.socket.connect`` no longer ignore IPv6 scope IDs.
+
+Any IP address (IPv4 or IPv6) is no longer subject to an extra call to
+``getaddrinfo``. Depending on the resolver in use, this is likely to
+change the number and order of greenlet switches. (On Windows, in
+particular test cases when there are no other greenlets running, it has
+been observed to lead to ``LoopExit`` in scenarios that didn't produce
+that before.)

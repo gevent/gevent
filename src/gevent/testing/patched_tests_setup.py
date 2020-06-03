@@ -703,6 +703,8 @@ if WIN:
     disabled_tests += [
         # Issue with Unix vs DOS newlines in the file vs from the server
         'test_ssl.ThreadedTests.test_socketserver',
+        # This sometimes hangs (only on appveyor)
+        'test_ssl.ThreadedTests.test_asyncore_server',
         # On appveyor, this sometimes produces 'A non-blocking socket
         # operation could not be completed immediately', followed by
         # 'No connection could be made because the target machine

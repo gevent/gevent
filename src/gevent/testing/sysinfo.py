@@ -17,7 +17,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-
+import errno
 import os
 import sys
 
@@ -125,7 +125,9 @@ if RUNNING_ON_APPVEYOR:
 
 EXPECT_POOR_TIMER_RESOLUTION = (
     PYPY3
-    or RUNNING_ON_APPVEYOR
+    # Really, this is probably only in VMs. But that's all I test
+    # Windows with.
+    or WIN
     or (LIBUV and PYPY)
     or RUN_COVERAGE
     or (OSX and RUNNING_ON_CI)
@@ -133,16 +135,19 @@ EXPECT_POOR_TIMER_RESOLUTION = (
 
 
 CONN_ABORTED_ERRORS = []
-try:
-    from errno import WSAECONNABORTED
-    CONN_ABORTED_ERRORS.append(WSAECONNABORTED)
-except ImportError:
-    pass
+def _make_socket_errnos(*names):
+    result = []
+    for name in names:
+        try:
+            x = getattr(errno, name)
+        except AttributeError:
+            pass
+        else:
+            result.append(x)
+    return frozenset(result)
 
-from errno import ECONNRESET
-CONN_ABORTED_ERRORS.append(ECONNRESET)
-
-CONN_ABORTED_ERRORS = frozenset(CONN_ABORTED_ERRORS)
+CONN_ABORTED_ERRORS = _make_socket_errnos('WSAECONNABORTED', 'ECONNRESET')
+CONN_REFUSED_ERRORS = _make_socket_errnos('WSAECONNREFUSED', 'ECONNREFUSED')
 
 RESOLVER_ARES = os.getenv('GEVENT_RESOLVER') == 'ares'
 RESOLVER_DNSPYTHON = os.getenv('GEVENT_RESOLVER') == 'dnspython'

@@ -4,9 +4,13 @@ shallow_clone: true
 build:
   parallel: true
   verbosity: minimal
+# The VS 2019 image doesn't have
+# the MSVC needed for Python 2.7.
+image: Visual Studio 2015
 
 environment:
   global:
+    APPVEYOR_SAVE_CACHE_ON_ERROR: "true"
     # SDK v7.0 MSVC Express 2008's SetEnv.cmd script will fail if the
     # /E:ON and /V:ON options are not enabled in the batch script interpreter
     # See: http://stackoverflow.com/a/13751649/163740
@@ -125,7 +129,7 @@ install:
   - ps: "ls \"C:/\""
 
   - ECHO "Installed SDKs:"
-  - ps: "ls \"C:/Program Files/Microsoft SDKs/Windows\""
+  - ps: "if(Test-Path(\"C:/Program Files/Microsoft SDKs/Windows\")) {ls \"C:/Program Files/Microsoft SDKs/Windows\";}"
 
   # Install Python (from the official .msi of http://python.org) and pip when
   # not already installed.
@@ -167,7 +171,7 @@ install:
 
 cache:
   - "%TMP%\\py\\"
-  - '%LOCALAPPDATA%\pip\Cache'
+  - '%LOCALAPPDATA%\pip\Cache -> appveyor.yml,setup.py'
 
 build_script:
   # Build the compiled extension

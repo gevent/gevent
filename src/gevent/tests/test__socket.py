@@ -562,6 +562,19 @@ class TestFunctions(greentest.TestCase):
             exclude.append('gethostbyaddr')
         self.assertMonkeyPatchedFuncSignatures('socket', exclude=exclude)
 
+    def test_resolve_ipv6_scope_id(self):
+        from gevent import _socketcommon as SC
+        if not SC.__socket__.has_ipv6:
+            self.skipTest("Needs IPv6") # pragma: no cover
+        if not hasattr(SC.__socket__, 'inet_pton'):
+            self.skipTest("Needs inet_pton") # pragma: no cover
+
+        # A valid IPv6 address, with a scope.
+        addr = ('2607:f8b0:4000:80e::200e', 80, 0, 9)
+        # Mock socket
+        class sock(object):
+            family = SC.AF_INET6 # pylint:disable=no-member
+        self.assertIs(addr, SC._resolve_addr(sock, addr))
 
 class TestSocket(greentest.TestCase):
 

@@ -21,12 +21,10 @@
 
 import gevent.testing as greentest
 from gevent.testing import support
-from gevent.socket import socket, error
+from gevent.testing import sysinfo
 
-try:
-    from errno import WSAECONNREFUSED as ECONNREFUSED
-except ImportError:
-    from errno import ECONNREFUSED
+from gevent.socket import socket, error
+from gevent.exceptions import LoopExit
 
 
 class TestSocketErrors(greentest.TestCase):
@@ -35,15 +33,15 @@ class TestSocketErrors(greentest.TestCase):
 
     def test_connection_refused(self):
         port = support.find_unused_port()
-        s = socket()
-        self._close_on_teardown(s)
-        try:
-            s.connect((greentest.DEFAULT_CONNECT_HOST, port))
-        except error as ex:
-            self.assertEqual(ex.args[0], ECONNREFUSED, ex)
-            self.assertIn('refused', str(ex).lower())
-        else:
-            self.fail("Shouldn't have connected")
+        with socket() as s:
+            try:
+                with self.assertRaises(error) as exc:
+                    s.connect((greentest.DEFAULT_CONNECT_HOST, port))
+            except LoopExit:
+                return
+        ex = exc.exception
+        self.assertIn(ex.args[0], sysinfo.CONN_REFUSED_ERRORS, ex)
+        self.assertIn('refused', str(ex).lower())
 
 
 if __name__ == '__main__':

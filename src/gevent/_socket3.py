@@ -389,10 +389,17 @@ class socket(_socketcommon.SocketMixin):
         return sock.detach()
 
     def connect(self, address):
+        """
+        Connect to *address*.
+
+        .. versionchanged:: NEXT
+            If the host part of the address includes an IPv6 scope ID,
+            it will be used instead of ignored, if the platform supplies
+            :func:`socket.inet_pton`.
+        """
         if self.timeout == 0.0:
             return _socket.socket.connect(self._sock, address)
         address = _socketcommon._resolve_addr(self._sock, address)
-
         with Timeout._start_new_or_dummy(self.timeout, timeout("timed out")):
             while True:
                 err = self.getsockopt(SOL_SOCKET, SO_ERROR)
