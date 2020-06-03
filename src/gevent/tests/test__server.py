@@ -469,6 +469,7 @@ class TestNoneSpawn(TestCase):
     def test_invalid_callback(self):
         self._test_invalid_callback()
 
+    @greentest.skipOnAppVeyor("Sometimes doesn't get the error.")
     def test_assertion_in_blocking_func(self):
         def sleep(*_args):
             gevent.sleep(SMALLEST_RELIABLE_DELAY)
@@ -507,7 +508,7 @@ class BadWrapException(BaseException):
 
 class TestSSLGetCertificate(TestCase):
 
-    def _create_server(self):
+    def _create_server(self): # pylint:disable=arguments-differ
         return self.ServerSubClass((greentest.DEFAULT_BIND_ADDR, 0),
                                    keyfile=_file('server.key'),
                                    certfile=_file('server.crt'))

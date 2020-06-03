@@ -1291,6 +1291,7 @@ if OSX:
             # These sometime timeout. Cannot reproduce locally.
             'test_ftp.TestTLS_FTPClassMixin.test_mlsd',
             'test_ftp.TestTLS_FTPClassMixin.test_retrlines_too_long',
+            'test_ftp.TestTLS_FTPClassMixin.test_storlines',
         ]
 
     if RESOLVER_ARES and PY38 and not RUNNING_ON_CI:
