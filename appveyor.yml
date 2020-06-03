@@ -183,7 +183,7 @@ test_script:
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -c "import gevent.core; print(gevent.core.loop)"
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -c "import gevent; print(gevent.config.settings['resolver'].get_options())"
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -c "from gevent._compat import get_clock_info; print(get_clock_info('perf_counter'))"
-  - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -mgevent.tests --no-combine --config known_failures.py --quiet
+  - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -mgevent.tests --config known_failures.py --quiet
 
 after_test:
   # pycparser can't be built correctly in an isolated environment.

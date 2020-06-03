@@ -806,5 +806,5 @@ def get_server_certificate(addr, ssl_version=PROTOCOL_SSLv23, ca_certs=None):
         with wrap_socket(sock, ssl_version=ssl_version,
                          cert_reqs=cert_reqs, ca_certs=ca_certs) as sslsock:
             dercert = sslsock.getpeercert(True)
-
+    sslsock = sock = None
     return DER_cert_to_PEM_cert(dercert)

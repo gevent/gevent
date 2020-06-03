@@ -125,7 +125,9 @@ if RUNNING_ON_APPVEYOR:
 
 EXPECT_POOR_TIMER_RESOLUTION = (
     PYPY3
-    or RUNNING_ON_APPVEYOR
+    # Really, this is probably only in VMs. But that's all I test
+    # Windows with.
+    or WIN
     or (LIBUV and PYPY)
     or RUN_COVERAGE
     or (OSX and RUNNING_ON_CI)
