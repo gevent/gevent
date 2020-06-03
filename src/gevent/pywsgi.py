@@ -1389,6 +1389,8 @@ class WSGIServer(StreamServer):
     .. versionchanged:: 1.1a3
         Add support for passing :class:`logging.Logger` objects to the ``log`` and
         ``error_log`` arguments.
+    .. versionchanged:: NEXT
+        Passing a ``handle`` kwarg to the constructor is now officially deprecated.
     """
 
     #: A callable taking three arguments: (socket, address, server) and returning
@@ -1436,7 +1438,21 @@ class WSGIServer(StreamServer):
                  log='default', error_log='default',
                  handler_class=None,
                  environ=None, **ssl_args):
+        if 'handle' in ssl_args:
+            # The ultimate base class (BaseServer) uses 'handle' for
+            # the thing we call 'application'. We never deliberately
+            # bass a `handle` argument to the base class, but one
+            # could sneak in through ``**ssl_args``, even though that
+            # is not the intent, while application is None. That
+            # causes our own ``def handle`` method to be replaced,
+            # probably leading to bad results. Passing a 'handle'
+            # instead of an 'application' can really confuse things.
+            import warnings
+            warnings.warn("Passing 'handle' kwarg to WSGIServer is deprecated. "
+                          "Did you mean application?", DeprecationWarning, stacklevel=2)
+
         StreamServer.__init__(self, listener, backlog=backlog, spawn=spawn, **ssl_args)
+
         if application is not None:
             self.application = application
         if handler_class is not None:
