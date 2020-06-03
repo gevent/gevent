@@ -235,11 +235,13 @@ class TestCase(greentest.TestCase):
         # with os.system. We can probably do better with psutil.
         return
 
-    def _create_server(self):
-        return self.ServerSubClass((greentest.DEFAULT_BIND_ADDR, 0))
+    def _create_server(self, *args, **kwargs):
+        kind = kwargs.pop('server_kind', self.ServerSubClass)
+        addr = kwargs.pop('server_listen_addr', (greentest.DEFAULT_BIND_ADDR, 0))
+        return kind(addr, *args, **kwargs)
 
-    def init_server(self):
-        self.server = self._create_server()
+    def init_server(self, *args, **kwargs):
+        self.server = self._create_server(*args, **kwargs)
         self.server.start()
         sleep_to_clear_old_sockets()
 
@@ -470,8 +472,7 @@ class TestNoneSpawn(TestCase):
     def test_assertion_in_blocking_func(self):
         def sleep(*_args):
             gevent.sleep(SMALLEST_RELIABLE_DELAY)
-        self.server = self.Settings.ServerClass((greentest.DEFAULT_BIND_ADDR, 0), sleep, spawn=None)
-        self.server.start()
+        self.init_server(sleep, server_kind=self.ServerSubClass, spawn=None)
         self.expect_one_error()
         self.assert500()
         self.assert_error(AssertionError, 'Impossible to call blocking function in the event loop callback')
