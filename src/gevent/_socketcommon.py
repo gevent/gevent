@@ -400,7 +400,8 @@ def _resolve_addr(sock, address):
     # address is (host, port) (ipv4) or (host, port, flowinfo, scopeid) (ipv6).
     # If it's already resolved, no need to go through getaddrinfo() again.
     # That can lose precision (e.g., on IPv6, it can lose scopeid). The standard library
-    # does this in socketmodule.c:setipaddr.
+    # does this in socketmodule.c:setipaddr. (This is only part of the logic, the real
+    # thing is much more complex.)
     try:
         if __socket__.inet_pton(sock.family, address[0]):
             return address
