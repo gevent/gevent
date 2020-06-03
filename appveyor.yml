@@ -1,16 +1,14 @@
 clone_depth: 50
 max_jobs: 8
 shallow_clone: true
-# Beginning May 29, 2020, having a `build` section
-# overrides the `build_script` section, causing
-# an error about no Visual Studio file for the default
-# 'MSBuild' mode.
-# build:
-#   parallel: true
-#   verbosity: minimal
+build:
+  parallel: true
+  verbosity: minimal
+image: Visual Studio 2019
 
 environment:
   global:
+    APPVEYOR_SAVE_CACHE_ON_ERROR: "true"
     # SDK v7.0 MSVC Express 2008's SetEnv.cmd script will fail if the
     # /E:ON and /V:ON options are not enabled in the batch script interpreter
     # See: http://stackoverflow.com/a/13751649/163740
@@ -171,7 +169,7 @@ install:
 
 cache:
   - "%TMP%\\py\\"
-  - '%LOCALAPPDATA%\pip\Cache'
+  - '%LOCALAPPDATA%\pip\Cache -> appveyor.yml,setup.py'
 
 build_script:
   # Build the compiled extension
@@ -185,7 +183,7 @@ test_script:
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -c "import gevent.core; print(gevent.core.loop)"
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -c "import gevent; print(gevent.config.settings['resolver'].get_options())"
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -c "from gevent._compat import get_clock_info; print(get_clock_info('perf_counter'))"
-  - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -mgevent.tests --config known_failures.py --quiet
+  - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -mgevent.tests --no-combine --config known_failures.py --quiet
 
 after_test:
   # pycparser can't be built correctly in an isolated environment.
