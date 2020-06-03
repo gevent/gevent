@@ -127,7 +127,7 @@ install:
   - ps: "ls \"C:/\""
 
   - ECHO "Installed SDKs:"
-  - ps: "ls \"C:/Program Files/Microsoft SDKs/Windows\""
+  - ps: "if(Test-Path(\"C:/Program Files/Microsoft SDKs/Windows\")) {ls \"C:/Program Files/Microsoft SDKs/Windows\";}"
 
   # Install Python (from the official .msi of http://python.org) and pip when
   # not already installed.
