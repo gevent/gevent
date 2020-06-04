@@ -194,6 +194,10 @@ class AbstractLinkable(object):
         # The object itself becomes false in a boolean way as soon
         # as this method returns.
         notifier = self._notifier
+        if notifier is None:
+            # XXX: How did we get here?
+            self._check_and_notify()
+            return
         # Early links are allowed to remove later links, and links
         # are allowed to add more links, thus we must not
         # make a copy of our the ``_links`` list, we must traverse it and

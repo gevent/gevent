@@ -317,6 +317,8 @@ EXTRA_RECOMMENDED = [
     CFFI_DEP,
     # Backport of selectors module to Python 2
     'selectors2 ; python_version == "2.7"',
+    # Backport of socket.socketpair to Python 2; only needed on Windows
+    'backports.socketpair ; python_version == "2.7" and sys_platform == "win32"',
 ] + EXTRA_DNSPYTHON + EXTRA_EVENTS + EXTRA_MONITOR
 
 

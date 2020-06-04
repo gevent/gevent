@@ -460,7 +460,8 @@ class socket(_socketcommon.SocketMixin):
 SocketType = socket
 
 if hasattr(_socket, 'socketpair'):
-
+    # The native, low-level socketpair returns
+    # low-level objects
     def socketpair(family=getattr(_socket, 'AF_UNIX', _socket.AF_INET),
                    type=_socket.SOCK_STREAM, proto=0):
         one, two = _socket.socketpair(family, type, proto)
@@ -469,6 +470,20 @@ if hasattr(_socket, 'socketpair'):
             one._drop()
             two._drop()
         return result
+elif hasattr(__socket__, 'socketpair'):
+    # The high-level backport uses high-level socket APIs. It works
+    # cooperatively automatically if we're monkey-patched,
+    # else we must do it ourself.
+    _orig_socketpair = __socket__.socketpair
+    def socketpair(*args, **kwargs):
+        one, two = _orig_socketpair(*args, **kwargs)
+        if not isinstance(one, socket):
+            one = socket(_sock=one)
+            two = socket(_sock=two)
+            if PYPY:
+                one._drop()
+                two._drop()
+        return one, two
 elif 'socketpair' in __implements__:
     __implements__.remove('socketpair')
 

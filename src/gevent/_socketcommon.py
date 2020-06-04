@@ -128,6 +128,11 @@ if is_macos:
 import _socket
 _realsocket = _socket.socket
 import socket as __socket__
+try:
+    # Provide implementation of socket.socketpair on Windows < 3.5.
+    import backports.socketpair
+except ImportError:
+    pass
 
 _name = _value = None
 __imports__ = copy_globals(__socket__, globals(),
