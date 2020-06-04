@@ -1,4 +1,7 @@
-Add ``gevent.selectors`` containing ``GeventSelector``.
+Add ``gevent.selectors`` containing ``GeventSelector``. This selector
+implementation uses gevent details to attempt to reduce overhead when
+polling many file descriptors, only some of which become ready at any
+given time.
 
 This is monkey-patched as ``selectors.DefaultSelector`` by default.
 

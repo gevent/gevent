@@ -475,8 +475,8 @@ elif hasattr(__socket__, 'socketpair'):
     # cooperatively automatically if we're monkey-patched,
     # else we must do it ourself.
     _orig_socketpair = __socket__.socketpair
-    def socketpair(*args, **kwargs):
-        one, two = _orig_socketpair(*args, **kwargs)
+    def socketpair(family=_socket.AF_INET, type=_socket.SOCK_STREAM, proto=0):
+        one, two = _orig_socketpair(family, type, proto)
         if not isinstance(one, socket):
             one = socket(_sock=one)
             two = socket(_sock=two)

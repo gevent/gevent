@@ -10,10 +10,10 @@ import gevent.testing as greentest
 class SelectorTestMixin(object):
 
     @staticmethod
-    def run_selector_once(sel):
+    def run_selector_once(sel, timeout=3):
         # Run in a background greenlet, leaving the main
         # greenlet free to send data.
-        events = sel.select(timeout=3)
+        events = sel.select(timeout=timeout)
         for key, mask in events:
             key.data(sel, key.fileobj, mask)
             gevent.sleep()
@@ -56,8 +56,12 @@ class GeventSelectorTest(SelectorTestMixin,
             self._check_selector(sel)
 
     def test_select_many_sockets(self):
+        try:
+            AF_UNIX = socket.AF_UNIX
+        except AttributeError:
+            AF_UNIX = None
+
         pairs = [socket.socketpair() for _ in range(10)]
-        clients = [s[1] for s in pairs]
 
         try:
             server_sel = selectors.GeventSelector()
@@ -67,13 +71,23 @@ class GeventSelectorTest(SelectorTestMixin,
                 server_sel.register(server, selectors.EVENT_READ,
                                     self.read_from_ready_socket_and_reply)
                 client_sel.register(client, selectors.EVENT_READ, i)
-            # Prime them all to be ready at once.
-            for i, client in enumerate(clients):
+                # Prime them all to be ready at once.
                 data = str(i).encode('ascii')
                 client.send(data)
 
-            # Read and reply to all the clients
-            self.run_selector_once(server_sel)
+            # Read and reply to all the clients..
+            # Everyone should be ready, so we ask not to block.
+            # The call to gevent.idle() is there to make sure that
+            # all event loop implementations (looking at you, libuv)
+            # get a chance to poll for IO. Without it, libuv
+            # doesn't find any results here.
+            # Not blocking only works for AF_UNIX sockets, though.
+            # If we got AF_INET (Windows) the data may need some time to
+            # traverse through the layers.
+            gevent.idle()
+            self.run_selector_once(
+                server_sel,
+                timeout=-1 if pairs[0][0].family == AF_UNIX else 3)
 
             found = 0
             for key, _ in client_sel.select(timeout=3):
