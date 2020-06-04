@@ -5,9 +5,6 @@ try:
     import selectors
 except ImportError:
     import selectors2 as selectors
-import socket
-
-import gevent
 
 from gevent.monkey import patch_all
 import gevent.testing as greentest
@@ -16,9 +13,9 @@ patch_all()
 
 from gevent.selectors import DefaultSelector
 from gevent.selectors import GeventSelector
+from gevent.tests.test__selectors import SelectorTestMixin
 
-
-class TestSelectors(greentest.TestCase):
+class TestSelectors(SelectorTestMixin, greentest.TestCase):
 
     @greentest.skipOnPy2(
         'selectors2 backport does not use _select'
@@ -39,39 +36,9 @@ class TestSelectors(greentest.TestCase):
         self.assertIs(selectors.DefaultSelector, GeventSelector)
 
     def test_import_selectors(self):
-        # selectors can always be imported. On Python 2,
+        # selectors can always be imported once monkey-patched. On Python 2,
         # this is an alias for gevent.selectors.
         __import__('selectors')
-
-    def _check_selector(self, sel):
-        def read(conn, _mask):
-            data = conn.recv(100)  # Should be ready
-            if data:
-                conn.send(data)  # Hope it won't block
-
-            sel.unregister(conn)
-            conn.close()
-
-        def run_selector_once():
-            events = sel.select()
-            for key, mask in events:
-                key.data(key.fileobj, mask)
-
-        sock1, sock2 = socket.socketpair()
-        try:
-            sel.register(sock1, selectors.EVENT_READ, read)
-            glet = gevent.spawn(run_selector_once)
-            DATA = b'abcdef'
-            sock2.send(DATA)
-            data = sock2.recv(50)
-            self.assertEqual(data, DATA)
-        finally:
-            sel.close()
-            sock1.close()
-            sock2.close()
-            glet.join(10)
-        self.assertTrue(glet.ready())
-
 
     def _make_test(name, kind): # pylint:disable=no-self-argument
         if kind is None:
