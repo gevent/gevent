@@ -415,6 +415,20 @@ def patch_module(target_module, source_module, items=None,
 
     return True
 
+def _check_availability(name):
+    """
+    Test that the source and target modules for *name* are
+    available and return them.
+
+    :raise ImportError: If the source or target cannot be imported.
+    :return: The tuple ``(gevent_module, target_module, target_module_name)``
+    """
+    gevent_module = getattr(__import__('gevent.' + name), name)
+    target_module_name = getattr(gevent_module, '__target__', name)
+    target_module = __import__(target_module_name)
+
+    return gevent_module, target_module, target_module_name
+
 def _patch_module(name,
                   items=None,
                   _warnings=None,
@@ -423,9 +437,7 @@ def _patch_module(name,
                   _notify_did_subscribers=True,
                   _call_hooks=True):
 
-    gevent_module = getattr(__import__('gevent.' + name), name)
-    module_name = getattr(gevent_module, '__target__', name)
-    target_module = __import__(module_name)
+    gevent_module, target_module, target_module_name = _check_availability(name)
 
     patch_module(target_module, gevent_module, items=items,
                  _warnings=_warnings, _patch_kwargs=_patch_kwargs,
@@ -451,7 +463,7 @@ def _patch_module(name,
                          _notify_will_subscribers=False,
                          _notify_did_subscribers=False,
                          _call_hooks=False)
-            saved[alternate_name] = saved[module_name]
+            saved[alternate_name] = saved[target_module_name]
 
     return gevent_module, target_module
 
@@ -1013,19 +1025,47 @@ def patch_select(aggressive=True):
     and :func:`select.poll` with :class:`gevent.select.poll` (where available).
 
     If ``aggressive`` is true (the default), also remove other
-    blocking functions from :mod:`select` and (on Python 3.4 and
-    above) :mod:`selectors`:
+    blocking functions from :mod:`select` .
 
     - :func:`select.epoll`
     - :func:`select.kqueue`
     - :func:`select.kevent`
     - :func:`select.devpoll` (Python 3.5+)
-    - :class:`selectors.EpollSelector`
-    - :class:`selectors.KqueueSelector`
-    - :class:`selectors.DevpollSelector` (Python 3.5+)
     """
     _patch_module('select',
                   _patch_kwargs={'aggressive': aggressive})
+
+@_ignores_DoNotPatch
+def patch_selectors(aggressive=True):
+    """
+    Replace :class:`selectors.DefaultSelector` with
+    :class:`gevent.selectors.GeventSelector`.
+
+    If ``aggressive`` is true (the default), also remove other
+    blocking classes :mod:`selectors`:
+
+    - :class:`selectors.EpollSelector`
+    - :class:`selectors.KqueueSelector`
+    - :class:`selectors.DevpollSelector` (Python 3.5+)
+
+    On Python 2, the :mod:`selectors2` module is used instead
+    of :mod:`selectors` if it is available. If this module cannot
+    be imported, no patching is done and :mod:`gevent.selectors` is
+    not available.
+
+    In :func:`patch_all`, the *select* argument controls both this function
+    and :func:`patch_select`.
+
+    .. versionadded:: NEXT
+    """
+    try:
+        _check_availability('selectors')
+    except ImportError: # pragma: no cover
+        return
+
+    _patch_module('selectors',
+                  _patch_kwargs={'aggressive': aggressive})
+
 
 @_ignores_DoNotPatch
 def patch_subprocess():
@@ -1178,6 +1218,7 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
         patch_socket(dns=dns, aggressive=aggressive)
     if select:
         patch_select(aggressive=aggressive)
+        patch_selectors(aggressive=aggressive)
     if ssl:
         patch_ssl(_warnings=_warnings, _first_time=first_time)
     if subprocess:

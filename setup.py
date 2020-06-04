@@ -315,6 +315,8 @@ EXTRA_MONITOR = [
 EXTRA_RECOMMENDED = [
     # We need this at runtime to use the libev-CFFI and libuv backends
     CFFI_DEP,
+    # Backport of selectors module to Python 2
+    'selectors2 ; python_version == "2.7"',
 ] + EXTRA_DNSPYTHON + EXTRA_EVENTS + EXTRA_MONITOR
 
 

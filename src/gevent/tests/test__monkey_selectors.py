@@ -4,7 +4,7 @@ try:
     # things up properly if the order is wrong.
     import selectors
 except ImportError:
-    selectors = None
+    import selectors2 as selectors
 import socket
 
 import gevent
@@ -14,12 +14,15 @@ import gevent.testing as greentest
 
 patch_all()
 
-@greentest.skipIf(
-    selectors is None,
-    "selectors module not present"
-)
+from gevent.selectors import DefaultSelector
+from gevent.selectors import GeventSelector
+
+
 class TestSelectors(greentest.TestCase):
 
+    @greentest.skipOnPy2(
+        'selectors2 backport does not use _select'
+    )
     @greentest.skipOnWindows(
         "SelectSelector._select is a normal function on Windows"
     )
@@ -28,15 +31,17 @@ class TestSelectors(greentest.TestCase):
         _select = selectors.SelectSelector._select
         self.assertIn('_gevent_monkey', dir(_select))
 
-    @greentest.skipUnless(
-        hasattr(selectors, 'PollSelector'),
-        "Needs gevent.select.poll"
-    )
-    def test_poll_is_default(self):
+    def test_default(self):
         # Depending on the order of imports, gevent.select.poll may be defined but
         # selectors.PollSelector may not be defined.
         # https://github.com/gevent/gevent/issues/1466
-        self.assertIs(selectors.DefaultSelector, selectors.PollSelector)
+        self.assertIs(DefaultSelector, GeventSelector)
+        self.assertIs(selectors.DefaultSelector, GeventSelector)
+
+    def test_import_selectors(self):
+        # selectors can always be imported. On Python 2,
+        # this is an alias for gevent.selectors.
+        __import__('selectors')
 
     def _check_selector(self, sel):
         def read(conn, _mask):
@@ -74,8 +79,8 @@ class TestSelectors(greentest.TestCase):
                 self.skipTest(name + ' is not defined')
         else:
             def m(self, k=kind):
-                sel = k()
-                self._check_selector(sel)
+                with k() as sel:
+                    self._check_selector(sel)
         m.__name__ = 'test_selector_' + name
         return m
 
@@ -90,14 +95,20 @@ class TestSelectors(greentest.TestCase):
             'DevpollSelector',
             'PollSelector',
             'SelectSelector',
+            GeventSelector,
     ):
-        SelKind = getattr(selectors, SelKindName, None)
+        if not isinstance(SelKindName, type):
+            SelKind = getattr(selectors, SelKindName, None)
+        else:
+            SelKind = SelKindName
+            SelKindName = SelKind.__name__
         m = _make_test(SelKindName, SelKind)
         locals()[m.__name__] = m
 
     del SelKind
     del SelKindName
     del _make_test
+
 
 
 if __name__ == '__main__':

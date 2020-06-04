@@ -25,6 +25,7 @@ MAPPING = {
     'gevent.local': '_threading_local',
     'gevent.socket': 'socket',
     'gevent.select': 'select',
+    'gevent.selectors': 'selectors' if PY3 else 'selectors2',
     'gevent.ssl': 'ssl',
     'gevent.thread': '_thread' if PY3 else 'thread',
     'gevent.subprocess': 'subprocess',
