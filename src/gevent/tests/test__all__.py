@@ -174,7 +174,7 @@ class AbstractTestMixin(object):
             return
         if self.__implements__ is not None and self.stdlib_module is None:
             raise AssertionError(
-                '%s (%r) has __implements__ (%s) but no stdlib counterpart (%s)'
+                '%s (%r) has __implements__ (%s) but no stdlib counterpart module exists (%s)'
                 % (self.modname, self.module, self.__implements__, self.stdlib_name))
 
     @skip_if_no_stdlib_counterpart

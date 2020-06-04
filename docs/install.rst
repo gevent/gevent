@@ -146,7 +146,13 @@ monitor
     build on all platforms.)
 
 recommended
-    A shortcut for installing suggested extras together.
+    A shortcut for installing suggested extras together. This includes
+    the non-test extras defined here, plus:
+
+    - `backports.socketpair
+      <https://pypi.org/project/backports.socketpair/>`_ on Python
+      2/Windows (beginning with release 20.6.0);
+    - `selectors2 <https://pypi.org/project/selectors2/>`_ on Python 2 (beginning with release 20.6.0).
 
 test
     Everything needed to run the complete gevent test suite.

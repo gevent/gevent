@@ -15,6 +15,8 @@ class TestSocketpair(unittest.TestCase):
         self.assertEqual(msg, read)
         y.close()
 
+    @unittest.skipUnless(hasattr(socket, 'fromfd'),
+                         'Needs socket.fromfd')
     def test_fromfd(self):
         msg = b'hello world'
         x, y = socket.socketpair()

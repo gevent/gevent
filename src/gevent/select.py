@@ -258,6 +258,25 @@ class poll(object):
     def modify(self, fd, eventmask):
         self.register(fd, eventmask)
 
+    def _get_started_watchers(self, watcher_cb):
+        watchers = []
+        io = self.loop.io
+        MAXPRI = self.loop.MAXPRI
+
+        try:
+            for fd, flags in iteritems(self.fds):
+                watcher = io(fd, flags)
+                watchers.append(watcher)
+                watcher.priority = MAXPRI
+                watcher.start(watcher_cb, fd, pass_events=True)
+        except:
+            for awatcher in watchers:
+                awatcher.stop()
+                awatcher.close()
+            raise
+        return watchers
+
+
     def poll(self, timeout=None):
         """
         poll the registered fds.
@@ -270,15 +289,8 @@ class poll(object):
            i.e., block. This was always the case with libev.
         """
         result = PollResult()
-        watchers = []
-        io = self.loop.io
-        MAXPRI = self.loop.MAXPRI
+        watchers = self._get_started_watchers(result.add_event)
         try:
-            for fd, flags in iteritems(self.fds):
-                watcher = io(fd, flags)
-                watchers.append(watcher)
-                watcher.priority = MAXPRI
-                watcher.start(result.add_event, fd, pass_events=True)
             if timeout is not None:
                 if timeout < 0:
                     # The docs for python say that an omitted timeout,
@@ -320,7 +332,6 @@ class poll(object):
 
 def _gevent_do_monkey_patch(patch_request):
     aggressive = patch_request.patch_kwargs['aggressive']
-    target_mod = patch_request.target_module
 
     patch_request.default_patch_items()
 
@@ -334,55 +345,3 @@ def _gevent_do_monkey_patch(patch_request):
             'kevent',
             'devpoll',
         )
-
-    if patch_request.PY3:
-        # TODO: Do we need to broadcast events about patching the selectors
-        # package? If so, must be careful to deal with DoNotPatch exceptions.
-
-        # Python 3 wants to use `select.select` as a member function,
-        # leading to this error in selectors.py (because
-        # gevent.select.select is not a builtin and doesn't get the
-        # magic auto-static that they do):
-        #
-        #    r, w, _ = self._select(self._readers, self._writers, [], timeout)
-        #    TypeError: select() takes from 3 to 4 positional arguments but 5 were given
-        #
-        # Note that this obviously only happens if selectors was
-        # imported after we had patched select; but there is a code
-        # path that leads to it being imported first (but now we've
-        # patched select---so we can't compare them identically). It also doesn't
-        # happen on Windows, because they define a normal method for _select, to work around
-        # some weirdness in the handling of the third argument.
-
-        orig_select_select = patch_request.get_original('select', 'select')
-        assert target_mod.select is not orig_select_select
-        selectors = __import__('selectors')
-        if selectors.SelectSelector._select in (target_mod.select, orig_select_select):
-            def _select(self, *args, **kwargs): # pylint:disable=unused-argument
-                return select(*args, **kwargs)
-            selectors.SelectSelector._select = _select
-            _select._gevent_monkey = True # prove for test cases
-
-        # Python 3.7 refactors the poll-like selectors to use a common
-        # base class and capture a reference to select.poll, etc, at
-        # import time. selectors tends to get imported early
-        # (importing 'platform' does it: platform -> subprocess -> selectors),
-        # so we need to clean that up.
-        if hasattr(selectors, 'PollSelector') and hasattr(selectors.PollSelector, '_selector_cls'):
-            selectors.PollSelector._selector_cls = poll
-
-        if aggressive:
-            # If `selectors` had already been imported before we removed
-            # select.epoll|kqueue|devpoll, these may have been defined in terms
-            # of those functions. They'll fail at runtime.
-            patch_request.remove_item(
-                selectors,
-                'EpollSelector',
-                'KqueueSelector',
-                'DevpollSelector',
-            )
-            selectors.DefaultSelector = getattr(
-                selectors,
-                'PollSelector',
-                selectors.SelectSelector
-            )

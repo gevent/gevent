@@ -259,14 +259,6 @@ class Definitions(DefinitionsBase):
         when=APPVEYOR & PY3
     )
 
-    test__socketpair = Ignored(
-        """
-        Py35 added socket.socketpair, all other releases
-        are missing it. No reason to even test it.
-        """,
-        when=WIN & PY2
-    )
-
     test_ftplib = Flaky(
         r"""
         could be a problem of appveyor - not sure

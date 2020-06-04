@@ -743,8 +743,9 @@ else:
                 future = self._threadpool.spawn(fn, *args, **kwargs)
                 return _FutureProxy(future)
 
-        def shutdown(self, wait=True):
-            super(ThreadPoolExecutor, self).shutdown(wait)
+        def shutdown(self, wait=True, **kwargs): # pylint:disable=arguments-differ
+            # In 3.9, this added ``cancel_futures=False``
+            super(ThreadPoolExecutor, self).shutdown(wait, **kwargs)
             # XXX: We don't implement wait properly
             kill = getattr(self._threadpool, 'kill', None)
             if kill: # pylint:disable=using-constant-test
