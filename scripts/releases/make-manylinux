@@ -88,6 +88,10 @@ fi
 
 # Mount the current directory as /gevent
 # Mount the pip cache directory as /cache
+# `pip cache` requires pip 20.1
+echo Setting up caching
+python --version
+python -mpip --version
 LCACHE="$(dirname `python -mpip cache dir`)"
 echo Sharing pip cache at $LCACHE
 echo Sharing ccache dir at $HOME/.ccache
