@@ -11,7 +11,7 @@
 extern "C" {
 #endif
 
-#define GREENLET_VERSION "0.4.14"
+#define GREENLET_VERSION "0.4.16"
 
 #if PY_VERSION_HEX >= 0x030700A3
 #  define GREENLET_USE_EXC_INFO

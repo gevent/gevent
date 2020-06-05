@@ -22,12 +22,8 @@ requires = [
      # See version requirements in setup.py
      "cffi >= 1.12.3 ; platform_python_implementation == 'CPython'",
      # Python 3.7 requires at least 0.4.14, which is ABI incompatible with earlier
-     # releases. Python 3.9 and 3.10 require 0.4.16, which has not been released yet.
-     # Listing it here fails to find a distro on PyPI; and this setting won't accept
-     # git+https:// VCS urls, it seems. If we list it in dev-requirements.txt, we seem to
-     # get what we need.
-     "greenlet>=0.4.14 ; platform_python_implementation == 'CPython' and python_version <= '3.8'",
-     #"greenlet > 0.4.15 ; platform_python_implementation == 'CPython' and python_version >= '3.9.0b1'",
+     # releases. Python 3.9 and 3.10 require 0.4.16
+     "greenlet >= 0.4.16 ; platform_python_implementation == 'CPython'",
 ]
 
 [tool.towncrier]
