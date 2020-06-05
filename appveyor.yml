@@ -24,6 +24,7 @@ environment:
     # Don't get warnings about Python 2 support being deprecated. We
     # know.
     PIP_NO_PYTHON_VERSION_WARNING: 1
+    PIP_UPGRADE_STRATEGY: eager
     # Enable this if debugging a resource leak. Otherwise
     # it slows things down.
     # PYTHONTRACEMALLOC: 10
@@ -177,7 +178,7 @@ build_script:
   # Build the compiled extension
   # Try to get some things that don't wind up in the pip cache as
   # built wheels if they're built during an isolated build.
-  - "%CMD_IN_ENV% %PYEXE% -m pip install -U wheel cython setuptools cffi"
+  - "%CMD_IN_ENV% %PYEXE% -m pip install --pre -U wheel cython setuptools cffi"
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -m pip install -U -e .[test]
 
 test_script:
@@ -193,7 +194,7 @@ after_test:
   # https://ci.appveyor.com/project/denik/gevent/builds/23810605/job/83aw4u67artt002b#L602
   # So we violate DRY and repeate some requirements in order to use
   # --no-build-isolation
-  - "%CMD_IN_ENV% %PYEXE% -m pip install wheel cython setuptools cffi"
+  - "%CMD_IN_ENV% %PYEXE% -m pip install --pre wheel cython setuptools cffi"
   - "%CMD_IN_ENV% %PYEXE% -m pip wheel --no-build-isolation . -w dist"
   - ps: "ls dist"
 

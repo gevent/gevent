@@ -32,8 +32,8 @@ CARES_EMBED = should_embed('c-ares')
 
 # See #616, trouble building for a 32-bit python on a 64-bit platform
 # (Linux).
-_config_cflags = distutils.sysconfig.get_config_var("CFLAGS") or ''
-cflags = _config_cflags + ((' ' + os.environ['CFLAGS']) if os.environ.get("CFLAGS") else '')
+_distutils_cflags = distutils.sysconfig.get_config_var("CFLAGS") or ''
+cflags = _distutils_cflags + ((' ' + os.environ['CFLAGS']) if os.environ.get("CFLAGS") else '')
 cflags = ('CFLAGS="%s"' % (cflags,)) if cflags else ''
 
 
@@ -48,6 +48,10 @@ ares_configure_command = ' '.join([
     " && if [ -r ares_build.h.orig ]; then mv ares_build.h.orig ares_build.h; fi)",
     "> configure-output.txt"
 ])
+
+if 'GEVENT_MANYLINUX' in os.environ:
+    # Assumes that c-ares is pre-configured.
+    ares_configure_command = '(echo preconfigured) > configure-output.txt'
 
 
 

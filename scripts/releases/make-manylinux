@@ -14,32 +14,85 @@ export GEVENTTEST_USE_RESOURCES="-network"
 export CI=1
 export TRAVIS=true
 export GEVENT_MANYLINUX=1
+# Don't get warnings about Python 2 support being deprecated. We
+# know. The env var works for pip 20.
+export PIP_NO_PYTHON_VERSION_WARNING=1
+export PIP_NO_WARN_SCRIPT_LOCATION=1
+
+# Build configuration.
+export CC="ccache gcc"
+export LDSHARED="$CC -shared"
+export LDCCSHARED="$LDSHARED"
+export LDCXXSHARED="$LDSHARED"
+export CCACHE_NOCPP2=true
+export CCACHE_SLOPPINESS=file_macro,time_macros,include_file_ctime,include_file_mtime
+export CCACHE_NOHASHDIR=true
+export CCACHE_BASEDIR="/gevent"
+export BUILD_LIBS=$HOME/.libs
+# Share the ccache directory
+export CCACHE_DIR="/ccache"
+# Disable some warnings produced by libev especially and also some Cython generated code.
+# Note that changing the value of these variables invalidates configure caches
+export CFLAGS="-Ofast -pipe -Wno-strict-aliasing -Wno-comment -Wno-unused-value -Wno-unused-but-set-variable -Wno-sign-compare -Wno-parentheses -Wno-unused-function -Wno-tautological-compare -Wno-strict-prototypes"
+
 
 if [ -d /gevent -a -d /opt/python ]; then
     # Running inside docker
-    yum -y install libffi-devel
-    cd /gevent
-    rm -rf wheelhouse
-    mkdir wheelhouse
+
+    # Set a cache directory for pip. This was
+    # mounted to be the same as it is outside docker
+    export XDG_CACHE_HOME="/cache"
+
+    yum -y install libffi-devel ccache
+
+    mkdir /tmp/build
+    cd /tmp/build
+    git clone /gevent gevent
+    cd gevent
+    echo Configuring cares
+    time (cd deps/c-ares && ./configure --disable-dependency-tracking -C > /dev/null)
+    rm -rf /gevent/wheelhouse
+    mkdir /gevent/wheelhouse
+    OPATH="$PATH"
+    which auditwheel
     for variant in `ls -d /opt/python/cp{27,35,36,37,38,39}*`; do
-        echo "Building $variant"
-        mkdir /tmp/build
-        cd /tmp/build
-        git clone /gevent gevent
-        cd gevent
-        PATH=$variant/bin:$PATH $variant/bin/python -mpip wheel . -w dist
-        auditwheel repair --plat manylinux2010_x86_64 dist/gevent*.whl
+        export PATH="$variant/bin:$OPATH"
+        echo "Building $variant $(python --version)"
+
+        python -mpip install -U pip
+        # Build the wheel *in place*. This helps with cahching.
+        # The downside is that we must install dependencies manually.
+        # NOTE: We can't upgrade ``wheel`` because ``auditwheel`` depends on
+        # it, and auditwheel is installed in one of these environments.
+        python -mpip install -U "cython >= 3.0a5" cffi greenlet setuptools
+        time (python setup.py bdist_wheel -q > /dev/null)
+        PATH="$OPATH" auditwheel repair --plat manylinux2010_x86_64 dist/gevent*.whl
         cp wheelhouse/gevent*.whl /gevent/wheelhouse
 
-        PATH=$variant/bin:$PATH $variant/bin/python -mpip install -U --no-compile `ls dist/gevent*whl`[test]
-        PATH=$variant/bin:$PATH $variant/bin/python -mgevent.tests
+        python -mpip install -U --no-compile `ls dist/gevent*whl`[test]
+        echo 'Installation details'
+        python -c 'from __future__ import print_function; import gevent; print(gevent, gevent.__version__)'
+        python -c 'from __future__ import print_function; from gevent._compat import get_clock_info; print("clock info", get_clock_info("perf_counter"))'
+        python -c 'from __future__ import print_function; import greenlet; print(greenlet, greenlet.__version__)'
+        python -c 'from __future__ import print_function; import gevent.core; print("loop", gevent.core.loop)'
+        python -c 'from __future__ import print_function; import gevent.ares; print("ares", gevent.ares)'
 
-        cd /gevent
-        rm -rf /tmp/build
+        python -mgevent.tests
+        rm -rf build
+        rm -f dist/gevent*.whl
+        ccache -s
     done
-    rm -rf dist build *.egg-info
+    ccache -s
     exit 0
 fi
 
-docker run --rm -ti -v "$(pwd):/gevent" quay.io/pypa/manylinux2010_x86_64 /gevent/scripts/releases/$(basename $0)
+# Mount the current directory as /gevent
+# Mount the pip cache directory as /cache
+LCACHE="$(dirname `python -mpip cache dir`)"
+echo Sharing pip cache at $LCACHE
+echo Sharing ccache dir at $HOME/.ccache
+if [ ! -d $HOME/.ccache ]; then
+    mkdir $HOME/.ccache
+fi
+docker run --rm -ti -v "$(pwd):/gevent" -v "$LCACHE:/cache" -v "$HOME/.ccache:/ccache" quay.io/pypa/manylinux2010_x86_64 /gevent/scripts/releases/$(basename $0)
 ls -l wheelhouse
