@@ -93,7 +93,7 @@ echo Setting up caching
 python --version
 python -mpip --version
 LCACHE="$(dirname `python -mpip cache dir`)"
-echo Sharing pip cache at $LCACHE
+echo Sharing pip cache at $LCACHE $(ls -ld $LCACHE)
 echo Sharing ccache dir at $HOME/.ccache
 if [ ! -d $HOME/.ccache ]; then
     mkdir $HOME/.ccache
