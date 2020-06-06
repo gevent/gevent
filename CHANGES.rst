@@ -6,6 +6,51 @@
 
 .. towncrier release notes start
 
+20.6.0 (2020-06-06)
+===================
+
+
+Features
+--------
+
+- Add ``gevent.selectors`` containing ``GeventSelector``. This selector
+  implementation uses gevent details to attempt to reduce overhead when
+  polling many file descriptors, only some of which become ready at any
+  given time.
+
+  This is monkey-patched as ``selectors.DefaultSelector`` by default.
+
+  This is available on Python 2 if the ``selectors2`` backport is
+  installed. (This backport is installed automatically using the
+  ``recommended`` extra.) When monkey-patching, ``selectors`` is made
+  available as an alias to this module.
+  See :issue:`1532`.
+- Depend on greenlet >= 0.4.16. This is required for CPython 3.9 and 3.10a0.
+  See :issue:`1627`.
+- Add support for Python 3.9.
+
+  No binary wheels are available yet, however.
+  See :issue:`1628`.
+
+
+Bugfixes
+--------
+
+- ``gevent.socket.create_connection`` and
+  ``gevent.socket.socket.connect`` no longer ignore IPv6 scope IDs.
+
+  Any IP address (IPv4 or IPv6) is no longer subject to an extra call to
+  ``getaddrinfo``. Depending on the resolver in use, this is likely to
+  change the number and order of greenlet switches. (On Windows, in
+  particular test cases when there are no other greenlets running, it has
+  been observed to lead to ``LoopExit`` in scenarios that didn't produce
+  that before.)
+  See :issue:`1634`.
+
+
+----
+
+
 20.5.2 (2020-05-28)
 ===================
 

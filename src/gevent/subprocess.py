@@ -587,7 +587,7 @@ class Popen(object):
        Under Python 2, ``restore_signals`` defaults to ``False``. Previously it
        defaulted to ``True``, the same as it did in Python 3.
 
-    .. versionchanged:: NEXT
+    .. versionchanged:: 20.6.0
        Add the *group*, *extra_groups*, *user*, and *umask* arguments. These
        were added to Python 3.9, but are available in any gevent version, provided
        the underlying platform support is present.

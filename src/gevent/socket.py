@@ -76,7 +76,7 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
     address before making the connection. A host of '' or port 0 tells
     the OS to use the default.
 
-    .. versionchanged:: NEXT
+    .. versionchanged:: 20.6.0
         If the host part of the address includes an IPv6 scope ID,
         it will be used instead of ignored, if the platform supplies
         :func:`socket.inet_pton`.

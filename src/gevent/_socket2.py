@@ -254,7 +254,7 @@ class socket(_socketcommon.SocketMixin):
         """
         Connect to *address*.
 
-        .. versionchanged:: NEXT
+        .. versionchanged:: 20.6.0
             If the host part of the address includes an IPv6 scope ID,
             it will be used instead of ignored, if the platform supplies
             :func:`socket.inet_pton`.

@@ -1389,7 +1389,7 @@ class WSGIServer(StreamServer):
     .. versionchanged:: 1.1a3
         Add support for passing :class:`logging.Logger` objects to the ``log`` and
         ``error_log`` arguments.
-    .. versionchanged:: NEXT
+    .. versionchanged:: 20.6.0
         Passing a ``handle`` kwarg to the constructor is now officially deprecated.
     """
 

@@ -1056,7 +1056,7 @@ def patch_selectors(aggressive=True):
     In :func:`patch_all`, the *select* argument controls both this function
     and :func:`patch_select`.
 
-    .. versionadded:: NEXT
+    .. versionadded:: 20.6.0
     """
     try:
         _check_availability('selectors')

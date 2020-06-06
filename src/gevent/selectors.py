@@ -8,7 +8,7 @@ This module provides the same API as the selectors defined in :mod:`selectors`.
 On Python 2, this module is only available if the `selectors2
 <https://pypi.org/project/selectors2/>`_ backport is installed.
 
-.. versionadded:: NEXT
+.. versionadded:: 20.6.0
 """
 from __future__ import absolute_import
 from __future__ import division
