@@ -19,6 +19,7 @@ _ssl = __ssl__._ssl # pylint:disable=no-member
 
 import errno
 from gevent._socket2 import socket
+from gevent._socket2 import AF_INET
 from gevent.socket import timeout_default
 from gevent.socket import create_connection
 from gevent.socket import error as socket_error

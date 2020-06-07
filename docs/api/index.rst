@@ -20,6 +20,7 @@ Networking interfaces
    gevent.socket
    gevent.ssl
    gevent.select
+   gevent.selectors
 
 Synchronization primitives (locks, queues, events)
 ==================================================

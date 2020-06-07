@@ -216,6 +216,7 @@ Bugfixes
             particular, is using some additional socket functions and
             defines. Please let the maintainers know if this introduces
             issues.
+
   See :issue:`1459`.
 
 

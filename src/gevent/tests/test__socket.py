@@ -12,6 +12,7 @@ import time
 import unittest
 from functools import wraps
 
+import gevent
 from gevent._compat import reraise
 
 import gevent.testing as greentest
@@ -31,12 +32,10 @@ from threading import Event
 
 errno_types = int
 
+class BaseThread(object):
+    terminal_exc = None
 
-class Thread(_Thread):
-
-    def __init__(self, **kwargs):
-        target = kwargs.pop('target')
-        self.terminal_exc = None
+    def __init__(self, target):
         @wraps(target)
         def errors_are_fatal(*args, **kwargs):
             try:
@@ -44,10 +43,30 @@ class Thread(_Thread):
             except: # pylint:disable=bare-except
                 self.terminal_exc = sys.exc_info()
                 raise
+        self.target = errors_are_fatal
 
-        _Thread.__init__(self, target=errors_are_fatal, **kwargs)
-        self.start()
+class GreenletThread(BaseThread):
 
+    def __init__(self, target=None, args=()):
+        BaseThread.__init__(self, target)
+        self.glet = gevent.spawn(self.target, *args)
+
+    def join(self, *args, **kwargs):
+        return self.glet.join(*args, **kwargs)
+
+    def is_alive(self):
+        return not self.glet.ready()
+
+if not monkey.is_module_patched('threading'):
+    class ThreadThread(BaseThread, _Thread):
+        def __init__(self, **kwargs):
+            target = kwargs.pop('target')
+            BaseThread.__init__(self, target)
+            _Thread.__init__(self, target=self.target, **kwargs)
+            self.start()
+    Thread = ThreadThread
+else:
+    Thread = GreenletThread
 
 class TestTCP(greentest.TestCase):
     __timeout__ = None
@@ -68,14 +87,15 @@ class TestTCP(greentest.TestCase):
                 if not printed:
                     print()
                     printed.append(1)
-                print("\t ->", now(), *args)
+                print("\t -> %0.6f" % now(), *args)
 
             orig_cot = self._close_on_teardown
             def cot(o):
                 log("Registering for teardown", o)
-                def c():
+                def c(o=o):
                     log("Closing on teardown", o)
                     o.close()
+                    o = None
                 orig_cot(c)
                 return o
             self._close_on_teardown = cot
@@ -119,21 +139,21 @@ class TestTCP(greentest.TestCase):
                       **client_args):
         # pylint:disable=too-many-locals,too-many-branches,too-many-statements
         log = self.log
-        log("Sendall", client_method)
+        log("test_sendall using method", client_method)
 
         read_data = []
         accepted_event = Event()
 
         def accept_and_read():
-            log("accepting", self.listener)
+            log("\taccepting", self.listener)
             conn, _ = self.listener.accept()
             try:
                 with conn.makefile(mode='rb') as r:
-                    log("accepted on server", conn)
+                    log("\taccepted on server", conn)
                     accepted_event.set()
-                    log("reading")
+                    log("\treading")
                     read_data.append(r.read())
-                    log("done reading")
+                    log("\tdone reading")
                 del r
             finally:
                 conn.close()
@@ -176,7 +196,6 @@ class TestTCP(greentest.TestCase):
             try:
                 getattr(client, client_method)(data)
             except:
-                import traceback; traceback.print_exc()
                 # unwrapping might not work after this because we're in
                 # a bad state.
                 if should_unwrap:
@@ -536,17 +555,15 @@ class TestFunctions(greentest.TestCase):
     # Creating new types in the function takes a cycle to cleanup.
     def test_wait_timeout(self):
         # Issue #635
-        import gevent.socket
-        import gevent._socketcommon
-
+        from gevent import socket as gsocket
         class io(object):
             callback = None
 
             def start(self, *_args):
                 gevent.sleep(10)
 
-        with self.assertRaises(gevent.socket.timeout):
-            gevent.socket.wait(io(), timeout=0.01) # pylint:disable=no-member
+        with self.assertRaises(gsocket.timeout):
+            gsocket.wait(io(), timeout=0.01) # pylint:disable=no-member
 
 
     def test_signatures(self):
