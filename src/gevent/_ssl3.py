@@ -396,15 +396,15 @@ class SSLSocket(socket):
                 if ex.args[0] == SSL_ERROR_EOF and self.suppress_ragged_eofs:
                     return b'' if buffer is None else len(buffer) - initial_buf_len
                 raise
-            except ConnectionResetError:
-                # Certain versions of Python, built against certain
-                # versions of OpenSSL operating in certain modes,
-                # can produce this instead of SSLError. Notably, it looks
-                # like anything built against 1.1.1c do?
-                if self.suppress_ragged_eofs:
-                    return b'' if buffer is None else len(buffer) - initial_buf_len
-                raise
-
+            # Certain versions of Python, built against certain
+            # versions of OpenSSL operating in certain modes, can
+            # produce ``ConnectionResetError`` instead of
+            # ``SSLError``. Notably, it looks like anything built
+            # against 1.1.1c does that? gevent briefly (from support of TLS 1.3
+            # in Sept 2019 to issue #1637 it June 2020) caught that error and treaded
+            # it just like SSL_ERROR_EOF. But that's not what the standard library does.
+            # So presumably errors that result from unexpected ``ConnectionResetError``
+            # are issues in gevent tests.
 
     def write(self, data):
         """Write DATA to the underlying SSL channel.  Returns

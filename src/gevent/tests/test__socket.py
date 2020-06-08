@@ -3,7 +3,8 @@
 from __future__ import print_function
 from __future__ import absolute_import
 
-from gevent import monkey; monkey.patch_all()
+from gevent import monkey
+monkey.patch_all()
 
 import sys
 import array
@@ -149,11 +150,11 @@ class TestTCP(greentest.TestCase):
             conn, _ = self.listener.accept()
             try:
                 with conn.makefile(mode='rb') as r:
-                    log("\taccepted on server", conn)
+                    log("\taccepted on server; client conn is", conn, "file is", r)
                     accepted_event.set()
                     log("\treading")
                     read_data.append(r.read())
-                    log("\tdone reading")
+                    log("\tdone reading", r, "got bytes", len(read_data[0]))
                 del r
             finally:
                 conn.close()
@@ -173,8 +174,11 @@ class TestTCP(greentest.TestCase):
             # sockets interferes, especially when using SSL sockets.
             # The best way to get a decent FIN to the server is to shutdown
             # the output. Doing that on Python 3, OTOH, is contraindicated
-            # except on PyPy.
-            should_shutdown = greentest.PY2 or greentest.PYPY
+            # except on PyPy, so this used to read ``PY2 or PYPY``. But
+            # it seems that a shutdown is generally good practice, and I didn't
+            # document what errors we saw without it. Per issue #1637
+            # lets do a shutdown everywhere.
+            should_shutdown = 1
 
             # It's important to wait for the server to fully accept before
             # we shutdown and close the socket. In SSL mode, the number
@@ -192,9 +196,10 @@ class TestTCP(greentest.TestCase):
             # when it got switched to by server.join(), found its new socket
             # dead.
             accepted_event.wait()
-            log("accepted", client)
+            log("Client got accepted event from server", client, "; sending data", len(data))
             try:
-                getattr(client, client_method)(data)
+                x = getattr(client, client_method)(data)
+                log("Client sent data: result from method", x)
             except:
                 # unwrapping might not work after this because we're in
                 # a bad state.
@@ -204,7 +209,7 @@ class TestTCP(greentest.TestCase):
                     should_shutdown = False
                 raise
             finally:
-                log("shutdown")
+                log("Client will: Shutdown?", should_shutdown, "Unwrap?", should_unwrap)
                 if should_shutdown:
                     client.shutdown(socket.SHUT_RDWR)
                 elif should_unwrap:
@@ -218,8 +223,9 @@ class TestTCP(greentest.TestCase):
                             pass
                         else:
                             raise
-                log("closing")
+                log("Client will close")
                 client.close()
+                gevent.idle()
         finally:
             server.join(10)
             assert not server.is_alive()
@@ -231,6 +237,8 @@ class TestTCP(greentest.TestCase):
             match_data = self.long_data
         read_data = read_data[0].split(b',')
         match_data = match_data.split(b',')
+        self.assertEqual(read_data[0], match_data[0])
+        self.assertEqual(len(read_data), len(match_data))
         self.assertEqual(read_data, match_data)
 
     def test_sendall_str(self):
