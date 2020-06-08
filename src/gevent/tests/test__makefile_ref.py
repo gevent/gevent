@@ -12,7 +12,6 @@ import gevent.testing as greentest
 from gevent.testing.params import DEFAULT_BIND_ADDR_TUPLE
 from gevent.testing.params import DEFAULT_CONNECT
 from gevent.testing.sockets import tcp_listener
-from gevent.testing.skipping import skipOnManylinux
 
 dirname = os.path.dirname(os.path.abspath(__file__))
 certfile = os.path.join(dirname, '2_7_keycert.pem')
@@ -75,7 +74,9 @@ class Test(greentest.TestCase):
     def assert_fd_closed(self, fileno):
         assert isinstance(fileno, fd_types), repr(fileno)
         assert fileno > 0, fileno
-        open_files = get_open_files()
+        # Here, if we're in the process of closing, don't consider it open.
+        # This goes into details of psutil
+        open_files = get_open_files(count_closing_as_open=False)
         if fileno in open_files:
             raise AssertionError('%r is not closed:\n%s' % (fileno, open_files['data']))
 
@@ -248,7 +249,6 @@ class TestSocket(Test):
 
 
 @greentest.skipOnAppVeyor("This sometimes times out for no apparent reason.")
-@skipOnManylinux("For some reason manylinux doesn't see the open files all the time.")
 class TestSSL(Test):
 
     def _ssl_connect_task(self, connector, port, accepted_event):
@@ -409,7 +409,6 @@ class TestSSL(Test):
             f.close()
             self.assert_closed(client_socket, fileno)
 
-    @skipOnManylinux("Doesn't see the file open")
     def test_serverssl_makefile2(self):
         raw_listener = tcp_listener(backlog=1)
         port = raw_listener.getsockname()[1]
@@ -439,14 +438,15 @@ class TestSSL(Test):
             self.assert_open(client_socket, fileno)
             self.assertEqual(f.read(), 'test_serverssl_makefile2')
             self.assertEqual(f.read(), '')
+            # Closing file object does not close the socket.
             f.close()
             if WIN and psutil:
                 # Hmm?
                 self.extra_allowed_open_states = (psutil.CONN_CLOSE_WAIT,)
+
             self.assert_open(client_socket, fileno)
             client_socket.close()
             self.assert_closed(client_socket, fileno)
-
 
 
 class Closing(object):

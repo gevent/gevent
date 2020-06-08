@@ -309,6 +309,7 @@ class TestDefaultSpawn(TestCase):
             self.ServerClass(self.get_listener(), backlog=25)
 
     @greentest.skipOnLibuvOnCIOnPyPy("Sometimes times out")
+    @greentest.skipOnAppVeyor("Sometimes times out.")
     def test_backlog_is_accepted_for_address(self):
         self.server = self.ServerSubClass((greentest.DEFAULT_BIND_ADDR, 0), backlog=25)
         self.assertConnectionRefused()

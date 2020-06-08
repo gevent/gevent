@@ -49,14 +49,14 @@ def _collects(func):
     # collected and drop references and thus close files. We should be deterministic
     # and careful about closing things.
     @functools.wraps(func)
-    def f():
+    def f(**kw):
         gc.collect()
         gc.collect()
         enabled = gc.isenabled()
         gc.disable()
 
         try:
-            return func()
+            return func(**kw)
         finally:
             if enabled:
                 gc.enable()
@@ -82,7 +82,7 @@ else:
         os.remove(tmpname)
         return data
 
-def default_get_open_files(pipes=False):
+def default_get_open_files(pipes=False, **_kwargs):
     data = _run_lsof()
     results = {}
     for line in data.split('\n'):
@@ -128,9 +128,13 @@ except ImportError:
     get_open_files = default_get_open_files
     get_number_open_files = default_get_number_open_files
 else:
+    class _TrivialOpenFile(object):
+        __slots__ = ('fd',)
+        def __init__(self, fd):
+            self.fd = fd
 
     @_collects
-    def get_open_files():
+    def get_open_files(count_closing_as_open=True, **_kw):
         """
         Return a list of popenfile and pconn objects.
 
@@ -146,8 +150,27 @@ else:
 
         for _ in range(3):
             try:
+                if count_closing_as_open and os.path.exists('/proc/'):
+                    # Linux only.
+                    # psutil doesn't always see all connections, even though
+                    # they exist in the filesystem. It's not entirely clear why.
+                    # It sees them on Travis (prior to Ubuntu Bionic, at least)
+                    # but doesn't in the manylinux image or Fedora 33 Rawhide image.
+                    # This happens in test__makefile_ref TestSSL.*; in particular, if a
+                    # ``sslsock.makefile()`` is opened and used to read all data, and the sending
+                    # side shuts down, psutil no longer finds the open file. So we add them
+                    # back in.
+                    #
+                    # Of course, the flip side of this is that we sometimes find connections
+                    # we're not expecting.
+                    # I *think* this has to do with CLOSE_WAIT handling?
+                    fd_directory = '/proc/%d/fd' % os.getpid()
+                    fd_files = os.listdir(fd_directory)
+                else:
+                    fd_files = []
                 process = psutil.Process()
-                results['data'] = process.open_files() + process.connections('all')
+                results['data'] = process.open_files()
+                results['data'] += process.connections('all')
                 break
             except OSError:
                 pass
@@ -157,7 +180,12 @@ else:
 
         for x in results['data']:
             results[x.fd] = x
-        results['data'] += ['From psutil', process]
+        for fd_str in fd_files:
+            if fd_str not in results:
+                fd = int(fd_str)
+                results[fd] = _TrivialOpenFile(fd)
+        results['data'] += [('From psutil', process)]
+        results['data'] += [('fd files', fd_files)]
         return results
 
     @_collects

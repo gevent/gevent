@@ -19,7 +19,7 @@ _ssl = __ssl__._ssl # pylint:disable=no-member
 
 import errno
 from gevent._socket2 import socket
-from gevent._socket2 import AF_INET
+from gevent._socket2 import AF_INET # pylint:disable=no-name-in-module
 from gevent.socket import timeout_default
 from gevent.socket import create_connection
 from gevent.socket import error as socket_error
@@ -564,7 +564,13 @@ class SSLSocket(socket):
         if not self._sslobj:
             raise ValueError("No SSL wrapper around " + str(self))
 
-        s = self._sslobj_shutdown()
+        s = self._sock
+        try:
+            s = self._sslobj_shutdown()
+        except socket_error as ex:
+            if ex.args[0] != 0:
+                raise
+
         self._sslobj = None
         # match _ssl2; critical to drop/reuse here on PyPy
         # XXX: _ssl3 returns an SSLSocket. Is that what the standard lib does on

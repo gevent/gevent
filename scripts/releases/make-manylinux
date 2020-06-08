@@ -44,6 +44,8 @@ if [ -d /gevent -a -d /opt/python ]; then
     export XDG_CACHE_HOME="/cache"
     ls -ld /cache
     yum -y install libffi-devel ccache
+    # On Fedora Rawhide (F33)
+    # yum install python39 python3-devel gcc kernel-devel kernel-headers make diffutils file
 
     mkdir /tmp/build
     cd /tmp/build
