@@ -1315,6 +1315,19 @@ if PY39:
         'test_subprocess.POSIXProcessTestTest.test_send_signal_race',
     ]
 
+if TRAVIS:
+    disabled_tests += [
+        # These tests frequently break when we try to use newer Travis CI images,
+        # due to different versions of OpenSSL being available. See above for some
+        # specific examples. Usually the tests catch up, eventually (e.g., at this writing,
+        # the 3.9b1 tests are fine on Ubuntu Bionic, but all other versions fail).
+        'test_ssl.ContextTests.test_options',
+        'test_ssl.ThreadedTests.test_alpn_protocols',
+        'test_ssl.ThreadedTests.test_default_ecdh_curve',
+        'test_ssl.ThreadedTests.test_shared_ciphers,'
+
+    ]
+
 # Now build up the data structure we'll use to actually find disabled tests
 # to avoid a linear scan for every file (it seems the list could get quite large)
 # (First, freeze the source list to make sure it isn't modified anywhere)
