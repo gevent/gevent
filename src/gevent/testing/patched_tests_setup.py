@@ -1324,7 +1324,7 @@ if TRAVIS:
         'test_ssl.ContextTests.test_options',
         'test_ssl.ThreadedTests.test_alpn_protocols',
         'test_ssl.ThreadedTests.test_default_ecdh_curve',
-        'test_ssl.ThreadedTests.test_shared_ciphers,'
+        'test_ssl.ThreadedTests.test_shared_ciphers',
 
     ]
 
