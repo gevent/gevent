@@ -1228,7 +1228,9 @@ if PY37:
 
     if APPVEYOR:
         disabled_tests += [
-
+            # This sometimes produces ``self.assertEqual(1, len(s.select(0))): 1 != 0``.
+            # Probably needs to spin the loop once.
+            'test_selectors.DefaultSelectorTestCase.test_timeout',
         ]
 
 if PY38:
@@ -1283,16 +1285,13 @@ if OSX:
     disabled_tests += [
         # This sometimes produces OSError: Errno 40: Message too long
         'test_socket.RecvmsgIntoTCPTest.testRecvmsgIntoGenerator',
+
+        # These sometime timeout. Cannot reproduce locally.
+        'test_ftp.TestTLS_FTPClassMixin.test_mlsd',
+        'test_ftp.TestTLS_FTPClassMixin.test_retrlines_too_long',
+        'test_ftp.TestTLS_FTPClassMixin.test_storlines',
+        'test_ftp.TestTLS_FTPClassMixin.test_retrbinary_rest',
     ]
-
-    if RUNNING_ON_CI:
-
-        disabled_tests += [
-            # These sometime timeout. Cannot reproduce locally.
-            'test_ftp.TestTLS_FTPClassMixin.test_mlsd',
-            'test_ftp.TestTLS_FTPClassMixin.test_retrlines_too_long',
-            'test_ftp.TestTLS_FTPClassMixin.test_storlines',
-        ]
 
     if RESOLVER_ARES and PY38 and not RUNNING_ON_CI:
         disabled_tests += [

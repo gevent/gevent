@@ -612,6 +612,7 @@ class SSLSocket(socket):
             # that with a layer.
             shutdown = self._sslobj.unwrap
 
+        s = self._sock
         while True:
             try:
                 s = shutdown()
@@ -627,6 +628,12 @@ class SSLSocket(socket):
                 if self.timeout == 0.0:
                     raise
                 self._wait(self._write_event)
+            except OSError as e:
+                if e.errno == 0:
+                    # What does this even mean? Seen on 3.7+.
+                    break
+                raise
+
 
         self._sslobj = None
 

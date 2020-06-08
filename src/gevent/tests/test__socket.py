@@ -166,20 +166,6 @@ class TestTCP(greentest.TestCase):
             log("creating client connection")
             client = self.create_connection(**client_args)
 
-            # We seem to have a buffer stuck somewhere on appveyor?
-            # https://ci.appveyor.com/project/denik/gevent/builds/27320824/job/bdbax88sqnjoti6i#L712
-            should_unwrap = hasattr(client, 'unwrap') and greentest.PY37 and greentest.WIN
-
-            # The implicit reference-based nastiness of Python 2
-            # sockets interferes, especially when using SSL sockets.
-            # The best way to get a decent FIN to the server is to shutdown
-            # the output. Doing that on Python 3, OTOH, is contraindicated
-            # except on PyPy, so this used to read ``PY2 or PYPY``. But
-            # it seems that a shutdown is generally good practice, and I didn't
-            # document what errors we saw without it. Per issue #1637
-            # lets do a shutdown everywhere.
-            should_shutdown = 1
-
             # It's important to wait for the server to fully accept before
             # we shutdown and close the socket. In SSL mode, the number
             # and timing of data exchanges to complete the handshake and
@@ -200,29 +186,32 @@ class TestTCP(greentest.TestCase):
             try:
                 x = getattr(client, client_method)(data)
                 log("Client sent data: result from method", x)
-            except:
-                # unwrapping might not work after this because we're in
-                # a bad state.
-                if should_unwrap:
-                    client.shutdown(socket.SHUT_RDWR)
-                    should_unwrap = False
-                    should_shutdown = False
-                raise
             finally:
-                log("Client will: Shutdown?", should_shutdown, "Unwrap?", should_unwrap)
-                if should_shutdown:
-                    client.shutdown(socket.SHUT_RDWR)
-                elif should_unwrap:
+                log("Client will unwrap and shutdown")
+                if hasattr(client, 'unwrap'):
+                    # Are we dealing with an SSLSocket? If so, unwrap it
+                    # before attempting to shut down the socket. This does the
+                    # SSL shutdown handshake and (hopefully) stops ``accept_and_read``
+                    # from generating ``ConnectionResetError`` on AppVeyor.
                     try:
-                        client.unwrap()
-                    except OSError as e:
-                        if greentest.PY37 and greentest.WIN and e.errno == 0:
-                            # ? 3.7.4 on AppVeyor sometimes raises
-                            # "OSError[errno 0] Error" here, which doesn't make
-                            # any sense.
-                            pass
-                        else:
-                            raise
+                        client = client.unwrap()
+                    except ValueError:
+                        pass
+
+                try:
+                    # The implicit reference-based nastiness of Python 2
+                    # sockets interferes, especially when using SSL sockets.
+                    # The best way to get a decent FIN to the server is to shutdown
+                    # the output. Doing that on Python 3, OTOH, is contraindicated
+                    # except on PyPy, so this used to read ``PY2 or PYPY``. But
+                    # it seems that a shutdown is generally good practice, and I didn't
+                    # document what errors we saw without it. Per issue #1637
+                    # lets do a shutdown everywhere, but only after removing any
+                    # SSL wrapping.
+                    client.shutdown(socket.SHUT_RDWR)
+                except (OSError, socket.error):
+                    pass
+
                 log("Client will close")
                 client.close()
         finally:
