@@ -1076,6 +1076,9 @@ if PY35:
             # RT_CONSISTENT' failed!" and fail.
             disabled_tests += [
                 'test_threading.ThreadTests.test_is_alive_after_fork',
+                # This has timing constraints that are strict and do not always
+                # hold.
+                'test_selectors.PollSelectorTestCase.test_timeout',
             ]
 
     if TRAVIS:
@@ -1230,7 +1233,7 @@ if PY37:
         disabled_tests += [
             # This sometimes produces ``self.assertEqual(1, len(s.select(0))): 1 != 0``.
             # Probably needs to spin the loop once.
-            'test_selectors.DefaultSelectorTestCase.test_timeout',
+            'test_selectors.BaseSelectorTestCase.test_timeout',
         ]
 
 if PY38:
