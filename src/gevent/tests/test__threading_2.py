@@ -394,12 +394,12 @@ class ThreadTests(unittest.TestCase):
             warnings.simplefilter('ignore', DeprecationWarning)
             # get/set checkinterval are deprecated in Python 3,
             # and removed in Python 3.9
-            old_interval = sys.getcheckinterval()
+            old_interval = sys.getcheckinterval() # pylint:disable=no-member
             try:
                 for i in xrange(1, 100):
                     # Try a couple times at each thread-switching interval
                     # to get more interleavings.
-                    sys.setcheckinterval(i // 5)
+                    sys.setcheckinterval(i // 5) # pylint:disable=no-member
                     t = threading.Thread(target=lambda: None)
                     t.start()
                     t.join()
@@ -407,7 +407,7 @@ class ThreadTests(unittest.TestCase):
                     self.assertFalse(t in l,
                                      "#1703448 triggered after %d trials: %s" % (i, l))
             finally:
-                sys.setcheckinterval(old_interval)
+                sys.setcheckinterval(old_interval) # pylint:disable=no-member
 
     if not hasattr(sys, 'pypy_version_info'):
         def test_no_refcycle_through_target(self):

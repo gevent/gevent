@@ -225,7 +225,6 @@ class TestTCP(greentest.TestCase):
                             raise
                 log("Client will close")
                 client.close()
-                gevent.idle()
         finally:
             server.join(10)
             assert not server.is_alive()
