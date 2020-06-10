@@ -176,3 +176,14 @@ def libev_supports_linux_aio():
     from platform import release
 
     return system() == 'Linux' and LooseVersion(release() or '0') >= LooseVersion('4.19')
+
+def libev_supports_linux_iouring():
+    # libev requires kernel XXX to be able to support linux io_uring.
+    # It fails with the kernel in fedora rawhide (4.19.76) but
+    # works (doesn't fail catastrophically when asked to create one)
+    # with kernel 5.3.0 (Ubuntu Bionic)
+    from distutils.version import LooseVersion
+    from platform import system
+    from platform import release
+
+    return system() == 'Linux' and LooseVersion(release() or '0') >= LooseVersion('5.3')

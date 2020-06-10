@@ -1,6 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-# pylint:disable=broad-except
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
 import gevent
 from gevent import monkey
 
@@ -16,7 +18,6 @@ import gevent.socket as gevent_socket
 import gevent.testing as greentest
 
 from gevent.testing import util
-from gevent.testing import six
 from gevent.testing.six import xrange
 from gevent.testing import flaky
 from gevent.testing.skipping import skipWithoutExternalNetwork
@@ -41,85 +42,6 @@ assert gevent_socket.error is socket.error
 
 
 RUN_ALL_HOST_TESTS = os.getenv('GEVENTTEST_RUN_ALL_ETC_HOST_TESTS', '')
-
-
-def compare_relaxed(a, b):
-    """
-    >>> compare_relaxed('2a00:1450:400f:801::1010', '2a00:1450:400f:800::1011')
-    True
-
-    >>> compare_relaxed('2a00:1450:400f:801::1010', '2aXX:1450:400f:900::1011')
-    False
-
-    >>> compare_relaxed('2a00:1450:4016:800::1013', '2a00:1450:4008:c01::93')
-    True
-
-    >>> compare_relaxed('2001:470::e852:4a38:9d7f:0', '2001:470:6d00:1c:1::d00')
-    True
-
-    >>> compare_relaxed('2001:470:4147:4943:6161:6161:2e74:6573', '2001:470::')
-    True
-
-    >>> compare_relaxed('2607:f8b0:6708:24af:1fd:700:60d4:4af', '2607:f8b0:2d00::f000:0')
-    True
-
-    >>> compare_relaxed('a.google.com', 'b.google.com')
-    True
-
-    >>> compare_relaxed('a.google.com', 'a.gevent.org')
-    False
-    """
-    # IPv6 address from different requests might be different
-    a_segments = a.count(':')
-    b_segments = b.count(':')
-    if a_segments and b_segments:
-        if a_segments == b_segments and a_segments in (4, 5, 6, 7):
-            return True
-        if a.rstrip(':').startswith(b.rstrip(':')) or b.rstrip(':').startswith(a.rstrip(':')):
-            return True
-        if a_segments >= 2 and b_segments >= 2 and a.split(':')[:2] == b.split(':')[:2]:
-            return True
-
-    return a.split('.', 1)[-1] == b.split('.', 1)[-1]
-
-
-def contains_5tuples(lst):
-    for item in lst:
-        if not (isinstance(item, tuple) and len(item) == 5):
-            return False
-    return True
-
-
-def relaxed_is_equal(a, b):
-    """
-    >>> relaxed_is_equal([(10, 1, 6, '', ('2a00:1450:400f:801::1010', 80, 0, 0))], [(10, 1, 6, '', ('2a00:1450:400f:800::1011', 80, 0, 0))])
-    True
-
-    >>> relaxed_is_equal([1, '2'], (1, '2'))
-    False
-
-    >>> relaxed_is_equal([1, '2'], [1, '2'])
-    True
-
-    >>> relaxed_is_equal(('wi-in-x93.1e100.net', 'http'), ('we-in-x68.1e100.net', 'http'))
-    True
-    """
-    if type(a) is not type(b):
-        return False
-    if a == b:
-        return True
-    if isinstance(a, six.string_types):
-        return compare_relaxed(a, b)
-    try:
-        if len(a) != len(b):
-            return False
-    except TypeError:
-        return False
-    if contains_5tuples(a) and contains_5tuples(b):
-        # getaddrinfo results
-        a = sorted(a)
-        b = sorted(b)
-    return all(relaxed_is_equal(x, y) for (x, y) in zip(a, b))
 
 
 def add(klass, hostname, name=None,
@@ -196,7 +118,7 @@ class TestCase(greentest.TestCase):
             return result
         except self.REAL_ERRORS:
             raise
-        except Exception as ex:
+        except Exception as ex: # pylint:disable=broad-except
             if self.TRACE:
                 traceback.print_exc()
             return ex
@@ -307,7 +229,6 @@ class TestCase(greentest.TestCase):
             return getattr(self, norm_name)(result)
         return result
 
-
     NORMALIZE_GAI_IGNORE_CANONICAL_NAME = RESOLVER_ARES # It tends to return them even when not asked for
     if not RESOLVER_NOT_SYSTEM:
         def _normalize_result_getaddrinfo(self, result):
@@ -393,9 +314,14 @@ class TestCase(greentest.TestCase):
             return (result[0], [], result[2])
         return result
 
-    def _compare_exceptions(self, real_result, gevent_result, func_name):
+    def _compare_exceptions_strict(self, real_result, gevent_result, func_name):
+        if repr(real_result) == repr(gevent_result):
+            # Catch things like `OverflowError('port must be 0-65535.',)```
+            return
+
         msg = (func_name, 'system:', repr(real_result), 'gevent:', repr(gevent_result))
         self.assertIs(type(gevent_result), type(real_result), msg)
+
         if isinstance(real_result, TypeError):
             return
 
@@ -409,8 +335,91 @@ class TestCase(greentest.TestCase):
         if hasattr(real_result, 'errno'):
             self.assertEqual(real_result.errno, gevent_result.errno)
 
+    def _compare_exceptions_lenient(self, real_result, gevent_result, func_name):
+        try:
+            self._compare_exceptions_strict(real_result, gevent_result, func_name)
+        except AssertionError:
+            # Allow raising different things in a few rare cases.
+            if (
+                    func_name not in (
+                        'getaddrinfo',
+                        'gethostbyaddr',
+                        'gethostbyname',
+                        'gethostbyname_ex',
+                        'getnameinfo',
+                    )
+                    or type(real_result) not in (socket.herror, socket.gaierror)
+                    or type(gevent_result) not in (socket.herror, socket.gaierror, socket.error)
+            ):
+                raise
+            util.log('WARNING: error type mismatch for %s: %r (gevent) != %r (stdlib)',
+                     func_name,
+                     gevent_result, real_result,
+                     color='warning')
+
+    _compare_exceptions = _compare_exceptions_lenient if RESOLVER_NOT_SYSTEM else _compare_exceptions_strict
+
+    def _compare_results(self, real_result, gevent_result, func_name):
+        if real_result == gevent_result:
+            return True
+
+        compare_func = getattr(self, '_compare_results_' + func_name,
+                               self._generic_compare_results)
+        return compare_func(real_result, gevent_result, func_name)
+
+    def _generic_compare_results(self, real_result, gevent_result, func_name):
+        try:
+            if len(real_result) != len(gevent_result):
+                return False
+        except TypeError:
+            return False
+
+        return all(self._compare_results(x, y, func_name)
+                   for (x, y)
+                   in zip(real_result, gevent_result))
+
+    def _compare_results_getaddrinfo(self, real_result, gevent_result, func_name):
+        # On some systems, we find more results with
+        # one resolver than we do with the other resolver.
+        # So as long as they have some subset in common,
+        # we'll take it.
+        if not set(real_result).isdisjoint(set(gevent_result)):
+            return True
+        return self._generic_compare_results(real_result, gevent_result, func_name)
+
+    def _compare_address_strings(self, a, b):
+        # IPv6 address from different requests might be different
+        a_segments = a.count(':')
+        b_segments = b.count(':')
+        if a_segments and b_segments:
+            if a_segments == b_segments and a_segments in (4, 5, 6, 7):
+                return True
+            if a.rstrip(':').startswith(b.rstrip(':')) or b.rstrip(':').startswith(a.rstrip(':')):
+                return True
+            if a_segments >= 2 and b_segments >= 2 and a.split(':')[:2] == b.split(':')[:2]:
+                return True
+
+        return a.split('.', 1)[-1] == b.split('.', 1)[-1]
+
+    def _compare_results_gethostbyname(self, real_result, gevent_result, _func_name):
+        # Both strings.
+        return self._compare_address_strings(real_result, gevent_result)
+
+    def _compare_results_gethostbyname_ex(self, real_result, gevent_result, _func_name):
+        # Results are IPv4 only:
+        #   (hostname, [aliaslist], [ipaddrlist])
+        # As for getaddrinfo, we'll just check the ipaddrlist has something in common.
+        return not set(real_result[2]).isdisjoint(set(gevent_result[2]))
+
     def assertEqualResults(self, real_result, gevent_result, func_name):
-        errors = (socket.gaierror, socket.herror, TypeError)
+        errors = (
+            OverflowError,
+            TypeError,
+            UnicodeError,
+            socket.error,
+            socket.gaierror,
+            socket.herror,
+        )
         if isinstance(real_result, errors) and isinstance(gevent_result, errors):
             self._compare_exceptions(real_result, gevent_result, func_name)
             return
@@ -418,11 +427,7 @@ class TestCase(greentest.TestCase):
         real_result = self._normalize_result(real_result, func_name)
         gevent_result = self._normalize_result(gevent_result, func_name)
 
-        real_result_repr = repr(real_result)
-        gevent_result_repr = repr(gevent_result)
-        if real_result_repr == gevent_result_repr:
-            return
-        if relaxed_is_equal(gevent_result, real_result):
+        if self._compare_results(real_result, gevent_result, func_name):
             return
 
         # If we're using a different resolver, allow the real resolver to generate an
@@ -531,27 +536,11 @@ add(
     skip_reason="Can return gaierror(-2)"
 )
 
-def dnspython_lenient_compare_exceptions(self, real_result, gevent_result, func_name):
-    try:
-        TestCase._compare_exceptions(self, real_result, gevent_result, func_name)
-    except AssertionError:
-        # Allow gethostbyaddr to raise different things in a few rare cases.
-        if (
-                func_name != 'gethostbyaddr'
-                or type(real_result) not in (socket.herror, socket.gaierror)
-                or type(gevent_result) not in (socket.herror, socket.gaierror)
-        ):
-            raise
-        util.log('WARNING: error type mismatch for %s: %r (gevent) != %r (stdlib)',
-                 func_name,
-                 gevent_result, real_result,
-                 color='warning')
+
 
 
 class TestNonexistent(TestCase):
-    if RESOLVER_DNSPYTHON:
-        _compare_exceptions = dnspython_lenient_compare_exceptions
-
+    pass
 
 add(TestNonexistent, 'nonexistentxxxyyy')
 
@@ -841,17 +830,12 @@ class TestInterrupted_gethostbyname(gevent.testing.timing.AbstractGenericWaitTes
 
 
 class TestBadName(TestCase):
-    if RESOLVER_DNSPYTHON:
-        _compare_exceptions = dnspython_lenient_compare_exceptions
-
+    pass
 
 add(TestBadName, 'xxxxxxxxxxxx')
 
 class TestBadIP(TestCase):
-
-    if RESOLVER_DNSPYTHON:
-        _compare_exceptions = dnspython_lenient_compare_exceptions
-
+    pass
 
 add(TestBadIP, '1.2.3.400')
 

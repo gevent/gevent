@@ -1076,6 +1076,9 @@ if PY35:
             # RT_CONSISTENT' failed!" and fail.
             disabled_tests += [
                 'test_threading.ThreadTests.test_is_alive_after_fork',
+                # This has timing constraints that are strict and do not always
+                # hold.
+                'test_selectors.PollSelectorTestCase.test_timeout',
             ]
 
     if TRAVIS:
@@ -1230,7 +1233,7 @@ if PY37:
         disabled_tests += [
             # This sometimes produces ``self.assertEqual(1, len(s.select(0))): 1 != 0``.
             # Probably needs to spin the loop once.
-            'test_selectors.DefaultSelectorTestCase.test_timeout',
+            'test_selectors.BaseSelectorTestCase.test_timeout',
         ]
 
 if PY38:
@@ -1310,6 +1313,19 @@ if PY39:
         # ``returncode`` attribute to stay None. But we have already hooked SIGCHLD, so
         # we see and set the ``returncode``; there is no way to wait that doesn't do that.
         'test_subprocess.POSIXProcessTestTest.test_send_signal_race',
+    ]
+
+if TRAVIS:
+    disabled_tests += [
+        # These tests frequently break when we try to use newer Travis CI images,
+        # due to different versions of OpenSSL being available. See above for some
+        # specific examples. Usually the tests catch up, eventually (e.g., at this writing,
+        # the 3.9b1 tests are fine on Ubuntu Bionic, but all other versions fail).
+        'test_ssl.ContextTests.test_options',
+        'test_ssl.ThreadedTests.test_alpn_protocols',
+        'test_ssl.ThreadedTests.test_default_ecdh_curve',
+        'test_ssl.ThreadedTests.test_shared_ciphers',
+
     ]
 
 # Now build up the data structure we'll use to actually find disabled tests

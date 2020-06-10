@@ -32,10 +32,11 @@ class Test(unittest.TestCase):
     )
 
     BACKENDS_THAT_WILL_FAIL_TO_CREATE_AT_RUNTIME = (
-        # This fails on the Ubuntu Bionic image, and on
-        # the Fedora Rawhide 33 image. It's not clear why; needs
-        # investigated.
+        # This fails on the Fedora Rawhide 33 image. It's not clear
+        # why; needs investigated.
         'linux_iouring',
+    ) if not sysinfo.libev_supports_linux_iouring() else (
+
     )
 
     BACKENDS_THAT_WILL_FAIL_TO_CREATE_AT_RUNTIME += (

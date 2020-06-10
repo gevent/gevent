@@ -7,7 +7,7 @@
 # python: one day so making the migration simpler). "shell" and
 # "minimal" are aliases.
 language: shell
-dist: xenial
+dist: bionic
 group: travis_latest
 os:
   - linux
@@ -31,11 +31,11 @@ env:
         - CCACHE_SLOPPINESS=file_macro,time_macros,include_file_ctime,include_file_mtime
         - CCACHE_NOHASHDIR=true
         - BUILD_LIBS=$HOME/.libs
-        - GEVENTSETUP_EV_VERIFY=2
+        - GEVENTSETUP_EV_VERIFY=1
         # Disable some warnings produced by libev especially and also some Cython generated code.
         # Note that changing the value of these variables invalidates configure caches
         - CFLAGS="-Ofast -pipe -Wno-strict-aliasing -Wno-comment"
-        - CPPFLAGS="-I$BUILD_LIBS/include -DEV_VERIFY=3"
+        - CPPFLAGS="-I$BUILD_LIBS/include -DEV_VERIFY=1"
         - LDFLAGS="-L$BUILD_LIBS/lib"
         - LD_LIBRARY_PATH="$BUILD_LIBS/lib"
         # Uploading built wheels for releases.
@@ -64,7 +64,7 @@ env:
       - TRAVIS_PYTHON_VERSION=3.9
       - TRAVIS_PYTHON_VERSION=pypy2.7
       - TRAVIS_PYTHON_VERSION=pypy3.6
-      - TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0 GEVENTSETUP_EV_VERIFY=3
+      - TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0 GEVENTSETUP_EV_VERIFY=1
 
 cache:
   pip: true
@@ -161,7 +161,7 @@ jobs:
     - os: osx
       env: TRAVIS_PYTHON_VERSION=pypy3.6
     - os: osx
-      env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0 GEVENTSETUP_EV_VERIFY=3
+      env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0 GEVENTSETUP_EV_VERIFY=1
 
   include:
     - &build-gevent
@@ -218,7 +218,7 @@ jobs:
       os: osx
 
     - <<: *build-gevent
-      env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0 GEVENTSETUP_EV_VERIFY=3
+      env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0 GEVENTSETUP_EV_VERIFY=1
       install:
         # Install the Python runtime
         - *build-gevent-python
@@ -362,14 +362,14 @@ jobs:
     - <<: *test-ares-jobs
       # This job exercises both the non-embedded ares resolver
       # and the non-embedded Cython libev loop.
-      env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0 GEVENTSETUP_EV_VERIFY=3
+      env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0 GEVENTSETUP_EV_VERIFY=1
       name: c-ares resolver, external (Python 2.7)
     # These exercise the CFFI versions.
     - <<: *test-libuv-jobs
-      env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0 GEVENTSETUP_EV_VERIFY=3
+      env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0 GEVENTSETUP_EV_VERIFY=1
       name: libuv backend, external (Python 2.7)
     - <<: *test-libev-jobs
-      env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0 GEVENTSETUP_EV_VERIFY=3
+      env: TRAVIS_PYTHON_VERSION=2.7 GEVENTSETUP_EMBED=0 GEVENTSETUP_EV_VERIFY=1
       name: libev backend, external (Python 2.7)
 
     # PyPy 2.7
