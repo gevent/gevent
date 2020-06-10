@@ -229,7 +229,6 @@ class TestCase(greentest.TestCase):
             return getattr(self, norm_name)(result)
         return result
 
-
     NORMALIZE_GAI_IGNORE_CANONICAL_NAME = RESOLVER_ARES # It tends to return them even when not asked for
     if not RESOLVER_NOT_SYSTEM:
         def _normalize_result_getaddrinfo(self, result):
@@ -316,8 +315,13 @@ class TestCase(greentest.TestCase):
         return result
 
     def _compare_exceptions_strict(self, real_result, gevent_result, func_name):
+        if repr(real_result) == repr(gevent_result):
+            # Catch things like `OverflowError('port must be 0-65535.',)```
+            return
+
         msg = (func_name, 'system:', repr(real_result), 'gevent:', repr(gevent_result))
         self.assertIs(type(gevent_result), type(real_result), msg)
+
         if isinstance(real_result, TypeError):
             return
 
@@ -335,9 +339,15 @@ class TestCase(greentest.TestCase):
         try:
             self._compare_exceptions_strict(real_result, gevent_result, func_name)
         except AssertionError:
-            # Allow gethostbyaddr/getnameinfo to raise different things in a few rare cases.
+            # Allow raising different things in a few rare cases.
             if (
-                    func_name not in ('gethostbyaddr', 'getnameinfo', 'getaddrinfo')
+                    func_name not in (
+                        'getaddrinfo',
+                        'gethostbyaddr',
+                        'gethostbyname',
+                        'gethostbyname_ex',
+                        'getnameinfo',
+                    )
                     or type(real_result) not in (socket.herror, socket.gaierror)
                     or type(gevent_result) not in (socket.herror, socket.gaierror, socket.error)
             ):
@@ -358,8 +368,6 @@ class TestCase(greentest.TestCase):
         return compare_func(real_result, gevent_result, func_name)
 
     def _generic_compare_results(self, real_result, gevent_result, func_name):
-        # if isinstance(real_result, six.string_types):
-        #     return compare_relaxed(real_result, gevent_result)
         try:
             if len(real_result) != len(gevent_result):
                 return False
@@ -404,7 +412,14 @@ class TestCase(greentest.TestCase):
         return not set(real_result[2]).isdisjoint(set(gevent_result[2]))
 
     def assertEqualResults(self, real_result, gevent_result, func_name):
-        errors = (socket.gaierror, socket.herror, TypeError, socket.error, UnicodeError)
+        errors = (
+            OverflowError,
+            TypeError,
+            UnicodeError,
+            socket.error,
+            socket.gaierror,
+            socket.herror,
+        )
         if isinstance(real_result, errors) and isinstance(gevent_result, errors):
             self._compare_exceptions(real_result, gevent_result, func_name)
             return
