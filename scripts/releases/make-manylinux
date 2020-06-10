@@ -40,9 +40,15 @@ if [ -d /gevent -a -d /opt/python ]; then
     # Running inside docker
 
     # Set a cache directory for pip. This was
-    # mounted to be the same as it is outside docker
+    # mounted to be the same as it is outside docker so it
+    # can be persisted.
+    # XXX: This works for macOS, where everything bind-mounted
+    # is seen as owned by root in the container. But when the host is Linux
+    # the actual UIDs come through to the container, triggering
+    # pip to disable the cache when it detects that the owner doesn't match.
     export XDG_CACHE_HOME="/cache"
     ls -ld /cache
+    ls -ld /cache/pip
     yum -y install libffi-devel ccache
     # On Fedora Rawhide (F33)
     # yum install python39 python3-devel gcc kernel-devel kernel-headers make diffutils file

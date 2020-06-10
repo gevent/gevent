@@ -1,0 +1,2 @@
+On Python 2, the dnspython resolver can be used without having
+selectors2 installed. Previously, an ImportError would be raised.

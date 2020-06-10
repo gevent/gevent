@@ -13,7 +13,10 @@ os:
   - linux
   - osx
 osx_image: xcode11.4
-
+addons:
+  homebrew:
+    packages:
+      - ccache
 
 env:
     global:
@@ -95,7 +98,6 @@ before_install:
   - echo Running in stage $TRAVIS_BUILD_STAGE_NAME
   - |
     if [[ "$TRAVIS_OS_NAME" == "osx" && "$TRAVIS_BUILD_STAGE_NAME" != "test" ]]; then
-      brew install ccache
       export PATH="/usr/local/opt/ccache/libexec:$PATH"
       export CFLAGS="$CFLAGS -Wno-parentheses-equality"
     fi
@@ -313,7 +315,8 @@ jobs:
     # Run dnspython with coverage enabled, it's implemented in python whereas ares is C.
     # PyPy is supported.
     - &test-dnspython-jobs
-      script: GEVENT_RESOLVER=dnspython python -mgevent.tests --coverage --ignore tests_that_dont_use_resolver.txt
+      script:
+        - GEVENT_RESOLVER=dnspython python -mgevent.tests --coverage --ignore tests_that_dont_use_resolver.txt
       name: dnspython resolver (Python 2.7)
     # Now test the alternate backends, starting with libuv-cffi, which should be present everywhere
     - &test-libuv-jobs
