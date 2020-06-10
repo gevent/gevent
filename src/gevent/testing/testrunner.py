@@ -718,15 +718,6 @@ def _setup_environ(debug=False):
     for k, v in sorted(interesting_envs.items()):
         util.log('%*s\t=\t%s', widest_k, k, v, color="debug")
 
-    util.run(
-        [
-            sys.executable,
-            '-c',
-            'from __future__ import print_function; '
-            'import sys; print("sys.warnoptions:\t", sys.warnoptions)',
-        ],
-        # Don't log the beginning and end of the subprocess.
-        quiet=True, nested=True)
 
 def main():
     # pylint:disable=too-many-locals,too-many-statements

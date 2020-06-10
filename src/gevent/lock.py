@@ -11,6 +11,7 @@ from __future__ import absolute_import
 
 from gevent.hub import getcurrent
 from gevent._compat import PURE_PYTHON
+from gevent._compat import PY2
 # This is the one exception to the rule of where to
 # import Semaphore, obviously
 from gevent import monkey
@@ -128,8 +129,9 @@ class _AtomicSemaphoreMixin(object):
     # and re-acquire it for them on exit.
     #
     # Note that this does *NOT*, in-and-of itself, make semaphores safe to use from multiple threads
+    __slots__ = ()
     def __init__(self, *args, **kwargs):
-        self._lock_lock = _OwnedLock()
+        self._lock_lock = _OwnedLock() # pylint:disable=assigning-non-slot
         super(_AtomicSemaphoreMixin, self).__init__(*args, **kwargs)
 
     def _acquire_lock_for_switch_in(self):
@@ -157,19 +159,45 @@ class _AtomicSemaphoreMixin(object):
             return super(_AtomicSemaphoreMixin, self).wait(timeout)
 
 class _AtomicSemaphore(_AtomicSemaphoreMixin, Semaphore):
+    __doc__ = Semaphore.__doc__
     __slots__ = (
         '_lock_lock',
     )
 
+
 class _AtomicBoundedSemaphore(_AtomicSemaphoreMixin, BoundedSemaphore):
+    __doc__ = BoundedSemaphore.__doc__
     __slots__ = (
         '_lock_lock',
     )
+
+    def release(self): # pylint:disable=useless-super-delegation
+        # This method is duplicated here so that it can get
+        # properly documented.
+        return super(_AtomicBoundedSemaphore, self).release()
+
+
+def _fixup_docstrings():
+    for c in _AtomicSemaphore, _AtomicBoundedSemaphore:
+        b = c.__mro__[2]
+        assert b.__name__.endswith('Semaphore') and 'Atomic' not in b.__name__
+        assert c.__doc__ == b.__doc__
+        for m in 'acquire', 'release', 'wait':
+            c_meth = getattr(c, m)
+            if PY2:
+                c_meth = c_meth.__func__
+            b_meth = getattr(b, m)
+            c_meth.__doc__ = b_meth.__doc__
+
+_fixup_docstrings()
+del _fixup_docstrings
 
 
 if PURE_PYTHON:
     Semaphore = _AtomicSemaphore
+    Semaphore.__name__ = 'Semaphore'
     BoundedSemaphore = _AtomicBoundedSemaphore
+    BoundedSemaphore.__name__ = 'BoundedSemaphore'
 
 
 class DummySemaphore(object):

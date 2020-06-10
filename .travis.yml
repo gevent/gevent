@@ -92,8 +92,9 @@ before_install:
   - if [ -f $BUILD_LIBS/config.cache.ares ]; then cp $BUILD_LIBS/config.cache.ares deps/c-ares/config.cache ; fi
   - if [ -f $BUILD_LIBS/config.cache.libev ]; then cp $BUILD_LIBS/config.cache.libev deps/libev/config.cache ; fi
   - if [ -f $BUILD_LIBS/config.cache.libuv ]; then cp $BUILD_LIBS/config.cache.libuv deps/libuv/config.cache ; fi
+  - echo Running in stage $TRAVIS_BUILD_STAGE_NAME
   - |
-    if [[ "$TRAVIS_OS_NAME" == "osx" && "$TRAVIS_BUILD_STAGE_NAME" != "Test" ]]; then
+    if [[ "$TRAVIS_OS_NAME" == "osx" && "$TRAVIS_BUILD_STAGE_NAME" != "test" ]]; then
       brew install ccache
       export PATH="/usr/local/opt/ccache/libexec:$PATH"
       export CFLAGS="$CFLAGS -Wno-parentheses-equality"
