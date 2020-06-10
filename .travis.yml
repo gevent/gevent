@@ -13,7 +13,10 @@ os:
   - linux
   - osx
 osx_image: xcode11.4
-
+addons:
+  homebrew:
+    packages:
+      - ccache
 
 env:
     global:
@@ -95,7 +98,6 @@ before_install:
   - echo Running in stage $TRAVIS_BUILD_STAGE_NAME
   - |
     if [[ "$TRAVIS_OS_NAME" == "osx" && "$TRAVIS_BUILD_STAGE_NAME" != "test" ]]; then
-      brew install ccache
       export PATH="/usr/local/opt/ccache/libexec:$PATH"
       export CFLAGS="$CFLAGS -Wno-parentheses-equality"
     fi
