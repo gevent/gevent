@@ -313,7 +313,10 @@ jobs:
     # Run dnspython with coverage enabled, it's implemented in python whereas ares is C.
     # PyPy is supported.
     - &test-dnspython-jobs
-      script: GEVENT_RESOLVER=dnspython python -mgevent.tests --coverage --ignore tests_that_dont_use_resolver.txt
+      script:
+        # https://github.com/gevent/gevent/issues/1641
+        - python -m pip uninstall -y selectors2
+        - GEVENT_RESOLVER=dnspython python -mgevent.tests --coverage --ignore tests_that_dont_use_resolver.txt
       name: dnspython resolver (Python 2.7)
     # Now test the alternate backends, starting with libuv-cffi, which should be present everywhere
     - &test-libuv-jobs

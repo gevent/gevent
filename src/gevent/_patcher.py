@@ -38,7 +38,30 @@ MAPPING = {
     'gevent.contextvars': 'contextvars',
 }
 
+OPTIONAL_STDLIB_MODULES = frozenset() if PY3 else frozenset([
+    'selectors2',
+])
+
 _PATCH_PREFIX = '__g_patched_module_'
+
+def _collect_stdlib_gevent_modules():
+    """
+    Return a map from standard library name to
+    imported gevent module that provides the same API.
+
+    Optional modules are skipped if they cannot be imported.
+    """
+    result = {}
+
+    for gevent_name, stdlib_name in iteritems(MAPPING):
+        try:
+            result[stdlib_name] = importlib.import_module(gevent_name)
+        except ImportError:
+            if stdlib_name in OPTIONAL_STDLIB_MODULES:
+                continue
+            raise
+    return result
+
 
 class _SysModulesPatcher(object):
 
@@ -49,11 +72,7 @@ class _SysModulesPatcher(object):
         # green modules, replacing regularly imported modules.
         # This begins as the gevent list of modules, and
         # then gets extended with green things from the tree we import.
-        self._green_modules = {
-            stdlib_name: importlib.import_module(gevent_name)
-            for gevent_name, stdlib_name
-            in iteritems(MAPPING)
-        }
+        self._green_modules = _collect_stdlib_gevent_modules()
 
         ## Transient, reset each time we're called.
         # The set of things imported before we began.
