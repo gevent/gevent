@@ -6,6 +6,37 @@
 
 .. towncrier release notes start
 
+20.6.1 (2020-06-10)
+===================
+
+
+Features
+--------
+
+- gevent's CI is now tested on Ubuntu 18.04 (Bionic), an upgrade from
+  16.04 (Xenial).
+  See :issue:`1623`.
+
+
+Bugfixes
+--------
+
+- On Python 2, the dnspython resolver can be used without having
+  selectors2 installed. Previously, an ImportError would be raised.
+  See :issue:`issue1641`.
+- Python 3 ``gevent.ssl.SSLSocket`` objects no longer attempt to catch
+  ``ConnectionResetError`` and treat it the same as an ``SSLError`` with
+  ``SSL_ERROR_EOF`` (typically by suppressing it).
+
+  This was a difference from the way the standard library behaved (which
+  is to raise the exception). It was added to gevent during early
+  testing of OpenSSL 1.1 and TLS 1.3.
+  See :issue:`1637`.
+
+
+----
+
+
 20.6.0 (2020-06-06)
 ===================
 

@@ -1,7 +1,0 @@
-Python 3 ``gevent.ssl.SSLSocket`` objects no longer attempt to catch
-``ConnectionResetError`` and treat it the same as an ``SSLError`` with
-``SSL_ERROR_EOF`` (typically by suppressing it).
-
-This was a difference from the way the standard library behaved (which
-is to raise the exception). It was added to gevent during early
-testing of OpenSSL 1.1 and TLS 1.3.
