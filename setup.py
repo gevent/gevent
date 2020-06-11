@@ -301,12 +301,12 @@ EXTRA_EVENTS = [
 ]
 
 EXTRA_PSUTIL_DEPS = [
-    # psutil fails  to build on PyPy on Windows. (TODO: Is that still the case?)
-    # Versions of PyPy2 prior to 7.4 (maybe?) are incompatible with
-    # psutil >= 5.6.4.
+    # Versions of PyPy2 prior to 7.3.1 (maybe?) are incompatible with
+    # psutil >= 5.6.4. 5.7.0 seems to work.
     # https://github.com/giampaolo/psutil/issues/1659
-    'psutil >= 5.6.1 ; platform_python_implementation == "CPython" or python_version!="2.7"',
-    'psutil == 5.6.3 ; platform_python_implementation=="PyPy" and python_version=="2.7" and sys_platform != "win32"',
+    # PyPy on Windows can't build psutil, it fails to link with the missing symbol
+    # PyErr_SetFromWindowsErr.
+    'psutil >= 5.7.0; sys_platform != "win32" or platform_python_implementation == "CPython"',
 ]
 
 EXTRA_MONITOR = [
