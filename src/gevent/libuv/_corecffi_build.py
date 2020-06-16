@@ -209,6 +209,20 @@ elif sys.platform.startswith('haiku'): # untested
     LIBUV_SOURCES += [
         _libuv_source('unix/haiku.c')
     ]
+elif sys.platform.startswith('cygwin'):
+    # Based on Cygwin package sources /usr/src/libuv-1.32.0-1.src/libuv-1.32.0/Makefile.am
+    # Apparently the same upstream at https://github.com/libuv/libuv/blob/v1.x/Makefile.am
+    LIBUV_SOURCES += [
+        _libuv_source('unix/cygwin.c'),
+        _libuv_source('unix/bsd-ifaddrs.c'),
+        _libuv_source('unix/no-fsevents.c'),
+        _libuv_source('unix/no-proctitle.c'),
+        _libuv_source('unix/posix-hrtime.c'),
+        _libuv_source('unix/posix-poll.c'),
+        _libuv_source('unix/procfs-exepath.c'),
+        _libuv_source('unix/sysinfo-loadavg.c'),
+        _libuv_source('unix/sysinfo-memory.c'),
+    ]
 
 
 LIBUV_MACROS = [
