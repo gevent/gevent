@@ -171,7 +171,8 @@ elif sys.platform == 'darwin':
         _libuv_source('unix/kqueue.c'),
         _libuv_source('unix/proctitle.c'),
     ]
-elif sys.platform.startswith(('freebsd', 'dragonfly')):
+elif sys.platform.startswith(('freebsd', 'dragonfly')): # pragma: no cover
+    # Not tested
     LIBUV_SOURCES += [
         _libuv_source('unix/bsd-ifaddrs.c'),
         _libuv_source('unix/freebsd.c'),
@@ -179,7 +180,8 @@ elif sys.platform.startswith(('freebsd', 'dragonfly')):
         _libuv_source('unix/posix-hrtime.c'),
         _libuv_source('unix/bsd-proctitle.c'),
     ]
-elif sys.platform.startswith('openbsd'):
+elif sys.platform.startswith('openbsd'): # pragma: no cover
+    # Not tested
     LIBUV_SOURCES += [
         _libuv_source('unix/bsd-ifaddrs.c'),
         _libuv_source('unix/kqueue.c'),
@@ -187,7 +189,8 @@ elif sys.platform.startswith('openbsd'):
         _libuv_source('unix/posix-hrtime.c'),
         _libuv_source('unix/bsd-proctitle.c'),
     ]
-elif sys.platform.startswith('netbsd'):
+elif sys.platform.startswith('netbsd'): # pragma: no cover
+    # Not tested
     LIBUV_SOURCES += [
         _libuv_source('unix/bsd-ifaddrs.c'),
         _libuv_source('unix/kqueue.c'),
@@ -195,21 +198,26 @@ elif sys.platform.startswith('netbsd'):
         _libuv_source('unix/posix-hrtime.c'),
         _libuv_source('unix/bsd-proctitle.c'),
     ]
-elif sys.platform.startswith('sunos'):
+elif sys.platform.startswith('sunos'): # pragma: no cover
+    # Not tested.
     LIBUV_SOURCES += [
         _libuv_source('unix/no-proctitle.c'),
         _libuv_source('unix/sunos.c'),
     ]
-elif sys.platform.startswith('aix'):
+elif sys.platform.startswith('aix'): # pragma: no cover
+    # Not tested.
     LIBUV_SOURCES += [
         _libuv_source('unix/aix.c'),
         _libuv_source('unix/aix-common.c'),
     ]
-elif sys.platform.startswith('haiku'): # untested
+elif sys.platform.startswith('haiku'): # pragma: no cover
+    # Not tested
     LIBUV_SOURCES += [
         _libuv_source('unix/haiku.c')
     ]
-elif sys.platform.startswith('cygwin'):
+elif sys.platform.startswith('cygwin'): # pragma: no cover
+    # Not tested.
+
     # Based on Cygwin package sources /usr/src/libuv-1.32.0-1.src/libuv-1.32.0/Makefile.am
     # Apparently the same upstream at https://github.com/libuv/libuv/blob/v1.x/Makefile.am
     LIBUV_SOURCES += [
@@ -249,9 +257,9 @@ if sys.platform.startswith('linux'):
 elif sys.platform == 'darwin':
     _define_macro('_DARWIN_USE_64_BIT_INODE', 1)
     _define_macro('_DARWIN_UNLIMITED_SELECT', 1)
-elif sys.platform.startswith('netbsd'):
+elif sys.platform.startswith('netbsd'): # pragma: no cover
     _add_library('kvm')
-elif sys.platform.startswith('sunos'):
+elif sys.platform.startswith('sunos'): # pragma: no cover
     _define_macro('__EXTENSIONS__', 1)
     _define_macro('_XOPEN_SOURCE', 500)
     _add_library('kstat')
@@ -262,7 +270,7 @@ elif sys.platform.startswith('sunos'):
         # https://github.com/libuv/libuv/issues/1458
         # https://github.com/giampaolo/psutil/blob/4d6a086411c77b7909cce8f4f141bbdecfc0d354/setup.py#L298-L300
         _define_macro('SUNOS_NO_IFADDRS', '')
-elif sys.platform.startswith('aix'):
+elif sys.platform.startswith('aix'): # pragma: no cover
     _define_macro('_LINUX_SOURCE_COMPAT', 1)
     _add_library('perfstat')
 elif WIN:
