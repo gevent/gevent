@@ -194,7 +194,7 @@ after_test:
   # https://ci.appveyor.com/project/denik/gevent/builds/23810605/job/83aw4u67artt002b#L602
   # So we violate DRY and repeate some requirements in order to use
   # --no-build-isolation
-  - "%CMD_IN_ENV% %PYEXE% -m pip install --pre wheel cython setuptools cffi"
+  - "%CMD_IN_ENV% %PYEXE% -m pip install --pre wheel cython setuptools cffi twine"
   - "%CMD_IN_ENV% %PYEXE% -m pip wheel --no-build-isolation . -w dist"
   - ps: "ls dist"
 
@@ -204,6 +204,6 @@ artifacts:
 
 
 deploy_script:
-  - ps: if ($env:APPVEYOR_REPO_TAG -eq $TRUE) { pip install twine; twine upload --skip-existing dist/gevent* }
+  - ps: if ($env:APPVEYOR_REPO_TAG -eq $TRUE) { twine upload --skip-existing dist/gevent* }
 
 deploy: on
