@@ -1,4 +1,0 @@
-Relax the version constraint for psutil on PyPy.
-
-Previously it was pinned to 5.6.3 for PyPy2, except for on Windows,
-where it was excluded. It is now treated the same as CPython again.
