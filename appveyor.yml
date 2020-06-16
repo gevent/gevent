@@ -32,7 +32,7 @@ environment:
     # Upload settings for twine.
     TWINE_USERNAME: "__token__"
     TWINE_PASSWORD:
-      secure: m1SSFQeqMo/O65xd0tKYT5wBnqVHSmX8nWw5aui+i65GWODEkXbRp4QQha9PLNtiQvYBTO4tAkWaimWhEHZyx6Zun/0yEcBmovFkLaLWXKdekIDcX+Oi0aefP1t4yoo8C9amOLMAV/t229P7hzqCUDHB9JHvhOWbBMsCJ4VCIKCCiMObUeSazD4lBwgiwMHHfyfMF+xWs24jc5D/7a/xpSghvzoaoLl/gBDCy1op2tsuAIgJCF0P1YjUP/bzVNqmjMa2bG5pQY5n8mskuTTqdA==
+      secure: uXZ6Juhz2hElaTsaJ2Hnemm+YoYbjpkoT5NFFlj4xxSlZvUrjoiOdvPqxxCaNYozWIRM5QmXlj1nOF8nZDpzx7oAyVIMT2x3z9iI0C/G5r4G8uvbJJq6wpJRI5HQ3sE39qLK2MCPZJ3BTu/uvVgWWqQ6wInKXxNqDGyf9IgZOv3/sCd4CwD7bEqlwHzyeh9a2o17a5J1YMhL03LVRcrlmjN8/Ds642FtnF/e+VAhUdtZvU1ze8rfeR7KCe4ehOmy18dh5joPX8TJKbg/AJlIYQ==
 
 
   matrix:
