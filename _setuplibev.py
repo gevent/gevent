@@ -15,6 +15,7 @@ from _setuputils import Extension
 from _setuputils import system
 from _setuputils import dep_abspath
 from _setuputils import quoted_dep_abspath
+from _setuputils import LINUX
 from _setuputils import WIN
 from _setuputils import LIBRARIES
 from _setuputils import DEFINE_MACROS
@@ -52,7 +53,18 @@ def configure_libev(build_command=None, extension=None): # pylint:disable=unused
         print("Not configuring libev, 'config.h' already exists")
         return
 
-    system(libev_configure_command)
+    env = os.environ.copy()
+
+    if LINUX:
+        # Older versions of Linux libc, such as the one used by manylinux2010
+        # builds, ship the clock_gettime() function in librt, which is not
+        # included by default in our linked libraries. When clock_gettime() is
+        # not available, libev instead calls the SYS_CLOCK_GETTIME syscall
+        # directly, bypassing vDSO, which means that we cannot take advantage of
+        # vDSO's optimized access to the current time.
+        env["LIBS"] = os.environ.get("LIBS", "") + " -lrt"
+
+    system(libev_configure_command, env=env)
 
 
 def build_extension():
@@ -88,7 +100,9 @@ def build_extension():
             # libev watchers that we don't use currently:
             ('EV_CLEANUP_ENABLE', '0'),
             ('EV_EMBED_ENABLE', '0'),
-            ("EV_PERIODIC_ENABLE", '0')
+            ("EV_PERIODIC_ENABLE", '0'),
+            # Use clock_gettime(CLOCK_REALTIME) instead of gettimeofday()
+            ("EV_USE_REALTIME", '1')
         ]
         CORE.configure = configure_libev
         if os.environ.get('GEVENTSETUP_EV_VERIFY') is not None:

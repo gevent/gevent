@@ -23,6 +23,7 @@ THIS_DIR = os.path.dirname(__file__)
 
 PYPY = hasattr(sys, 'pypy_version_info')
 WIN = sys.platform.startswith('win')
+LINUX = sys.platform.startswith('linux')
 
 RUNNING_ON_TRAVIS = os.environ.get('TRAVIS')
 RUNNING_ON_APPVEYOR = os.environ.get('APPVEYOR')
