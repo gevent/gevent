@@ -90,7 +90,12 @@ install () {
     $DESTINATION/bin/python --version
     # Set the PATH to include the install's bin directory so pip
     # doesn't nag.
-    PATH="$DESTINATION/bin/:$PATH" $SNAKEPIT/$ALIAS -m pip install --upgrade pip wheel virtualenv
+    # Use quiet mode for this; PyPy2 has been seen to output
+    # an error:
+    #     UnicodeEncodeError: 'ascii' codec can't encode
+    #     character u'\u258f' in position 6: ordinal not in range(128)
+    # https://travis-ci.org/github/gevent/gevent/jobs/699973435
+    PATH="$DESTINATION/bin/:$PATH" $SNAKEPIT/$ALIAS -m pip install -q --upgrade pip wheel virtualenv
     ls -l $SNAKEPIT
     ls -l $BASE/versions
 
