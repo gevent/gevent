@@ -171,7 +171,7 @@ jobs:
       stage: build-gevent
       install:
         # Install the Python runtime
-        - &build-gevent-python time ./scripts/install.sh $TRAVIS_PYTHON_VERSION
+        - &build-gevent-python time travis_wait ./scripts/install.sh $TRAVIS_PYTHON_VERSION
         # Install gevent. Yes, this will create different files each time,
         # leading to a fresh cache. But because of CCache stats, we had already been doing
         # that (before we learned about CCACHE_NOSTATS).
