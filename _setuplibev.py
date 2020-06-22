@@ -88,7 +88,17 @@ def build_extension():
             # libev watchers that we don't use currently:
             ('EV_CLEANUP_ENABLE', '0'),
             ('EV_EMBED_ENABLE', '0'),
-            ("EV_PERIODIC_ENABLE", '0')
+            ("EV_PERIODIC_ENABLE", '0'),
+            # Time keeping. If possible, use the realtime and/or monotonic
+            # clocks. On Linux, this can reduce the number of observable syscalls.
+            # On older linux, such as the version in manylinux2010, this requires
+            # linking to lib rt. We handle this in make-manylinux. Newer versions
+            # generally don't need that.
+            ("EV_USE_REALTIME", "1"),
+            ("EV_USE_MONOTONIC", "1"),
+            # use the builtin floor() function. Every modern platform should
+            # have this, right?
+            ("EV_USE_FLOOR", "1"),
         ]
         CORE.configure = configure_libev
         if os.environ.get('GEVENTSETUP_EV_VERIFY') is not None:
