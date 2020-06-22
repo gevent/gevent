@@ -38,6 +38,10 @@ General Notes
 
      apk add --virtual build-deps file make gcc musl-dev libffi-dev
 
+  On Fedora Rawhide for Fedora 33, one might need to do this::
+
+     yum install python3-devel gcc kernel-devel kernel-headers make diffutils file
+
   See :issue:`1567`, :issue:`1559`, and :issue:`1566`.
 
   .. note::
@@ -47,6 +51,12 @@ General Notes
      such as libev, libuv and c-ares. Disabling :ref:`embed-lib` and
      using system libraries can reduce these dependencies, although
      this isn't encouraged.
+
+- On older versions of Linux, linking to ``librt`` might be useful to
+  avoid system calls from libev accessing the current time. One way to
+  do this is to set the ``LDFLAGS`` environment variable to include
+  ``-lrt`` when installing from source. (This is done automatically
+  when gevent builds manylinux wheels.) See :pr:`1650`.
 
 - Installing from source requires ``setuptools``. This is installed
   automatically in virtual environments and by buildout. However,
