@@ -34,7 +34,7 @@ export CCACHE_DIR="/ccache"
 # Disable some warnings produced by libev especially and also some Cython generated code.
 # Note that changing the value of these variables invalidates configure caches
 export CFLAGS="-Ofast -pipe -Wno-strict-aliasing -Wno-comment -Wno-unused-value -Wno-unused-but-set-variable -Wno-sign-compare -Wno-parentheses -Wno-unused-function -Wno-tautological-compare -Wno-strict-prototypes"
-
+export LDFLAGS="-lrt" # Needed for clock_gettime libc support on this version.
 
 if [ -d /gevent -a -d /opt/python ]; then
     # Running inside docker

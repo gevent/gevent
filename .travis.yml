@@ -184,6 +184,7 @@ jobs:
         # Next, build the wheel *in place*. This helps ccache, and also lets us cache the configure
         # output (pip install uses a random temporary directory, making this difficult)
         - python setup.py bdist_wheel
+        - cat deps/libev/configure-output.txt
         - ls -l dist
         - twine check dist/*
         - pip uninstall -y gevent
