@@ -74,6 +74,9 @@ class _fileobject(getattr(__ssl__, '_fileobject', object)): # pylint:disable=no-
 orig_SSLContext = __ssl__.SSLContext # pylint: disable=no-member
 
 class SSLContext(orig_SSLContext):
+
+    __slots__ = ()
+
     def wrap_socket(self, sock, server_side=False,
                     do_handshake_on_connect=True,
                     suppress_ragged_eofs=True,
