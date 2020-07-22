@@ -28,7 +28,7 @@ import unittest
 # It's important to do this ASAP, because if we're monkey patched,
 # then importing things like the standard library test.support can
 # need to construct the hub (to check for IPv6 support using a socket).
-# We can't do it in the testrunner, as the testrunner spaws new, unrelated
+# We can't do it in the testrunner, as the testrunner spawns new, unrelated
 # processes.
 from .hub import QuietHub
 import gevent.hub
