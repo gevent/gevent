@@ -291,7 +291,7 @@ del _to_cythonize
 ## Extras
 
 EXTRA_DNSPYTHON = [
-    'dnspython >= 1.16.0',
+    'dnspython >= 1.16.0, < 2.0',
     'idna',
 ]
 EXTRA_EVENTS = [
