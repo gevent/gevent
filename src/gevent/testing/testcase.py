@@ -432,3 +432,6 @@ class TestCase(TestCaseMetaClass("NewBase",
 
     assertRaisesRegex = getattr(BaseTestCase, 'assertRaisesRegex',
                                 getattr(BaseTestCase, 'assertRaisesRegexp'))
+
+    def assertStartsWith(self, it, has_prefix):
+        self.assertTrue(it.startswith(has_prefix), (it, has_prefix))
