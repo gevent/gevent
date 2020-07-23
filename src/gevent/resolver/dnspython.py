@@ -112,7 +112,7 @@ def _patch_dns():
     def extra_all(mod_name):
         return extras.get(mod_name, ())
 
-    def after_import_hook(mod):
+    def after_import_hook(dns): # pylint:disable=redefined-outer-name
         # Runs while still in the original patching scope.
         # The dns.rdata:get_rdata_class() function tries to
         # dynamically import modules using __import__ and then walk
@@ -122,10 +122,23 @@ def _patch_dns():
         # We could patch __import__ to do things at runtime, but it's
         # easier to enumerate the world and populate the cache now
         # before we then switch the names back.
-        rdata = mod.rdata
+        rdata = dns.rdata
         get_rdata_class = rdata.get_rdata_class
-        for rdclass in mod.rdataclass._by_value:
-            for rdtype in mod.rdatatype._by_value:
+        try:
+            rdclass_values = list(dns.rdataclass.RdataClass)
+        except AttributeError:
+            # dnspython < 2.0
+            rdclass_values = dns.rdataclass._by_value
+
+        try:
+            rdtype_values = list(dns.rdatatype.RdataType)
+        except AttributeError:
+            # dnspython < 2.0
+            rdtype_values = dns.rdatatype._by_value
+
+
+        for rdclass in rdclass_values:
+            for rdtype in rdtype_values:
                 get_rdata_class(rdclass, rdtype)
 
     patcher = importer('dns', extra_all, after_import_hook)
@@ -136,7 +149,6 @@ def _patch_dns():
         raise ValueError(name)
 
     top.rdata.__import__ = _no_dynamic_imports
-
 
     return top
 

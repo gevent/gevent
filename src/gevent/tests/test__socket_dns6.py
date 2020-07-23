@@ -10,8 +10,9 @@ from gevent.tests.test__socket_dns import TestCase, add
 
 from gevent.testing.sysinfo import OSX
 from gevent.testing.sysinfo import RESOLVER_DNSPYTHON
+from gevent.testing.sysinfo import RESOLVER_ARES
 from gevent.testing.sysinfo import PYPY
-
+from gevent.testing.sysinfo import PY2
 
 # We can't control the DNS servers on CI (or in general...)
 # for the system. This works best with the google DNS servers
@@ -44,6 +45,18 @@ class Test6(TestCase):
         # that resolve and which ones you get depend on the settings
         # of the system and ares. They don't match exactly.
         return ()
+
+    if RESOLVER_ARES and PY2:
+        def _normalize_result_getnameinfo(self, result):
+            # Beginning 2020-07-23,
+            # c-ares returns a scope id on the result:
+            #    ('2001:470:1:18::115%0', 'http')
+            # The standard library does not (on linux or os x).
+            # I've only seen '%0', so only remove that
+            ipaddr, service = result
+            if ipaddr.endswith('%0'):
+                ipaddr = ipaddr[:-2]
+            return (ipaddr, service)
 
     if not OSX and RESOLVER_DNSPYTHON:
         # It raises gaierror instead of socket.error,

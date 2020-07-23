@@ -3,9 +3,10 @@
 internal gevent utilities, not for external use.
 """
 
-from __future__ import print_function, absolute_import, division
+# Be very careful not to import anything that would cause issues with
+# monkey-patching.
 
-from functools import update_wrapper
+from __future__ import print_function, absolute_import, division
 
 from gevent._compat import iteritems
 
@@ -22,6 +23,38 @@ class _NONE(object):
         return '<default value>'
 
 _NONE = _NONE()
+
+WRAPPER_ASSIGNMENTS = ('__module__', '__name__', '__qualname__', '__doc__',
+                       '__annotations__')
+WRAPPER_UPDATES = ('__dict__',)
+def update_wrapper(wrapper,
+                   wrapped,
+                   assigned=WRAPPER_ASSIGNMENTS,
+                   updated=WRAPPER_UPDATES):
+    """
+    Based on code from the standard library ``functools``, but
+    doesn't perform any of the troublesome imports.
+
+    functools imports RLock from _thread for purposes of the
+    ``lru_cache``, making it problematic to use from gevent.
+
+    The other imports are somewhat heavy: abc, collections, types.
+    """
+    for attr in assigned:
+        try:
+            value = getattr(wrapped, attr)
+        except AttributeError:
+            pass
+        else:
+            setattr(wrapper, attr, value)
+    for attr in updated:
+        getattr(wrapper, attr).update(getattr(wrapped, attr, {}))
+    # Issue #17482: set __wrapped__ last so we don't inadvertently copy it
+    # from the wrapped function when updating __dict__
+    wrapper.__wrapped__ = wrapped
+    # Return the wrapper so this can be used as a decorator via partial()
+    return wrapper
+
 
 def copy_globals(source,
                  globs,

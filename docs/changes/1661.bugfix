@@ -1,0 +1,5 @@
+Fix compatibility with dnspython 2.
+
+.. caution:: This currently means that it can be imported. But it
+             cannot yet be used. gevent has a pinned dependency on
+             dnspython < 2 for now.

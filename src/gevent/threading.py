@@ -33,6 +33,11 @@ __implements__ = [
     '_get_ident',
     '_sleep',
     '_DummyThread',
+    # RLock cannot go here, even though we need to import it.
+    # If it goes here, it replaces the RLock from the native
+    # threading module, but we really just need it here when some
+    # things import this module.
+    #'RLock',
 ]
 
 
@@ -43,11 +48,14 @@ from gevent.thread import start_new_thread as _start_new_thread
 from gevent.thread import allocate_lock as _allocate_lock
 from gevent.thread import get_ident as _get_ident
 from gevent.hub import sleep as _sleep, getcurrent
+from gevent.lock import RLock
 
 from gevent._compat import PY3
 from gevent._compat import PYPY
+from gevent._util import LazyOnClass
 
-# Exports, prevent unused import warnings
+# Exports, prevent unused import warnings.
+# XXX: Why don't we use __all__?
 local = local
 start_new_thread = _start_new_thread
 allocate_lock = _allocate_lock
@@ -56,6 +64,7 @@ _sleep = _sleep
 getcurrent = getcurrent
 
 Lock = _allocate_lock
+RLock = RLock
 
 
 def _cleanup(g):
@@ -80,7 +89,7 @@ class _DummyThread(_DummyThread_):
 
     # These objects are constructed quite frequently in some cases, so
     # the optimization matters: for example, in gunicorn, which uses
-    # pywsgi.WSGIServer, every request is handled in a new greenlet,
+    # pywsgi.WSGIServer, most every request is handled in a new greenlet,
     # and every request uses a logging.Logger to write the access log,
     # and every call to a log method captures the current thread (by
     # default).
@@ -113,11 +122,11 @@ class _DummyThread(_DummyThread_):
     def __init__(self): # pylint:disable=super-init-not-called
         #_DummyThread_.__init__(self)
 
-        # It'd be nice to use a pattern like "greenlet-%d", but maybe somebody out
-        # there is checking thread names...
-        self._name = self._Thread__name = __threading__._newname("DummyThread-%d")
+        # It'd be nice to use a pattern like "greenlet-%d", but there are definitely
+        # third-party libraries checking thread names to detect DummyThread objects.
+        self._name = self._Thread__name = __threading__._newname("Dummy-%d")
         # All dummy threads in the same native thread share the same ident
-        # (that of the native thread)
+        # (that of the native thread), unless we're monkey-patched.
         self._set_ident()
 
         g = getcurrent()
@@ -131,10 +140,8 @@ class _DummyThread(_DummyThread_):
         else:
             # ... so for them we use weakrefs.
             # See https://github.com/gevent/gevent/issues/918
-            global _weakref
-            if _weakref is None:
-                _weakref = __import__('weakref')
-            ref = _weakref.ref(g, _make_cleanup_id(gid))
+            ref = self.__weakref_ref
+            ref = ref(g, _make_cleanup_id(gid)) # pylint:disable=too-many-function-args
             self.__raw_ref = ref
 
     def _Thread__stop(self):
@@ -144,6 +151,10 @@ class _DummyThread(_DummyThread_):
 
     def _wait_for_tstate_lock(self, *args, **kwargs): # pylint:disable=signature-differs
         pass
+
+    @LazyOnClass
+    def __weakref_ref(self):
+        return __import__('weakref').ref
 
 if hasattr(__threading__, 'main_thread'): # py 3.4+
     def main_native_thread():
