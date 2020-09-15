@@ -37,6 +37,7 @@ export CFLAGS="-Ofast -pipe -Wno-strict-aliasing -Wno-comment -Wno-unused-value 
 export LDFLAGS="-lrt" # Needed for clock_gettime libc support on this version.
 
 if [ -d /gevent -a -d /opt/python ]; then
+    PLATFORM=$1
     # Running inside docker
 
     # Set a cache directory for pip. This was
@@ -49,7 +50,9 @@ if [ -d /gevent -a -d /opt/python ]; then
     export XDG_CACHE_HOME="/cache"
     ls -ld /cache
     ls -ld /cache/pip
+    yum -y install epel-release || true
     yum -y install libffi-devel ccache
+
     # On Fedora Rawhide (F33)
     # yum install python39 python3-devel gcc kernel-devel kernel-headers make diffutils file
 
@@ -74,7 +77,7 @@ if [ -d /gevent -a -d /opt/python ]; then
         # it, and auditwheel is installed in one of these environments.
         python -mpip install -U "cython >= 3.0a5" cffi greenlet setuptools
         time (python setup.py bdist_wheel -q > /dev/null)
-        PATH="$OPATH" auditwheel repair --plat manylinux2010_x86_64 dist/gevent*.whl
+        PATH="$OPATH" auditwheel repair --plat $PLATFORM dist/gevent*.whl
         cp wheelhouse/gevent*.whl /gevent/wheelhouse
 
         python -mpip install -U --no-compile `ls dist/gevent*whl`[test]
@@ -106,5 +109,5 @@ echo Sharing ccache dir at $HOME/.ccache
 if [ ! -d $HOME/.ccache ]; then
     mkdir $HOME/.ccache
 fi
-docker run --rm -ti -v "$(pwd):/gevent" -v "$LCACHE:/cache" -v "$HOME/.ccache:/ccache" quay.io/pypa/manylinux2010_x86_64 /gevent/scripts/releases/$(basename $0)
+docker run --rm -t -v "$(pwd):/gevent" -v "$LCACHE:/cache" -v "$HOME/.ccache:/ccache" $DOCKER_IMAGE /gevent/scripts/releases/$(basename $0) `basename $DOCKER_IMAGE`
 ls -l wheelhouse
