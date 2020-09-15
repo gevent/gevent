@@ -280,6 +280,22 @@ jobs:
         - chmod a+w $HOME/.cache/pip
 
     - stage: test
+      name: arm64 manylinux wheels (all Pythons)
+      language: python
+      services: docker
+      group: edge
+      arch: arm64
+      virt: lxd
+      env: DOCKER_IMAGE=quay.io/pypa/manylinux2014_aarch64
+      install: docker pull $DOCKER_IMAGE
+      script: bash scripts/releases/make-manylinux
+      before_script:
+        - python -mpip install -U pip twine
+        - chmod a+rwx $HOME/.cache
+        - mkdir -p $HOME/.cache/pip
+        - chmod a+rwx $HOME/.cache/pip
+
+    - stage: test
       name: 32-bit manylinux wheels (all Pythons)
       language: python
       services: docker
