@@ -295,18 +295,18 @@ jobs:
         - mkdir -p $HOME/.cache/pip
         - chmod a+rwx $HOME/.cache/pip
 
-    - stage: test
-      name: 32-bit manylinux wheels (all Pythons)
-      language: python
-      services: docker
-      env: DOCKER_IMAGE=quay.io/pypa/manylinux2010_i686 PRE_CMD=linux32
-      install: docker pull $DOCKER_IMAGE
-      script: bash scripts/releases/make-manylinux
-      before_script:
-        - python -mpip install -U pip twine
-        - chmod a+rwx $HOME/.cache
-        - mkdir -p $HOME/.cache/pip
-        - chmod a+rwx $HOME/.cache/pip
+    # - stage: test
+    #   name: 32-bit manylinux wheels (all Pythons)
+    #   language: python
+    #   services: docker
+    #   env: DOCKER_IMAGE=quay.io/pypa/manylinux2010_i686 PRE_CMD=linux32
+    #   install: docker pull $DOCKER_IMAGE
+    #   script: bash scripts/releases/make-manylinux
+    #   before_script:
+    #     - python -mpip install -U pip twine
+    #     - chmod a+rwx $HOME/.cache
+    #     - mkdir -p $HOME/.cache/pip
+    #     - chmod a+rwx $HOME/.cache/pip
 
     # Lint the code. Because this is a separate job, even if it fails fast
     # the tests will still run. Put it at the top for fast feedback.
