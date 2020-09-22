@@ -3,7 +3,8 @@
 Cooperative ``contextvars`` module.
 
 This module was added to Python 3.7. The gevent version is available
-on all supported versions of Python.
+on all supported versions of Python. However, see an important note
+about gevent 20.9.
 
 Context variables are like greenlet-local variables, just more
 inconvenient to use. They were designed to work around limitations in
@@ -23,6 +24,17 @@ from :pep:`567` and doesn't have much optimization. In particular, setting
 context values isn't constant time.
 
 .. versionadded:: 1.5a3
+.. versionchanged:: NEXT
+   On Python 3.7 and above, this module is no longer monkey-patched
+   in place of the standard library version.
+   gevent depends on greenlet 0.4.17 which includes support for context variables.
+   This means that any number of greenlets can be running any number of asyncio tasks
+   each with their own context variables. This module is only greenlet aware, not
+   asyncio task aware, so its use is not recommended on Python 3.7 and above.
+
+   On previous versions of Python, this module continues to be a solution for
+   backporting code. It is also available if you wish to use the contextvar API
+   in a strictly greenlet-local manner.
 """
 from __future__ import absolute_import
 from __future__ import division
