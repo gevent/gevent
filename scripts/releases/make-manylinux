@@ -72,9 +72,9 @@ if [ -d /gevent -a -d /opt/python ]; then
         # The downside is that we must install dependencies manually.
         # NOTE: We can't upgrade ``wheel`` because ``auditwheel`` depends on
         # it, and auditwheel is installed in one of these environments.
-        python -mpip install -U "cython >= 3.0a5" cffi greenlet setuptools
+        python -mpip install -U "cython >= 3.0a5" cffi 'greenlet >= 0.4.17' setuptools
         time (python setup.py bdist_wheel -q > /dev/null)
-        PATH="$OPATH" auditwheel repair --plat manylinux2010_x86_64 dist/gevent*.whl
+        PATH="$OPATH" auditwheel repair dist/gevent*.whl
         cp wheelhouse/gevent*.whl /gevent/wheelhouse
 
         python -mpip install -U --no-compile `ls dist/gevent*whl`[test]
@@ -106,5 +106,5 @@ echo Sharing ccache dir at $HOME/.ccache
 if [ ! -d $HOME/.ccache ]; then
     mkdir $HOME/.ccache
 fi
-docker run --rm -ti -v "$(pwd):/gevent" -v "$LCACHE:/cache" -v "$HOME/.ccache:/ccache" quay.io/pypa/manylinux2010_x86_64 /gevent/scripts/releases/$(basename $0)
+docker run --rm -ti -v "$(pwd):/gevent" -v "$LCACHE:/cache" -v "$HOME/.ccache:/ccache" ${DOCKER_IMAGE:-quay.io/pypa/manylinux2010_x86_64} /gevent/scripts/releases/$(basename $0)
 ls -l wheelhouse
