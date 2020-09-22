@@ -235,11 +235,14 @@ disabled_tests = [
     # and this doesn't work reliably on all versions.
     'test_httplib.HeaderTests.test_headers_debuglevel',
 
-    # These depend on the exact error message produced by the interpreter
-    # when too many arguments are passed to functions. We can't match
-    # the exact signatures (because Python 2 doesn't support the syntax)
-    'test_context.ContextTest.test_context_new_1',
-    'test_context.ContextTest.test_context_var_new_1',
+    # On Appveyor with Python 3.8.0 and 3.7.5, this test
+    # for __class_getitem__ fails. Presumably this was added
+    # in a patch release (it's not in the PEP.) Sigh.
+    # https://bugs.python.org/issue38979
+    'test_context.ContextTest.test_contextvar_getitem',
+    # The same patch that fixed that removed this test,
+    # because it would now fail.
+    'test_context.ContextTest.test_context_var_new_2',
 ]
 
 if OSX:
