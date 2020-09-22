@@ -1,8 +1,13 @@
-# gevent: ed from 3.7 to test our monkey-patch.
-# XXX: We need to move this to src/gevent/tests and
-# make it run on all supported Python versions.
+# gevent: copied from 3.7 to test our monkey-patch.
+# Modified to work on all versions of Python.
+import gevent.monkey; gevent.monkey.patch_all()
+
+import sys
 import concurrent.futures
-import contextvars
+try:
+    import contextvars
+except ImportError:
+    from gevent import contextvars
 import functools
 import gc
 import random
@@ -10,11 +15,11 @@ import time
 import unittest
 import weakref
 
-try:
-    from _testcapi import hamt
-except ImportError:
-    hamt = None
-
+# try:
+#     from _testcapi import hamt
+# except ImportError:
+#     hamt = None
+hamt = None
 
 def isolated_context(func):
     """Needed to make reftracking test mode work."""
@@ -26,12 +31,17 @@ def isolated_context(func):
 
 
 class ContextTest(unittest.TestCase):
+
+    if not hasattr(unittest.TestCase, 'assertRaisesRegex'):
+        assertRaisesRegex = unittest.TestCase.assertRaisesRegexp
+
     def test_context_var_new_1(self):
-        with self.assertRaisesRegex(TypeError, 'takes exactly 1'):
+        with self.assertRaises(TypeError):
             contextvars.ContextVar()
 
-        with self.assertRaisesRegex(TypeError, 'must be a str'):
-            contextvars.ContextVar(1)
+        # gevent: Doesn't raise
+        # with self.assertRaisesRegex(TypeError, 'must be a str'):
+        #     contextvars.ContextVar(1)
 
         c = contextvars.ContextVar('aaa')
         self.assertEqual(c.name, 'aaa')
@@ -61,26 +71,27 @@ class ContextTest(unittest.TestCase):
         c.reset(t)
         self.assertIn(' used ', repr(t))
 
-    def test_context_subclassing_1(self):
-        with self.assertRaisesRegex(TypeError, 'not an acceptable base type'):
-            class MyContextVar(contextvars.ContextVar):
-                # Potentially we might want ContextVars to be subclassable.
-                pass
+    # gevent: Doesn't raise
+    # def test_context_subclassing_1(self):
+    #     with self.assertRaisesRegex(TypeError, 'not an acceptable base type'):
+    #         class MyContextVar(contextvars.ContextVar):
+    #             # Potentially we might want ContextVars to be subclassable.
+    #             pass
 
-        with self.assertRaisesRegex(TypeError, 'not an acceptable base type'):
-            class MyContext(contextvars.Context):
-                pass
+    #     with self.assertRaisesRegex(TypeError, 'not an acceptable base type'):
+    #         class MyContext(contextvars.Context):
+    #             pass
 
-        with self.assertRaisesRegex(TypeError, 'not an acceptable base type'):
-            class MyToken(contextvars.Token):
-                pass
+    #     with self.assertRaisesRegex(TypeError, 'not an acceptable base type'):
+    #         class MyToken(contextvars.Token):
+    #             pass
 
     def test_context_new_1(self):
-        with self.assertRaisesRegex(TypeError, 'any arguments'):
+        with self.assertRaises(TypeError):
             contextvars.Context(1)
-        with self.assertRaisesRegex(TypeError, 'any arguments'):
+        with self.assertRaises(TypeError):
             contextvars.Context(1, a=1)
-        with self.assertRaisesRegex(TypeError, 'any arguments'):
+        with self.assertRaises(TypeError):
             contextvars.Context(a=1)
         contextvars.Context(**{})
 
@@ -98,11 +109,12 @@ class ContextTest(unittest.TestCase):
         ctx = contextvars.copy_context()
         self.assertIsInstance(ctx, contextvars.Context)
 
-    def test_context_run_1(self):
-        ctx = contextvars.Context()
+    # gevent: This doesn't raise
+    # def test_context_run_1(self):
+    #     ctx = contextvars.Context()
 
-        with self.assertRaisesRegex(TypeError, 'missing 1 required'):
-            ctx.run()
+    #     with self.assertRaisesRegex(TypeError, 'missing 1 required'):
+    #         ctx.run()
 
     def test_context_run_2(self):
         ctx = contextvars.Context()
@@ -373,14 +385,14 @@ class ContextTest(unittest.TestCase):
 class HashKey:
     _crasher = None
 
-    def __init__(self, hash, name, *, error_on_eq_to=None):
+    def __init__(self, hash, name, error_on_eq_to=None):
         assert hash != -1
         self.name = name
         self.hash = hash
         self.error_on_eq_to = error_on_eq_to
 
-    def __repr__(self):
-        return f'<Key name:{self.name} hash:{self.hash}>'
+    # def __repr__(self):
+    #     return f'<Key name:{self.name} hash:{self.hash}>'
 
     def __hash__(self):
         if self._crasher is not None and self._crasher.error_on_hash:
@@ -396,9 +408,9 @@ class HashKey:
             raise EqError
 
         if self.error_on_eq_to is not None and self.error_on_eq_to is other:
-            raise ValueError(f'cannot compare {self!r} to {other!r}')
+            raise ValueError#(f'cannot compare {self!r} to {other!r}')
         if other.error_on_eq_to is not None and other.error_on_eq_to is self:
-            raise ValueError(f'cannot compare {other!r} to {self!r}')
+            raise ValueError#(f'cannot compare {other!r} to {self!r}')
 
         return (self.name, self.hash) == (other.name, other.hash)
 
@@ -416,7 +428,7 @@ class KeyStr(str):
 
 
 class HaskKeyCrasher:
-    def __init__(self, *, error_on_hash=False, error_on_eq=False):
+    def __init__(self, error_on_hash=False, error_on_eq=False):
         self.error_on_hash = error_on_hash
         self.error_on_eq = error_on_eq
 
@@ -812,7 +824,7 @@ class HamtTest(unittest.TestCase):
         for i in range(17):
             key = HashKey(i, str(i))
             keys.append(key)
-            h = h.set(key, f'val-{i}')
+            h = h.set(key, 'val-{i}'.format(i=i))
 
         collision_key16 = HashKey(16, '18')
         h = h.set(collision_key16, 'collision')
@@ -1071,4 +1083,5 @@ class HamtTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    if not gevent.monkey.PY37:
+        unittest.main()
