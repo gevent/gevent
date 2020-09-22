@@ -42,6 +42,7 @@ from socket import SOL_SOCKET
 
 from ssl import SSLWantReadError
 from ssl import SSLWantWriteError
+from ssl import SSLEOFError
 from ssl import CERT_NONE
 from ssl import SSLError
 from ssl import SSL_ERROR_EOF
@@ -628,9 +629,12 @@ class SSLSocket(socket):
                 if self.timeout == 0.0:
                     raise
                 self._wait(self._write_event)
+            except SSLEOFError:
+                break
             except OSError as e:
                 if e.errno == 0:
-                    # What does this even mean? Seen on 3.7+.
+                    # The equivalent of SSLEOFError on unpatched versions of Python.
+                    # https://bugs.python.org/issue31122
                     break
                 raise
 
