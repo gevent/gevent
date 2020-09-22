@@ -1,8 +1,12 @@
 # gevent: copied from 3.7 to test our monkey-patch.
 # Modified to work on all versions of Python.
-import gevent.monkey; gevent.monkey.patch_all()
+from gevent import monkey
+monkey.patch_all()
 
-import sys
+# pylint:disable=superfluous-parens,pointless-statement,not-callable
+# pylint:disable=unused-argument,too-many-public-methods,unused-variable
+# pylint:disable=too-many-branches,too-many-statements
+
 import concurrent.futures
 try:
     import contextvars
@@ -1083,5 +1087,5 @@ class HamtTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    if not gevent.monkey.PY37:
+    if not monkey.PY37:
         unittest.main()
