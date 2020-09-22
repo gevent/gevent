@@ -11,10 +11,18 @@
 extern "C" {
 #endif
 
-#define GREENLET_VERSION "0.4.16"
+#define GREENLET_VERSION "0.4.17"
 
 #if PY_VERSION_HEX >= 0x030700A3
 #  define GREENLET_USE_EXC_INFO
+#endif
+
+#ifndef GREENLET_USE_CONTEXT_VARS
+#ifdef Py_CONTEXT_H
+#define GREENLET_USE_CONTEXT_VARS 1
+#else
+#define GREENLET_USE_CONTEXT_VARS 0
+#endif
 #endif
 
 typedef struct _greenlet {
@@ -38,6 +46,9 @@ typedef struct _greenlet {
 	PyObject* exc_traceback;
 #endif
 	PyObject* dict;
+#if GREENLET_USE_CONTEXT_VARS
+	PyObject* context;
+#endif
 } PyGreenlet;
 
 #define PyGreenlet_Check(op)      PyObject_TypeCheck(op, &PyGreenlet_Type)

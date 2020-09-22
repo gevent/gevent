@@ -1,0 +1,4 @@
+On CPython, depend on greenlet >= 0.4.17. This version is binary
+incompatible with earlier releases on CPython 3.7 and later. Note that
+gevent does not rely on its new support for context variables since
+gevent provides the same API to older versions of Python.
