@@ -6,6 +6,49 @@
 
 .. towncrier release notes start
 
+20.9.0 (2020-09-22)
+===================
+
+
+Features
+--------
+
+- The embedded libev is now asked to detect the availability of
+  ``clock_gettime`` and use the realtime and/or monotonic clocks, if
+  they are available.
+
+  On Linux, this can reduce the number of system calls libev makes.
+  Originally provided by Josh Snyder.
+  See :issue:`issue1648`.
+
+
+Bugfixes
+--------
+
+- On CPython, depend on greenlet >= 0.4.17. This version is binary
+  incompatible with earlier releases on CPython 3.7 and later.
+
+  On Python 3.7 and above, the module ``gevent.contextvars`` is no
+  longer monkey-patched into the standard library. contextvars are now
+  both greenlet and asyncio task local. See :issue:`1656`.
+  See :issue:`issue1674`.
+- The ``DummyThread`` objects created automatically by certain
+  operations when the standard library threading module is
+  monkey-patched now match the naming convention the standard library
+  uses ("Dummy-12345"). Previously (since gevent 1.2a2) they used
+  "DummyThread-12345".
+  See :issue:`1659`.
+- Fix compatibility with dnspython 2.
+
+  .. caution:: This currently means that it can be imported. But it
+               cannot yet be used. gevent has a pinned dependency on
+               dnspython < 2 for now.
+  See :issue:`1661`.
+
+
+----
+
+
 20.6.2 (2020-06-16)
 ===================
 

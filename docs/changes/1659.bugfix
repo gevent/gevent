@@ -1,5 +1,0 @@
-The ``DummyThread`` objects created automatically by certain
-operations when the standard library threading module is
-monkey-patched now match the naming convention the standard library
-uses ("Dummy-12345"). Previously (since gevent 1.2a2) they used
-"DummyThread-12345".

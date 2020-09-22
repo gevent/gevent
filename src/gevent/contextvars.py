@@ -24,7 +24,7 @@ from :pep:`567` and doesn't have much optimization. In particular, setting
 context values isn't constant time.
 
 .. versionadded:: 1.5a3
-.. versionchanged:: NEXT
+.. versionchanged:: 20.9.0
    On Python 3.7 and above, this module is no longer monkey-patched
    in place of the standard library version.
    gevent depends on greenlet 0.4.17 which includes support for context variables.

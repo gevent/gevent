@@ -585,7 +585,7 @@ def patch_contextvars():
     .. versionchanged:: 20.04.0
        Clarify that the backport is also patched.
 
-    .. versionchanged:: NEXT
+    .. versionchanged:: 20.9.0
        This now does nothing on Python 3.7 and above.
        gevent now depends on greenlet 0.4.17, which
        natively handles switching context vars when greenlets are switched.
