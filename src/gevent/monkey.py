@@ -157,6 +157,7 @@ else:
 
 WIN = sys.platform.startswith("win")
 PY36 = sys.version_info[:2] >= (3, 6)
+PY37 = sys.version_info[:2] >= (3, 7)
 
 class _BadImplements(AttributeError):
     """
@@ -583,7 +584,16 @@ def patch_contextvars():
 
     .. versionchanged:: 20.04.0
        Clarify that the backport is also patched.
+
+    .. versionchanged:: NEXT
+       This now does nothing on Python 3.7 and above.
+       gevent now depends on greenlet 0.4.17, which
+       natively handles switching context vars when greenlets are switched.
+       Older versions of Python that have the backport installed will
+       still be patched.
     """
+    if PY37:
+        return
     try:
         __import__('contextvars')
     except ImportError:

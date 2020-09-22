@@ -1,4 +1,6 @@
 On CPython, depend on greenlet >= 0.4.17. This version is binary
-incompatible with earlier releases on CPython 3.7 and later. Note that
-gevent does not rely on its new support for context variables since
-gevent provides the same API to older versions of Python.
+incompatible with earlier releases on CPython 3.7 and later.
+
+On Python 3.7 and above, the module ``gevent.contextvars`` is no
+longer monkey-patched into the standard library. contextvars are now
+both greenlet and asyncio task local. See :issue:`1656`.
