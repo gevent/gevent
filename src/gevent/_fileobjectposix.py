@@ -298,7 +298,7 @@ class FileObjectPosix(FileObjectBase):
        The default value for *mode* was changed from ``rb`` to ``r``. This is consistent
        with :func:`open`, :func:`io.open`, and :class:`~.FileObjectThread`, which is the
        default ``FileObject`` on some platforms.
-     .. versionchanged:: 1.5
+    .. versionchanged:: 1.5
        Stop forcing buffering. Previously, given a ``buffering=0`` argument,
        *buffering* would be set to 1, and ``buffering=1`` would be forced to
        the default buffer size. This was a workaround for a long-standing concurrency
