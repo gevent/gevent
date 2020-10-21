@@ -50,8 +50,8 @@ if [ -d /gevent -a -d /opt/python ]; then
     ls -ld /cache
     ls -ld /cache/pip
     yum -y install libffi-devel ccache
-    # On Fedora Rawhide (F33)
-    # yum install python39 python3-devel gcc kernel-devel kernel-headers make diffutils file
+    # On Fedora Rawhide (F34)
+    # dnf install python3 python3-devel gcc kernel-devel kernel-headers make diffutils file
 
     mkdir /tmp/build
     cd /tmp/build
