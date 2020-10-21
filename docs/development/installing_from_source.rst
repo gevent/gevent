@@ -38,9 +38,9 @@ General Notes
 
      apk add --virtual build-deps file make gcc musl-dev libffi-dev
 
-  On Fedora Rawhide for Fedora 33, one might need to do this::
+  On Fedora Rawhide or Fedora 33, one might need to do this::
 
-     yum install python3-devel gcc kernel-devel kernel-headers make diffutils file
+     dnf install python3-devel gcc kernel-devel kernel-headers make diffutils file
 
   See :issue:`1567`, :issue:`1559`, and :issue:`1566`.
 
