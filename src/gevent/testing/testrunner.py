@@ -378,9 +378,27 @@ class Discovery(object):
 
         def __begin_command(self):
             cmd = [sys.executable, '-u']
-            if PYPY and PY2:
-                # Doesn't seem to be an env var for this
-                cmd.extend(('-X', 'track-resources'))
+            # XXX: -X track-resources is broken. This happened when I updated to
+            # PyPy 7.3.2. It started failing to even start inside the virtual environment
+            # with
+            #
+            # debug: OperationError:
+            # debug:  operror-type: ImportError
+            # debug:  operror-value: No module named traceback
+            #
+            # I don't know if this is PyPy's problem or a problem in virtualenv:
+            #
+            # virtualenv==20.0.35
+            # virtualenv-clone==0.5.4
+            # virtualenvwrapper==4.8.4
+            #
+            # Deferring investigation until I need this...
+
+            # if PYPY and PY2:
+            #     # Doesn't seem to be an env var for this.
+            #     # XXX: track-resources is broken in virtual environments
+            #     # on 7.3.2.
+            #     cmd.extend(('-X', 'track-resources'))
             return cmd
 
 

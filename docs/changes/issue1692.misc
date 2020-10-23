@@ -1,0 +1,4 @@
+Travis CI now tests PyPy 7.3.2.
+
+.. note:: Support for Python 3.5 will be removed in 2021, as it has
+          now reached end-of-life.

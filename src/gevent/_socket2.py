@@ -513,4 +513,10 @@ if hasattr(__socket__, 'ssl'):
         return wrap(sock, keyfile, certfile)
     __implements__.append('ssl')
 
+if hasattr(__socket__, 'sethostname'):
+    # This was added in 3.3, but PyPy 2.7-7.3.2
+    # leaked it back into Python 2.
+    sethostname = __socket__.sethostname
+    __imports__.append('sethostname')
+
 __all__ = __implements__ + __extensions__ + __imports__

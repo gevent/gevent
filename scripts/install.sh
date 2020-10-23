@@ -123,10 +123,10 @@ for var in "$@"; do
             install 3.9-dev python3.9 3.9.d
             ;;
         pypy2.7)
-            install pypy2.7-7.3.1 pypy2.7 pypy2.7.d
+            install pypy2.7-7.3.2 pypy2.7 pypy2.7.d
             ;;
         pypy3.6)
-            install pypy3.6-7.3.1 pypy3.6 pypy3.6.d
+            install pypy3.6-7.3.2 pypy3.6 pypy3.6.d
             ;;
     esac
 done
