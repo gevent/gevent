@@ -1118,6 +1118,14 @@ if PY35:
         'test_socket.TestExceptions.test_setblocking_invalidfd',
     ]
 
+    if sys.version_info[:2] == (3, 5):
+        # These tests are broken now that certificates are
+        # expired and Python 3.5 is out of maintenance.
+        disabled_tests += [
+            'test_ssl.ThreadedTests.test_crl_check',
+            'test_ssl.BasicSocketTests.test_parse_cert',
+        ]
+
     if ARES:
         disabled_tests += [
             # These raise different errors or can't resolve
