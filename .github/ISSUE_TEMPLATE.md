@@ -12,7 +12,7 @@ Remember to put tracebacks in literal blocks
 
 ### What I've run:
 
-**REPLACE ME**: Paste short, self contained, correct example code (sscce.org), tracebacks, etc, here
+**REPLACE ME**: Paste short, self contained, correct example code (http://sscce.org), tracebacks, etc, here
 
 
 ```python
