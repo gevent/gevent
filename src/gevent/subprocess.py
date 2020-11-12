@@ -557,6 +557,17 @@ class Popen(object):
     .. seealso:: :class:`subprocess.Popen`
        This class should have the same interface as the standard library class.
 
+    .. caution::
+
+       On Python 2, the ``read`` method of the ``stdout`` and ``stderr`` attributes
+       will not be buffered unless buffering is explicitly requested (e.g., `bufsize=-1`).
+       This is different than the ``read`` method of the standard library attributes,
+       which will buffer internally even if no buffering has been requested. This
+       matches the Python 3 behaviour. For portability, please explicitly request
+       buffering if you want ``read(n)`` to return all ``n`` bytes, making more than
+       one system call if needed. See `issue 1701 <https://github.com/gevent/gevent/issues/1701>`_
+       for more context.
+
     .. versionchanged:: 1.2a1
        Instances can now be used as context managers under Python 2.7. Previously
        this was restricted to Python 3.
