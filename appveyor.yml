@@ -179,10 +179,11 @@ build_script:
   # Try to get some things that don't wind up in the pip cache as
   # built wheels if they're built during an isolated build.
   - "%CMD_IN_ENV% %PYEXE% -m pip install --pre -U wheel cython setuptools cffi"
-  - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -m pip install -U -e .[test]
+  - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -m pip install --pre -U -e .[test]
 
 test_script:
   # Run the project tests
+  - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -c "import greenlet; print(greenlet, greenlet.__version__)"
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -c "import gevent.core; print(gevent.core.loop)"
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -c "import gevent; print(gevent.config.settings['resolver'].get_options())"
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -c "from gevent._compat import get_clock_info; print(get_clock_info('perf_counter'))"

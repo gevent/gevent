@@ -192,8 +192,10 @@ greenlet_requires = [
     # We need to watch our greenlet version fairly carefully,
     # since we compile cython code that extends the greenlet object.
     # Binary compatibility would break if the greenlet struct changes.
-    # (Which it did in 0.4.14 for Python 3.7)
-    'greenlet >= 0.4.17; platform_python_implementation=="CPython"',
+    # (Which it did in 0.4.14 for Python 3.7 and again in 0.4.17; with
+    # the release of 1.0a1 it began promising ABI stability with SemVer
+    # so we can add an upper bound)
+    'greenlet >= 0.4.17, < 2.0; platform_python_implementation=="CPython"',
 ]
 
 # Note that we don't add cffi to install_requires, it's

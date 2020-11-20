@@ -148,6 +148,10 @@ class TestTree(greentest.TestCase):
         value = value.replace('ref=-1', 'ref=0')
         value = value.replace("type.current_tree", 'GreenletTree.current_tree')
         value = value.replace('gevent.tests.__main__.MyLocal', '__main__.MyLocal')
+        # The repr in CPython greenlet 1.0a1 added extra info
+        value = value.replace('(otid=X) ', '')
+        value = value.replace(' dead>', '>')
+        value = value.replace(' current active started main>', '>')
         return value
 
     @greentest.ignores_leakcheck

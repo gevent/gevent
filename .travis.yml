@@ -184,7 +184,7 @@ jobs:
         #   UnicodeEncodeError: 'ascii' codec can't encode character u'\u2588' in position 6: ordinal not in range(128)
         # when downloading files. This started sometime in mid 2020. It's from
         # pip's vendored progress.bar class.
-        - &build-gevent-deps pip install -U -q setuptools wheel twine && pip install -q -U 'faulthandler; python_version == "2.7" and platform_python_implementation == "CPython"' 'cffi;platform_python_implementation=="CPython"' 'cython>=3.0a5' 'greenlet;platform_python_implementation=="CPython"'
+        - &build-gevent-deps pip install -U -q setuptools wheel twine && pip install -q -U 'faulthandler; python_version == "2.7" and platform_python_implementation == "CPython"' 'cffi;platform_python_implementation=="CPython"' 'cython>=3.0a5' 'greenlet>=1.0a1;platform_python_implementation=="CPython"'
         # Next, build the wheel *in place*. This helps ccache, and also lets us cache the configure
         # output (pip install uses a random temporary directory, making this difficult)
         - python setup.py bdist_wheel
