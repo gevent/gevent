@@ -99,9 +99,12 @@ class GreenletTracer(object):
         self.active_greenlet = getcurrent()
 
     def did_block_hub_report(self, hub, active_greenlet, format_kwargs):
+        # XXX: On Python 2 with greenlet 1.0a1, '%s' formatting a greenlet
+        # results in a unicode object. This is a bug in greenlet, I think.
+        # https://github.com/python-greenlet/greenlet/issues/218
         report = ['=' * 80,
                   '\n%s : Greenlet %s appears to be blocked' %
-                  (gmctime(), active_greenlet)]
+                  (gmctime(), str(active_greenlet))]
         report.append("    Reported by %s" % (self,))
         try:
             frame = sys._current_frames()[hub.thread_ident]
