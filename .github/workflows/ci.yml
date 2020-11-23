@@ -35,37 +35,6 @@ on: [push, pull_request]
   # pull_request:
   #   branches: [ $default-branch ]
 
-defaults:
-  env:
-    BUILD_RUNTIMES: $HOME/.runtimes
-    PYTHONHASHSEED: 8675309
-    PYTHONUNBUFFERED: 1
-    PYTHONDONTWRITEBYTECODE: 1
-    PIP_UPGRADE_STRATEGY: eager
-    # Don't get warnings about Python 2 support being deprecated. We
-    # know. The env var works for pip 20.
-    PIP_NO_PYTHON_VERSION_WARNING: 1
-    PIP_NO_WARN_SCRIPT_LOCATION: 1
-    GEVENTSETUP_EV_VERIFY: 1
-    # Disable some warnings produced by libev especially and also some Cython generated code.
-    # Note that changing the value of these variables invalidates configure caches
-    CFLAGS: "-Ofast -pipe -Wno-strict-aliasing -Wno-comment"
-    # # Uploading built wheels for releases.
-    # TWINE_PASSWORD is encrypted and stored directly in the
-    # travis repo settings.
-    TWINE_USERNAME: "__token__"
-    ###
-    # Part of caching; disabled for now.
-    #
-    # CC: "ccache gcc"
-    # CCACHE_NOCPP2: true
-    # CCACHE_SLOPPINESS: file_macro,time_macros,include_file_ctime,include_file_mtime
-    # CCACHE_NOHASHDIR: true
-    # BUILD_LIBS: $HOME/.libs
-    # CPPFLAGS: "-I$BUILD_LIBS/include -DEV_VERIFY: 1"
-    # LDFLAGS: "-L$BUILD_LIBS/lib"
-    # LD_LIBRARY_PATH: "$BUILD_LIBS/lib"
-
 
 jobs:
   build:
@@ -73,7 +42,37 @@ jobs:
     strategy:
       matrix:
         python-version: [2.7, pypy, pypy3, 3.5, 3.6, 3.7, 3.8, 3.9]
-
+    env:
+      # XXX: Can't seem to set these globally. ``defaults.env`` is not
+      # a thing.
+      PYTHONHASHSEED: 8675309
+      PYTHONUNBUFFERED: 1
+      PYTHONDONTWRITEBYTECODE: 1
+      PIP_UPGRADE_STRATEGY: eager
+      # Don't get warnings about Python 2 support being deprecated. We
+      # know. The env var works for pip 20.
+      PIP_NO_PYTHON_VERSION_WARNING: 1
+      PIP_NO_WARN_SCRIPT_LOCATION: 1
+      GEVENTSETUP_EV_VERIFY: 1
+      # Disable some warnings produced by libev especially and also some Cython generated code.
+      # Note that changing the value of these variables invalidates configure caches
+      CFLAGS: "-Ofast -pipe -Wno-strict-aliasing -Wno-comment"
+      # # Uploading built wheels for releases.
+      # TWINE_PASSWORD is encrypted and stored directly in the
+      # travis repo settings.
+      TWINE_USERNAME: "__token__"
+      ###
+      # Part of caching; disabled for now.
+      #
+      # BUILD_RUNTIMES: $HOME/.runtimes
+      # CC: "ccache gcc"
+      # CCACHE_NOCPP2: true
+      # CCACHE_SLOPPINESS: file_macro,time_macros,include_file_ctime,include_file_mtime
+      # CCACHE_NOHASHDIR: true
+      # BUILD_LIBS: $HOME/.libs
+      # CPPFLAGS: "-I$BUILD_LIBS/include -DEV_VERIFY: 1"
+      # LDFLAGS: "-L$BUILD_LIBS/lib"
+      # LD_LIBRARY_PATH: "$BUILD_LIBS/lib"
     steps:
       - name: checkout
         uses: actions/checkout@v2
