@@ -71,8 +71,10 @@ jobs:
       PIP_NO_WARN_SCRIPT_LOCATION: 1
       GEVENTSETUP_EV_VERIFY: 1
       # Disable some warnings produced by libev especially and also some Cython generated code.
+      # These are shared between GCC and clang so it must be a minimal set.
+      # TODO: Figure out how to set env vars per platform without resolting to inline scripting.
       # Note that changing the value of these variables invalidates configure caches
-      CFLAGS: -Ofast -pipe -Wno-strict-aliasing -Wno-comment -Wno-unused-but-set-variable -Wno-unused-value
+      CFLAGS: -Ofast -pipe -Wno-strict-aliasing -Wno-comment
       # Uploading built wheels for releases.
       # TWINE_PASSWORD is encrypted and stored directly in the
       # travis repo settings.
@@ -118,6 +120,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: deps/*/config.cache
+          # XXX: This should probably include a hash of each configure script
           key: ${{ runner.os }}-configcache-${{ matrix.python-version }}-${{ env.CFLAGS }}
           restore-keys: |
             ${{ runner.os }}-configcache-
