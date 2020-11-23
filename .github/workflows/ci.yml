@@ -56,11 +56,11 @@ jobs:
       GEVENTSETUP_EV_VERIFY: 1
       # Disable some warnings produced by libev especially and also some Cython generated code.
       # Note that changing the value of these variables invalidates configure caches
-      CFLAGS: "-Ofast -pipe -Wno-strict-aliasing -Wno-comment"
-      # # Uploading built wheels for releases.
+      CFLAGS: -Ofast -pipe -Wno-strict-aliasing -Wno-comment
+      # Uploading built wheels for releases.
       # TWINE_PASSWORD is encrypted and stored directly in the
       # travis repo settings.
-      TWINE_USERNAME: "__token__"
+      TWINE_USERNAME: __token__
       ###
       # Part of caching; disabled for now.
       #
@@ -113,28 +113,28 @@ jobs:
       - name: Run tests
         run: |
           python -m gevent.tests
-  lint:
-    runs-on: ubuntu-latest
+  # lint:
+  #   runs-on: ubuntu-latest
 
-    # Lint the code. Because this is a separate job, even if it fails fast
-    # the tests will still run. Put it at the top for fast feedback.
-    # We only need to do this on one version, and it should be Python 3, because
-    # pylint has stopped updating for Python 2.
-    steps:
-      - name: checkout
-        uses: actions/checkout@v2
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.9
-      - name: pylint
-        # We need pylint, since above we're not installing a
-        # requirements file.
-        run: |
-          pip install -U pip
-          pip install -U wheel cffi greenlet pylint
-          pip install -U -e .[test]
-          python -m pylint --limit-inference-results=1 --rcfile=.pylintrc gevent
+  #   # Lint the code. Because this is a separate job, even if it fails fast
+  #   # the tests will still run. Put it at the top for fast feedback.
+  #   # We only need to do this on one version, and it should be Python 3, because
+  #   # pylint has stopped updating for Python 2.
+  #   steps:
+  #     - name: checkout
+  #       uses: actions/checkout@v2
+  #     - name: Set up Python 3.9
+  #       uses: actions/setup-python@v2
+  #       with:
+  #         python-version: 3.9
+  #     - name: pylint
+  #       # We need pylint, since above we're not installing a
+  #       # requirements file.
+  #       run: |
+  #         pip install -U pip
+  #         pip install -U wheel cffi greenlet pylint
+  #         pip install -U -e .[test]
+  #         python -m pylint --limit-inference-results=1 --rcfile=.pylintrc gevent
 
 # TODO:
 # * Configure caching
