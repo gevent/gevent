@@ -13,7 +13,8 @@
 # Important notes on GitHub actions:
 #
 # - We only get 2,000 free minutes a month
-# - We only get 500MB of storage, total.
+# - We only get 500MB of artifact storage
+# - Cache storage is limited to 7 days and 5GB.
 # - macOS minutes are 10x as expensive as Linux minutes
 # - windows minutes are twice as expensive.
 #
@@ -22,6 +23,11 @@
 # In December 2020, github only supports x86/64. If we wanted to test
 # gevent on other architectures, we might be able to use docker
 # emulation, but there's no native support.
+#
+# Another major downside: You can't just re-run the job for one part
+# of the matrix. So if there's a transient test failure that hit, say, 3.8,
+# to get a clean run every version of Python runs again. That's bad.
+# https://github.community/t/ability-to-rerun-just-a-single-job-in-a-workflow/17234/65
 
 name: gevent testing
 
@@ -41,7 +47,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: [2.7, pypy2, pypy3, 3.5, 3.6, 3.7, 3.8, 3.9]
+        python-version: [2.7, pypy2, pypy3, 3.6, 3.7, 3.8, 3.9]
         os: [ubuntu-latest, macos-latest]
         exclude:
           - os: macos-latest
@@ -90,6 +96,32 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+      ###
+      # Caching.
+      # This actually *restores* a cache and schedules a cleanup action
+      # to save the cache. So it must come before the thing we want to use
+      # the cache.
+      ###
+      - name: Get pip cache dir
+        id: pip-cache
+        run: |
+          echo "::set-output name=dir::$(pip cache dir)"
+
+      - name: pip cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.pip-cache.outputs.dir }}
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - name: Cache config.cache
+        uses: actions/cache@v2
+        with:
+          path: deps/*/config.cache
+          key: ${{ runner.os }}-configcache-${{ matrix.python-version }}-${{ env.CFLAGS }}
+          restore-keys: |
+            ${{ runner.os }}-configcache-
+
       - name: Install gevent
         # Install gevent. Yes, this will create different files each time,
         # leading to a fresh cache. But because of CCache stats, we had already been doing
@@ -118,6 +150,8 @@ jobs:
         run: |
           python --version
           python -c 'import greenlet; print(greenlet, greenlet.__version__)'
+          python -c 'import gevent; print(gevent.__version__)'
+          python -c 'from gevent._compat import get_clock_info; print(get_clock_info("perf_counter"))'
           python -c 'import gevent.core; print(gevent.core.loop)'
           python -c 'import gevent.ares; print(gevent.ares)'
       - name: Lint (Python 3.9)
@@ -132,18 +166,6 @@ jobs:
       - name: Run tests
         run: |
           python -m gevent.tests
-      - name: Get pip cache dir
-        id: pip-cache
-        run: |
-          echo "::set-output name=dir::$(pip cache dir)"
-
-      - name: pip cache
-        uses: actions/cache@v2
-        with:
-          path: ${{ steps.pip-cache.outputs.dir }}
-          key: ${{ runner.os }}-pip-${{ matrix.python-version }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
 
 # TODO:
 # * Configure caching
