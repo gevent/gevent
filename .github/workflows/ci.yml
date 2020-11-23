@@ -41,9 +41,17 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: [2.7, pypy, pypy3, 3.5, 3.6, 3.7, 3.8, 3.9]
+        python-version: [2.7, pypy2, pypy3, 3.5, 3.6, 3.7, 3.8, 3.9]
         os: [ubuntu-latest, macos-latest]
-
+        exclude:
+          - os: macos-latest
+            python-version: pypy2
+          - os: macos-latest
+            python-version: pypy3
+          - os: macos-latest
+            python-version: 3.5
+          - os: macos-latest
+            python-version: 3.6
     env:
       # XXX: Can't seem to set these globally. ``defaults.env`` is not
       # a thing.
@@ -124,6 +132,18 @@ jobs:
       - name: Run tests
         run: |
           python -m gevent.tests
+      - name: Get pip cache dir
+        id: pip-cache
+        run: |
+          echo "::set-output name=dir::$(pip cache dir)"
+
+      - name: pip cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.pip-cache.outputs.dir }}
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
 # TODO:
 # * Configure caching
