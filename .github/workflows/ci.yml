@@ -1,0 +1,125 @@
+###
+# Initially copied from
+# https://github.com/actions/starter-workflows/blob/main/ci/python-package.yml
+#
+# Original comment follows.
+###
+###
+# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+###
+
+###
+# Important notes on GitHub actions:
+#
+# - We only get 2,000 free minutes a month
+# - We only get 500MB of storage, total.
+# - macOS minutes are 10x as expensive as Linux minutes
+# - windows minutes are twice as expensive.
+#
+# So keep those workflows light.
+#
+# In December 2020, github only supports x86/64. If we wanted to test
+# gevent on other architectures, we might be able to use docker
+# emulation, but there's no native support.
+
+name: gevent testing
+
+on:
+  push:
+    branches: [ $default-branch ]
+  pull_request:
+    branches: [ $default-branch ]
+
+defaults:
+  env:
+    BUILD_RUNTIMES: $HOME/.runtimes
+    PYTHONHASHSEED: 8675309
+    PYTHONUNBUFFERED: 1
+    PYTHONDONTWRITEBYTECODE: 1
+    PIP_UPGRADE_STRATEGY: eager
+    # Don't get warnings about Python 2 support being deprecated. We
+    # know. The env var works for pip 20.
+    PIP_NO_PYTHON_VERSION_WARNING: 1
+    PIP_NO_WARN_SCRIPT_LOCATION: 1
+    GEVENTSETUP_EV_VERIFY: 1
+    # Disable some warnings produced by libev especially and also some Cython generated code.
+    # Note that changing the value of these variables invalidates configure caches
+    CFLAGS: "-Ofast -pipe -Wno-strict-aliasing -Wno-comment"
+    # # Uploading built wheels for releases.
+    # TWINE_PASSWORD is encrypted and stored directly in the
+    # travis repo settings.
+    TWINE_USERNAME: "__token__"
+    ###
+    # Part of caching; disabled for now.
+    #
+    # CC: "ccache gcc"
+    # CCACHE_NOCPP2: true
+    # CCACHE_SLOPPINESS: file_macro,time_macros,include_file_ctime,include_file_mtime
+    # CCACHE_NOHASHDIR: true
+    # BUILD_LIBS: $HOME/.libs
+    # CPPFLAGS: "-I$BUILD_LIBS/include -DEV_VERIFY: 1"
+    # LDFLAGS: "-L$BUILD_LIBS/lib"
+    # LD_LIBRARY_PATH: "$BUILD_LIBS/lib"
+
+
+jobs:
+  build:
+    runs-on: [ubuntu-latest, macos-latest]
+    strategy:
+      matrix:
+        python-version: [2.7, pypy, pypy3, 3.5, 3.6, 3.7, 3.8, 3.9]
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install gevent
+        # Install gevent. Yes, this will create different files each time,
+        # leading to a fresh cache. But because of CCache stats, we had already been doing
+        # that (before we learned about CCACHE_NOSTATS).
+        # We don't install using the requirements file for speed (reduced deps) and because an editable
+        # install doesn't work in the cache.
+        # First, the build dependencies (see setup.cfg)
+        # so that we don't have to use build isolation and can better use the cache;
+        # Note that we can't use -U for cffi and greenlet on PyPy.
+        # The -q is because PyPy2 sometimes started raising
+        #   UnicodeEncodeError: 'ascii' codec can't encode character u'\u2588' in position 6: ordinal not in range(128)
+        # when downloading files. This started sometime in mid 2020. It's from
+        # pip's vendored progress.bar class.
+
+        run: |
+          pip install -U -q setuptools wheel twine && pip install -q -U 'faulthandler; python_version == "2.7" and platform_python_implementation == "CPython"' 'cffi;platform_python_implementation=="CPython"' 'cython>=3.0a5' 'greenlet>=1.0a1;platform_python_implementation=="CPython"'
+          # Next, build the wheel *in place*. This helps ccache, and also lets us cache the configure
+          # output (pip install uses a random temporary directory, making this difficult)
+          python setup.py bdist_wheel
+          ls -l dist
+          twine check dist/*
+          pip uninstall -y gevent
+          pip install -U --no-compile `ls dist/*whl`[test]
+      - name: Report environment details
+        run: |
+          python --version
+          python -c 'import greenlet; print(greenlet, greenlet.__version__)'
+          python -c 'import gevent.core; print(gevent.core.loop)'
+          python -c 'import gevent.ares; print(gevent.ares)'
+      - name: Run tests
+        run: |
+          python -m gevent.tests
+
+# TODO:
+# * Configure caching
+#   - pip
+#   - configure and build caches (see .travis.yml)
+#   - ccache
+# * coverage upload/exclusion
+# * manylinux builds and uploading
+# * macos uploading
+# * full testing matrix:
+#   - Testing without embeds.
+#   - file=thread
+#   - different resolvers
+# * lint step
