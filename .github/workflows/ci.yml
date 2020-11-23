@@ -121,9 +121,11 @@ jobs:
         with:
           path: deps/*/config.cache
           # XXX: This should probably include a hash of each configure script
+          # We don't have a restore-keys that doesn't include the CFLAGS becouse
+          # the scripts fail to run if they get different CFLAGS, and GHA offers no
+          # way to manually clear the cache.
           key: ${{ runner.os }}-configcache-${{ matrix.python-version }}-${{ env.CFLAGS }}
-          restore-keys: |
-            ${{ runner.os }}-configcache-
+
 
       - name: Install gevent
         # Install gevent. Yes, this will create different files each time,
