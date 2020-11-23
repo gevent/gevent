@@ -115,9 +115,6 @@ jobs:
           python -m gevent.tests
   lint:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.8]
 
     # Lint the code. Because this is a separate job, even if it fails fast
     # the tests will still run. Put it at the top for fast feedback.
@@ -126,17 +123,17 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v2
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python 3.9
         uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: 3.9
       - name: pylint
         # We need pylint, since above we're not installing a
         # requirements file.
         run: |
           pip install -U pip
-          pip install -U -e .
-          pip install -U pylint
+          pip install -U wheel cffi greenlet pylint
+          pip install -U -e .[test]
           python -m pylint --limit-inference-results=1 --rcfile=.pylintrc gevent
 
 # TODO:
