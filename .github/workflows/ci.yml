@@ -111,7 +111,7 @@ jobs:
       - name: Install ccache (macos)
         if: startsWith(runner.os, 'macOS')
         run: |
-          sudo brew install ccache
+          brew install ccache
 
       ###
       # Caching.
