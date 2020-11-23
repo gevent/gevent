@@ -25,11 +25,15 @@
 
 name: gevent testing
 
-on:
-  push:
-    branches: [ $default-branch ]
-  pull_request:
-    branches: [ $default-branch ]
+
+# Triggers the workflow on push or pull request events
+on: [push, pull_request]
+# Limiting to particular branches might be helpful to conserve minutes.
+#on:
+  # push:
+  #   branches: [ $default-branch ]
+  # pull_request:
+  #   branches: [ $default-branch ]
 
 defaults:
   env:
@@ -92,6 +96,7 @@ jobs:
         # pip's vendored progress.bar class.
 
         run: |
+          pip install -U pip
           pip install -U -q setuptools wheel twine && pip install -q -U 'faulthandler; python_version == "2.7" and platform_python_implementation == "CPython"' 'cffi;platform_python_implementation=="CPython"' 'cython>=3.0a5' 'greenlet>=1.0a1;platform_python_implementation=="CPython"'
           # Next, build the wheel *in place*. This helps ccache, and also lets us cache the configure
           # output (pip install uses a random temporary directory, making this difficult)
@@ -109,6 +114,31 @@ jobs:
       - name: Run tests
         run: |
           python -m gevent.tests
+  lint:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8]
+
+    # Lint the code. Because this is a separate job, even if it fails fast
+    # the tests will still run. Put it at the top for fast feedback.
+    # We only need to do this on one version, and it should be Python 3, because
+    # pylint has stopped updating for Python 2.
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: pylint
+        # We need pylint, since above we're not installing a
+        # requirements file.
+        run: |
+          pip install -U pip
+          pip install -U -e .
+          pip install -U pylint
+          python -m pylint --limit-inference-results=1 --rcfile=.pylintrc gevent
 
 # TODO:
 # * Configure caching
@@ -122,4 +152,5 @@ jobs:
 #   - Testing without embeds.
 #   - file=thread
 #   - different resolvers
-# * lint step
+#   - pure-python
+#   - leak tests
