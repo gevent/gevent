@@ -38,10 +38,12 @@ on: [push, pull_request]
 
 jobs:
   build:
-    runs-on: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         python-version: [2.7, pypy, pypy3, 3.5, 3.6, 3.7, 3.8, 3.9]
+        os: [ubuntu-latest, macos-latest]
+
     env:
       # XXX: Can't seem to set these globally. ``defaults.env`` is not
       # a thing.
@@ -113,28 +115,28 @@ jobs:
       - name: Run tests
         run: |
           python -m gevent.tests
-  # lint:
-  #   runs-on: ubuntu-latest
+  lint:
+    runs-on: ubuntu-latest
 
-  #   # Lint the code. Because this is a separate job, even if it fails fast
-  #   # the tests will still run. Put it at the top for fast feedback.
-  #   # We only need to do this on one version, and it should be Python 3, because
-  #   # pylint has stopped updating for Python 2.
-  #   steps:
-  #     - name: checkout
-  #       uses: actions/checkout@v2
-  #     - name: Set up Python 3.9
-  #       uses: actions/setup-python@v2
-  #       with:
-  #         python-version: 3.9
-  #     - name: pylint
-  #       # We need pylint, since above we're not installing a
-  #       # requirements file.
-  #       run: |
-  #         pip install -U pip
-  #         pip install -U wheel cffi greenlet pylint
-  #         pip install -U -e .[test]
-  #         python -m pylint --limit-inference-results=1 --rcfile=.pylintrc gevent
+    # Lint the code. Because this is a separate job, even if it fails fast
+    # the tests will still run. Put it at the top for fast feedback.
+    # We only need to do this on one version, and it should be Python 3, because
+    # pylint has stopped updating for Python 2.
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+      - name: pylint
+        # We need pylint, since above we're not installing a
+        # requirements file.
+        run: |
+          pip install -U pip
+          pip install -U wheel cffi greenlet pylint
+          pip install -U -e .[test]
+          python -m pylint --limit-inference-results=1 --rcfile=.pylintrc gevent
 
 # TODO:
 # * Configure caching
