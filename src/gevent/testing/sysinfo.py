@@ -112,8 +112,9 @@ if WIN:
 else:
     SHARED_OBJECT_EXTENSION = ".so"
 
-
-RUNNING_ON_TRAVIS = os.environ.get('TRAVIS')
+# We define GitHub actions to be similar to travis
+RUNNING_ON_GITHUB_ACTIONS = os.environ.get('GITHUB_ACTIONS')
+RUNNING_ON_TRAVIS = os.environ.get('TRAVIS') or RUNNING_ON_GITHUB_ACTIONS
 RUNNING_ON_APPVEYOR = os.environ.get('APPVEYOR')
 RUNNING_ON_CI = RUNNING_ON_TRAVIS or RUNNING_ON_APPVEYOR
 RUNNING_ON_MANYLINUX = os.environ.get('GEVENT_MANYLINUX')
