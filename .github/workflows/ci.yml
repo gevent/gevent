@@ -143,14 +143,16 @@ jobs:
         uses: actions/cache@v2
         with:
           path: deps/*/config.cache
-          # XXX: This should probably include a hash of each configure script
-          # We don't have a restore-keys that doesn't include the CFLAGS becouse
-          # the scripts fail to run if they get different CFLAGS, and GHA offers no
-          # way to manually clear the cache.
-          # At one time, we had a restore-key configured, and it still seems to be used
-          # even without that setting here. The whole thing is being matched even without
-          # the CFLAGS matching. Perhaps the - is a generic search separator?
-          key: ${{ runner.os }}-configcache2-${{ matrix.python-version }}-${{ env.CFLAGS }}
+          # XXX: This should probably include a hash of each configure
+          # script We don't have a restore-keys that doesn't include
+          # the CFLAGS becouse the scripts fail to run if they get
+          # different CFLAGS, CC, CPPFLAGS, etc, and GHA offers no way
+          # to manually clear the cache. At one time, we had a
+          # restore-key configured, and it still seems to be used even
+          # without that setting here. The whole thing is being
+          # matched even without the CFLAGS matching. Perhaps the - is
+          # a generic search separator?
+          key: ${{ runner.os }}-configcache3-${{ matrix.python-version }}-${{ env.CFLAGS }}
 
       # Install gevent. Yes, this will create different files each time,
       # leading to a fresh cache. But because of CCache stats, we had already been doing
