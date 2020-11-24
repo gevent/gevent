@@ -41,6 +41,45 @@ on: [push, pull_request]
   # pull_request:
   #   branches: [ $default-branch ]
 
+env:
+  # Weirdly, this has to be a top-level key, not ``defaults.env``
+  PYTHONHASHSEED: 8675309
+  PYTHONUNBUFFERED: 1
+  PYTHONDONTWRITEBYTECODE: 1
+  PIP_UPGRADE_STRATEGY: eager
+  # Don't get warnings about Python 2 support being deprecated. We
+  # know. The env var works for pip 20.
+  PIP_NO_PYTHON_VERSION_WARNING: 1
+  PIP_NO_WARN_SCRIPT_LOCATION: 1
+  GEVENTSETUP_EV_VERIFY: 1
+  # Disable some warnings produced by libev especially and also some Cython generated code.
+  # These are shared between GCC and clang so it must be a minimal set.
+  # TODO: Figure out how to set env vars per platform without resolting to inline scripting.
+  # Note that changing the value of these variables invalidates configure caches
+  CFLAGS: -Ofast -pipe -Wno-strict-aliasing -Wno-comment
+  CPPFLAGS: -DEV_VERIFY=1
+  # Uploading built wheels for releases.
+  # TWINE_PASSWORD is encrypted and stored directly in the
+  # travis repo settings.
+  TWINE_USERNAME: __token__
+  ###
+  # caching
+  ###
+  CCACHE_DIR: ~/.ccache
+  CC: "ccache gcc"
+  CCACHE_NOCPP2: true
+  CCACHE_SLOPPINESS: file_macro,time_macros,include_file_ctime,include_file_mtime
+  CCACHE_NOHASHDIR: true
+
+  ###
+  # Part of caching; disabled for now.
+  #
+  # BUILD_RUNTIMES: $HOME/.runtimes
+  # BUILD_LIBS: $HOME/.libs
+  #
+  # LDFLAGS: "-L$BUILD_LIBS/lib"
+  # LD_LIBRARY_PATH: "$BUILD_LIBS/lib"
+
 
 jobs:
   build:
@@ -58,45 +97,6 @@ jobs:
             python-version: 3.5
           - os: macos-latest
             python-version: 3.6
-    env:
-      # XXX: Can't seem to set these globally. ``defaults.env`` is not
-      # a thing.
-      PYTHONHASHSEED: 8675309
-      PYTHONUNBUFFERED: 1
-      PYTHONDONTWRITEBYTECODE: 1
-      PIP_UPGRADE_STRATEGY: eager
-      # Don't get warnings about Python 2 support being deprecated. We
-      # know. The env var works for pip 20.
-      PIP_NO_PYTHON_VERSION_WARNING: 1
-      PIP_NO_WARN_SCRIPT_LOCATION: 1
-      GEVENTSETUP_EV_VERIFY: 1
-      # Disable some warnings produced by libev especially and also some Cython generated code.
-      # These are shared between GCC and clang so it must be a minimal set.
-      # TODO: Figure out how to set env vars per platform without resolting to inline scripting.
-      # Note that changing the value of these variables invalidates configure caches
-      CFLAGS: -Ofast -pipe -Wno-strict-aliasing -Wno-comment
-      CPPFLAGS: -DEV_VERIFY=1
-      # Uploading built wheels for releases.
-      # TWINE_PASSWORD is encrypted and stored directly in the
-      # travis repo settings.
-      TWINE_USERNAME: __token__
-      ###
-      # caching
-      ###
-      CCACHE_DIR: ~/.ccache
-      CC: "ccache gcc"
-      CCACHE_NOCPP2: true
-      CCACHE_SLOPPINESS: file_macro,time_macros,include_file_ctime,include_file_mtime
-      CCACHE_NOHASHDIR: true
-
-      ###
-      # Part of caching; disabled for now.
-      #
-      # BUILD_RUNTIMES: $HOME/.runtimes
-      # BUILD_LIBS: $HOME/.libs
-      #
-      # LDFLAGS: "-L$BUILD_LIBS/lib"
-      # LD_LIBRARY_PATH: "$BUILD_LIBS/lib"
     steps:
       - name: checkout
         uses: actions/checkout@v2
@@ -112,6 +112,11 @@ jobs:
         if: startsWith(runner.os, 'macOS')
         run: |
           brew install ccache
+          echo CFLAGS=$CFLAGS -Wno-parentheses-equality >>$GITHUB_ENV
+      - name: Set coverage status
+        if: ${{ !startsWith(matrix.python-version, 'pypy') }}
+        run: |
+          echo G_USE_COV=--coverage >> $GITHUB_ENV
 
       ###
       # Caching.
@@ -195,6 +200,7 @@ jobs:
           python -c 'from gevent._compat import get_clock_info; print(get_clock_info("perf_counter"))'
           python -c 'import gevent.core; print(gevent.core.loop)'
           python -c 'import gevent.ares; print(gevent.ares)'
+          ccache -s
       - name: Lint (Python 3.9)
         if: ${{ matrix.python-version == 3.9 }}
         # We only need to do this on one version, and it should be Python 3, because
@@ -204,24 +210,77 @@ jobs:
         run: |
           pip install -U pylint
           python -m pylint --limit-inference-results=1 --rcfile=.pylintrc gevent
-      - name: Run tests
+      - name: "Tests: Basic"
         # Run them twice if they fail; this is to workaround the inability to re-run
         # single jobs. Ideally the testrunner should be updated to do this for just failing
         # tests.
         run: |
-          python -m gevent.tests || python -m gevent.tests
+          python -m gevent.tests $G_USE_COV || python -m gevent.tests
+      # For the CPython interpreters, unless we have reason to expect
+      # different behaviour across the versions (e.g., as measured by coverage)
+      # it's sufficient to run the full suite on the current version
+      # and oldest version.
+      - name: "Tests: subproccess and FileObjectThread"
+        # Now, the non-default threaded file object.
+        # In the past, we included all test files that had a reference to 'subprocess'' somewhere in their
+        # text. The monkey-patched stdlib tests were specifically included here.
+        # However, we now always also test on AppVeyor (Windows) which only has GEVENT_FILE=thread,
+        # so we can save a lot of CI time by reducing the set and excluding the stdlib tests without
+        # losing any coverage. Which is good, because coverage fails when run this way.
+        env:
+          GEVENT_FILE: thread
+        run: |
+          cd src/gevent/tests && python $G_USE_COV -mgevent.tests test__*subprocess*.py
+      - name: "Tests: c-ares resolver"
+        env:
+          GEVENT_RESOLVER: ares
+        run: |
+          python -mgevent.tests $G_USE_COV --ignore tests_that_dont_use_resolver.txt
+      - name: "Tests: dnspython resolver"
+        env:
+          GEVENT_RESOLVER: dnspython
+        run: |
+          python -mgevent.tests $G_USE_COV --ignore tests_that_dont_use_resolver.txt
+      - name: "Tests: leakchecks"
+        # Run the leaktests; this seems to be extremely slow on Python 3.7
+        # XXX: Figure out why. Can we reproduce locally?
+        if: matrix.python-version == 2.7 && startsWith(runner.os, 'Linux')
+        env:
+          GEVENTTEST_LEAKCHECK: 1
+        run: |
+          python -m gevent.tests --ignore tests_that_dont_do_leakchecks.txt
+      - name: "Tests: PURE_PYTHON"
+        # No compiled cython modules on CPython, using the default backend. Get coverage here.
+        # We should only need to run this for a single Python 2 and a Python 3
+        if: (matrix.python-version == 2.7 || matrix.python-version == 3.9) && startsWith(runner.os, 'Linux')
+        env:
+          PURE_PYTHON: 1
+        run: |
+          python -mgevent.tests --coverage
+      - name: "Tests: libuv"
+        env:
+          GEVENT_LOOP: libuv
+        run: |
+          python -m gevent.tests $G_USE_COV
+      - name: "Tests: libev-cffi"
+        if: (matrix.python-version == 2.7 || matrix.python-version == 3.9) && startsWith(runner.os, 'Linux')
+        env:
+          GEVENT_LOOP: libev-cffi
+      - name: Submit coverage
+        run: |
+          python -mpip install -U coveralls
+          python -m coverage combine || true
+          python -m coverage report -i || true
+          python -m coveralls || true
+
 
 # TODO:
-# * Configure caching
+# * Configure caching (XXX: Are these caches updated? The post step doesn't seem to do that.)
 #   - pip
 #   - configure and build caches (see .travis.yml)
 #   - ccache
-# * coverage creation/upload/exclusion
 # * manylinux builds and uploading
 # * macos uploading
 # * full testing matrix:
 #   - Testing without embeds.
-#   - file=thread
-#   - different resolvers
-#   - pure-python
-#   - leak tests
+#
