@@ -266,6 +266,8 @@ jobs:
         if: (matrix.python-version == 2.7 || matrix.python-version == 3.9) && startsWith(runner.os, 'Linux')
         env:
           GEVENT_LOOP: libev-cffi
+        run: |
+          python -m gevent.tests $G_USE_COV
       - name: Submit coverage
         run: |
           python -mpip install -U coveralls
