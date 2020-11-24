@@ -258,7 +258,7 @@ jobs:
         env:
           PURE_PYTHON: 1
         run: |
-          python -mgevent.tests --coverage
+          python -mgevent.tests --coverage || python -m gevent.tests
       - name: "Tests: libuv"
         env:
           GEVENT_LOOP: libuv

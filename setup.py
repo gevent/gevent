@@ -412,8 +412,8 @@ def run_setup(ext_modules):
 
                 # We don't run coverage on Windows, and pypy can't build it there
                 # anyway (coveralls -> cryptopgraphy -> openssl).
-                # As of coverage 5.0a6, coveralls (up to 1.9) won't work at all.
-                'coverage<5.0 ; sys_platform != "win32"',
+                # coverage 5 needs coveralls 1.11
+                'coverage >= 5.0 ; sys_platform != "win32"',
                 'coveralls>=1.7.0 ; sys_platform != "win32"',
 
                 'futures ; python_version == "2.7"',
