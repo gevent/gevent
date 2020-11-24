@@ -186,14 +186,17 @@ jobs:
         run: |
           # Next, build the wheel *in place*. This helps ccache, and also lets us cache the configure
           # output (pip install uses a random temporary directory, making this difficult)
+          python setup.py build_ext -i
           python setup.py bdist_wheel
       - name: Check gevent build
         run: |
           ls -l dist
           twine check dist/*
       - name: Install gevent
+        # I'd prefer to install the wheel in non-editable mode, but that seems to
+        # screw up coverage reporting.
         run: |
-          pip install -U --no-compile `ls dist/*whl`[test]
+          pip install -U -e .[test]
       - name: Report environment details
         run: |
           python --version
@@ -264,16 +267,17 @@ jobs:
         run: |
           python -mgevent.tests --coverage || python -m gevent.tests
       - name: "Tests: libuv"
+        if: (matrix.python-version == 2.7 || matrix.python-version == 3.9)
         env:
           GEVENT_LOOP: libuv
         run: |
-          python -m gevent.tests $G_USE_COV
+          python -m gevent.tests $G_USE_COV || python -m gevent.tests
       - name: "Tests: libev-cffi"
         if: (matrix.python-version == 2.7 || matrix.python-version == 3.9) && startsWith(runner.os, 'Linux')
         env:
           GEVENT_LOOP: libev-cffi
         run: |
-          python -m gevent.tests $G_USE_COV
+          python -m gevent.tests $G_USE_COV || python -m gevent.tests
       - name: Report coverage
         if: ${{ !startsWith(matrix.python-version, 'pypy')  }}
         run: |
