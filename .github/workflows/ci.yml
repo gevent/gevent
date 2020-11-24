@@ -192,6 +192,11 @@ jobs:
         run: |
           ls -l dist
           twine check dist/*
+      - name: Upload gevent wheel
+        uses: actions/upload-artifact@v2
+        with:
+          name: gevent-${{ runner.os }}-${{ matrix.python-version }}.whl
+          path: dist/*whl
       - name: Install gevent
         # I'd prefer to install the wheel in non-editable mode, but that seems to
         # screw up coverage reporting.
