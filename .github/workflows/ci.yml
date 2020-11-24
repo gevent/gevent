@@ -177,7 +177,7 @@ jobs:
           pip install -U -q setuptools wheel twine
           pip install -q -U 'faulthandler; python_version == "2.7" and platform_python_implementation == "CPython"'
           pip install -q -U 'cffi;platform_python_implementation=="CPython"'
-          pip install -q -U 'cython>=3.0a5'
+          pip install -q -U 'cython>=3.0a5' coveralls
           pip install 'greenlet>=1.0a1;platform_python_implementation=="CPython"'
 
       - name: Build gevent
@@ -237,6 +237,8 @@ jobs:
         run: |
           python -mgevent.tests $G_USE_COV --ignore tests_that_dont_use_resolver.txt
       - name: "Tests: dnspython resolver"
+        # This has known issues on PyPy3
+        if: (matrix.python-version == 2.7 || matrix.python-version == 3.9) && startsWith(runner.os, 'Linux')
         env:
           GEVENT_RESOLVER: dnspython
         run: |
@@ -269,12 +271,25 @@ jobs:
         run: |
           python -m gevent.tests $G_USE_COV
       - name: Submit coverage
+        if: ${{ !startsWith(matrix.python-version, 'pypy') }}
+        env:
+          COVERALLS_PARALLEL: true
+          COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python -mpip install -U coveralls
           python -m coverage combine || true
           python -m coverage report -i || true
           python -m coveralls || true
 
+    complete_coveralls:
+     needs: build
+     runs-on: ubuntu-latest
+     steps:
+       - name: Coveralls Finished
+         uses: coverallsapp/github-action@master
+         with:
+           github-token: ${{ secrets.GITHUB_TOKEN }}
+           parallel-finished: true
 
 # TODO:
 # * Configure caching (XXX: Are these caches updated? The post step doesn't seem to do that.)

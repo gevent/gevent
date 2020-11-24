@@ -813,6 +813,8 @@ def main():
             # coverage files (which will have distinct suffixes because of parallel=true in .coveragerc
             # in this directory; makes them easier to combine and use with coverage report)
             os.environ['COVERAGE_FILE'] = os.path.abspath(".") + os.sep + ".coverage"
+            # XXX: Log this with color. Right now, it interferes (buffering) with other early
+            # output.
             print("Enabling coverage to", os.environ['COVERAGE_FILE'],
                   "with site", site_dir,
                   "and configuration file", cov_config)
