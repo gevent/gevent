@@ -226,11 +226,11 @@ jobs:
         # text. The monkey-patched stdlib tests were specifically included here.
         # However, we now always also test on AppVeyor (Windows) which only has GEVENT_FILE=thread,
         # so we can save a lot of CI time by reducing the set and excluding the stdlib tests without
-        # losing any coverage. Which is good, because coverage fails when run this way.
+        # losing any coverage.
         env:
           GEVENT_FILE: thread
         run: |
-          cd src/gevent/tests && python -mgevent.tests $G_USE_COV test__*subprocess*.py
+          python -m gevent.tests $G_USE_COV `(cd src/gevent/tests >/dev/null && ls test__*subprocess*.py)`
       - name: "Tests: c-ares resolver"
         env:
           GEVENT_RESOLVER: ares
