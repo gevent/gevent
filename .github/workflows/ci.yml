@@ -232,12 +232,14 @@ jobs:
         run: |
           python -m gevent.tests $G_USE_COV `(cd src/gevent/tests >/dev/null && ls test__*subprocess*.py)`
       - name: "Tests: c-ares resolver"
+        # This sometimes falis on mac. Also, save mac minutes.
+        if: (matrix.python-version == 2.7 || matrix.python-version == 3.9) && startsWith(runner.os, 'Linux')
         env:
           GEVENT_RESOLVER: ares
         run: |
           python -mgevent.tests $G_USE_COV --ignore tests_that_dont_use_resolver.txt
       - name: "Tests: dnspython resolver"
-        # This has known issues on PyPy3
+        # This has known issues on PyPy3. Also, save mac minutes.
         if: (matrix.python-version == 2.7 || matrix.python-version == 3.9) && startsWith(runner.os, 'Linux')
         env:
           GEVENT_RESOLVER: dnspython
@@ -270,26 +272,27 @@ jobs:
           GEVENT_LOOP: libev-cffi
         run: |
           python -m gevent.tests $G_USE_COV
-      - name: Submit coverage
+      - name: Report coverage
         if: ${{ !startsWith(matrix.python-version, 'pypy') }}
-        env:
-          COVERALLS_PARALLEL: true
-          COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python -mpip install -U coveralls
           python -m coverage combine || true
           python -m coverage report -i || true
           python -m coveralls || true
+      - name: Submit to Coveralls
+        if: ${{ !startsWith(matrix.python-version, 'pypy') }}
+        uses: AndreMiras/coveralls-python-action@develop
+        with:
+          parallel: true
 
-  complete_coveralls:
-    needs: build
+  coveralls_finish:
+    needs: test
     runs-on: ubuntu-latest
     steps:
-      - name: Coveralls Finished
-        uses: coverallsapp/github-action@master
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          parallel-finished: true
+    - name: Coveralls Finished
+      uses: AndreMiras/coveralls-python-action@develop
+      with:
+        parallel-finished: true
 
 # TODO:
 # * Configure caching (XXX: Are these caches updated? The post step doesn't seem to do that.)
