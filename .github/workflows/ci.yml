@@ -114,7 +114,9 @@ jobs:
           brew install ccache
           echo CFLAGS=$CFLAGS -Wno-parentheses-equality >>$GITHUB_ENV
       - name: Set coverage status
-        if: ${{ !startsWith(matrix.python-version, 'pypy') }}
+        # coverage is too slow on PyPy. We can't submit it from macOS (see that action),
+        # so don't bother taking the speed hit there either.
+        if: ${{ !startsWith(matrix.python-version, 'pypy') && startsWith(runner.os, 'Linux') }}
         run: |
           echo G_USE_COV=--coverage >> $GITHUB_ENV
 
@@ -128,7 +130,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.ccache/
-          key: ${{ runner.os }}-ccache-${{ matrix.python-version }}
+          key: ${{ runner.os }}-ccache2-${{ matrix.python-version }}
 
       - name: Get pip cache dir
         id: pip-cache
@@ -177,7 +179,7 @@ jobs:
           pip install -U -q setuptools wheel twine
           pip install -q -U 'faulthandler; python_version == "2.7" and platform_python_implementation == "CPython"'
           pip install -q -U 'cffi;platform_python_implementation=="CPython"'
-          pip install -q -U 'cython>=3.0a5' coveralls
+          pip install -q -U 'cython>=3.0a5'
           pip install 'greenlet>=1.0a1;platform_python_implementation=="CPython"'
 
       - name: Build gevent
@@ -273,14 +275,13 @@ jobs:
         run: |
           python -m gevent.tests $G_USE_COV
       - name: Report coverage
-        if: ${{ !startsWith(matrix.python-version, 'pypy') }}
+        if: ${{ !startsWith(matrix.python-version, 'pypy')  }}
         run: |
-          python -mpip install -U coveralls
           python -m coverage combine || true
           python -m coverage report -i || true
-          python -m coveralls || true
       - name: Submit to Coveralls
-        if: ${{ !startsWith(matrix.python-version, 'pypy') }}
+        # This is a container action, which only runs on Linux.
+        if: ${{ !startsWith(matrix.python-version, 'pypy') && startsWith(runner.os, 'Linux') }}
         uses: AndreMiras/coveralls-python-action@develop
         with:
           parallel: true
