@@ -281,15 +281,15 @@ jobs:
           python -m coverage report -i || true
           python -m coveralls || true
 
-    complete_coveralls:
-     needs: build
-     runs-on: ubuntu-latest
-     steps:
-       - name: Coveralls Finished
-         uses: coverallsapp/github-action@master
-         with:
-           github-token: ${{ secrets.GITHUB_TOKEN }}
-           parallel-finished: true
+  complete_coveralls:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Coveralls Finished
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          parallel-finished: true
 
 # TODO:
 # * Configure caching (XXX: Are these caches updated? The post step doesn't seem to do that.)
