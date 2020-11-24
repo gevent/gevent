@@ -230,7 +230,7 @@ jobs:
         env:
           GEVENT_FILE: thread
         run: |
-          cd src/gevent/tests && python $G_USE_COV -mgevent.tests test__*subprocess*.py
+          cd src/gevent/tests && python -mgevent.tests $G_USE_COV test__*subprocess*.py
       - name: "Tests: c-ares resolver"
         env:
           GEVENT_RESOLVER: ares
