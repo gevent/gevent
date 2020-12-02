@@ -71,7 +71,7 @@ env:
   CCACHE_SLOPPINESS: file_macro,time_macros,include_file_ctime,include_file_mtime
   CCACHE_NOHASHDIR: true
 
-  BUILD_LIBS: ~/.libs
+
   LD_LIBRARY_PATH: "~/.libs/lib"
 
   #
@@ -366,18 +366,14 @@ jobs:
           GEVENTSETUP_EV_VERIFY: 1
         run: |
           # These need to be absolute paths
-          env | sort
-          mkdir -p ~/.libs/lib
-          export BUILD_LIBS=`realpath -m $BUILD_LIBS`
+          export BUILD_LIBS="$HOME/.libs/lib"
+          mkdir -p $BUILD_LIBS
           export LDFLAGS=-L$BUILD_LIBS/lib
+          export CPPFLAGS="-I$BUILD_LIBS/include"
           env | sort
-          ls -l deps/libev/
-          autoconf --version
-          automake --version
-
           pushd deps/libev && ./configure -C --prefix=$BUILD_LIBS && make install && popd
           pushd deps/c-ares && ./configure -C --prefix=$BUILD_LIBS && make -j4 install && popd
-          ls -l deps/libuv/m4
+
           pushd deps/libuv && ./autogen.sh && ./configure -C --disable-static --prefix=$BUILD_LIBS && make -j4 install && popd
           # libev builds a manpage each time, and it includes today's date, so it frequently changes.
           # delete to avoid repacking the archive
