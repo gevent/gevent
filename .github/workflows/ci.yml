@@ -366,12 +366,14 @@ jobs:
           GEVENTSETUP_EV_VERIFY: 1
           LDFLAGS: "-L~/.libs/lib"
         run: |
+          export BUILD_LIBS=`realpath $BUILD_LIBS`
           mkdir -p ~/.libs/lib
           ls -l deps/libev/
-          pushd deps/libev && ./configure -C --prefix=$BUILD_LIBS && make install && popd
-          pushd deps/c-ares && ./configure -C --prefix=$BUILD_LIBS && make -j4 install && popd
           autoconf --version
           automake --version
+
+          pushd deps/libev && ./configure -C --prefix=$BUILD_LIBS && make install && popd
+          pushd deps/c-ares && ./configure -C --prefix=$BUILD_LIBS && make -j4 install && popd
           ls -l deps/libuv/m4
           pushd deps/libuv && ./autogen.sh && ./configure -C --disable-static --prefix=$BUILD_LIBS && make -j4 install && popd
           # libev builds a manpage each time, and it includes today's date, so it frequently changes.
