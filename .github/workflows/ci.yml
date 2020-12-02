@@ -366,9 +366,11 @@ jobs:
           GEVENTSETUP_EV_VERIFY: 1
         run: |
           # These need to be absolute paths
-          export BUILD_LIBS=`realpath $BUILD_LIBS`
-          export LDFLAGS=-L$BUILD_LIBS/lib
+          env | sort
           mkdir -p ~/.libs/lib
+          export BUILD_LIBS=`realpath -m $BUILD_LIBS`
+          export LDFLAGS=-L$BUILD_LIBS/lib
+          env | sort
           ls -l deps/libev/
           autoconf --version
           automake --version
@@ -405,3 +407,4 @@ jobs:
 #   - ccache
 # * manylinux builds and uploading
 # * macos uploading
+# * Use YAML syntax to share snippets, like the old .travis.yml did
