@@ -42,11 +42,16 @@ if [ -d /gevent -a -d /opt/python ]; then
     # Set a cache directory for pip. This was
     # mounted to be the same as it is outside docker so it
     # can be persisted.
+    export XDG_CACHE_HOME="/cache"
     # XXX: This works for macOS, where everything bind-mounted
     # is seen as owned by root in the container. But when the host is Linux
     # the actual UIDs come through to the container, triggering
     # pip to disable the cache when it detects that the owner doesn't match.
-    export XDG_CACHE_HOME="/cache"
+    # The below is an attempt to fix that, taken frob bcrypt
+    if [ -n "$GITHUB_ACTIONS" ]; then
+        mkdir -p $XDG_CACHE_HOME/pip
+        chown -R $(whoami) $XDG_CACHE_HOME
+    fi
     ls -ld /cache
     ls -ld /cache/pip
     yum -y install libffi-devel ccache
@@ -108,6 +113,6 @@ if [ ! -d $HOME/.ccache ]; then
 fi
 # Travis CI and locally we want `-ti`, but github actions doesn't have a TTY, so one
 # or the other of the arguments causes this to fail with 'input device is not a TTY'
-# We used to work on 2010, trying 2014 to workaround https://github.com/pypa/manylinux/issues/836
-docker run --rm -v "$(pwd):/gevent" -v "$LCACHE:/cache" -v "$HOME/.ccache:/ccache" ${DOCKER_IMAGE:-quay.io/pypa/manylinux2014_x86_64} /gevent/scripts/releases/$(basename $0)
+
+docker run --rm -v "$(pwd):/gevent" -v "$LCACHE:/cache" -v "$HOME/.ccache:/ccache" ${DOCKER_IMAGE:-quay.io/pypa/manylinux2010_x86_64} /gevent/scripts/releases/$(basename $0)
 ls -l wheelhouse
