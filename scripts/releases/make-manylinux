@@ -38,7 +38,7 @@ export LDFLAGS="-lrt" # Needed for clock_gettime libc support on this version.
 
 if [ -d /gevent -a -d /opt/python ]; then
     # Running inside docker
-
+    env | sort
     # Set a cache directory for pip. This was
     # mounted to be the same as it is outside docker so it
     # can be persisted.
