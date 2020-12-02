@@ -394,9 +394,20 @@ jobs:
 
   manylinux_x86_64:
     runs-on: ubuntu-latest
+    # We use a regular Python matrix entry to share as much code as possible.
+    strategy:
+      matrix:
+        python-version: [3.9]
+
     steps:
       - name: checkout
         uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Update pip
+        run: pip install -U pip
       - name: Build and test gevent
         # An alternate way to do this is to run the container directly with a uses:
         # and then the script runs inside it. That may work better with caching.
