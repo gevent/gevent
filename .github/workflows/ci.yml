@@ -71,8 +71,8 @@ env:
   CCACHE_SLOPPINESS: file_macro,time_macros,include_file_ctime,include_file_mtime
   CCACHE_NOHASHDIR: true
 
-  BUILD_LIBS: $HOME/.libs
-  LD_LIBRARY_PATH: "$BUILD_LIBS/lib"
+  BUILD_LIBS: ~/.libs
+  LD_LIBRARY_PATH: "~/.libs/lib"
 
   #
 
@@ -364,8 +364,9 @@ jobs:
         env:
           GEVENTSETUP_EMBED: 0
           GEVENTSETUP_EV_VERIFY: 1
-          LDFLAGS: "-L$BUILD_LIBS/lib"
+          LDFLAGS: "-L~/.libs/lib"
         run: |
+          mkdir -p ~/.libs/lib
           ls -l deps/libev/
           pushd deps/libev && ./configure -C --prefix=$BUILD_LIBS && make install && popd
           pushd deps/c-ares && ./configure -C --prefix=$BUILD_LIBS && make -j4 install && popd
