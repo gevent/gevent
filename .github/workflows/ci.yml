@@ -71,14 +71,10 @@ env:
   CCACHE_SLOPPINESS: file_macro,time_macros,include_file_ctime,include_file_mtime
   CCACHE_NOHASHDIR: true
 
-  ###
-  # Part of caching; disabled for now.
+  BUILD_LIBS: $HOME/.libs
+  LD_LIBRARY_PATH: "$BUILD_LIBS/lib"
+
   #
-  # BUILD_RUNTIMES: $HOME/.runtimes
-  # BUILD_LIBS: $HOME/.libs
-  #
-  # LDFLAGS: "-L$BUILD_LIBS/lib"
-  # LD_LIBRARY_PATH: "$BUILD_LIBS/lib"
 
 
 jobs:
@@ -304,6 +300,100 @@ jobs:
       with:
         parallel-finished: true
 
+  test_no_embed:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        python-version: [2.7, 3.9]
+        os: [ubuntu-latest]
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install ccache (ubuntu)
+        if: startsWith(runner.os, 'Linux')
+        run: |
+          sudo apt-get install -y ccache
+      - name: Cache ~/.ccache
+        uses: actions/cache@v2
+        with:
+          path: ~/.ccache/
+          key: ${{ runner.os }}-ccache2_embed-${{ matrix.python-version }}
+
+      - name: Get pip cache dir
+        id: pip-cache
+        run: |
+          echo "::set-output name=dir::$(pip cache dir)"
+
+      - name: pip cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.pip-cache.outputs.dir }}
+          key: ${{ runner.os }}-pip_emded-${{ matrix.python-version }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - name: Cache config.cache
+        # Store the configure caches. Having a cache can speed up c-ares
+        # configure from 2-3 minutes to 20 seconds.
+        uses: actions/cache@v2
+        with:
+          path: deps/*/config.cache
+          # XXX: This should probably include a hash of each configure
+          # script We don't have a restore-keys that doesn't include
+          # the CFLAGS becouse the scripts fail to run if they get
+          # different CFLAGS, CC, CPPFLAGS, etc, and GHA offers no way
+          # to manually clear the cache. At one time, we had a
+          # restore-key configured, and it still seems to be used even
+          # without that setting here. The whole thing is being
+          # matched even without the CFLAGS matching. Perhaps the - is
+          # a generic search separator?
+          key: ${{ runner.os }}-configcache_embed-${{ matrix.python-version }}-${{ env.CFLAGS }}
+      - name: Install dependencies
+        run: |
+          pip install -U pip
+          pip install -U -q setuptools wheel twine
+          pip install -q -U 'faulthandler; python_version == "2.7" and platform_python_implementation == "CPython"'
+          pip install -q -U 'cffi;platform_python_implementation=="CPython"'
+          pip install -q -U 'cython>=3.0a5'
+          pip install 'greenlet>=1.0a1;platform_python_implementation=="CPython"'
+
+      - name: build libs and gevent
+        env:
+          GEVENTSETUP_EMBED: 0
+          GEVENTSETUP_EV_VERIFY: 1
+          LDFLAGS: "-L$BUILD_LIBS/lib"
+        run: |
+          ls -l deps/libev/
+          pushd deps/libev && ./configure -C --prefix=$BUILD_LIBS && make install && popd
+          pushd deps/c-ares && ./configure -C --prefix=$BUILD_LIBS && make -j4 install && popd
+          autoconf --version
+          automake --version
+          ls -l deps/libuv/m4
+          pushd deps/libuv && ./autogen.sh && ./configure -C --disable-static --prefix=$BUILD_LIBS && make -j4 install && popd
+          # libev builds a manpage each time, and it includes today's date, so it frequently changes.
+          # delete to avoid repacking the archive
+          rm -rf $BUILD_LIBS/share/man/
+          ls -l $BUILD_LIBS $BUILD_LIBS/lib $BUILD_LIBS/include
+          python setup.py bdist_wheel
+          pip uninstall -y gevent
+          pip install -U `ls dist/*whl`[test]
+          # Test that we're actually linking
+          # to the .so file.
+          objdump -p build/lib*/gevent/libev/_corecffi*so | grep "NEEDED.*libev.so"
+          objdump -p build/lib*/gevent/libev/corecext*so | grep "NEEDED.*libev.so"
+          objdump -p build/lib*/gevent/libuv/_corecffi*so | grep "NEEDED.*libuv.so"
+      - name: test non-embedded
+        run: |
+          # Verify that we got non-embedded builds
+          python -c 'import gevent.libev.corecffi as CF; assert not CF.LIBEV_EMBED'
+          python -c 'import gevent.libuv.loop as CF; assert not CF.libuv.LIBUV_EMBED'
+          python -mgevent.tests
+
+
+
 # TODO:
 # * Configure caching (XXX: Are these caches updated? The post step doesn't seem to do that.)
 #   - pip
@@ -311,6 +401,3 @@ jobs:
 #   - ccache
 # * manylinux builds and uploading
 # * macos uploading
-# * full testing matrix:
-#   - Testing without embeds.
-#
