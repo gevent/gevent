@@ -366,7 +366,7 @@ jobs:
           GEVENTSETUP_EV_VERIFY: 1
         run: |
           # These need to be absolute paths
-          export BUILD_LIBS="$HOME/.libs/lib"
+          export BUILD_LIBS="$HOME/.libs/"
           mkdir -p $BUILD_LIBS
           export LDFLAGS=-L$BUILD_LIBS/lib
           export CPPFLAGS="-I$BUILD_LIBS/include"
