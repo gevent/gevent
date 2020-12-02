@@ -108,5 +108,6 @@ if [ ! -d $HOME/.ccache ]; then
 fi
 # Travis CI and locally we want `-ti`, but github actions doesn't have a TTY, so one
 # or the other of the arguments causes this to fail with 'input device is not a TTY'
-docker run --rm -v "$(pwd):/gevent" -v "$LCACHE:/cache" -v "$HOME/.ccache:/ccache" ${DOCKER_IMAGE:-quay.io/pypa/manylinux2010_x86_64} /gevent/scripts/releases/$(basename $0)
+# We used to work on 2010, trying 2014 to workaround https://github.com/pypa/manylinux/issues/836
+docker run --rm -v "$(pwd):/gevent" -v "$LCACHE:/cache" -v "$HOME/.ccache:/ccache" ${DOCKER_IMAGE:-quay.io/pypa/manylinux2014_x86_64} /gevent/scripts/releases/$(basename $0)
 ls -l wheelhouse
