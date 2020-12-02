@@ -392,6 +392,20 @@ jobs:
           python -c 'import gevent.libuv.loop as CF; assert not CF.libuv.LIBUV_EMBED'
           python -mgevent.tests
 
+  manylinux_x86_64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: Build and test gevent
+        # An alternate way to do this is to run the container directly with a uses:
+        # and then the script runs inside it. That may work better with caching.
+        # See https://github.com/pyca/bcrypt/blob/f6b5ee2eda76d077c531362ac65e16f045cf1f29/.github/workflows/wheel-builder.yml
+        run: scripts/releases/make-manylinux
+      - name: Upload gevent wheels
+        uses: actions/upload-artifact@v2
+        with:
+          path: dist/*whl
 
 
 # TODO:
