@@ -40,6 +40,7 @@ if [ "$DOCKER_IMAGE" == "quay.io/pypa/manylinux2014_aarch64" -a -n "$GITHUB_ACTI
     # and adding -Os doesn't help much. So maybe -O1 will.
     echo "Compiling with -O1"
     export CFLAGS="-O1 $GEVENT_WARNFLAGS"
+    SLOW_ARM=1
 else
     echo "Compiling with -Ofast"
     export CFLAGS="-Ofast $GEVENT_WARNFLAGS"
@@ -71,6 +72,11 @@ if [ -d /gevent -a -d /opt/python ]; then
     # Some images/archs (specificaly 2014_aarch64) don't have ccache;
     # This also seems to have vanished for manylinux_2010 x64/64 after November 30
     # 2020 when the OS went EOL and the package repos switched to the "vault"
+    if [ -n "$SLOW_ARM" ]; then
+        # This provides access to ccache for the 2014 image
+        echo Installing epel
+        rpm -Uvh https://dl.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-7-13.noarch.rpm
+    fi
     yum -y install ccache || export CC=gcc LDSHARED="gcc -shared" LDCXXSHARED="gcc -shared"
     # On Fedora Rawhide (F33)
     # yum install python39 python3-devel gcc kernel-devel kernel-headers make diffutils file
