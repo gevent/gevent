@@ -82,13 +82,17 @@ if [ -d /gevent -a -d /opt/python ]; then
     cd /tmp/build
     git clone /gevent gevent
     cd gevent
-    echo Configuring cares
-    time (cd deps/c-ares && ./configure --disable-dependency-tracking -C > /dev/null )
+    if [ -z "$GEVENTSETUP_DISABLE_ARES" ]; then
+        echo Configuring cares
+        time (cd deps/c-ares && ./configure --disable-dependency-tracking -C > /dev/null )
+    else
+        echo Not configuring c-ares because it is disabled
+    fi
     rm -rf /gevent/wheelhouse
     mkdir /gevent/wheelhouse
     OPATH="$PATH"
     which auditwheel
-    for variant in `ls -d /opt/python/cp{27,36,37,38,39}*`; do
+    for variant in `ls -d /opt/python/cp{27,37,38,39}*`; do
         export PATH="$variant/bin:$OPATH"
         echo "Building $variant $(python --version)"
 
@@ -108,7 +112,9 @@ if [ -d /gevent -a -d /opt/python ]; then
         python -c 'from __future__ import print_function; from gevent._compat import get_clock_info; print("clock info", get_clock_info("perf_counter"))'
         python -c 'from __future__ import print_function; import greenlet; print(greenlet, greenlet.__version__)'
         python -c 'from __future__ import print_function; import gevent.core; print("loop", gevent.core.loop)'
-        python -c 'from __future__ import print_function; import gevent.ares; print("ares", gevent.ares)'
+        if [ -z "$GEVENTSETUP_DISABLE_ARES" ]; then
+            python -c 'from __future__ import print_function; import gevent.ares; print("ares", gevent.ares)'
+        fi
 
         if [ -z "$GEVENTTEST_SKIP_ALL" ]; then
             # TODO: Make the testrunner automatically repeat flaky tests.
@@ -143,5 +149,5 @@ fi
 # Travis CI and locally we want `-ti`, but github actions doesn't have a TTY, so one
 # or the other of the arguments causes this to fail with 'input device is not a TTY'
 # Pas through whether we're running on github or not to help with caching.
-docker run --rm -e GITHUB_ACTIONS -e GEVENTTEST_SKIP_ALL -e DOCKER_IMAGE -v "$(pwd):/gevent" -v "$LCACHE:/cache" -v "$HOME/.ccache:/ccache" ${DOCKER_IMAGE:-quay.io/pypa/manylinux2010_x86_64} /gevent/scripts/releases/$(basename $0)
+docker run --rm -e GEVENTSETUP_DISABLE_ARES -e GITHUB_ACTIONS -e GEVENTTEST_SKIP_ALL -e DOCKER_IMAGE -v "$(pwd):/gevent" -v "$LCACHE:/cache" -v "$HOME/.ccache:/ccache" ${DOCKER_IMAGE:-quay.io/pypa/manylinux2010_x86_64} /gevent/scripts/releases/$(basename $0)
 ls -l wheelhouse

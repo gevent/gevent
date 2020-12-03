@@ -26,7 +26,8 @@ WIN = sys.platform.startswith('win')
 
 RUNNING_ON_TRAVIS = os.environ.get('TRAVIS')
 RUNNING_ON_APPVEYOR = os.environ.get('APPVEYOR')
-RUNNING_ON_CI = RUNNING_ON_TRAVIS or RUNNING_ON_APPVEYOR
+RUNNING_ON_GITHUB_ACTIONS = os.environ.get('GITHUB_ACTIONS')
+RUNNING_ON_CI = RUNNING_ON_TRAVIS or RUNNING_ON_APPVEYOR or RUNNING_ON_GITHUB_ACTIONS
 RUNNING_FROM_CHECKOUT = os.path.isdir(os.path.join(THIS_DIR, ".git"))
 
 
@@ -77,7 +78,7 @@ def glob_many(*globs):
 # They should all begin with ``GEVENTSETUP_``
 
 
-def _bool_from_environ(key):
+def bool_from_environ(key):
     value = os.environ.get(key)
     if not value:
         return
@@ -97,9 +98,9 @@ def _check_embed(key, defkey, path=None, warn=False):
     those don't exist, then check for the existence of *path* and return
     that (if path is given)
     """
-    value = _bool_from_environ(key)
+    value = bool_from_environ(key)
     if value is None:
-        value = _bool_from_environ(defkey)
+        value = bool_from_environ(defkey)
     if value is not None:
         if warn:
             print("Warning: gevent setup: legacy environment key %s or %s found"

@@ -21,6 +21,7 @@ from _setuputils import GeventClean
 from _setuputils import BuildFailed
 from _setuputils import cythonize1
 from _setuputils import get_include_dirs
+from _setuputils import bool_from_environ
 
 # Environment variables that are intended to be used outside of our own
 # CI should be documented in ``installing_from_source.rst``
@@ -169,6 +170,10 @@ EXT_MODULES = [
     GLT_PRIMITIVES,
     TRACER,
 ]
+
+if bool_from_environ('GEVENTSETUP_DISABLE_ARES'):
+    print("c-ares module disabled, not building")
+    EXT_MODULES.remove(ARES)
 
 LIBEV_CFFI_MODULE = 'src/gevent/libev/_corecffi_build.py:ffi'
 LIBUV_CFFI_MODULE = 'src/gevent/libuv/_corecffi_build.py:ffi'

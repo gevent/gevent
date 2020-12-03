@@ -114,10 +114,12 @@ jobs:
           docker run --rm --privileged hypriot/qemu-register
       - name: Build and test gevent
         # Skip the bulk of the tests, running them emulated on arm takes
-        # forever
+        # forever. Likewise, don't build or even configure c-ares; in the emulated platform
+        # it takes at least 15 minutes and often much longer.
         env:
           DOCKER_IMAGE: quay.io/pypa/manylinux2014_aarch64
           GEVENTTEST_SKIP_ALL: 1
+          GEVENTSETUP_DISABLE_ARES: 1
         run: scripts/releases/make-manylinux
       - name: Upload gevent wheels
         uses: actions/upload-artifact@v2
