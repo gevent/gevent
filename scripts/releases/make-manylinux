@@ -33,12 +33,14 @@ export BUILD_LIBS=$HOME/.libs
 export CCACHE_DIR="/ccache"
 # Disable some warnings produced by libev especially and also some Cython generated code.
 # Note that changing the value of these variables invalidates configure caches
-GEVENT_WARNFLAGS="-pipe -Wno-strict-aliasing -Wno-comment -Wno-unused-value -Wno-unused-but-set-variable -Wno-sign-compare -Wno-parentheses -Wno-unused-function -Wno-tautological-compare -Wno-strict-prototypes"
+GEVENT_WARNFLAGS="-pipe -Wno-strict-aliasing -Wno-comment -Wno-unused-value -Wno-unused-but-set-variable -Wno-sign-compare -Wno-parentheses -Wno-unused-function -Wno-tautological-compare -Wno-strict-prototypes -Wno-return-type -Wno-misleading-indentation"
 export CFLAGS="$GEVENT_WARNFLAGS"
 if [ "$DOCKER_IMAGE" == "quay.io/pypa/manylinux2014_aarch64" -a -n "$GITHUB_ACTIONS" ]; then
     # Compiling with -Ofast on the arm emulator takes hours.
-    export CFLAGS="$GEVENT_WARNFLAGS"
+    echo "Compiling with -Os"
+    export CFLAGS="-Os $GEVENT_WARNFLAGS"
 else
+    echo "Compiling with -Ofast"
     export CFLAGS="-Ofast $GEVENT_WARNFLAGS"
 fi
 # Needed for clock_gettime libc support on this version. This used to be spelled with LDFLAGS,
@@ -72,6 +74,9 @@ if [ -d /gevent -a -d /opt/python ]; then
     # On Fedora Rawhide (F33)
     # yum install python39 python3-devel gcc kernel-devel kernel-headers make diffutils file
 
+    echo Current environment
+    env | sort
+
     mkdir /tmp/build
     cd /tmp/build
     git clone /gevent gevent
@@ -91,8 +96,8 @@ if [ -d /gevent -a -d /opt/python ]; then
         # The downside is that we must install dependencies manually.
         # NOTE: We can't upgrade ``wheel`` because ``auditwheel`` depends on
         # it, and auditwheel is installed in one of these environments.
-        python -mpip install -U "cython >= 3.0a5" cffi 'greenlet >= 0.4.17' setuptools
-        time (python setup.py bdist_wheel -q > /dev/null)
+        python -mpip install -U "cython >= 3.0a5" cffi 'greenlet >= 1.0a1' setuptools
+        time (python setup.py bdist_wheel)
         PATH="$OPATH" auditwheel repair dist/gevent*.whl
         cp wheelhouse/gevent*.whl /gevent/wheelhouse
 
@@ -111,6 +116,7 @@ if [ -d /gevent -a -d /opt/python ]; then
         else
             # Allow skipping the bulk of the tests. If we're emulating Arm,
             # running the whole thing takes forever.
+            # XXX: It's possible that what takes forever is actually building gevent itself.
             python -mgevent.tests.test__core
         fi
         rm -rf build

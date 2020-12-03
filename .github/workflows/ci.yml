@@ -103,7 +103,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ${{ steps.pip-cache.outputs.dir }}
-          key: ${{ runner.os }}-pip_aarch64-${{ matrix.python-version }}
+          key: ${{ runner.os }}-pip_manylinux_aarch64-${{ matrix.python-version }}
           restore-keys: |
             ${{ runner.os }}-pip-
 
@@ -472,7 +472,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ${{ steps.pip-cache.outputs.dir }}
-          key: ${{ runner.os }}-pip_x8664-${{ matrix.python-version }}
+          key: ${{ runner.os }}-pip_manylinux_x8664-${{ matrix.python-version }}
           restore-keys: |
             ${{ runner.os }}-pip-
 
