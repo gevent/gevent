@@ -439,6 +439,8 @@ jobs:
         with:
           path: wheelhouse/*whl
           name: manylinux_x86_64_wheels.zip
+      - name: Restore pip cache permissions
+        run: sudo chown -R $(whoami) ${{ steps.pip-cache.outputs.dir }}
 
   manylinux_arm64:
     runs-on: ubuntu-latest
@@ -489,6 +491,8 @@ jobs:
         with:
           path: wheelhouse/*whl
           name: manylinux_aarch64_wheels.zip
+      - name: Restore pip cache permissions
+        run: sudo chown -R $(whoami) ${{ steps.pip-cache.outputs.dir }}
 
 
 # TODO:
