@@ -47,7 +47,6 @@ export LIBS="-lrt"
 
 if [ -d /gevent -a -d /opt/python ]; then
     # Running inside docker
-    set -v
     # Set a cache directory for pip. This was
     # mounted to be the same as it is outside docker so it
     # can be persisted.
@@ -56,7 +55,8 @@ if [ -d /gevent -a -d /opt/python ]; then
     # is seen as owned by root in the container. But when the host is Linux
     # the actual UIDs come through to the container, triggering
     # pip to disable the cache when it detects that the owner doesn't match.
-    # The below is an attempt to fix that, taken frob bcrypt
+    # The below is an attempt to fix that, taken frob bcrypt. It seems to work on
+    # Github Actions.
     if [ -n "$GITHUB_ACTIONS" ]; then
         echo Adjusting pip cache permissions
         mkdir -p $XDG_CACHE_HOME/pip
@@ -65,7 +65,9 @@ if [ -d /gevent -a -d /opt/python ]; then
     ls -ld /cache
     ls -ld /cache/pip
     yum -y install libffi-devel
-    # Some images/archs (specificaly 2014_aarch64 don't have ccache)
+    # Some images/archs (specificaly 2014_aarch64) don't have ccache;
+    # This also seems to have vanished for manylinux_2010 x64/64 after November 30
+    # 2020 when the OS went EOL and the package repos switched to the "vault"
     yum -y install ccache || export CC=gcc LDSHARED="gcc -shared" LDCXXSHARED="gcc -shared"
     # On Fedora Rawhide (F33)
     # yum install python39 python3-devel gcc kernel-devel kernel-headers make diffutils file
@@ -75,7 +77,7 @@ if [ -d /gevent -a -d /opt/python ]; then
     git clone /gevent gevent
     cd gevent
     echo Configuring cares
-    time (cd deps/c-ares && ./configure --disable-dependency-tracking -C )
+    time (cd deps/c-ares && ./configure --disable-dependency-tracking -C > /dev/null )
     rm -rf /gevent/wheelhouse
     mkdir /gevent/wheelhouse
     OPATH="$PATH"
