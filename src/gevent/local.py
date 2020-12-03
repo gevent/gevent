@@ -582,7 +582,7 @@ def __new__(cls, *args, **kw):
 try:
     # PyPy2/3 and CPython handle adding a __new__ to the class
     # in different ways. In CPython and PyPy3, it must be wrapped with classmethod;
-    # in PyPy2, it must not. In either case, the args that get passed to
+    # in PyPy2 < 7.3.3, it must not. In either case, the args that get passed to
     # it are stil wrong.
     local.__new__ = 'None'
 except TypeError: # pragma: no cover
@@ -592,7 +592,13 @@ else:
     from gevent._compat import PYPY
     from gevent._compat import PY2
     if PYPY and PY2:
+        # The behaviour changed with no warning between PyPy2 7.3.2 and 7.3.3.
         local.__new__ = __new__
+        try:
+            local() # <= 7.3.2
+        except TypeError:
+            # >= 7.3.3
+            local.__new__ = classmethod(__new__)
     else:
         local.__new__ = classmethod(__new__)
 
