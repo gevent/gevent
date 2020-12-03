@@ -410,7 +410,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.ccache/
-          key: ${{ runner.os }}-ccache_manylinux-${{ matrix.python-version }}
+          key: ${{ runner.os }}-ccache_manylinux2-${{ matrix.python-version }}
       - name: Update pip
         run: pip install -U pip
       - name: Build and test gevent

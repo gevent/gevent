@@ -49,12 +49,15 @@ if [ -d /gevent -a -d /opt/python ]; then
     # pip to disable the cache when it detects that the owner doesn't match.
     # The below is an attempt to fix that, taken frob bcrypt
     if [ -n "$GITHUB_ACTIONS" ]; then
+        echo Adjusting pip cache permissions
         mkdir -p $XDG_CACHE_HOME/pip
         chown -R $(whoami) $XDG_CACHE_HOME
     fi
     ls -ld /cache
     ls -ld /cache/pip
-    yum -y install libffi-devel ccache
+    yum -y install libffi-devel
+    # Some images/archs (specificaly 2014_aarch64 don't have ccache)
+    yum -y install ccache || export CC=gcc LDSHARED="gcc -shared" LDCXXSHARED="gcc -shared"
     # On Fedora Rawhide (F33)
     # yum install python39 python3-devel gcc kernel-devel kernel-headers make diffutils file
 
@@ -63,7 +66,7 @@ if [ -d /gevent -a -d /opt/python ]; then
     git clone /gevent gevent
     cd gevent
     echo Configuring cares
-    time (cd deps/c-ares && ./configure --disable-dependency-tracking -C > /dev/null)
+    time (cd deps/c-ares && ./configure --disable-dependency-tracking -C )
     rm -rf /gevent/wheelhouse
     mkdir /gevent/wheelhouse
     OPATH="$PATH"
