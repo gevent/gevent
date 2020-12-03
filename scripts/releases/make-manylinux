@@ -113,6 +113,6 @@ if [ ! -d $HOME/.ccache ]; then
 fi
 # Travis CI and locally we want `-ti`, but github actions doesn't have a TTY, so one
 # or the other of the arguments causes this to fail with 'input device is not a TTY'
-
-docker run --rm -v "$(pwd):/gevent" -v "$LCACHE:/cache" -v "$HOME/.ccache:/ccache" ${DOCKER_IMAGE:-quay.io/pypa/manylinux2010_x86_64} /gevent/scripts/releases/$(basename $0)
+# Pas through whether we're running on github or not to help with caching.
+docker run --rm -e GITHUB_ACTIONS -v "$(pwd):/gevent" -v "$LCACHE:/cache" -v "$HOME/.ccache:/ccache" ${DOCKER_IMAGE:-quay.io/pypa/manylinux2010_x86_64} /gevent/scripts/releases/$(basename $0)
 ls -l wheelhouse

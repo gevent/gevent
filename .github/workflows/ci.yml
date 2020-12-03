@@ -417,15 +417,48 @@ jobs:
         # An alternate way to do this is to run the container directly with a uses:
         # and then the script runs inside it. That may work better with caching.
         # See https://github.com/pyca/bcrypt/blob/f6b5ee2eda76d077c531362ac65e16f045cf1f29/.github/workflows/wheel-builder.yml
-        # We used to work on 2010, trying 2014 to workaround https://github.com/pypa/manylinux/issues/836
-        # The problem with that is there is no Python 2 on that image.
+        # The 2010 image is the last one that comes with Python 2.7.
         env:
-          DOCKER_IMAGE: quay.io/pypa/manylinux2014_x86_64
+          DOCKER_IMAGE: quay.io/pypa/manylinux2010_x86_64
         run: scripts/releases/make-manylinux
       - name: Upload gevent wheels
         uses: actions/upload-artifact@v2
         with:
           path: wheelhouse/*whl
+          name: manylinux_x86_64_wheels.zip
+  manylinux_arm64:
+    runs-on: ubuntu-latest
+    # We use a regular Python matrix entry to share as much code as possible.
+    strategy:
+      matrix:
+        python-version: [3.9]
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Cache ~/.ccache
+        uses: actions/cache@v2
+        with:
+          path: ~/.ccache/
+          key: ${{ runner.os }}-ccache_manylinux-${{ matrix.python-version }}
+      - name: Update pip
+        run: pip install -U pip
+      - name: Enable emulation
+        run: |
+          docker run --rm --privileged hypriot/qemu-register
+      - name: Build and test gevent
+        env:
+          DOCKER_IMAGE: quay.io/pypa/manylinux2014_aarch64
+        run: scripts/releases/make-manylinux
+      - name: Upload gevent wheels
+        uses: actions/upload-artifact@v2
+        with:
+          path: wheelhouse/*whl
+          name: manylinux_x86_64_wheels.zip
 
 
 # TODO:
