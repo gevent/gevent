@@ -2,18 +2,18 @@
  Continuous integration
 ========================
 
-A test suite is run for every push and pull request submitted. Travis
+A test suite is run for every push and pull request submitted. Github Actions
 CI is used to test on Linux and macOS, and `AppVeyor`_ runs the builds on
 Windows.
 
-.. image:: https://travis-ci.org/gevent/gevent.svg?branch=master
-   :target: https://travis-ci.org/gevent/gevent
+.. image:: https://github.com/gevent/gevent/workflows/gevent%20testing/badge.svg
+   :target: https://github.com/gevent/gevent/actions
 
 .. image:: https://ci.appveyor.com/api/projects/status/q4kl21ng2yo2ixur?svg=true
    :target: https://ci.appveyor.com/project/denik/gevent
 
 
-Builds on Travis CI automatically submit updates to `coveralls.io`_ to
+Builds on Github Actions CI automatically submit updates to `coveralls.io`_ to
 monitor test coverage.
 
 .. image:: https://coveralls.io/repos/gevent/gevent/badge.svg?branch=master&service=github

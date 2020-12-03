@@ -2,8 +2,8 @@
  gevent
 ========
 
-.. image:: https://travis-ci.org/gevent/gevent.svg?branch=master
-   :target: https://travis-ci.org/gevent/gevent
+.. image:: https://github.com/gevent/gevent/workflows/gevent%20testing/badge.svg
+   :target: https://github.com/gevent/gevent/actions
 
 .. image:: https://ci.appveyor.com/api/projects/status/bqxl88yhpho223jg?svg=true
    :target: https://ci.appveyor.com/project/denik/gevent

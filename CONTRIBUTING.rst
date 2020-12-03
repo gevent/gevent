@@ -22,25 +22,25 @@ cases, see `the development documentation
 There are a number of systems in place to help ensure gevent is of the
 highest possible quality:
 
-- A test suite is run for every push and pull request submitted. Travis
-  CI is used to test on Linux and macOS, and `AppVeyor`_ runs the builds on
+- A test suite is run for every push and pull request submitted.
+  Github Actions is used to test on Linux and macOS, and `AppVeyor`_ runs the builds on
   Windows. Pull requests with tests that don't pass will be
   automatically failed.
 
-  .. image:: https://travis-ci.org/gevent/gevent.svg?branch=master
-     :target: https://travis-ci.org/gevent/gevent
+.. image:: https://github.com/gevent/gevent/workflows/gevent%20testing/badge.svg
+   :target: https://github.com/gevent/gevent/actions
 
   .. image:: https://ci.appveyor.com/api/projects/status/q4kl21ng2yo2ixur?svg=true
      :target: https://ci.appveyor.com/project/denik/gevent
 
-- Builds on Travis CI automatically submit updates to `coveralls.io`_ to
+- Builds on Github Actions automatically submit updates to `coveralls.io`_ to
   monitor test coverage. Pull requests that don't feature adequate test
   coverage will be automatically failed.
 
   .. image:: https://coveralls.io/repos/gevent/gevent/badge.svg?branch=master&service=github
      :target: https://coveralls.io/github/gevent/gevent?branch=master
 
-- Travis CI builds also run `pylint
+- Github Actions builds also run `pylint
   <https://pylint.readthedocs.io/en/latest/>`_ to enforce code quality
   conventions (PEP8 compliance and the like).
 

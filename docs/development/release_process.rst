@@ -48,7 +48,7 @@ Releasing gevent
 
 gevent is released using `zest.releaser
 <https://pypi.org/project/zest.releaser/>`_. Binary wheels are
-published automatically by Travis CI (macOS and manylinux) and
+published automatically by Github Actions CI (macOS and manylinux) and
 Appveyor (Windows) when a tag is uploaded.
 
 

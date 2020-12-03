@@ -36,9 +36,10 @@ export CCACHE_DIR="/ccache"
 GEVENT_WARNFLAGS="-pipe -Wno-strict-aliasing -Wno-comment -Wno-unused-value -Wno-unused-but-set-variable -Wno-sign-compare -Wno-parentheses -Wno-unused-function -Wno-tautological-compare -Wno-strict-prototypes -Wno-return-type -Wno-misleading-indentation"
 export CFLAGS="$GEVENT_WARNFLAGS"
 if [ "$DOCKER_IMAGE" == "quay.io/pypa/manylinux2014_aarch64" -a -n "$GITHUB_ACTIONS" ]; then
-    # Compiling with -Ofast on the arm emulator takes hours.
-    echo "Compiling with -Os"
-    export CFLAGS="-Os $GEVENT_WARNFLAGS"
+    # Compiling with -Ofast on the arm emulator takes hours. The default settings have -O3,
+    # and adding -Os doesn't help much. So maybe -O1 will.
+    echo "Compiling with -O1"
+    export CFLAGS="-O1 $GEVENT_WARNFLAGS"
 else
     echo "Compiling with -Ofast"
     export CFLAGS="-Ofast $GEVENT_WARNFLAGS"
@@ -87,7 +88,7 @@ if [ -d /gevent -a -d /opt/python ]; then
     mkdir /gevent/wheelhouse
     OPATH="$PATH"
     which auditwheel
-    for variant in `ls -d /opt/python/cp{27,35,36,37,38,39}*`; do
+    for variant in `ls -d /opt/python/cp{27,36,37,38,39}*`; do
         export PATH="$variant/bin:$OPATH"
         echo "Building $variant $(python --version)"
 

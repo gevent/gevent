@@ -87,7 +87,7 @@ Using tox
 
 Before submitting a pull request, it's a good idea to run the tests
 across all supported versions of Python, and to check the code quality
-using prospector. This is what is done on Travis CI. Locally it
+using prospector/pylint. This is what is done on CI. Locally it
 can be done using tox::
 
   pip install tox
