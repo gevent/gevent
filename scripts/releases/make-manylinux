@@ -33,12 +33,21 @@ export BUILD_LIBS=$HOME/.libs
 export CCACHE_DIR="/ccache"
 # Disable some warnings produced by libev especially and also some Cython generated code.
 # Note that changing the value of these variables invalidates configure caches
-export CFLAGS="-Ofast -pipe -Wno-strict-aliasing -Wno-comment -Wno-unused-value -Wno-unused-but-set-variable -Wno-sign-compare -Wno-parentheses -Wno-unused-function -Wno-tautological-compare -Wno-strict-prototypes"
-export LDFLAGS="-lrt" # Needed for clock_gettime libc support on this version.
+GEVENT_WARNFLAGS="-pipe -Wno-strict-aliasing -Wno-comment -Wno-unused-value -Wno-unused-but-set-variable -Wno-sign-compare -Wno-parentheses -Wno-unused-function -Wno-tautological-compare -Wno-strict-prototypes"
+export CFLAGS="$GEVENT_WARNFLAGS"
+if [ "$DOCKER_IMAGE" == "quay.io/pypa/manylinux2014_aarch64" -a -n "$GITHUB_ACTIONS" ]; then
+    # Compiling with -Ofast on the arm emulator takes hours.
+    export CFLAGS="$GEVENT_WARNFLAGS"
+else
+    export CFLAGS="-Ofast $GEVENT_WARNFLAGS"
+fi
+# Needed for clock_gettime libc support on this version. This used to be spelled with LDFLAGS,
+# but that is deprecated and produces a warning.
+export LIBS="-lrt"
 
 if [ -d /gevent -a -d /opt/python ]; then
     # Running inside docker
-    env | sort
+    set -v
     # Set a cache directory for pip. This was
     # mounted to be the same as it is outside docker so it
     # can be persisted.
@@ -93,12 +102,20 @@ if [ -d /gevent -a -d /opt/python ]; then
         python -c 'from __future__ import print_function; import gevent.core; print("loop", gevent.core.loop)'
         python -c 'from __future__ import print_function; import gevent.ares; print("ares", gevent.ares)'
 
-        python -mgevent.tests
+        if [ -z "$GEVENTTEST_SKIP_ALL" ]; then
+            # TODO: Make the testrunner automatically repeat flaky tests.
+            # See the github action.
+            python -mgevent.tests || python -m gevent.tests
+        else
+            # Allow skipping the bulk of the tests. If we're emulating Arm,
+            # running the whole thing takes forever.
+            python -mgevent.tests.test__core
+        fi
         rm -rf build
         rm -f dist/gevent*.whl
-        ccache -s
+        ccache -s || true
     done
-    ccache -s
+    ccache -s || true
     exit 0
 fi
 
@@ -117,5 +134,5 @@ fi
 # Travis CI and locally we want `-ti`, but github actions doesn't have a TTY, so one
 # or the other of the arguments causes this to fail with 'input device is not a TTY'
 # Pas through whether we're running on github or not to help with caching.
-docker run --rm -e GITHUB_ACTIONS -v "$(pwd):/gevent" -v "$LCACHE:/cache" -v "$HOME/.ccache:/ccache" ${DOCKER_IMAGE:-quay.io/pypa/manylinux2010_x86_64} /gevent/scripts/releases/$(basename $0)
+docker run --rm -e GITHUB_ACTIONS -e GEVENTTEST_SKIP_ALL -e DOCKER_IMAGE -v "$(pwd):/gevent" -v "$LCACHE:/cache" -v "$HOME/.ccache:/ccache" ${DOCKER_IMAGE:-quay.io/pypa/manylinux2010_x86_64} /gevent/scripts/releases/$(basename $0)
 ls -l wheelhouse

@@ -216,7 +216,7 @@ jobs:
       - name: "Tests: Basic"
         # Run them twice if they fail; this is to workaround the inability to re-run
         # single jobs. Ideally the testrunner should be updated to do this for just failing
-        # tests.
+        # tests. See also make-manylinux.
         run: |
           python -m gevent.tests $G_USE_COV || python -m gevent.tests
       # For the CPython interpreters, unless we have reason to expect
@@ -235,7 +235,7 @@ jobs:
         run: |
           python -m gevent.tests $G_USE_COV `(cd src/gevent/tests >/dev/null && ls test__*subprocess*.py)`
       - name: "Tests: c-ares resolver"
-        # This sometimes falis on mac. Also, save mac minutes.
+        # This sometimes fails on mac. Also, save mac minutes.
         if: (matrix.python-version == 2.7 || matrix.python-version == 3.9) && startsWith(runner.os, 'Linux')
         env:
           GEVENT_RESOLVER: ares
@@ -411,6 +411,19 @@ jobs:
         with:
           path: ~/.ccache/
           key: ${{ runner.os }}-ccache_manylinux2-${{ matrix.python-version }}
+      - name: Get pip cache dir
+        id: pip-cache
+        run: |
+          echo "::set-output name=dir::$(pip cache dir)"
+
+      - name: pip cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.pip-cache.outputs.dir }}
+          key: ${{ runner.os }}-pip_x8664-${{ matrix.python-version }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
       - name: Update pip
         run: pip install -U pip
       - name: Build and test gevent
@@ -426,6 +439,7 @@ jobs:
         with:
           path: wheelhouse/*whl
           name: manylinux_x86_64_wheels.zip
+
   manylinux_arm64:
     runs-on: ubuntu-latest
     # We use a regular Python matrix entry to share as much code as possible.
@@ -445,20 +459,36 @@ jobs:
         with:
           path: ~/.ccache/
           key: ${{ runner.os }}-ccache_manylinux-${{ matrix.python-version }}
+      - name: Get pip cache dir
+        id: pip-cache
+        run: |
+          echo "::set-output name=dir::$(pip cache dir)"
+
+      - name: pip cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.pip-cache.outputs.dir }}
+          key: ${{ runner.os }}-pip_aarch64-${{ matrix.python-version }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
       - name: Update pip
         run: pip install -U pip
       - name: Enable emulation
         run: |
           docker run --rm --privileged hypriot/qemu-register
       - name: Build and test gevent
+        # Skip the bulk of the tests, running them emulated on arm takes
+        # forever
         env:
           DOCKER_IMAGE: quay.io/pypa/manylinux2014_aarch64
+          GEVENTTEST_SKIP_ALL: 1
         run: scripts/releases/make-manylinux
       - name: Upload gevent wheels
         uses: actions/upload-artifact@v2
         with:
           path: wheelhouse/*whl
-          name: manylinux_x86_64_wheels.zip
+          name: manylinux_aarch64_wheels.zip
 
 
 # TODO:
