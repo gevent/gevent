@@ -75,6 +75,58 @@ env:
 
 
 jobs:
+  manylinux_arm64:
+    runs-on: ubuntu-latest
+    # We use a regular Python matrix entry to share as much code as possible.
+    strategy:
+      matrix:
+        python-version: [3.9]
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Cache ~/.ccache
+        uses: actions/cache@v2
+        with:
+          path: ~/.ccache/
+          key: ${{ runner.os }}-ccache_manylinux-${{ matrix.python-version }}
+      - name: Get pip cache dir
+        id: pip-cache
+        run: |
+          echo "::set-output name=dir::$(pip cache dir)"
+
+      - name: pip cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.pip-cache.outputs.dir }}
+          key: ${{ runner.os }}-pip_aarch64-${{ matrix.python-version }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Update pip
+        run: pip install -U pip
+      - name: Enable emulation
+        run: |
+          docker run --rm --privileged hypriot/qemu-register
+      - name: Build and test gevent
+        # Skip the bulk of the tests, running them emulated on arm takes
+        # forever
+        env:
+          DOCKER_IMAGE: quay.io/pypa/manylinux2014_aarch64
+          GEVENTTEST_SKIP_ALL: 1
+        run: scripts/releases/make-manylinux
+      - name: Upload gevent wheels
+        uses: actions/upload-artifact@v2
+        with:
+          path: wheelhouse/*whl
+          name: manylinux_aarch64_wheels.zip
+      - name: Restore pip cache permissions
+        run: sudo chown -R $(whoami) ${{ steps.pip-cache.outputs.dir }}
+
   test:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -439,58 +491,6 @@ jobs:
         with:
           path: wheelhouse/*whl
           name: manylinux_x86_64_wheels.zip
-      - name: Restore pip cache permissions
-        run: sudo chown -R $(whoami) ${{ steps.pip-cache.outputs.dir }}
-
-  manylinux_arm64:
-    runs-on: ubuntu-latest
-    # We use a regular Python matrix entry to share as much code as possible.
-    strategy:
-      matrix:
-        python-version: [3.9]
-
-    steps:
-      - name: checkout
-        uses: actions/checkout@v2
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Cache ~/.ccache
-        uses: actions/cache@v2
-        with:
-          path: ~/.ccache/
-          key: ${{ runner.os }}-ccache_manylinux-${{ matrix.python-version }}
-      - name: Get pip cache dir
-        id: pip-cache
-        run: |
-          echo "::set-output name=dir::$(pip cache dir)"
-
-      - name: pip cache
-        uses: actions/cache@v2
-        with:
-          path: ${{ steps.pip-cache.outputs.dir }}
-          key: ${{ runner.os }}-pip_aarch64-${{ matrix.python-version }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Update pip
-        run: pip install -U pip
-      - name: Enable emulation
-        run: |
-          docker run --rm --privileged hypriot/qemu-register
-      - name: Build and test gevent
-        # Skip the bulk of the tests, running them emulated on arm takes
-        # forever
-        env:
-          DOCKER_IMAGE: quay.io/pypa/manylinux2014_aarch64
-          GEVENTTEST_SKIP_ALL: 1
-        run: scripts/releases/make-manylinux
-      - name: Upload gevent wheels
-        uses: actions/upload-artifact@v2
-        with:
-          path: wheelhouse/*whl
-          name: manylinux_aarch64_wheels.zip
       - name: Restore pip cache permissions
         run: sudo chown -R $(whoami) ${{ steps.pip-cache.outputs.dir }}
 
