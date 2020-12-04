@@ -102,11 +102,15 @@ class _InvalidClientInput(IOError):
 
 
 class _InvalidClientRequest(ValueError):
-    # Internal exception raised by WSGIHandler.read_request
-    # indicating that the client sent an HTTP request that cannot
-    # be parsed (e.g., invalid grammar). The result *should* be an
-    # HTTP 400 error
-    pass
+    # Internal exception raised by WSGIHandler.read_request indicating
+    # that the client sent an HTTP request that cannot be parsed
+    # (e.g., invalid grammar). The result *should* be an HTTP 400
+    # error. It must have exactly one argument, the fully formatted
+    # error string.
+
+    def __init__(self, message):
+        ValueError.__init__(self, message)
+        self.formatted_message = message
 
 
 class Input(object):
@@ -564,12 +568,20 @@ class WSGIHandler(object):
 
         return True
 
+    _print_unexpected_exc = staticmethod(traceback.print_exc)
+
     def log_error(self, msg, *args):
-        try:
-            message = msg % args
-        except Exception: # pylint:disable=broad-except
-            traceback.print_exc()
-            message = '%r %r' % (msg, args)
+        if not args:
+            # Already fully formatted, no need to do it again; msg
+            # might contain % chars that would lead to a formatting
+            # error.
+            message = msg
+        else:
+            try:
+                message = msg % args
+            except Exception: # pylint:disable=broad-except
+                self._print_unexpected_exc()
+                message = '%r %r' % (msg, args)
         try:
             message = '%s: %s' % (self.socket, message)
         except Exception: # pylint:disable=broad-except
@@ -578,7 +590,7 @@ class WSGIHandler(object):
         try:
             self.server.error_log.write(message + '\n')
         except Exception: # pylint:disable=broad-except
-            traceback.print_exc()
+            self._print_unexpected_exc()
 
     def read_requestline(self):
         """
@@ -1030,9 +1042,10 @@ class WSGIHandler(object):
             # handle_error method?
             traceback.print_exc()
         if isinstance(ex, _InvalidClientRequest):
-            # These come with good error messages, and we want to let
-            # log_error deal with the formatting, especially to handle encoding
-            self.log_error(*ex.args)
+            # No formatting needed, that's already been handled. In fact, because the
+            # formatted message contains user input, it might have a % in it, and attempting
+            # to format that with no arguments would be an error.
+            self.log_error(ex.formatted_message)
         else:
             self.log_error('Invalid request: %s', str(ex) or ex.__class__.__name__)
         return ('400', _BAD_REQUEST_RESPONSE)

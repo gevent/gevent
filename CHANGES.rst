@@ -19,7 +19,7 @@ Features
 
   On Linux, this can reduce the number of system calls libev makes.
   Originally provided by Josh Snyder.
-  See :issue:`issue1648`.
+  See :issue:`1648`.
 
 
 Bugfixes
@@ -31,7 +31,7 @@ Bugfixes
   On Python 3.7 and above, the module ``gevent.contextvars`` is no
   longer monkey-patched into the standard library. contextvars are now
   both greenlet and asyncio task local. See :issue:`1656`.
-  See :issue:`issue1674`.
+  See :issue:`1674`.
 - The ``DummyThread`` objects created automatically by certain
   operations when the standard library threading module is
   monkey-patched now match the naming convention the standard library
@@ -43,6 +43,7 @@ Bugfixes
   .. caution:: This currently means that it can be imported. But it
                cannot yet be used. gevent has a pinned dependency on
                dnspython < 2 for now.
+
   See :issue:`1661`.
 
 
@@ -64,7 +65,7 @@ Features
   unknown, and this may bitrot in future releases.
 
   Thanks to berkakinci for the patch.
-  See :issue:`issue1645`.
+  See :issue:`1645`.
 
 
 Bugfixes
@@ -74,7 +75,7 @@ Bugfixes
 
   Previously it was pinned to 5.6.3 for PyPy2, except for on Windows,
   where it was excluded. It is now treated the same as CPython again.
-  See :issue:`issue1643`.
+  See :issue:`1643`.
 
 
 ----
@@ -97,7 +98,7 @@ Bugfixes
 
 - On Python 2, the dnspython resolver can be used without having
   selectors2 installed. Previously, an ImportError would be raised.
-  See :issue:`issue1641`.
+  See :issue:`1641`.
 - Python 3 ``gevent.ssl.SSLSocket`` objects no longer attempt to catch
   ``ConnectionResetError`` and treat it the same as an ``SSLError`` with
   ``SSL_ERROR_EOF`` (typically by suppressing it).
@@ -222,7 +223,7 @@ Bugfixes
   Also, the underlying Semaphore always behaves in an atomic fashion (as
   if the GIL was not released) when PURE_PYTHON is set. Previously, it
   only correctly did so on PyPy.
-  See :issue:`issue1437`.
+  See :issue:`1437`.
 - Rename gevent's C accelerator extension modules using a prefix to
   avoid clashing with other C extensions.
   See :issue:`1480`.
