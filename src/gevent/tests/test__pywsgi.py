@@ -1019,7 +1019,7 @@ class TestInputN(TestCase):
         self.urlopen()
 
 
-class TestError(TestCase):
+class TestErrorInApplication(TestCase):
 
     error = object()
     error_fatal = False
@@ -1034,7 +1034,7 @@ class TestError(TestCase):
         self.assert_error(greentest.ExpectedException, self.error)
 
 
-class TestError_after_start_response(TestError):
+class TestError_after_start_response(TestErrorInApplication):
 
     def application(self, env, start_response):
         self.error = greentest.ExpectedException('TestError_after_start_response.application')
@@ -1175,6 +1175,12 @@ class BadRequestTests(TestCase):
     # pywsgi checks content-length, but wsgi does not
     content_length = None
 
+    assert TestCase.handler_class._print_unexpected_exc
+
+    class handler_class(TestCase.handler_class):
+        def _print_unexpected_exc(self):
+            raise AssertionError("Should not print a traceback")
+
     def application(self, env, start_response):
         self.assertEqual(env['CONTENT_LENGTH'], self.content_length)
         start_response('200 OK', [('Content-Type', 'text/plain')])
@@ -1191,6 +1197,15 @@ class BadRequestTests(TestCase):
         with self.makefile() as fd:
             fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nContent-Length: %s\r\n\r\n' % self.content_length)
             read_http(fd, code=(200, 400))
+
+    def test_bad_request_line_with_percent(self):
+        # If the request is invalid and contains Python formatting characters (%)
+        # we don't fail to log the error and we do generate a 400.
+        # https://github.com/gevent/gevent/issues/1708
+        bad_request = 'GET / HTTP %\r\n'
+        with self.makefile() as fd:
+            fd.write(bad_request)
+            read_http(fd, code=400)
 
 
 class ChunkedInputTests(TestCase):
