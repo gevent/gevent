@@ -47,7 +47,7 @@ extensions = [
     'sphinxcontrib.programoutput',
 
     # Ours
-    'mysphinxext',
+
 ]
 
 intersphinx_mapping = {
