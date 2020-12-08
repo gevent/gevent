@@ -11,6 +11,10 @@ import unittest
 import gevent
 from gevent import fileobject
 from gevent._fileobjectcommon import OpenDescriptor
+try:
+    from gevent._fileobjectposix import GreenOpenDescriptor
+except ImportError:
+    GreenOpenDescriptor = None
 
 from gevent._compat import PY2
 from gevent._compat import PY3
@@ -387,8 +391,11 @@ class TestTextMode(unittest.TestCase):
 
 class TestOpenDescriptor(greentest.TestCase):
 
+    def _getTargetClass(self):
+        return OpenDescriptor
+
     def _makeOne(self, *args, **kwargs):
-        return OpenDescriptor(*args, **kwargs)
+        return self._getTargetClass()(*args, **kwargs)
 
     def _check(self, regex, kind, *args, **kwargs):
         with self.assertRaisesRegex(kind, regex):
@@ -411,13 +418,32 @@ class TestOpenDescriptor(greentest.TestCase):
         vase('take a newline', mode='rb', newline='\n'),
     )
 
+    def test_atomicwrite_fd(self):
+        from gevent._fileobjectcommon import WriteallMixin
+        # It basically only does something when buffering is otherwise disabled
+        desc = self._makeOne(1, 'wb',
+                             buffering=0,
+                             closefd=False,
+                             atomic_write=True)
+        self.assertTrue(desc.atomic_write)
+
+        fobj = desc.opened()
+        self.assertIsInstance(fobj, WriteallMixin)
+
 def pop():
     for regex, kind, kwargs in TestOpenDescriptor.CASES:
         setattr(
-            TestOpenDescriptor, 'test_' + regex,
+            TestOpenDescriptor, 'test_' + regex.replace(' ', '_'),
             lambda self, _re=regex, _kind=kind, _kw=kwargs: self._check(_re, _kind, 1, **_kw)
         )
 pop()
+
+@unittest.skipIf(GreenOpenDescriptor is None, "No support for non-blocking IO")
+class TestGreenOpenDescripton(TestOpenDescriptor):
+    def _getTargetClass(self):
+        return GreenOpenDescriptor
+
+
 
 
 if __name__ == '__main__':

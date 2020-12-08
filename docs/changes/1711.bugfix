@@ -1,0 +1,6 @@
+Python 2: Make ``gevent.subprocess.Popen.stdin`` objects have a
+``write`` method that guarantees to write the entire argument in
+binary, unbuffered mode. This may require multiple trips around the
+event loop, but more closely matches the behaviour of the Python 2
+standard library (and gevent prior to 1.5). The number of bytes
+written is still returned (instead of ``None``).

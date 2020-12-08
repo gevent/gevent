@@ -70,12 +70,54 @@ class UniversalNewlineBytesWrapper(io.TextIOWrapper):
 
     next = __next__
 
+
 class FlushingBufferedWriter(io.BufferedWriter):
 
     def write(self, b):
         ret = io.BufferedWriter.write(self, b)
         self.flush()
         return ret
+
+
+class WriteallMixin(object):
+
+    def writeall(self, value):
+        """
+        Similar to :meth:`socket.socket.sendall`, ensures that all the contents of
+        *value* have been written (though not necessarily flushed) before returning.
+
+        Returns the length of *value*.
+
+        .. versionadded:: NEXT
+        """
+        # Do we need to play the same get_memory games we do with sockets?
+        # And what about chunking for large values? See _socketcommon.py
+        write = super(WriteallMixin, self).write
+
+        total = len(value)
+        while value:
+            l = len(value)
+            w = write(value)
+            if w == l:
+                break
+            value = value[w:]
+        return total
+
+
+class FileIO(io.FileIO):
+    """A subclass that we can dynamically assign __class__ for."""
+    __slots__ = ()
+
+
+class WriteIsWriteallMixin(WriteallMixin):
+
+    def write(self, value):
+        return self.writeall(value)
+
+
+class WriteallFileIO(WriteIsWriteallMixin, io.FileIO):
+    pass
+
 
 class OpenDescriptor(object): # pylint:disable=too-many-instance-attributes
     """
@@ -87,25 +129,40 @@ class OpenDescriptor(object): # pylint:disable=too-many-instance-attributes
     - Native strings are returned on Python 2 when neither
       'b' nor 't' are in the mode string and no encoding is specified.
     - Universal newlines work in that mode.
-    - Allows unbuffered text IO.
+    - Allows externally unbuffered text IO.
+
+    :keyword bool atomic_write: If true, then if the opened, wrapped, stream
+        is unbuffered (meaning that ``write`` can produce short writes and the return
+        value needs to be checked), then the implementation will be adjusted so that
+        ``write`` behaves like Python 2 on a built-in file object and writes the
+        entire value. Only set this on Python 2; the only intended user is
+        :class:`gevent.subprocess.Popen`.
     """
 
     @staticmethod
-    def _collapse_arg(preferred_val, old_val, default):
+    def _collapse_arg(pref_name, preferred_val, old_name, old_val, default):
+        # We could play tricks with the callers ``locals()`` to avoid having to specify
+        # the name (which we only use for error handling) but ``locals()`` may be slow and
+        # inhibit JIT (on PyPy), so we just write it out long hand.
         if preferred_val is not None and old_val is not None:
-            raise TypeError
+            raise TypeError("Cannot specify both %s=%s and %s=%s" % (
+                pref_name, preferred_val,
+                old_name, old_val
+            ))
         if preferred_val is None and old_val is None:
             return default
         return preferred_val if preferred_val is not None else old_val
 
     def __init__(self, fobj, mode='r', bufsize=None, close=None,
                  encoding=None, errors=None, newline=None,
-                 buffering=None, closefd=None):
+                 buffering=None, closefd=None,
+                 atomic_write=False):
         # Based on code in the stdlib's _pyio.py from 3.8.
         # pylint:disable=too-many-locals,too-many-branches,too-many-statements
-        closefd = self._collapse_arg(closefd, close, True)
+
+        closefd = self._collapse_arg('closefd', closefd, 'close', close, True)
         del close
-        buffering = self._collapse_arg(buffering, bufsize, -1)
+        buffering = self._collapse_arg('buffering', buffering, 'bufsize', bufsize, -1)
         del bufsize
 
         if not hasattr(fobj, 'fileno'):
@@ -168,7 +225,7 @@ class OpenDescriptor(object): # pylint:disable=too-many-instance-attributes
                           "mode, the default buffer size will be used",
                           RuntimeWarning, 4)
 
-        self.fobj = fobj
+        self._fobj = fobj
         self.fileio_mode = (
             (creating and "x" or "")
             + (reading and "r" or "")
@@ -198,34 +255,124 @@ class OpenDescriptor(object): # pylint:disable=too-many-instance-attributes
         self.errors = errors
         self.newline = newline
         self.closefd = closefd
+        self.atomic_write = atomic_write
 
     default_buffer_size = io.DEFAULT_BUFFER_SIZE
 
+    _opened = None
+    _opened_raw = None
+
     def is_fd(self):
-        return isinstance(self.fobj, integer_types)
+        return isinstance(self._fobj, integer_types)
 
-    def open(self):
-        return self.open_raw_and_wrapped()[1]
+    def opened(self):
+        """
+        Return the :meth:`wrapped` file object.
+        """
+        if self._opened is None:
+            raw = self.opened_raw()
+            try:
+                self._opened = self.__wrapped(raw)
+            except:
+                # XXX: This might be a bug? Could we wind up closing
+                # something we shouldn't close?
+                raw.close()
+                raise
+        return self._opened
 
-    def open_raw_and_wrapped(self):
-        raw = self.open_raw()
+    def _raw_object_is_new(self, raw):
+        return self._fobj is not raw
+
+    def opened_raw(self):
+        if self._opened_raw is None:
+            self._opened_raw = self._do_open_raw()
+        return self._opened_raw
+
+    def _do_open_raw(self):
+        if hasattr(self._fobj, 'fileno'):
+            return self._fobj
+        # io.FileIO doesn't allow assigning to its __class__,
+        # and we can't know for sure here whether we need the atomic write()
+        # method or not (it depends on the layers on top of us),
+        # so we use a subclass that *does* allow assigning.
+        return FileIO(self._fobj, self.fileio_mode, self.closefd)
+
+    @staticmethod
+    def is_buffered(stream):
+        return (
+            # buffering happens internally in the text codecs
+            isinstance(stream, (io.BufferedIOBase, io.TextIOBase))
+            or (hasattr(stream, 'buffer') and stream.buffer is not None)
+        )
+
+    @classmethod
+    def buffer_size_for_stream(cls, stream):
+        result = cls.default_buffer_size
         try:
-            return raw, self.wrapped(raw)
-        except:
-            raw.close()
-            raise
+            bs = os.fstat(stream.fileno()).st_blksize
+        except (OSError, AttributeError):
+            pass
+        else:
+            if bs > 1:
+                result = bs
+        return result
 
-    def open_raw(self):
-        if hasattr(self.fobj, 'fileno'):
-            return self.fobj
-        return io.FileIO(self.fobj, self.fileio_mode, self.closefd)
+    def __buffered(self, stream, buffering):
+        if self.updating:
+            Buffer = io.BufferedRandom
+        elif self.creating or self.writing or self.appending:
+            Buffer = io.BufferedWriter
+        elif self.reading:
+            Buffer = io.BufferedReader
+        else: # prgama: no cover
+            raise ValueError("unknown mode: %r" % self.mode)
 
-    def wrapped(self, raw):
+        try:
+            result = Buffer(stream, buffering)
+        except AttributeError:
+            # Python 2 file() objects don't have the readable/writable
+            # attributes. But they handle their own buffering.
+            result = stream
+
+        return result
+
+    def _make_atomic_write(self, result, raw):
+        # The idea was to swizzle the class with one that defines
+        # write() to call writeall(). This avoids setting any
+        # attribute on the return object, avoids an additional layer
+        # of proxying, and avoids any reference cycles (if setting a
+        # method on the object).
+        #
+        # However, this is not possible with the built-in io classes
+        # (static types defined in C cannot have __class__ assigned).
+        # Fortunately, we need this only for the specific case of
+        # opening a file descriptor (subprocess.py) on Python 2, in
+        # which we fully control the types involved.
+        #
+        # So rather than attempt that, we only implement exactly what we need.
+        if result is not raw or self._raw_object_is_new(raw):
+            if result.__class__ is FileIO:
+                result.__class__ = WriteallFileIO
+            else: # pragma: no cover
+                raise NotImplementedError(
+                    "Don't know how to make %s have atomic write. "
+                    "Please open a gevent issue with your use-case." % (
+                        result
+                    )
+                )
+        return result
+
+    def __wrapped(self, raw):
         """
         Wraps the raw IO object (`RawIOBase` or `io.TextIOBase`) in
         buffers, text decoding, and newline handling.
         """
-        # pylint:disable=too-many-branches
+        if self.binary and isinstance(raw, io.TextIOBase):
+            # Can't do it. The TextIO object will have its own buffer, and
+            # trying to read from the raw stream or the buffer without going through
+            # the TextIO object is likely to lead to problems with the codec.
+            raise ValueError("Unable to perform binary IO on top of text IO stream")
+
         result = raw
         buffering = self.buffering
 
@@ -234,61 +381,32 @@ class OpenDescriptor(object): # pylint:disable=too-many-instance-attributes
             buffering = -1
             line_buffering = True
         if buffering < 0:
-            buffering = self.default_buffer_size
-            try:
-                bs = os.fstat(raw.fileno()).st_blksize
-            except (OSError, AttributeError):
-                pass
-            else:
-                if bs > 1:
-                    buffering = bs
+            buffering = self.buffer_size_for_stream(result)
+
         if buffering < 0: # pragma: no cover
             raise ValueError("invalid buffering size")
 
-        if not isinstance(raw, io.BufferedIOBase) and \
-           (not hasattr(raw, 'buffer') or raw.buffer is None):
+        if buffering != 0 and not self.is_buffered(result):
             # Need to wrap our own buffering around it. If it
             # is already buffered, don't do so.
-            if buffering != 0:
-                if self.updating:
-                    Buffer = io.BufferedRandom
-                elif self.creating or self.writing or self.appending:
-                    Buffer = io.BufferedWriter
-                elif self.reading:
-                    Buffer = io.BufferedReader
-                else: # prgama: no cover
-                    raise ValueError("unknown mode: %r" % self.mode)
+            result = self.__buffered(result, buffering)
 
-                try:
-                    result = Buffer(raw, buffering)
-                except AttributeError:
-                    # Python 2 file() objects don't have the readable/writable
-                    # attributes. But they handle their own buffering.
-                    result = raw
+        if not self.binary:
+            # Either native or text at this point.
+            if PY2 and self.native:
+                # Neither text mode nor binary mode specified.
+                if self.universal:
+                    # universal was requested, e.g., 'rU'
+                    result = UniversalNewlineBytesWrapper(result, line_buffering)
+            else:
+                # Python 2 and text mode, or Python 3 and either text or native (both are the same)
+                if not isinstance(raw, io.TextIOBase):
+                    # Avoid double-wrapping a TextIOBase in another TextIOWrapper.
+                    # That tends not to work. See https://github.com/gevent/gevent/issues/1542
+                    result = io.TextIOWrapper(result, self.encoding, self.errors, self.newline,
+                                              line_buffering)
 
-        if self.binary:
-            if isinstance(raw, io.TextIOBase):
-                # Can't do it. The TextIO object will have its own buffer, and
-                # trying to read from the raw stream or the buffer without going through
-                # the TextIO object is likely to lead to problems with the codec.
-                raise ValueError("Unable to perform binary IO on top of text IO stream")
-            return result
-
-        # Either native or text at this point.
-        if PY2 and self.native:
-            # Neither text mode nor binary mode specified.
-            if self.universal:
-                # universal was requested, e.g., 'rU'
-                result = UniversalNewlineBytesWrapper(result, line_buffering)
-        else:
-            # Python 2 and text mode, or Python 3 and either text or native (both are the same)
-            if not isinstance(raw, io.TextIOBase):
-                # Avoid double-wrapping a TextIOBase in another TextIOWrapper.
-                # That tends not to work. See https://github.com/gevent/gevent/issues/1542
-                result = io.TextIOWrapper(result, self.encoding, self.errors, self.newline,
-                                          line_buffering)
-
-        if result is not raw:
+        if result is not raw or self._raw_object_is_new(raw):
             # Set the mode, if possible, but only if we created a new
             # object.
             try:
@@ -297,6 +415,15 @@ class OpenDescriptor(object): # pylint:disable=too-many-instance-attributes
                 # AttributeError: No such attribute
                 # TypeError: Readonly attribute (py2)
                 pass
+
+        if (
+                self.atomic_write
+                and not self.is_buffered(result)
+                and not isinstance(result, WriteIsWriteallMixin)
+        ):
+            # Let subclasses have a say in how they make this atomic, and
+            # whether or not they do so even if we're actually returning the raw object.
+            result = self._make_atomic_write(result, raw)
 
         return result
 
@@ -326,8 +453,12 @@ class FileObjectBase(object):
         'readlines',
         'read1',
 
-        # Write
+        # Write.
+        # Note that we do not extend WriteallMixin,
+        # so writeall will be copied, if it exists, and
+        # wrapped.
         'write',
+        'writeall',
         'writelines',
         'truncate',
     )
@@ -335,11 +466,12 @@ class FileObjectBase(object):
 
     _io = None
 
-    def __init__(self, fobj, closefd):
-        self._io = fobj
+    def __init__(self, descriptor):
+        # type: (OpenDescriptor) -> None
+        self._io = descriptor.opened()
         # We don't actually use this property ourself, but we save it (and
         # pass it along) for compatibility.
-        self._close = closefd
+        self._close = descriptor.closefd
 
         self._do_delegate_methods()
 
@@ -379,7 +511,15 @@ class FileObjectBase(object):
 
         fobj = self._io
         self._io = None
-        self._do_close(fobj, self._close)
+        try:
+            self._do_close(fobj, self._close)
+        finally:
+            fobj = None
+            # Remove delegate methods to drop remaining references to
+            # _io.
+            d = self.__dict__
+            for meth_name in self._delegate_methods:
+                d.pop(meth_name, None)
 
     def _do_close(self, fobj, closefd):
         raise NotImplementedError()
@@ -435,7 +575,7 @@ class FileObjectBlock(FileObjectBase):
 
     def __init__(self, fobj, *args, **kwargs):
         descriptor = OpenDescriptor(fobj, *args, **kwargs)
-        FileObjectBase.__init__(self, descriptor.open(), descriptor.closefd)
+        FileObjectBase.__init__(self, descriptor)
 
     def _do_close(self, fobj, closefd):
         fobj.close()
@@ -456,7 +596,6 @@ class FileObjectThread(FileObjectBase):
        The file object is closed using the threadpool. Note that whether or
        not this action is synchronous or asynchronous is not documented.
     """
-
 
     def __init__(self, *args, **kwargs):
         """
@@ -483,8 +622,8 @@ class FileObjectThread(FileObjectBase):
         if not hasattr(self.lock, '__enter__'):
             raise TypeError('Expected a Semaphore or boolean, got %r' % type(self.lock))
 
-        self.__io_holder = [descriptor.open()] # signal for _wrap_method
-        FileObjectBase.__init__(self, self.__io_holder[0], descriptor.closefd)
+        self.__io_holder = [descriptor.opened()] # signal for _wrap_method
+        FileObjectBase.__init__(self, descriptor)
 
     def _do_close(self, fobj, closefd):
         self.__io_holder[0] = None # for _wrap_method
@@ -523,16 +662,6 @@ class FileObjectThread(FileObjectBase):
 
     def _extra_repr(self):
         return ' threadpool=%r' % (self.threadpool,)
-
-    def __iter__(self):
-        return self
-
-    def next(self):
-        line = self.readline()
-        if line:
-            return line
-        raise StopIteration
-    __next__ = next
 
     def _wrap_method(self, method):
         # NOTE: We are careful to avoid introducing a refcycle
