@@ -455,6 +455,14 @@ def FileObject(*args, **kwargs):
     # Defer importing FileObject until we need it
     # to allow it to be configured more easily.
     from gevent.fileobject import FileObject as _FileObject
+    if not PY3:
+        # Make write behave like the old Python 2 file
+        # write and loop to consume output, even when not
+        # buffered.
+        __FileObject = _FileObject
+        def _FileObject(*args, **kwargs):
+            kwargs['atomic_write'] = True
+            return __FileObject(*args, **kwargs)
     globals()['FileObject'] = _FileObject
     return _FileObject(*args)
 
@@ -559,6 +567,12 @@ class Popen(object):
 
     .. caution::
 
+       The default values of some arguments, notably ``buffering``, differ
+       between Python 2 and Python 3. For the most consistent behaviour across
+       versions, it's best to explicitly pass the desired values.
+
+    .. caution::
+
        On Python 2, the ``read`` method of the ``stdout`` and ``stderr`` attributes
        will not be buffered unless buffering is explicitly requested (e.g., `bufsize=-1`).
        This is different than the ``read`` method of the standard library attributes,
@@ -602,6 +616,15 @@ class Popen(object):
        Add the *group*, *extra_groups*, *user*, and *umask* arguments. These
        were added to Python 3.9, but are available in any gevent version, provided
        the underlying platform support is present.
+
+    .. versionchanged:: NEXT
+       On Python 2 only, if unbuffered binary communication is requested,
+       the ``stdin`` attribute of this object will have a ``write`` method that
+       actually performs internal buffering and looping, similar to the standard library.
+       It guarantees to write all the data given to it in a single call (but internally
+       it may make many system calls and/or trips around the event loop to accomplish this).
+       See :issue:`1711`.
+
     """
 
     if GenericAlias is not None:
@@ -751,6 +774,7 @@ class Popen(object):
                                         encoding=self.encoding, errors=self.errors)
             else:
                 self.stdin = FileObject(p2cwrite, 'wb', bufsize)
+
         if c2pread != -1:
             if universal_newlines or text_mode:
                 if PY3:

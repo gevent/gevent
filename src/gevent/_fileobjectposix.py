@@ -14,6 +14,7 @@ from gevent._compat import reraise
 from gevent._fileobjectcommon import cancel_wait_ex
 from gevent._fileobjectcommon import FileObjectBase
 from gevent._fileobjectcommon import OpenDescriptor
+from gevent._fileobjectcommon import WriteIsWriteallMixin
 from gevent._hub_primitives import wait_on_watcher
 from gevent.hub import get_hub
 from gevent.os import _read
@@ -213,26 +214,39 @@ class GreenFileDescriptorIO(RawIOBase):
         )
 
 
+class GreenFileDescriptorIOWriteall(WriteIsWriteallMixin,
+                                    GreenFileDescriptorIO):
+    pass
+
+
 class GreenOpenDescriptor(OpenDescriptor):
 
-    def open_raw(self):
+    def _do_open_raw(self):
         if self.is_fd():
-            fileio = GreenFileDescriptorIO(self.fobj, self, closefd=self.closefd)
+            fileio = GreenFileDescriptorIO(self._fobj, self, closefd=self.closefd)
         else:
-            closefd = False
             # Either an existing file object or a path string (which
             # we open to get a file object). In either case, the other object
             # owns the descriptor and we must not close it.
             closefd = False
-            if hasattr(self.fobj, 'fileno'):
-                raw = self.fobj
-            else:
-                raw = OpenDescriptor.open_raw(self)
+
+            raw = OpenDescriptor._do_open_raw(self)
 
             fileno = raw.fileno()
             fileio = GreenFileDescriptorIO(fileno, self, closefd=closefd)
             fileio._keep_alive = raw
         return fileio
+
+    def _make_atomic_write(self, result, raw):
+        # Our return value from _do_open_raw is always a new
+        # object that we own, so we're always free to change
+        # the class.
+        assert result is not raw or self._raw_object_is_new(raw)
+        if result.__class__ is GreenFileDescriptorIO:
+            result.__class__ = GreenFileDescriptorIOWriteall
+        else:
+            result = OpenDescriptor._make_atomic_write(self, result, raw)
+        return result
 
 
 class FileObjectPosix(FileObjectBase):
@@ -309,9 +323,9 @@ class FileObjectPosix(FileObjectBase):
 
     def __init__(self, *args, **kwargs):
         descriptor = GreenOpenDescriptor(*args, **kwargs)
+        FileObjectBase.__init__(self, descriptor)
         # This attribute is documented as available for non-blocking reads.
-        self.fileio, buffered_fobj = descriptor.open_raw_and_wrapped()
-        FileObjectBase.__init__(self, buffered_fobj, descriptor.closefd)
+        self.fileio = descriptor.opened_raw()
 
     def _do_close(self, fobj, closefd):
         try:
