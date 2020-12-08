@@ -58,14 +58,14 @@ class TimeAssertMixin(object):
             self.assertGreaterEqual(time_taken, min_time)
 
     @contextmanager
-    def runs_in_given_time(self, expected, fuzzy=None):
+    def runs_in_given_time(self, expected, fuzzy=None, min_time=None):
         if fuzzy is None:
             if sysinfo.EXPECT_POOR_TIMER_RESOLUTION or sysinfo.LIBUV:
                 # The noted timer jitter issues on appveyor/pypy3
                 fuzzy = expected * 5.0
             else:
                 fuzzy = expected / 2.0
-        min_time = expected - fuzzy
+        min_time = min_time if min_time is not None else expected - fuzzy
         max_time = expected + fuzzy
         start = perf_counter()
         yield (min_time, max_time)
@@ -73,8 +73,8 @@ class TimeAssertMixin(object):
         try:
             self.assertTrue(
                 min_time <= elapsed <= max_time,
-                'Expected: %r; elapsed: %r; fuzzy %r; clock_info: %s' % (
-                    expected, elapsed, fuzzy, get_clock_info('perf_counter')
+                'Expected: %r; elapsed: %r; min: %r; max: %r; fuzzy %r; clock_info: %s' % (
+                    expected, elapsed, min_time, max_time, fuzzy, get_clock_info('perf_counter')
                 ))
         except AssertionError:
             flaky.reraiseFlakyTestRaceCondition()
