@@ -10,9 +10,16 @@ The most common functions and classes are available in the
 Please read :doc:`/intro` for an introduction to the concepts
 discussed here.
 
+.. seealso:: :mod:`gevent.util`
+
+.. seealso:: :doc:`/configuration`
+
+             For configuring gevent using the environment or the
+             ``gevent.config`` object.
+
+
 .. autodata:: __version__
 
-.. seealso:: :mod:`gevent.util`
 
 Working With Greenlets
 ======================

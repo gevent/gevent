@@ -2,8 +2,14 @@
  API reference
 ===============
 
+Functional Areas
+================
+
+This section of the document groups gevent APIs by functional area.
+For an alphabetical listing by module, see :ref:`api_module_listing`.
+
 High-level concepts
-===================
+-------------------
 .. toctree::
 
    gevent
@@ -13,7 +19,7 @@ High-level concepts
 .. _networking:
 
 Networking interfaces
-=====================
+---------------------
 
 .. toctree::
 
@@ -23,7 +29,7 @@ Networking interfaces
    gevent.selectors
 
 Synchronization primitives (locks, queues, events)
-==================================================
+--------------------------------------------------
 
 .. toctree::
 
@@ -33,20 +39,25 @@ Synchronization primitives (locks, queues, events)
    gevent.lock
 
 Low-level details
-=================
+-----------------
 
 .. toctree::
 
    gevent.hub
    gevent.core
 
+.. _api_module_listing:
+
 Module Listing
 ==============
+
+This section of the document groups gevent APIs by module.
 
 .. This should be sorted alphabetically
 
 .. toctree::
 
+   gevent
    gevent.backdoor
    gevent.baseserver
    gevent.builtins
@@ -82,7 +93,9 @@ Module Listing
 
 
 Deprecated Modules
-==================
+------------------
+
+These modules are deprecated and should not be used in new code.
 
 .. toctree::
 

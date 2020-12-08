@@ -10,7 +10,7 @@
    changelog_1_5
 
 Detailed information on what has changed is available in the
-:doc:`changelog`. This document summarizes the most important changes
+:doc:`changelog_1_5`. This document summarizes the most important changes
 since :doc:`gevent 1.4 <whatsnew_1_4>`.
 
 gevent 1.5 is a maintenance and feature release including bug fixes and a

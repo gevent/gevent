@@ -10,7 +10,7 @@
    changelog_1_3
 
 Detailed information on what has changed is available in the
-:doc:`changelog`. This document summarizes the most important changes
+:doc:`changelog_1_3`. This document summarizes the most important changes
 since :doc:`gevent 1.2 <whatsnew_1_2>`.
 
 gevent 1.3 is an important update for performance, debugging and
