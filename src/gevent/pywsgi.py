@@ -1085,6 +1085,22 @@ class WSGIHandler(object):
         """
         env = self.server.get_environ()
         env['REQUEST_METHOD'] = self.command
+        # SCRIPT_NAME is explicitly implementation defined. Using an
+        # empty value for SCRIPT_NAME is both explicitly allowed by
+        # both the CGI standard and WSGI PEPs, and also the thing that
+        # makes the most sense from a generic server perspective (we
+        # have no hierarchy or understanding of URLs or files, just a
+        # single application to call. The empty string represents the
+        # application root, which is what we have). Different WSGI
+        # implementations handle this very differently, so portable
+        # applications that rely on SCRIPT_NAME will have to use a
+        # WSGI middleware to set it to a defined value, or otherwise
+        # rely on server-specific mechanisms (e.g, on waitress, use
+        # ``--url-prefix``, in gunicorn set the ``SCRIPT_NAME`` header
+        # or process environment variable, in gevent subclass
+        # WSGIHandler.)
+        #
+        # See https://github.com/gevent/gevent/issues/1667 for discussion.
         env['SCRIPT_NAME'] = ''
 
         if '?' in self.path:
