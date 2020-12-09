@@ -212,7 +212,7 @@ class TestPool(_AbstractPoolTest):
         self.assertEqual(get(), 49)
         self.assertTimeoutAlmostEqual(get.elapsed, TIMEOUT1, 1)
         gevent.sleep(0)  # lets the callback run
-        assert result == [49], result
+        self.assertEqual(result, [49])
 
     def test_async_timeout(self):
         res = self.pool.apply_async(sqr, (6, TIMEOUT2 + 0.2))
@@ -273,10 +273,11 @@ class TestPool(_AbstractPoolTest):
         size = self.size or 10
         result = self.pool.map_async(sleep, [0.1] * (size * 2))
         gevent.sleep(0.1)
-        kill = TimingWrapper(self.pool.kill)
-        kill()
-        assert kill.elapsed < 0.1 * self.size + 0.5, kill.elapsed
-        result.join()
+        try:
+            with self.runs_in_given_time(0.1 * self.size + 0.5, min_time=0):
+                self.pool.kill()
+        finally:
+            result.join()
 
     def sleep(self, x):
         sleep(float(x) / 10.0)
@@ -485,7 +486,7 @@ class TestRef(TestCase):
             #     result = func(Object(), kwarg1=Object())
             # but in a thread pool and see that arguments', result's and func's references are not leaked
             result = pool.apply(func, (Object(), ), {'kwarg1': Object()})
-            assert isinstance(result, Object), repr(result)
+            self.assertIsInstance(result, Object)
             gevent.sleep(0.1)  # XXX should not be needed
 
             refs.append(weakref.ref(func))
