@@ -598,6 +598,47 @@ class TestBasic(greentest.TestCase):
         g.join()
         self.assertFalse(g.exc_info)
 
+    def test_recursion_error(self):
+        # https://github.com/gevent/gevent/issues/1704
+        # A RuntimeError: recursion depth exceeded
+        # does not break things.
+        def recur():
+            recur() # This is expected to raise RecursionError
+
+        errors = []
+        def handle_error(glet, t, v, tb):
+            errors.append((glet, t, v, tb))
+
+        try:
+            gevent.get_hub().handle_error = handle_error
+
+            g = gevent.spawn(recur)
+            def wait():
+                return gevent.joinall([g])
+
+            g2 = gevent.spawn(wait)
+
+            gevent.joinall([g2])
+        finally:
+            del gevent.get_hub().handle_error
+
+        try:
+            expected_exc = RecursionError
+        except NameError:
+            expected_exc = RuntimeError
+        with self.assertRaises(expected_exc):
+            g.get()
+
+        self.assertFalse(g.successful())
+        self.assertTrue(g.dead)
+
+        self.assertTrue(errors)
+        self.assertEqual(1, len(errors))
+        self.assertIs(errors[0][0], g)
+        self.assertEqual(errors[0][1], expected_exc)
+        del errors[:]
+
+
     def test_tree_locals(self):
         g = g2 = None
         def func():

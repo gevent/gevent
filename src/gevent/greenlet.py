@@ -565,7 +565,12 @@ class Greenlet(greenlet):
         """
         ei = self._exc_info
         if ei is not None and ei[0] is not None:
-            return (ei[0], ei[1], load_traceback(ei[2]))
+            return (
+                ei[0],
+                ei[1],
+                # The pickled traceback may be None if we couldn't pickle it.
+                load_traceback(ei[2]) if ei[2] else None
+            )
 
     def throw(self, *args):
         """Immediately switch into the greenlet and raise an exception in it.
@@ -834,7 +839,13 @@ class Greenlet(greenlet):
             self.__report_result(exc_info[1])
             return
 
-        self._exc_info = exc_info[0], exc_info[1], dump_traceback(exc_info[2])
+        # Depending on the error, we may not be able to pickle it.
+        # In particular, RecursionError can be a problem.
+        try:
+            tb = dump_traceback(exc_info[2])
+        except: # pylint:disable=bare-except
+            tb = None
+        self._exc_info = exc_info[0], exc_info[1], tb
 
         hub = get_my_hub(self) # pylint:disable=undefined-variable
         if self._links and not self._notifier:
