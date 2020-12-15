@@ -5,7 +5,9 @@ from gevent._gevent_c_hub_local cimport get_hub_noargs as get_hub
 from gevent._gevent_c_hub_local cimport get_hub_if_exists
 
 cdef InvalidSwitchError
+cdef InvalidThreadUseError
 cdef Timeout
+cdef _get_thread_ident
 cdef bint _greenlet_imported
 
 cdef extern from "greenlet/greenlet.h":
@@ -49,9 +51,14 @@ cdef class AbstractLinkable(object):
    cpdef unlink(self, callback)
 
    cdef _check_and_notify(self)
-   cdef void _capture_hub(self, bint create)
+   cdef int _capture_hub(self, bint create) except -1
    cdef __wait_to_be_notified(self, bint rawlink)
-   cdef void __unlink_all(self, obj) # suppress exceptions
+
+   cdef void _quiet_unlink_all(self, obj) # suppress exceptions
+
+   cdef _allocate_lock(self)
+   cdef greenlet _getcurrent(self)
+   cdef int _switch_to_hub(self, the_hub) except -1
 
    @cython.nonecheck(False)
    cdef _notify_link_list(self, list links)
@@ -63,5 +70,5 @@ cdef class AbstractLinkable(object):
    cpdef _acquire_lock_for_switch_in(self)
 
    cdef _wait_core(self, timeout, catch=*)
-   cdef _wait_return_value(self, waited, wait_success)
+   cdef _wait_return_value(self, bint waited, bint wait_success)
    cdef _wait(self, timeout=*)

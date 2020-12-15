@@ -162,7 +162,6 @@ def _format_thread_info(lines, thread_stacks, limit, current_thread_ident):
     import threading
 
     threads = {th.ident: th for th in threading.enumerate()}
-
     lines.append('*' * 80)
     lines.append('* Threads')
 

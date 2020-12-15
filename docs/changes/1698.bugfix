@@ -1,0 +1,5 @@
+Improve the ability to use monkey-patched locks, and
+`gevent.lock.BoundedSemaphore`, across threads, especially when the
+various threads might not have a gevent hub or any other active
+greenlets. In particular, this handles some cases that previously
+raised ``LoopExit``.

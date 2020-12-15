@@ -11,6 +11,9 @@ from gevent.tests import test__semaphore
 
 class TestRLockMultiThread(test__semaphore.TestSemaphoreMultiThread):
 
+    # For some reason, the tests are extremely flaky on Python 2.
+    dueling_thread_tests_are_too_flaky = greentest.PY2
+
     def _makeOne(self):
         # If we don't set the hub before returning,
         # there's a potential race condition, if the implementation
@@ -23,6 +26,11 @@ class TestRLockMultiThread(test__semaphore.TestSemaphoreMultiThread):
         #
         # So we deliberately don't set the hub to help test that condition.
         return lock.RLock()
+
+    def assertOneHasNoHub(self, sem):
+        self.assertIsNone(sem._block.hub)
+
+
 
 if __name__ == '__main__':
     greentest.main()

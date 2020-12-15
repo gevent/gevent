@@ -12,9 +12,11 @@ import weakref
 import gevent
 import gevent.exceptions
 from gevent.lock import Semaphore
+from gevent.lock import BoundedSemaphore
 
 import gevent.testing as greentest
 from gevent.testing import timing
+from gevent.testing import flaky
 
 class TestSemaphore(greentest.TestCase):
 
@@ -74,12 +76,15 @@ class TestSemaphoreMultiThread(greentest.TestCase):
 
     # See https://github.com/gevent/gevent/issues/1437
 
+    def _getTargetClass(self):
+        return Semaphore
+
     def _makeOne(self):
         # Create an object that is associated with the current hub. If
         # we don't do this now, it gets initialized lazily the first
         # time it would have to block, which, in the event of threads,
         # would be from an arbitrary thread.
-        return Semaphore(1, gevent.get_hub())
+        return self._getTargetClass()(1)
 
     def _makeThreadMain(self, thread_running, thread_acquired, sem,
                         acquired, exc_info,
@@ -104,7 +109,10 @@ class TestSemaphoreMultiThread(greentest.TestCase):
                 thread_acquired.set()
         return thread_main
 
-    def _do_test_acquire_in_one_then_another(self, release=True, **thread_acquire_kwargs):
+    def _do_test_acquire_in_one_then_another(self,
+                                             release=True,
+                                             require_thread_acquired_to_finish=False,
+                                             **thread_acquire_kwargs):
         from gevent import monkey
         self.assertFalse(monkey.is_module_patched('threading'))
 
@@ -144,6 +152,8 @@ class TestSemaphoreMultiThread(greentest.TestCase):
             self.assertEqual(acquired, [True])
 
         thread_acquired.wait(timing.LARGE_TICK * 5)
+        if require_thread_acquired_to_finish:
+            self.assertTrue(thread_acquired.is_set())
         try:
             self.assertEqual(exc_info, [])
         finally:
@@ -157,6 +167,7 @@ class TestSemaphoreMultiThread(greentest.TestCase):
     def test_acquire_in_one_then_another_timed(self):
         sem, acquired_in_thread = self._do_test_acquire_in_one_then_another(
             release=False,
+            require_thread_acquired_to_finish=True,
             timeout=timing.SMALLEST_RELIABLE_DELAY)
         self.assertEqual([False], acquired_in_thread)
         # This doesn't, of course, notify anything, because
@@ -177,7 +188,6 @@ class TestSemaphoreMultiThread(greentest.TestCase):
 
         import threading
 
-
         sem = self._makeOne()
         # Make future acquires block
         sem.acquire()
@@ -192,8 +202,6 @@ class TestSemaphoreMultiThread(greentest.TestCase):
 
         exc_info = []
         acquired = []
-
-
 
         glet = gevent.spawn(greenlet_one)
         thread = threading.Thread(target=self._makeThreadMain(
@@ -210,10 +218,106 @@ class TestSemaphoreMultiThread(greentest.TestCase):
         self.assertEqual(glet.value, True)
         self.assertEqual([], exc_info)
         self.assertEqual([False], acquired)
+        self.assertTrue(glet.dead, glet)
+        glet = None
+
+    def assertOneHasNoHub(self, sem):
+        self.assertIsNone(sem.hub, sem)
+
+    dueling_thread_tests_are_too_flaky = False
+
+    def test_dueling_threads(self, acquire_args=(), create_hub=None):
+        # pylint:disable=too-many-locals,too-many-statements
+
+        if self.dueling_thread_tests_are_too_flaky:
+            self.skipTest("Described as too flaky")
+
+        # Threads doing nothing but acquiring and releasing locks, without
+        # having any other greenlets to switch to.
+        # https://github.com/gevent/gevent/issues/1698
+        from gevent import monkey
+        from gevent._hub_local import get_hub_if_exists
+
+        self.assertFalse(monkey.is_module_patched('threading'))
+
+        import threading
+        from time import sleep as native_sleep
+
+        sem = self._makeOne()
+        self.assertOneHasNoHub(sem)
+        count = 10000
+        results = [-1, -1]
+        run = True
+        def do_it(ix):
+            if create_hub:
+                gevent.get_hub()
+
+            try:
+                for i in range(count):
+                    if not run:
+                        break
+
+                    sem.acquire(*acquire_args)
+                    sem.release()
+                    results[ix] = i
+                    if create_hub and i % 10 == 0:
+                        gevent.sleep(timing.SMALLEST_RELIABLE_DELAY)
+                    elif i % 100 == 0:
+                        native_sleep(timing.SMALLEST_RELIABLE_DELAY)
+            except Exception as ex: # pylint:disable=broad-except
+                import traceback; traceback.print_exc()
+                results[ix] = ex
+            finally:
+                hub = get_hub_if_exists()
+                if hub is not None:
+                    hub.join()
+                    hub.destroy(destroy_loop=True)
+
+        t1 = threading.Thread(target=do_it, args=(0,))
+        t1.daemon = True
+        t2 = threading.Thread(target=do_it, args=(1,))
+        t2.daemon = True
+        t1.start()
+        t2.start()
+
+        t1.join(1)
+        t2.join(1)
+
+        while t1.is_alive() or t2.is_alive():
+            cur = list(results)
+            t1.join(2)
+            t2.join(2)
+            if cur == results:
+                # Hmm, after two seconds, no progress
+                print("No progress!", cur, results, t1, t2)
+                from gevent.util import print_run_info
+                print_run_info()
+                run = False
+                break
+
+        try:
+            self.assertEqual(results, [count - 1, count - 1])
+        except AssertionError:
+            if greentest.PY2:
+                flaky.reraiseFlakyTestRaceCondition()
+            else:
+                raise
+
+    def test_dueling_threads_timeout(self):
+        self.test_dueling_threads((True, 4))
+
+    def test_dueling_threads_with_hub(self):
+        self.test_dueling_threads(create_hub=True)
+
 
     # XXX: Need a test with multiple greenlets in a non-primary
     # thread. Things should work, just very slowly; instead of moving through
     # greenlet.switch(), they'll be moving with async watchers.
+
+class TestBoundedSemaphoreMultiThread(TestSemaphoreMultiThread):
+
+    def _getTargetClass(self):
+        return BoundedSemaphore
 
 @greentest.skipOnPurePython("Needs C extension")
 class TestCExt(greentest.TestCase):

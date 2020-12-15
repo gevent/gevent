@@ -10,10 +10,12 @@ from __future__ import print_function
 
 import sys
 
+from gevent._compat import thread_mod_name
 from gevent._hub_local import get_hub_noargs as get_hub
 from gevent._hub_local import get_hub_if_exists
 
 from gevent.exceptions import InvalidSwitchError
+from gevent.exceptions import InvalidThreadUseError
 from gevent.timeout import Timeout
 
 locals()['getcurrent'] = __import__('greenlet').getcurrent
@@ -22,6 +24,11 @@ locals()['greenlet_init'] = lambda: None
 __all__ = [
     'AbstractLinkable',
 ]
+
+# Need the real get_ident. We're imported early enough during monkey-patching
+# that we can be sure nothing is monkey patched yet.
+_get_thread_ident = __import__(thread_mod_name).get_ident
+_allocate_thread_lock = __import__(thread_mod_name).allocate_lock
 
 class AbstractLinkable(object):
     # Encapsulates the standard parts of the linking and notifying
@@ -38,7 +45,9 @@ class AbstractLinkable(object):
     # 2b. A subclass ensures that a Python-level native thread lock is held
     #     for the duration of the method; this is necessary in pure-Python mode.
     #     The only known implementation of such
-    #     a subclass is for Semaphore.
+    #     a subclass is for Semaphore. AND
+    # 3. The subclass that calls ``capture_hub`` catches
+    #    and handles ``InvalidThreadUseError``
     #
     # TODO: As of gevent 1.5, we use the same datastructures and almost
     # the same algorithm as Greenlet. See about unifying them more.
@@ -85,9 +94,12 @@ class AbstractLinkable(object):
         # we don't want to do get_hub() here to allow defining module-level objects
         # without initializing the hub. However, for multiple-thread safety, as soon
         # as a waiting method is entered, even if it won't have to wait, we
-        # need to grab the hub and assign ownership. For that reason, if the hub
-        # is present, we'll go ahead and take it.
-        self.hub = hub if hub is not None else get_hub_if_exists()
+        # need to grab the hub and assign ownership. But we don't want to grab one prematurely.
+        # The example is three threads, the main thread and two worker threads; if we create
+        # a Semaphore in the main thread but only use it in the two threads, if we had grabbed
+        # the main thread's hub, the two worker threads would have a dependency on it, meaning that
+        # if the main event loop is blocked, the worker threads might get blocked too.
+        self.hub = hub
 
     def linkcount(self):
         # For testing: how many objects are linked to this one?
@@ -127,24 +139,58 @@ class AbstractLinkable(object):
             # _notify_links method.
             self._notifier.stop()
 
+    def _allocate_lock(self):
+        return _allocate_thread_lock()
+
+    def _getcurrent(self):
+        return getcurrent() # pylint:disable=undefined-variable
+
     def _capture_hub(self, create):
         # Subclasses should call this as the first action from any
         # public method that could, in theory, block and switch
-        # to the hub. This may release the GIL.
+        # to the hub. This may release the GIL. It may
+        # raise InvalidThreadUseError if the result would
+        while 1:
+            my_hub = self.hub
+            if my_hub is None:
+                break
+            if my_hub.dead: # dead is a property, could release GIL
+                # back, holding GIL
+                if self.hub is my_hub:
+                    self.hub = None
+                    my_hub = None
+                    break
+            else:
+                break
+
         if self.hub is None:
             # This next line might release the GIL.
             current_hub = get_hub() if create else get_hub_if_exists()
-            if current_hub is None:
-                return
+
             # We have the GIL again. Did anything change? If so,
             # we lost the race.
             if self.hub is None:
                 self.hub = current_hub
 
+        if self.hub is not None and self.hub.thread_ident != _get_thread_ident():
+            raise InvalidThreadUseError(
+                self.hub,
+                get_hub_if_exists(),
+                getcurrent() # pylint:disable=undefined-variable
+            )
+        return 1
+
     def _check_and_notify(self):
         # If this object is ready to be notified, begin the process.
         if self.ready() and self._links and not self._notifier:
-            self._capture_hub(True) # Must create, we need it.
+            try:
+                self._capture_hub(True) # Must create, we need it.
+            except InvalidThreadUseError:
+                # The current hub doesn't match self.hub. That's OK,
+                # we still want to start the notifier in the thread running
+                # self.hub (because the links probably contains greenlet.switch
+                # calls valid only in that hub)
+                pass
             self._notifier = self.hub.loop.run_callback(self._notify_links, [])
 
     def _notify_link_list(self, links):
@@ -164,7 +210,8 @@ class AbstractLinkable(object):
             if id_link not in done:
                 # XXX: JAM: What was I thinking? This doesn't make much sense,
                 # there's a good chance `link` will be deallocated, and its id() will
-                # be free to be reused.
+                # be free to be reused. This also makes looping difficult, you have to
+                # create new functions inside a loop rather than just once outside the loop.
                 done.add(id_link)
                 try:
                     self._drop_lock_for_switch_out()
@@ -172,6 +219,7 @@ class AbstractLinkable(object):
                         link(self)
                     finally:
                         self._acquire_lock_for_switch_in()
+
                 except: # pylint:disable=bare-except
                     # We're running in the hub, errors must not escape.
                     self.hub.handle_error((link, self), *sys.exc_info())
@@ -236,7 +284,7 @@ class AbstractLinkable(object):
         # wakeup.
         self._check_and_notify()
 
-    def __unlink_all(self, obj):
+    def _quiet_unlink_all(self, obj):
         if obj is None:
             return
 
@@ -248,75 +296,32 @@ class AbstractLinkable(object):
                 pass
 
     def __wait_to_be_notified(self, rawlink): # pylint:disable=too-many-branches
-        # We've got to watch where we could potentially release the GIL.
-        # Decisions we make based an the state of this object must be in blocks
-        # that cannot release the GIL.
-        resume_this_greenlet = None
-        watcher = None
-        current_hub = get_hub()
-        send = None
+        resume_this_greenlet = getcurrent().switch # pylint:disable=undefined-variable
+        if rawlink:
+            self.rawlink(resume_this_greenlet)
+        else:
+            self._notifier.args[0].append(resume_this_greenlet)
 
-        while 1:
-            my_hub = self.hub
-            if my_hub is current_hub:
-                break
-
-            # We're owned by another hub.
-            if my_hub.dead: # dead is a property, this could have released the GIL.
-                # We have the GIL back. Did anything change?
-                if my_hub is not self.hub:
-                    continue # start over.
-                # The other hub is dead, so we can take ownership.
-                self.hub = current_hub
-                break
-            # Some other hub owns this object. We must ask it to wake us
-            # up. We can't use a Python-level ``Lock`` because
-            # (1) it doesn't support a timeout on all platforms; and
-            # (2) we don't want to block this hub from running. So we need to
-            # do so in a way that cooperates with *two* hubs. That's what an
-            # async watcher is built for.
-            #
-            # Allocating and starting the watcher *could* release the GIL.
-            # with the libev corcext, allocating won't, but starting briefly will.
-            # With other backends, allocating might, and starting might also.
-            # So...XXX: Race condition here, tiny though it may be.
-            watcher = current_hub.loop.async_()
-            send = watcher.send_ignoring_arg
-            if rawlink:
-                # Make direct calls to self.rawlink, the most common case,
-                # so cython can more easily optimize.
-                self.rawlink(send)
-            else:
-                self._notifier.args[0].append(send)
-
-            watcher.start(getcurrent().switch, self) # pylint:disable=undefined-variable
-            break
-
-        if self.hub is current_hub:
-            resume_this_greenlet = getcurrent().switch # pylint:disable=undefined-variable
-            if rawlink:
-                self.rawlink(resume_this_greenlet)
-            else:
-                self._notifier.args[0].append(resume_this_greenlet)
         try:
-            self._drop_lock_for_switch_out()
-            result = current_hub.switch() # Probably releases
+            self._switch_to_hub(self.hub)
             # If we got here, we were automatically unlinked already.
             resume_this_greenlet = None
-            if result is not self: # pragma: no cover
-                raise InvalidSwitchError(
-                    'Invalid switch into %s.wait(): %r' % (
-                        self.__class__.__name__,
-                        result,
-                    )
-                )
+        finally:
+            self._quiet_unlink_all(resume_this_greenlet)
+
+    def _switch_to_hub(self, the_hub):
+        self._drop_lock_for_switch_out()
+        try:
+            result = the_hub.switch()
         finally:
             self._acquire_lock_for_switch_in()
-            self.__unlink_all(resume_this_greenlet)
-            self.__unlink_all(send)
-            if watcher is not None:
-                watcher.stop()
-                watcher.close()
+        if result is not self: # pragma: no cover
+            raise InvalidSwitchError(
+                'Invalid switch into %s.wait(): %r' % (
+                    self.__class__.__name__,
+                    result,
+                )
+            )
 
     def _acquire_lock_for_switch_in(self):
         return
@@ -329,12 +334,12 @@ class AbstractLinkable(object):
         The core of the wait implementation, handling switching and
         linking.
 
-        This method is safe to call from multiple threads; it must be holding
-        the GIL for the entire duration, or be protected by a Python-level
-        lock for that to be true.
+        This method is NOT safe to call from multiple threads.
 
         ``self.hub`` must be initialized before entering this method.
-        The hub that is set is considered the owner and cannot be changed.
+        The hub that is set is considered the owner and cannot be changed
+        while this method is running. It must only be called from the thread
+        where ``self.hub`` is the current hub.
 
         If *catch* is set to ``()``, a timeout that elapses will be
         allowed to be raised.
@@ -344,8 +349,11 @@ class AbstractLinkable(object):
           resumed in this greenlet.
         """
         with Timeout._start_new_or_dummy(timeout) as timer: # Might release
+            # We already checked above (_wait()) if we're ready()
             try:
-                self.__wait_to_be_notified(True) # Use rawlink()
+                self.__wait_to_be_notified(
+                    True,# Use rawlink()
+                )
                 return True
             except catch as ex:
                 if ex is not timer:
@@ -361,10 +369,6 @@ class AbstractLinkable(object):
         return None # pragma: no cover all extent subclasses override
 
     def _wait(self, timeout=None):
-        """
-        This method is safe to call from multiple threads, providing
-        the conditions laid out in the class documentation are met.
-        """
         # Watch where we could potentially release the GIL.
         self._capture_hub(True) # Must create, we must have an owner. Might release
 
