@@ -24,5 +24,10 @@ class TestRLockMultiThread(test__semaphore.TestSemaphoreMultiThread):
         # So we deliberately don't set the hub to help test that condition.
         return lock.RLock()
 
+    def assertOneHasNoHub(self, sem):
+        self.assertIsNone(sem._block.hub)
+
+
+
 if __name__ == '__main__':
     greentest.main()

@@ -8,6 +8,7 @@ infinite bounds (:class:`DummySemaphore`), along with a reentrant lock
 (:class:`RLock`) with the same API as :class:`threading.RLock`.
 """
 from __future__ import absolute_import
+from __future__ import print_function
 
 from gevent.hub import getcurrent
 from gevent._compat import PURE_PYTHON
@@ -43,82 +44,77 @@ _allocate_lock, _get_ident = monkey.get_original(
     ('allocate_lock', 'get_ident')
 )
 
+def atomic(meth):
+    def m(self, *args):
+        with self._atomic:
+            return meth(self, *args)
+    return m
 
-class _OwnedLock(object):
+
+class _GILLock(object):
     __slots__ = (
-        '_owner',
-        '_block',
-        '_locking',
-        '_count',
+        '_owned_thread_id',
+        '_gil',
+        '_atomic',
+        '_recursion_depth',
     )
-    # Don't allow re-entry to these functions in a single thread, as can
-    # happen if a sys.settrace is used.
+    # Don't allow re-entry to these functions in a single thread, as
+    # can happen if a sys.settrace is used. (XXX: What does that even
+    # mean? Our original implementation that did that has been
+    # replaced by something more robust)
     #
     # This is essentially a variant of the (pure-Python) RLock from the
     # standard library.
     def __init__(self):
-        self._owner = None
-        self._block = _allocate_lock()
-        self._locking = {}
-        self._count = 0
+        self._owned_thread_id = None
+        self._gil = _allocate_lock()
+        self._atomic = _allocate_lock()
+        self._recursion_depth = 0
 
+    @atomic
+    def acquire(self):
+        current_tid = _get_ident()
+        if self._owned_thread_id == current_tid:
+            self._recursion_depth += 1
+            return True
 
-    def __begin(self):
-        # Return (me, count) if we should proceed, otherwise return
-        # None. The function should exit in that case.
-        # In either case, it must call __end.
-        me = _get_ident()
-        try:
-            count = self._locking[me]
-        except KeyError:
-            count = self._locking[me] = 1
-        else:
-            count = self._locking[me] = count + 1
-        return (me, count) if not count else (None, None)
+        # Not owned by this thread. Only one thread will make it through this point.
+        while 1:
+            self._atomic.release()
+            try:
+                self._gil.acquire()
+            finally:
+                self._atomic.acquire()
+            if self._owned_thread_id is None:
+                break
 
-    def __end(self, me, count):
-        if me is None:
-            return
-        count = count - 1
-        if not count:
-            del self._locking[me]
-        else:
-            self._locking[me] = count
+        self._owned_thread_id = current_tid
+        self._recursion_depth = 1
+        return True
+
+    @atomic
+    def release(self):
+        current_tid = _get_ident()
+        if current_tid != self._owned_thread_id:
+            raise RuntimeError("%s: Releasing lock not owned by you. You: 0x%x; Owner: 0x%x" % (
+                self,
+                current_tid, self._owned_thread_id or 0,
+            ))
+
+        self._recursion_depth -= 1
+
+        if not self._recursion_depth:
+            self._owned_thread_id = None
+            self._gil.release()
 
     def __enter__(self):
-        me, lock_count = self.__begin()
-        try:
-            if me is None:
-                return
-
-            if self._owner == me:
-                self._count += 1
-                return
-
-            self._block.acquire()
-            self._owner = me
-            self._count = 1
-        finally:
-            self.__end(me, lock_count)
+        self.acquire()
 
     def __exit__(self, t, v, tb):
         self.release()
 
-    acquire = __enter__
-
-    def release(self):
-        me, lock_count = self.__begin()
-        try:
-            if me is None:
-                return
-
-            self._count = count = self._count - 1
-            if not count:
-                self._owner = None
-                self._block.release()
-        finally:
-            self.__end(me, lock_count)
-
+    def locked(self):
+        return self._gil.locked()
 
 class _AtomicSemaphoreMixin(object):
     # Behaves as though the GIL was held for the duration of acquire, wait,
@@ -131,7 +127,7 @@ class _AtomicSemaphoreMixin(object):
     # Note that this does *NOT*, in-and-of itself, make semaphores safe to use from multiple threads
     __slots__ = ()
     def __init__(self, *args, **kwargs):
-        self._lock_lock = _OwnedLock() # pylint:disable=assigning-non-slot
+        self._lock_lock = _GILLock() # pylint:disable=assigning-non-slot
         super(_AtomicSemaphoreMixin, self).__init__(*args, **kwargs)
 
     def _acquire_lock_for_switch_in(self):
@@ -347,7 +343,9 @@ class RLock(object):
         release it.
         """
         if self._owner is not getcurrent():
-            raise RuntimeError("cannot release un-acquired lock")
+            raise RuntimeError("cannot release un-acquired lock. Owner: %r Current: %r" % (
+                self._owner, getcurrent()
+            ))
         self._count = count = self._count - 1
         if not count:
             self._owner = None

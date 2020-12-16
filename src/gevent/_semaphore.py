@@ -14,12 +14,33 @@ __all__ = [
     'BoundedSemaphore',
 ]
 
+from time import sleep as _native_sleep
+
+from gevent._compat import monotonic
+from gevent.exceptions import InvalidThreadUseError
+from gevent.exceptions import LoopExit
+from gevent.timeout import Timeout
+
 def _get_linkable():
     x = __import__('gevent._abstract_linkable')
     return x._abstract_linkable.AbstractLinkable
 locals()['AbstractLinkable'] = _get_linkable()
 del _get_linkable
 
+from gevent._hub_local import get_hub_if_exists
+from gevent._hub_local import get_hub
+from gevent.hub import spawn_raw
+
+class _LockReleaseLink(object):
+    __slots__ = (
+        'lock',
+    )
+
+    def __init__(self, lock):
+        self.lock = lock
+
+    def __call__(self, _):
+        self.lock.release()
 
 class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
     """
@@ -42,7 +63,6 @@ class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
     This Semaphore's ``__exit__`` method does not call the trace function
     on CPython, but does under PyPy.
 
-
     .. versionchanged:: 1.4.0
         Document that the order in which waiters are awakened is not specified. It was not
         specified previously, but due to CPython implementation quirks usually went in FIFO order.
@@ -51,10 +71,17 @@ class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
     .. versionchanged:: 1.5a3
        The low-level ``rawlink`` method (most users won't use this) now automatically
        unlinks waiters before calling them.
+    .. versionchanged:: NEXT
+       Improved support for multi-threaded usage. When multi-threaded usage is detected,
+       instances will no longer create the thread's hub if it's not present.
     """
 
     __slots__ = (
         'counter',
+        # Integer. Set to 0 initially. Set to the ident of the first
+        # thread that acquires us. If we later see a different thread
+        # ident, set to -1.
+        '_multithreaded',
     )
 
     def __init__(self, value=1, hub=None):
@@ -63,10 +90,15 @@ class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
             raise ValueError("semaphore initial value must be >= 0")
         super(Semaphore, self).__init__(hub)
         self._notify_all = False
+        self._multithreaded = 0
 
     def __str__(self):
-        params = (self.__class__.__name__, self.counter, self.linkcount())
-        return '<%s counter=%s _links[%s]>' % params
+        return '<%s at 0x%x counter=%s _links[%s]>' % (
+            self.__class__.__name__,
+            id(self),
+            self.counter,
+            self.linkcount()
+        )
 
     def locked(self):
         """
@@ -162,28 +194,78 @@ class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
            the semaphore was acquired, False will be returned. (Note that this can still
            raise a ``Timeout`` exception, if some other caller had already started a timer.)
         """
-        if self.counter > 0:
-            # We conceptually now belong to the hub of
-            # the thread that called this, even though we didn't
-            # have to block. Note that we cannot force it to be created
-            # yet, because Semaphore is used by importlib.ModuleLock
-            # which is used when importing the hub itself!
+        # pylint:disable=too-many-return-statements,too-many-branches
+        # Sadly, the body of this method is rather complicated.
+        if self._multithreaded == 0:
+            self._multithreaded = self._get_thread_ident()
+        elif self._multithreaded != self._get_thread_ident():
+            self._multithreaded = -1
+
+        # We conceptually now belong to the hub of the thread that
+        # called this, whether or not we have to block. Note that we
+        # cannot force it to be created yet, because Semaphore is used
+        # by importlib.ModuleLock which is used when importing the hub
+        # itself! This also checks for cross-thread issues.
+        invalid_thread_use = None
+        try:
             self._capture_hub(False)
+        except InvalidThreadUseError as e:
+            # My hub belongs to some other thread. We didn't release the GIL/object lock
+            # by raising the exception, so we know this is still true.
+            invalid_thread_use = e.args
+            e = None
+            if not self.counter and blocking:
+                # We would need to block. So coordinate with the main hub.
+                return self.__acquire_from_other_thread(invalid_thread_use, blocking, timeout)
+
+        if self.counter > 0:
             self.counter -= 1
             return True
 
         if not blocking:
             return False
 
-        success = self._wait(timeout)
+        if self._multithreaded != -1 and self.hub is None: # pylint:disable=access-member-before-definition
+            self.hub = get_hub() # pylint:disable=attribute-defined-outside-init
+
+        if self.hub is None and not invalid_thread_use:
+            # Someone else is holding us. There's not a hub here,
+            # nor is there a hub in that thread. We'll need to use regular locks.
+            # This will be unfair to yet a third thread that tries to use us with greenlets.
+            return self.__acquire_from_other_thread(
+                (None, None, self._getcurrent(), "NoHubs"),
+                blocking,
+                timeout
+            )
+
+        # self._wait may drop both the GIL and the _lock_lock.
+        # By the time we regain control, both have been reacquired.
+        try:
+            success = self._wait(timeout)
+        except LoopExit as ex:
+            args = ex.args
+            ex = None
+            if self.counter:
+                success = True
+            else:
+                # Avoid using ex.hub property to keep holding the GIL
+                if len(args) == 3 and args[1].main_hub:
+                    # The main hub, meaning the main thread. We probably can do nothing with this.
+                    raise
+                return self.__acquire_from_other_thread(
+                    (self.hub, get_hub_if_exists(), self._getcurrent(), "LoopExit"),
+                    blocking,
+                    timeout)
+
         if not success:
+            assert timeout is not None
             # Our timer expired.
             return False
 
-        # Neither our timer no another one expired, so we blocked until
+        # Neither our timer or another one expired, so we blocked until
         # awoke. Therefore, the counter is ours
+        assert self.counter > 0, (self.counter, blocking, timeout, success,)
         self.counter -= 1
-        assert self.counter >= 0
         return True
 
     _py3k_acquire = acquire # PyPy needs this; it must be static for Cython
@@ -193,6 +275,168 @@ class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
 
     def __exit__(self, t, v, tb):
         self.release()
+
+    def __add_link(self, link):
+        if not self._notifier:
+            self.rawlink(link)
+        else:
+            self._notifier.args[0].append(link)
+
+    def __acquire_from_other_thread(self, ex_args, blocking, timeout):
+        assert blocking
+        # Some other hub owns this object. We must ask it to wake us
+        # up. In general, we can't use a Python-level ``Lock`` because
+        #
+        # (1) it doesn't support a timeout on all platforms; and
+        # (2) we don't want to block this hub from running.
+        #
+        # So we need to do so in a way that cooperates with *two*
+        # hubs. That's what an async watcher is built for.
+        #
+        # Of course, if we don't actually have two hubs, then we must find some other
+        # solution. That involves using a lock.
+
+        # We have to take an action that drops the GIL and drops the object lock
+        # to allow the main thread (the thread for our hub) to advance.
+        owning_hub = ex_args[0]
+        hub_for_this_thread = ex_args[1]
+        current_greenlet = ex_args[2]
+
+        if owning_hub is None and hub_for_this_thread is None:
+            return self.__acquire_without_hubs(timeout)
+
+        if hub_for_this_thread is None:
+            # Probably a background worker thread. We don't want to create
+            # the hub if not needed, and since it didn't exist there are no
+            # other greenlets that we could yield to anyway, so there's nothing
+            # to block and no reason to try to avoid blocking, so using a native
+            # lock is the simplest way to go.
+            return self.__acquire_using_other_hub(owning_hub, timeout)
+
+        # We have a hub we don't want to block. Use an async watcher
+        # and ask the next releaser of this object to wake us up.
+        return self.__acquire_using_two_hubs(hub_for_this_thread,
+                                             current_greenlet,
+                                             timeout)
+
+    def __acquire_using_two_hubs(self,
+                                 hub_for_this_thread,
+                                 current_greenlet,
+                                 timeout):
+        # Allocating and starting the watcher *could* release the GIL.
+        # with the libev corcext, allocating won't, but starting briefly will.
+        # With other backends, allocating might, and starting might also.
+        # So...
+        watcher = hub_for_this_thread.loop.async_()
+        send = watcher.send_ignoring_arg
+        watcher.start(current_greenlet.switch, self)
+        try:
+            with Timeout._start_new_or_dummy(timeout) as timer:
+                # ... now that we're back holding the GIL, we need to verify our
+                # state.
+                try:
+                    while 1:
+                        if self.counter > 0:
+                            self.counter -= 1
+                            assert self.counter >= 0, (self,)
+                            return True
+
+                        self.__add_link(send)
+
+                        # Releases the object lock
+                        self._switch_to_hub(hub_for_this_thread)
+                        # We waited and got notified. We should be ready now, so a non-blocking
+                        # acquire() should succeed. But sometimes we get spurious notifications?
+                        # It's not entirely clear how. So we need to loop until we get it, or until
+                        # the timer expires
+                        result = self.acquire(0)
+                        if result:
+                            return result
+                except Timeout as tex:
+                    if tex is not timer:
+                        raise
+                    return False
+        finally:
+            self._quiet_unlink_all(send)
+            watcher.stop()
+            watcher.close()
+
+    def __acquire_from_other_thread_cb(self, results, blocking, timeout, thread_lock):
+        try:
+            result = self.acquire(blocking, timeout)
+            results.append(result)
+        finally:
+            thread_lock.release()
+        return result
+
+    def __acquire_using_other_hub(self, owning_hub, timeout):
+        assert owning_hub is not get_hub_if_exists()
+        thread_lock = self._allocate_lock()
+        thread_lock.acquire()
+        results = []
+
+        owning_hub.loop.run_callback(
+            spawn_raw,
+            self.__acquire_from_other_thread_cb,
+            results,
+            1,       # blocking,
+            timeout, # timeout,
+            thread_lock)
+
+        # We MUST use a blocking acquire here, or at least be sure we keep going
+        # until we acquire it. If we timed out waiting here,
+        # just before the callback runs, then we would be out of sync.
+        self.__spin_on_native_lock(thread_lock, None)
+        return results[0]
+
+    def __acquire_without_hubs(self, timeout):
+        thread_lock = self._allocate_lock()
+        thread_lock.acquire()
+        absolute_expiration = 0
+        begin = 0
+        if timeout:
+            absolute_expiration = monotonic() + timeout
+
+        # Cython won't compile a lambda here
+        link = _LockReleaseLink(thread_lock)
+        while 1:
+            self.__add_link(link)
+            if absolute_expiration:
+                begin = monotonic()
+
+            got_native = self.__spin_on_native_lock(thread_lock, timeout)
+            self._quiet_unlink_all(link)
+            if got_native:
+                if self.acquire(0):
+                    return True
+            if absolute_expiration:
+                now = monotonic()
+                if now >= absolute_expiration:
+                    return False
+                duration = now - begin
+                timeout -= duration
+                if timeout <= 0:
+                    return False
+
+    def __spin_on_native_lock(self, thread_lock, timeout):
+        expiration = 0
+        if timeout:
+            expiration = monotonic() + timeout
+
+        self._drop_lock_for_switch_out()
+        try:
+            # TODO: When timeout is given and the lock supports that
+            # (Python 3), pass that.
+            # Python 2 has terrible behaviour where lock acquires can't
+            # be interrupted, so we use a spin loop
+            while not thread_lock.acquire(0):
+                if expiration and monotonic() >= expiration:
+                    return False
+
+                _native_sleep(0.001)
+            return True
+        finally:
+            self._acquire_lock_for_switch_in()
 
 
 class BoundedSemaphore(Semaphore):
@@ -208,6 +452,10 @@ class BoundedSemaphore(Semaphore):
     If not given, *value* defaults to 1.
     """
 
+    __slots__ = (
+        '_initial_value',
+    )
+
     #: For monkey-patching, allow changing the class of error we raise
     _OVER_RELEASE_ERROR = ValueError
 
@@ -222,7 +470,13 @@ class BoundedSemaphore(Semaphore):
         """
         if self.counter >= self._initial_value:
             raise self._OVER_RELEASE_ERROR("Semaphore released too many times")
-        return Semaphore.release(self)
+        counter = Semaphore.release(self)
+        # When we are absolutely certain that no one holds this semaphore,
+        # release our hub and go back to floating. This assists in cross-thread
+        # uses.
+        if counter == self._initial_value:
+            self.hub = None # pylint:disable=attribute-defined-outside-init
+        return counter
 
     def _at_fork_reinit(self):
         super(BoundedSemaphore, self)._at_fork_reinit()

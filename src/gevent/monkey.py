@@ -424,6 +424,8 @@ def _check_availability(name):
     :raise ImportError: If the source or target cannot be imported.
     :return: The tuple ``(gevent_module, target_module, target_module_name)``
     """
+    # Always import the gevent module first. This helps us be sure we can
+    # use regular imports in gevent files (when we can't use gevent.monkey.get_original())
     gevent_module = getattr(__import__('gevent.' + name), name)
     target_module_name = getattr(gevent_module, '__target__', name)
     target_module = __import__(target_module_name)
@@ -1216,10 +1218,13 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
     # order is important
     if os:
         patch_os()
-    if time:
-        patch_time()
     if thread:
         patch_thread(Event=Event, _warnings=_warnings)
+    if time:
+        # time must be patched after thread, some modules used by thread
+        # need access to the real time.sleep function.
+        patch_time()
+
     # sys must be patched after thread. in other cases threading._shutdown will be
     # initiated to _MainThread with real thread ident
     if sys:

@@ -763,6 +763,7 @@ class AbstractLoop(object):
             msg += ' fileno=' + repr(fileno)
         #if sigfd is not None and sigfd != -1:
         #    msg += ' sigfd=' + repr(sigfd)
+        msg += ' callbacks=' + str(len(self._callbacks))
         return msg
 
     def fileno(self):

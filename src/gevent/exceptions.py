@@ -36,12 +36,28 @@ class LoopExit(Exception):
 
     """
 
+    @property
+    def hub(self):
+        """
+        The (optional) hub that raised the error.
+
+        .. versionadded:: NEXT
+        """
+        # XXX: Note that semaphore.py does this manually.
+        if len(self.args) == 3: # From the hub
+            return self.args[1]
+
     def __repr__(self):
         # pylint:disable=unsubscriptable-object
         if len(self.args) == 3: # From the hub
             import pprint
-            return "%s\n\tHub: %s\n\tHandles:\n%s" % (
-                self.args[0], self.args[1],
+            return (
+                "%s\n"
+                "\tHub: %s\n"
+                "\tHandles:\n%s"
+            ) % (
+                self.args[0],
+                self.args[1],
                 pprint.pformat(self.args[2])
             )
         return Exception.__repr__(self)
