@@ -108,6 +108,8 @@ class TestSemaphoreMultiThread(greentest.TestCase):
                 thread_acquired.set()
         return thread_main
 
+    IDLE_ITERATIONS = 5
+
     def _do_test_acquire_in_one_then_another(self,
                                              release=True,
                                              require_thread_acquired_to_finish=False,
@@ -144,7 +146,7 @@ class TestSemaphoreMultiThread(greentest.TestCase):
             # that get run (including time-based) the notifier may or
             # may not be immediately ready to run, so this can take up
             # to two iterations.)
-            for _ in range(3):
+            for _ in range(self.IDLE_ITERATIONS):
                 gevent.idle()
                 if thread_acquired.wait(timing.LARGE_TICK):
                     break
@@ -155,11 +157,12 @@ class TestSemaphoreMultiThread(greentest.TestCase):
             # Spin the loop to be sure that the timeout has a chance to
             # process. Interleave this with something that drops the GIL
             # so the background thread has a chance to notice that.
-            for _ in range(3):
+            for _ in range(self.IDLE_ITERATIONS):
                 gevent.idle()
                 if thread_acquired.wait(timing.LARGE_TICK):
                     break
         thread_acquired.wait(timing.LARGE_TICK * 5)
+
         if require_thread_acquired_to_finish:
             self.assertTrue(thread_acquired.is_set())
         try:

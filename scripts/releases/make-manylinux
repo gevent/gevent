@@ -45,9 +45,14 @@ else
     echo "Compiling with -Ofast"
     export CFLAGS="-Ofast $GEVENT_WARNFLAGS"
 fi
-# Needed for clock_gettime libc support on this version. This used to be spelled with LDFLAGS,
-# but that is deprecated and produces a warning.
-export LIBS="-lrt"
+# -lrt: Needed for clock_gettime libc support on this version.
+# -pthread: Needed for pthread_atfork (cffi).
+
+# This used to be spelled with LDFLAGS, but that is deprecated and
+# produces a warning on the 2014 image (?). Still needed on the
+# 2010 image.
+export LIBS="-lrt -pthread"
+export LDFLAGS="$LIBS"
 # Be sure that we get the loop we expect by default, and not
 # a fallback loop.
 export GEVENT_LOOP="libev-cext"
