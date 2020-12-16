@@ -93,6 +93,7 @@ from .skipping import skipOnCI
 from .skipping import skipOnPyPy3OnCI
 from .skipping import skipOnPyPy
 from .skipping import skipOnPyPyOnCI
+from .skipping import skipOnPyPyOnWindows
 from .skipping import skipOnPyPy3
 from .skipping import skipIf
 from .skipping import skipUnless

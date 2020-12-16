@@ -238,6 +238,7 @@ class TestSemaphoreMultiThread(greentest.TestCase):
     def assertOneHasNoHub(self, sem):
         self.assertIsNone(sem.hub, sem)
 
+    @greentest.skipOnPyPyOnWindows("Flaky there; can't reproduce elsewhere")
     def test_dueling_threads(self, acquire_args=(), create_hub=None):
         # pylint:disable=too-many-locals,too-many-statements
 

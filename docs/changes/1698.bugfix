@@ -2,7 +2,8 @@ Improve the ability to use monkey-patched locks, and
 `gevent.lock.BoundedSemaphore`, across threads, especially when the
 various threads might not have a gevent hub or any other active
 greenlets. In particular, this handles some cases that previously
-raised ``LoopExit`` or would hang.
+raised ``LoopExit`` or would hang. Note that this may not be reliable
+on PyPy on Windows; such an environment is not currently recommended.
 
 The semaphore tries to avoid creating a hub if it seems unnecessary,
 automatically creating one in the single-threaded case when it would
