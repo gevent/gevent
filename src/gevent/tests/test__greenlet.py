@@ -732,33 +732,43 @@ class TestBasic(greentest.TestCase):
 
 class TestKill(greentest.TestCase):
 
-    def __assertKilled(self, g):
+    def __assertKilled(self, g, successful):
         self.assertFalse(g)
         self.assertTrue(g.dead)
         self.assertFalse(g.started)
         self.assertTrue(g.ready())
-        self.assertTrue(g.successful(), (repr(g), g.value, g.exception))
-        self.assertIsInstance(g.value, gevent.GreenletExit)
-        self.assertIsNone(g.exception)
-
-    def assertKilled(self, g):
-        self.__assertKilled(g)
-        gevent.sleep(0.01) # spin the loop to make sure it doesn't run.
-        self.__assertKilled(g)
-
-    def __kill_greenlet(self, g, block, killall):
-        if killall:
-            killer = functools.partial(gevent.killall, [g], block=block)
+        if successful:
+            self.assertTrue(g.successful(), (repr(g), g.value, g.exception))
+            self.assertIsInstance(g.value, gevent.GreenletExit)
+            self.assertIsNone(g.exception)
         else:
-            killer = functools.partial(g.kill, block=block)
+            self.assertFalse(g.successful(), (repr(g), g.value, g.exception))
+            self.assertNotIsInstance(g.value, gevent.GreenletExit)
+            self.assertIsNotNone(g.exception)
+
+    def assertKilled(self, g, successful=True):
+        self.__assertKilled(g, successful)
+        gevent.sleep(0.01) # spin the loop to make sure it doesn't run.
+        self.__assertKilled(g, successful)
+
+    def __kill_greenlet(self, g, block, killall, exc=None):
+        if exc is None:
+            exc = gevent.GreenletExit
+        if killall:
+            killer = functools.partial(gevent.killall, [g],
+                                       exception=exc, block=block)
+        else:
+            killer = functools.partial(g.kill, exception=exc, block=block)
         killer()
         if not block:
             # Must spin the loop to take effect (if it was scheduled)
             gevent.sleep(timing.SMALLEST_RELIABLE_DELAY)
-        self.assertKilled(g)
+
+        successful = exc is None or (isinstance(exc, type) and issubclass(exc, gevent.GreenletExit))
+        self.assertKilled(g, successful)
         # kill second time must not hurt
         killer()
-        self.assertKilled(g)
+        self.assertKilled(g, successful)
 
     @staticmethod
     def _run_in_greenlet(result_collector):
@@ -772,7 +782,7 @@ class TestKill(greentest.TestCase):
     _after_kill_greenlet = _start_greenlet
 
 
-    def _do_test(self, block, killall):
+    def _do_test(self, block, killall, exc=None):
         link_test = []
         result = []
         g = gevent.Greenlet(self._run_in_greenlet, result)
@@ -780,7 +790,7 @@ class TestKill(greentest.TestCase):
 
         self._start_greenlet(g)
 
-        self.__kill_greenlet(g, block, killall)
+        self.__kill_greenlet(g, block, killall, exc)
 
         self._after_kill_greenlet(g)
 
@@ -793,11 +803,35 @@ class TestKill(greentest.TestCase):
     def test_non_block(self):
         self._do_test(block=False, killall=False)
 
-    def test_block_killal(self):
+    def test_block_killall(self):
         self._do_test(block=True, killall=True)
 
     def test_non_block_killal(self):
         self._do_test(block=False, killall=True)
+
+    def test_non_type_exception(self):
+        self._do_test(block=True, killall=False, exc=Exception())
+
+    def test_non_type_exception_non_block(self):
+        self._do_test(block=False, killall=False, exc=Exception())
+
+    def test_non_type_exception_killall(self):
+        self._do_test(block=True, killall=True, exc=Exception())
+
+    def test_non_type_exception_killall_non_block(self):
+        self._do_test(block=False, killall=True, exc=Exception())
+
+    def test_non_exc_exception(self):
+        self._do_test(block=True, killall=False, exc=42)
+
+    def test_non_exc_exception_non_block(self):
+        self._do_test(block=False, killall=False, exc=42)
+
+    def test_non_exc_exception_killall(self):
+        self._do_test(block=True, killall=True, exc=42)
+
+    def test_non_exc_exception_killall_non_block(self):
+        self._do_test(block=False, killall=True, exc=42)
 
 
 class TestKillAfterStart(TestKill):
