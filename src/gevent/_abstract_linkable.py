@@ -223,6 +223,12 @@ class AbstractLinkable(object):
         # links in order. Lets the ``links`` list be mutated,
         # and only notifies up to the last item in the list, in case
         # objects are added to it.
+        if not links:
+            # HMM. How did we get here? Running two threads at once?
+            # Seen once on Py27/Win/Appveyor
+            # https://ci.appveyor.com/project/jamadden/gevent/builds/36875645/job/9wahj9ft4h4qa170
+            return []
+
         only_while_ready = not self._notify_all
         final_link = links[-1]
         done = set() # of ids
