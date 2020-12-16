@@ -51,13 +51,10 @@ cdef class AbstractLinkable(object):
    cpdef unlink(self, callback)
 
    cdef _check_and_notify(self)
-   cdef int _capture_hub(self, bint create) except -1
+   cdef SwitchOutGreenletWithLoop _capture_hub(self, bint create)
    cdef __wait_to_be_notified(self, bint rawlink)
 
    cdef void _quiet_unlink_all(self, obj) # suppress exceptions
-
-   cdef _allocate_lock(self)
-   cdef greenlet _getcurrent(self)
    cdef int _switch_to_hub(self, the_hub) except -1
 
    @cython.nonecheck(False)
@@ -72,3 +69,8 @@ cdef class AbstractLinkable(object):
    cdef _wait_core(self, timeout, catch=*)
    cdef _wait_return_value(self, bint waited, bint wait_success)
    cdef _wait(self, timeout=*)
+
+   # Unreleated utilities
+   cdef _allocate_lock(self)
+   cdef greenlet _getcurrent(self)
+   cdef _get_thread_ident(self)

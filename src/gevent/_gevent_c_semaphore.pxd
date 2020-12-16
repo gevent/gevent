@@ -5,15 +5,21 @@ from gevent._gevent_c_abstract_linkable cimport AbstractLinkable
 from gevent._gevent_c_hub_local cimport get_hub_if_exists
 from gevent._gevent_c_hub_local cimport get_hub_noargs as get_hub
 
-cdef Timeout
 cdef InvalidThreadUseError
 cdef LoopExit
-cdef spawn_raw
+cdef Timeout
 cdef _native_sleep
+cdef monotonic
+cdef spawn_raw
+
+cdef class _LockReleaseLink(object):
+    cdef object lock
 
 
 cdef class Semaphore(AbstractLinkable):
     cdef public int counter
+
+    cdef long _multithreaded
 
     cpdef bint locked(self)
     cpdef int release(self) except -1000
@@ -37,6 +43,15 @@ cdef class Semaphore(AbstractLinkable):
     )
     cdef __acquire_from_other_thread(self, tuple args, bint blocking, timeout)
     cpdef __acquire_from_other_thread_cb(self, list results, bint blocking, timeout, thread_lock)
+
+    cdef __add_link(self, link)
+    cdef __acquire_using_two_hubs(self,
+                                  SwitchOutGreenletWithLoop hub_for_this_thread,
+                                  current_greenlet,
+                                  timeout)
+    cdef __acquire_using_other_hub(self, SwitchOutGreenletWithLoop owning_hub, timeout)
+    cdef bint __acquire_without_hubs(self, timeout)
+    cdef bint __spin_on_native_lock(self, thread_lock, timeout)
 
 cdef class BoundedSemaphore(Semaphore):
     cdef readonly int _initial_value

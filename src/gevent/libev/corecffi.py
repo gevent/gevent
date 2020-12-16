@@ -294,6 +294,10 @@ class loop(AbstractLoop):
             libev.ev_timer_stop(self._timer0)
 
     def _setup_for_run_callback(self):
+        # XXX: libuv needs to start the callback timer to be sure
+        # that the loop wakes up and calls this. Our C version doesn't
+        # do this.
+        # self._start_callback_timer()
         self.ref() # we should go through the loop now
 
     def destroy(self):

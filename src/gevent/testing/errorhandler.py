@@ -22,31 +22,36 @@ from functools import wraps
 
 
 def wrap_error_fatal(method):
-    import gevent
-    system_error = gevent.get_hub().SYSTEM_ERROR
+    from gevent._hub_local import get_hub_class
+    system_error = get_hub_class().SYSTEM_ERROR
 
     @wraps(method)
     def wrapper(self, *args, **kwargs):
         # XXX should also be able to do gevent.SYSTEM_ERROR = object
         # which is a global default to all hubs
-        gevent.get_hub().SYSTEM_ERROR = object
+        get_hub_class().SYSTEM_ERROR = object
         try:
             return method(self, *args, **kwargs)
         finally:
-            gevent.get_hub().SYSTEM_ERROR = system_error
+            get_hub_class().SYSTEM_ERROR = system_error
     return wrapper
 
 
 def wrap_restore_handle_error(method):
-    import gevent
-    old = gevent.get_hub().handle_error
+    from gevent._hub_local import get_hub_if_exists
+    from gevent import getcurrent
 
     @wraps(method)
     def wrapper(self, *args, **kwargs):
         try:
             return method(self, *args, **kwargs)
         finally:
-            gevent.get_hub().handle_error = old
+            # Remove any customized handle_error, if set on the
+            # instance.
+            try:
+                del get_hub_if_exists().handle_error
+            except AttributeError:
+                pass
         if self.peek_error()[0] is not None:
-            gevent.getcurrent().throw(*self.peek_error()[1:])
+            getcurrent().throw(*self.peek_error()[1:])
     return wrapper

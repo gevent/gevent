@@ -16,7 +16,6 @@ from gevent.lock import BoundedSemaphore
 
 import gevent.testing as greentest
 from gevent.testing import timing
-from gevent.testing import flaky
 
 class TestSemaphore(greentest.TestCase):
 
@@ -132,6 +131,7 @@ class TestSemaphoreMultiThread(greentest.TestCase):
             acquired, exc_info,
             **thread_acquire_kwargs
         ))
+        t.daemon = True
         t.start()
         thread_running.wait(10) # implausibly large time
         if release:
@@ -151,6 +151,14 @@ class TestSemaphoreMultiThread(greentest.TestCase):
 
             self.assertEqual(acquired, [True])
 
+        if not release and thread_acquire_kwargs.get("timeout"):
+            # Spin the loop to be sure that the timeout has a chance to
+            # process. Interleave this with something that drops the GIL
+            # so the background thread has a chance to notice that.
+            for _ in range(3):
+                gevent.idle()
+                if thread_acquired.wait(timing.LARGE_TICK):
+                    break
         thread_acquired.wait(timing.LARGE_TICK * 5)
         if require_thread_acquired_to_finish:
             self.assertTrue(thread_acquired.is_set())
@@ -210,10 +218,13 @@ class TestSemaphoreMultiThread(greentest.TestCase):
             acquired, exc_info,
             timeout=timing.LARGE_TICK
         ))
+        thread.daemon = True
         gevent.idle()
         sem.release()
         glet.join()
-        thread.join(timing.LARGE_TICK)
+        for _ in range(3):
+            gevent.idle()
+            thread.join(timing.LARGE_TICK)
 
         self.assertEqual(glet.value, True)
         self.assertEqual([], exc_info)
@@ -260,13 +271,20 @@ class TestSemaphoreMultiThread(greentest.TestCase):
                     sem.acquire(*acquire_args)
                     sem.release()
                     results[ix] = i
+                    if not create_hub:
+                        # We don't artificially create the hub.
+                        self.assertIsNone(
+                            get_hub_if_exists(),
+                            (get_hub_if_exists(), ix, i)
+                        )
                     if create_hub and i % 10 == 0:
                         gevent.sleep(timing.SMALLEST_RELIABLE_DELAY)
                     elif i % 100 == 0:
                         native_sleep(timing.SMALLEST_RELIABLE_DELAY)
             except Exception as ex: # pylint:disable=broad-except
                 import traceback; traceback.print_exc()
-                results[ix] = ex
+                results[ix] = str(ex)
+                ex = None
             finally:
                 hub = get_hub_if_exists()
                 if hub is not None:
@@ -285,23 +303,14 @@ class TestSemaphoreMultiThread(greentest.TestCase):
 
         while t1.is_alive() or t2.is_alive():
             cur = list(results)
-            t1.join(2)
-            t2.join(2)
+            t1.join(7)
+            t2.join(7)
             if cur == results:
                 # Hmm, after two seconds, no progress
-                print("No progress!", cur, results, t1, t2)
-                from gevent.util import print_run_info
-                print_run_info()
                 run = False
                 break
 
-        try:
-            self.assertEqual(results, [count - 1, count - 1])
-        except AssertionError:
-            if greentest.PY2:
-                flaky.reraiseFlakyTestRaceCondition()
-            else:
-                raise
+        self.assertEqual(results, [count - 1, count - 1])
 
     def test_dueling_threads_timeout(self):
         self.test_dueling_threads((True, 4))

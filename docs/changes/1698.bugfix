@@ -2,4 +2,14 @@ Improve the ability to use monkey-patched locks, and
 `gevent.lock.BoundedSemaphore`, across threads, especially when the
 various threads might not have a gevent hub or any other active
 greenlets. In particular, this handles some cases that previously
-raised ``LoopExit``.
+raised ``LoopExit`` or would hang.
+
+The semaphore tries to avoid creating a hub if it seems unnecessary,
+automatically creating one in the single-threaded case when it would
+block, but not in the multi-threaded case. While the differences
+should be correctly detected, it's possible there are corner cases
+where they might not be.
+
+If your application appears to hang acquiring semaphores, but adding a
+call to ``gevent.get_hub()`` in the thread attempting to acquire the
+semaphore before doing so fixes it, please file an issue.

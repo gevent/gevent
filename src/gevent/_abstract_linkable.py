@@ -145,11 +145,16 @@ class AbstractLinkable(object):
     def _getcurrent(self):
         return getcurrent() # pylint:disable=undefined-variable
 
+    def _get_thread_ident(self):
+        return _get_thread_ident()
+
     def _capture_hub(self, create):
         # Subclasses should call this as the first action from any
         # public method that could, in theory, block and switch
         # to the hub. This may release the GIL. It may
         # raise InvalidThreadUseError if the result would
+
+        # First, detect a dead hub and drop it.
         while 1:
             my_hub = self.hub
             if my_hub is None:
@@ -178,20 +183,30 @@ class AbstractLinkable(object):
                 get_hub_if_exists(),
                 getcurrent() # pylint:disable=undefined-variable
             )
-        return 1
+        return self.hub
 
     def _check_and_notify(self):
         # If this object is ready to be notified, begin the process.
         if self.ready() and self._links and not self._notifier:
+            hub = None
             try:
-                self._capture_hub(True) # Must create, we need it.
+                hub = self._capture_hub(False) # Must create, we need it.
             except InvalidThreadUseError:
                 # The current hub doesn't match self.hub. That's OK,
                 # we still want to start the notifier in the thread running
                 # self.hub (because the links probably contains greenlet.switch
                 # calls valid only in that hub)
                 pass
-            self._notifier = self.hub.loop.run_callback(self._notify_links, [])
+            if hub is not None:
+                self._notifier = hub.loop.run_callback(self._notify_links, [])
+            else:
+                # Hmm, no hub. We must be the only thing running. Then its OK
+                # to just directly call the callbacks.
+                self._notifier = 1
+                try:
+                    self._notify_links([])
+                finally:
+                    self._notifier = None
 
     def _notify_link_list(self, links):
         # The core of the _notify_links method to notify
@@ -201,6 +216,9 @@ class AbstractLinkable(object):
         only_while_ready = not self._notify_all
         final_link = links[-1]
         done = set() # of ids
+        hub = self.hub
+        if hub is None:
+            hub = get_hub_if_exists()
         while links: # remember this can be mutated
             if only_while_ready and not self.ready():
                 break
@@ -222,7 +240,11 @@ class AbstractLinkable(object):
 
                 except: # pylint:disable=bare-except
                     # We're running in the hub, errors must not escape.
-                    self.hub.handle_error((link, self), *sys.exc_info())
+                    if hub is not None:
+                        hub.handle_error((link, self), *sys.exc_info())
+                    else:
+                        import traceback
+                        traceback.print_exc()
 
             if link is final_link:
                 break

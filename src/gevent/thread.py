@@ -116,24 +116,17 @@ class LockType(BoundedSemaphore):
             if timeout > self._TIMEOUT_MAX:
                 raise OverflowError('timeout value is too large')
 
-        acquired = BoundedSemaphore.acquire(self, 0)
-        if not acquired and getcurrent() is not get_hub_if_exists() and blocking and not timeout:
-            # If we would block forever, and we're not in the hub, and a trivial non-blocking
-            # check didn't get us the lock, then try to run pending callbacks that might
-            # release the lock.
-            sleep()
 
-        if not acquired:
-            try:
-                acquired = BoundedSemaphore.acquire(self, blocking, timeout)
-            except LoopExit:
-                # Raised when the semaphore was not trivially ours, and we needed
-                # to block. Some other thread presumably owns the semaphore, and there are no greenlets
-                # running in this thread to switch to. So the best we can do is
-                # release the GIL and try again later.
-                if blocking: # pragma: no cover
-                    raise
-                acquired = False
+        try:
+            acquired = BoundedSemaphore.acquire(self, blocking, timeout)
+        except LoopExit:
+            # Raised when the semaphore was not trivially ours, and we needed
+            # to block. Some other thread presumably owns the semaphore, and there are no greenlets
+            # running in this thread to switch to. So the best we can do is
+            # release the GIL and try again later.
+            if blocking: # pragma: no cover
+                raise
+            acquired = False
 
         if not acquired and not blocking and getcurrent() is not get_hub_if_exists():
             # Run other callbacks. This makes spin locks works.
