@@ -48,6 +48,9 @@ fi
 # Needed for clock_gettime libc support on this version. This used to be spelled with LDFLAGS,
 # but that is deprecated and produces a warning.
 export LIBS="-lrt"
+# Be sure that we get the loop we expect by default, and not
+# a fallback loop.
+export GEVENT_LOOP="libev-cext"
 
 if [ -d /gevent -a -d /opt/python ]; then
     # Running inside docker
@@ -117,7 +120,10 @@ if [ -d /gevent -a -d /opt/python ]; then
         python -c 'from __future__ import print_function; import gevent; print(gevent, gevent.__version__)'
         python -c 'from __future__ import print_function; from gevent._compat import get_clock_info; print("clock info", get_clock_info("perf_counter"))'
         python -c 'from __future__ import print_function; import greenlet; print(greenlet, greenlet.__version__)'
-        python -c 'from __future__ import print_function; import gevent.core; print("loop", gevent.core.loop)'
+        python -c 'from __future__ import print_function; import gevent.core; print("default loop", gevent.core.loop)'
+        # Other loops we should have
+        GEVENT_LOOP=libuv python -c 'from __future__ import print_function; import gevent.core; print("libuv loop", gevent.core.loop)'
+        GEVENT_LOOP=libev-cffi python -c 'from __future__ import print_function; import gevent.core; print("libev-cffi loop", gevent.core.loop)'
         if [ -z "$GEVENTSETUP_DISABLE_ARES" ]; then
             python -c 'from __future__ import print_function; import gevent.ares; print("ares", gevent.ares)'
         fi

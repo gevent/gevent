@@ -32,6 +32,9 @@ cdef inline void greenlet_init():
 
 cdef void _init()
 
+cdef class _FakeNotifier(object):
+    cdef bint pending
+
 cdef class AbstractLinkable(object):
    # We declare the __weakref__ here in the base (even though
    # that's not really what we want) as a workaround for a Cython
@@ -58,7 +61,7 @@ cdef class AbstractLinkable(object):
    cdef int _switch_to_hub(self, the_hub) except -1
 
    @cython.nonecheck(False)
-   cdef _notify_link_list(self, list links)
+   cdef list _notify_link_list(self, list links)
 
    @cython.nonecheck(False)
    cpdef _notify_links(self, list arrived_while_waiting)
