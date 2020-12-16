@@ -324,6 +324,10 @@ class AbstractLinkable(object):
         self._check_and_notify()
         # If we added unswitched greenlets, however, don't add them back to the links yet.
         # We wouldn't be able to call them in this hub anyway.
+        # TODO: Instead of just adding these back to self._links, we should try to detect their
+        # "home" hub and mode the callback to that hub. As it stands, there's a chance that
+        # if no greenlet tries to acquire/release this object in that hub, these objects
+        # will never get to run.
         self._links.extend(unswitched)
 
     def _quiet_unlink_all(self, obj):

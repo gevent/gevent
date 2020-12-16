@@ -238,13 +238,8 @@ class TestSemaphoreMultiThread(greentest.TestCase):
     def assertOneHasNoHub(self, sem):
         self.assertIsNone(sem.hub, sem)
 
-    dueling_thread_tests_are_too_flaky = False
-
     def test_dueling_threads(self, acquire_args=(), create_hub=None):
         # pylint:disable=too-many-locals,too-many-statements
-
-        if self.dueling_thread_tests_are_too_flaky:
-            self.skipTest("Described as too flaky")
 
         # Threads doing nothing but acquiring and releasing locks, without
         # having any other greenlets to switch to.
