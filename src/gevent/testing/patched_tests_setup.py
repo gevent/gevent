@@ -287,6 +287,16 @@ if PY2 and PYPY:
 
     ]
 
+if PY2 and WIN:
+    disabled_tests += [
+        # This test randomly produces a 'LoopExit: Would block forever'
+        # on 'self.serv.accept()', but only on Windows with Python 2. Possibly
+        # due to the weird refcounting involving socket.makefile (just a guess)?
+        # Seen in both PyPy 7.3 and CPython 2.7.x
+        # https://ci.appveyor.com/project/denik/gevent/builds/36874106/job/guyq6h9k56n81uf6#L563
+        'test_socket.BasicTCPTest2.testDup',
+    ]
+
 if LIBUV:
     # epoll appears to work with these just fine in some cases;
     # kqueue (at least on OS X, the only tested kqueue system)
