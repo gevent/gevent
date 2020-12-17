@@ -786,15 +786,27 @@ class TestWorkerProfileAndTrace(TestCase):
 
         self.ClassUnderTest = Pool
 
-        pool = self._makeOne(1)
+        pool = self._makeOne(1, create_all_worker_threads=True)
         assert isinstance(pool, Pool)
 
+        # Do this after creating the pool and its thread to verify we don't
+        # capture the function at thread creation time.
         setter(callback)
 
 
         res = pool.apply(task)
         self.assertEqual(res, 1701)
         self.assertGreaterEqual(called[0], 1)
+
+        # Shutdown the pool. PyPy2.7-7.3.1 on Windows/Appveyor was
+        # properly seeing the before_task value, but after_task was empty.
+        # That suggested a memory consistency type issue, where the updates
+        # written by the other thread weren't fully visible to this thread
+        # yet. Try to kill it to see if that helps. (Couldn't reproduce
+        # on macOS).
+        #
+        # https://ci.appveyor.com/project/jamadden/gevent/build/job/wo9likk85cduui7n#L867
+        pool.kill()
 
         # The function is active only for the scope of the function
         self.assertEqual(before_task, [task, None, callback])

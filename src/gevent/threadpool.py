@@ -460,7 +460,7 @@ class ThreadPool(GroupMappingMixin):
             self.fork_watcher.stop()
 
     def _adjust_wait(self):
-        delay = 0.0001
+        delay = self.hub.loop.approx_timer_resolution
         while True:
             self._adjust_step()
             if len(self._worker_greenlets) <= self._maxsize:
