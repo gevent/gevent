@@ -449,7 +449,14 @@ class Greenlet(greenlet):
         self._start_event.close()
 
     def __handle_death_before_start(self, args):
-        # args is (t, v, tb) or simply t or v
+        # args is (t, v, tb) or simply t or v.
+        # The last two cases are transformed into (t, v, None);
+        # if the single argument is an exception type, a new instance
+        # is created; if the single argument is not an exception type and also
+        # not an exception, it is wrapped in a BaseException (this is not
+        # documented, but should result in better behaviour in the event of a
+        # user error---instead of silently printing something to stderr, we still
+        # kill the greenlet).
         if self._exc_info is None and self.dead:
             # the greenlet was never switched to before and it will
             # never be; _report_error was not called, the result was
@@ -462,12 +469,15 @@ class Greenlet(greenlet):
             # the greenlet).
             if len(args) == 1:
                 arg = args[0]
-                if issubclass(arg, BaseException):
+                if isinstance(arg, type) and issubclass(arg, BaseException):
                     args = (arg, arg(), None)
                 else:
                     args = (type(arg), arg, None)
             elif not args:
                 args = (GreenletExit, GreenletExit(), None)
+            if not issubclass(args[0], BaseException):
+                # Random non-type, non-exception arguments.
+                args = (BaseException, BaseException(args), None)
             assert issubclass(args[0], BaseException)
             self.__report_error(args)
 
@@ -734,7 +744,7 @@ class Greenlet(greenlet):
             a :meth:`link` or :meth:`rawlink` (cheaper) may be a safer way to
             clean up resources.
 
-        See also :func:`gevent.kill`.
+        See also :func:`gevent.kill` and :func:`gevent.killall`.
 
         :keyword type exception: The type of exception to raise in the greenlet. The default
             is :class:`GreenletExit`, which indicates a :meth:`successful` completion
@@ -1096,7 +1106,7 @@ def killall(greenlets, exception=GreenletExit, block=True, timeout=None):
         calling this method will never be switched to. This makes this function
         behave like :meth:`Greenlet.kill`. This does not apply to raw greenlets.
     .. versionchanged:: 1.5a3
-       Now accepts raw greenlets created by :func:`gevent.spawn_raw`.
+        Now accepts raw greenlets created by :func:`gevent.spawn_raw`.
     """
 
     need_killed = [] # type: list
