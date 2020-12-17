@@ -134,9 +134,7 @@ if [ -d /gevent -a -d /opt/python ]; then
         fi
 
         if [ -z "$GEVENTTEST_SKIP_ALL" ]; then
-            # TODO: Make the testrunner automatically repeat flaky tests.
-            # See the github action.
-            python -mgevent.tests || python -m gevent.tests
+            python -mgevent.tests --second-chance
         else
             # Allow skipping the bulk of the tests. If we're emulating Arm,
             # running the whole thing takes forever.

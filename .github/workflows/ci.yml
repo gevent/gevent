@@ -284,11 +284,8 @@ jobs:
           pip install -U pylint
           python -m pylint --limit-inference-results=1 --rcfile=.pylintrc gevent
       - name: "Tests: Basic"
-        # Run them twice if they fail; this is to workaround the inability to re-run
-        # single jobs. Ideally the testrunner should be updated to do this for just failing
-        # tests. See also make-manylinux.
         run: |
-          python -m gevent.tests $G_USE_COV || python -m gevent.tests
+          python -m gevent.tests --second-chance $G_USE_COV
       # For the CPython interpreters, unless we have reason to expect
       # different behaviour across the versions (e.g., as measured by coverage)
       # it's sufficient to run the full suite on the current version
@@ -303,21 +300,21 @@ jobs:
         env:
           GEVENT_FILE: thread
         run: |
-          python -m gevent.tests $G_USE_COV `(cd src/gevent/tests >/dev/null && ls test__*subprocess*.py)`
+          python -m gevent.tests --second-chance $G_USE_COV `(cd src/gevent/tests >/dev/null && ls test__*subprocess*.py)`
       - name: "Tests: c-ares resolver"
         # This sometimes fails on mac. Also, save mac minutes.
         if: (matrix.python-version == 2.7 || matrix.python-version == 3.9) && startsWith(runner.os, 'Linux')
         env:
           GEVENT_RESOLVER: ares
         run: |
-          python -mgevent.tests $G_USE_COV --ignore tests_that_dont_use_resolver.txt
+          python -mgevent.tests --second-chance $G_USE_COV --ignore tests_that_dont_use_resolver.txt
       - name: "Tests: dnspython resolver"
         # This has known issues on PyPy3. Also, save mac minutes.
         if: (matrix.python-version == 2.7 || matrix.python-version == 3.9) && startsWith(runner.os, 'Linux')
         env:
           GEVENT_RESOLVER: dnspython
         run: |
-          python -mgevent.tests $G_USE_COV --ignore tests_that_dont_use_resolver.txt
+          python -mgevent.tests --second-chance $G_USE_COV --ignore tests_that_dont_use_resolver.txt
       - name: "Tests: leakchecks"
         # Run the leaktests; this seems to be extremely slow on Python 3.7
         # XXX: Figure out why. Can we reproduce locally?
@@ -325,7 +322,7 @@ jobs:
         env:
           GEVENTTEST_LEAKCHECK: 1
         run: |
-          python -m gevent.tests --ignore tests_that_dont_do_leakchecks.txt
+          python -m gevent.tests --second-chance --ignore tests_that_dont_do_leakchecks.txt
       - name: "Tests: PURE_PYTHON"
         # No compiled cython modules on CPython, using the default backend. Get coverage here.
         # We should only need to run this for a single Python 2 and a Python 3
@@ -333,19 +330,19 @@ jobs:
         env:
           PURE_PYTHON: 1
         run: |
-          python -mgevent.tests --coverage || python -m gevent.tests
+          python -mgevent.tests --second-chance --coverage
       - name: "Tests: libuv"
         if: (matrix.python-version == 2.7 || matrix.python-version == 3.9)
         env:
           GEVENT_LOOP: libuv
         run: |
-          python -m gevent.tests $G_USE_COV || python -m gevent.tests
+          python -m gevent.tests --second-chance $G_USE_COV
       - name: "Tests: libev-cffi"
         if: (matrix.python-version == 2.7 || matrix.python-version == 3.9) && startsWith(runner.os, 'Linux')
         env:
           GEVENT_LOOP: libev-cffi
         run: |
-          python -m gevent.tests $G_USE_COV || python -m gevent.tests
+          python -m gevent.tests --second-chance $G_USE_COV
       - name: Report coverage
         if: ${{ !startsWith(matrix.python-version, 'pypy')  }}
         run: |
@@ -460,7 +457,7 @@ jobs:
           # Verify that we got non-embedded builds
           python -c 'import gevent.libev.corecffi as CF; assert not CF.LIBEV_EMBED'
           python -c 'import gevent.libuv.loop as CF; assert not CF.libuv.LIBUV_EMBED'
-          python -mgevent.tests
+          python -mgevent.tests --second-chance
 
   manylinux_x86_64:
     runs-on: ubuntu-latest

@@ -15,8 +15,6 @@ from gevent.monkey import get_original
 
 # pylint: disable=broad-except,attribute-defined-outside-init
 
-runtimelog = []
-MIN_RUNTIME = 1.0
 BUFFER_OUTPUT = False
 # This is set by the testrunner, defaulting to true (be quiet)
 # But if we're run standalone, default to false
@@ -272,7 +270,9 @@ class RunResult(object):
                  output=None, # type: str
                  error=None, # type: str
                  name=None,
-                 run_count=0, skipped_count=0):
+                 run_count=0, skipped_count=0,
+                 run_duration=0, # type: float
+                 ):
         self.command = command
         self.run_kwargs = run_kwargs
         self.code = code
@@ -281,6 +281,7 @@ class RunResult(object):
         self.name = name
         self.run_count = run_count
         self.skipped_count = skipped_count
+        self.run_duration = run_duration
 
     @property
     def output_lines(self):
@@ -383,7 +384,7 @@ def run(command, **kwargs): # pylint:disable=too-many-locals
     try:
         time_start = perf_counter()
         out, err = popen.communicate()
-        took = perf_counter() - time_start
+        duration = perf_counter() - time_start
         if popen.was_killed or popen.poll() is None:
             result = 'TIMEOUT'
         else:
@@ -402,19 +403,18 @@ def run(command, **kwargs): # pylint:disable=too-many-locals
         out = out.rstrip()
         out += '\n'
         log('| %s\n%s', name, out)
-    status, run_count, skipped_count = _find_test_status(took, out)
+    status, run_count, skipped_count = _find_test_status(duration, out)
     if result:
         log('! %s [code %s] %s', name, result, status, color='error')
     elif not nested:
         log('- %s %s', name, status)
-    if took >= MIN_RUNTIME:
-        runtimelog.append((-took, name))
     return RunResult(
         command, kwargs, result,
         output=out, error=err,
         name=name,
         run_count=run_count,
-        skipped_count=skipped_count
+        skipped_count=skipped_count,
+        run_duration=duration,
     )
 
 

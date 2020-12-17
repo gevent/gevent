@@ -5,6 +5,7 @@ import re
 import sys
 import os
 import glob
+import operator
 import traceback
 import importlib
 
@@ -80,8 +81,12 @@ class ResultCollector(object):
         self.passed = {}
         self.total_cases = 0
         self.total_skipped = 0
+        # Every RunResult reported: failed, passed, rerun
+        self._all_results = []
 
     def __iadd__(self, result):
+        self._all_results.append(result)
+
         if not result:
             self.failed[result.name] = result #[cmd, kwargs]
         else:
@@ -89,6 +94,26 @@ class ResultCollector(object):
         self.total_cases += result.run_count
         self.total_skipped += result.skipped_count
         return self
+
+    def __ilshift__(self, result):
+        """
+        collector <<= result
+
+        Stores the result, but does not count it towards
+        the number of cases run, skipped, passed or failed.
+        """
+        self._all_results.append(result)
+        return self
+
+    @property
+    def longest_running_tests(self):
+        """
+        A new list of RunResult objects, sorted from longest running
+        to shortest running.
+        """
+        return sorted(self._all_results,
+                      key=operator.attrgetter('run_duration'),
+                      reverse=True)
 
 
 class FailFast(Exception):
@@ -105,7 +130,8 @@ class Runner(object):
                  failfast=False,
                  quiet=False,
                  configured_run_alone_tests=(),
-                 worker_count=DEFAULT_NWORKERS):
+                 worker_count=DEFAULT_NWORKERS,
+                 second_chance=False):
         """
         :keyword quiet: Set to True or False to explicitly choose. Set to
             `None` to use the default, which may come from the environment variable
@@ -113,9 +139,12 @@ class Runner(object):
         """
         self._tests = tests
         self._configured_failing_tests = configured_failing_tests
-        self._failfast = failfast
         self._quiet = quiet
         self._configured_run_alone_tests = configured_run_alone_tests
+
+        assert not (failfast and second_chance)
+        self._failfast = failfast
+        self._second_chance = second_chance
 
         self.results = ResultCollector()
         self.results.total = len(self._tests)
@@ -127,6 +156,10 @@ class Runner(object):
         if self._quiet is not None:
             kwargs['quiet'] = self._quiet
         result = util.run(cmd, **kwargs)
+        if not result and self._second_chance:
+            self.results <<= result
+            util.log("> %s", result.name, color='warning')
+            result = util.run(cmd, **kwargs)
         if not result and self._failfast:
             # Under Python 3.9 (maybe older versions?), raising the
             # SystemExit here (a background thread belonging to the
@@ -221,12 +254,10 @@ class Runner(object):
     def _report(self, elapsed_time, exit=False):
         results = self.results
         report(
-            results.total, results.failed, results.passed,
+            results,
             exit=exit,
             took=elapsed_time,
             configured_failing_tests=self._configured_failing_tests,
-            total_cases=results.total_cases,
-            total_skipped=results.total_skipped
         )
 
 
@@ -482,7 +513,15 @@ class Discovery(object):
                 module_name = os.path.splitext(filename)[0]
                 qualified_name = self.package + '.' + module_name if self.package else module_name
 
-            with open(os.path.abspath(filename), 'rb') as f:
+            # Also allow just 'foo' as a shortcut for 'gevent.tests.foo'
+            abs_filename = os.path.abspath(filename)
+            if (
+                    not os.path.exists(abs_filename)
+                    and not filename.endswith('.py')
+                    and os.path.exists(abs_filename + '.py') ):
+                abs_filename = abs_filename + '.py'
+
+            with open(abs_filename, 'rb') as f:
                 # Some of the test files (e.g., test__socket_dns) are
                 # UTF8 encoded. Depending on the environment, Python 3 may
                 # try to decode those as ASCII, which fails with UnicodeDecodeError.
@@ -583,18 +622,38 @@ def format_seconds(seconds):
     return seconds
 
 
-def report(total, failed, passed, exit=True, took=None,
-           configured_failing_tests=(),
-           total_cases=0, total_skipped=0):
+def _show_longest_running(result_collector, how_many=5):
+    longest_running_tests = result_collector.longest_running_tests
+    if not longest_running_tests:
+        return
+    # The only tricky part is handling repeats. we want to show them,
+    # but not count them as a distinct entry.
+
+    util.log('\nLongest-running tests:')
+    length_of_longest_formatted_decimal = len('%.1f' % longest_running_tests[0].run_duration)
+
+    frmt = '%' + str(length_of_longest_formatted_decimal) + '.1f seconds: %s'
+    seen_names = set()
+    for result in longest_running_tests:
+        util.log(frmt, result.run_duration, result.name)
+        seen_names.add(result.name)
+        if len(seen_names) >= how_many:
+            break
+
+
+
+def report(result_collector, # type: ResultCollector
+           exit=True, took=None,
+           configured_failing_tests=()):
     # pylint:disable=redefined-builtin,too-many-branches,too-many-locals
-    runtimelog = util.runtimelog # XXX: Global state!
-    if runtimelog:
-        util.log('\nLongest-running tests:')
-        runtimelog.sort()
-        length = len('%.1f' % -runtimelog[0][0])
-        frmt = '%' + str(length) + '.1f seconds: %s'
-        for delta, name in runtimelog[:5]:
-            util.log(frmt, -delta, name)
+    total = result_collector.total
+    failed = result_collector.failed
+    passed = result_collector.passed
+    total_cases = result_collector.total_cases
+    total_skipped = result_collector.total_skipped
+
+    _show_longest_running(result_collector)
+
     if took:
         took = ' in %s' % format_seconds(took)
     else:
@@ -745,11 +804,11 @@ def main():
     parser.add_argument('--discover', action='store_true')
     parser.add_argument('--full', action='store_true')
     parser.add_argument('--config', default='known_failures.py')
-    parser.add_argument('--failfast', '-x', action='store_true')
     parser.add_argument("--coverage", action="store_true")
     parser.add_argument("--quiet", action="store_true", default=True)
     parser.add_argument("--verbose", action="store_false", dest='quiet')
     parser.add_argument("--debug", action="store_true", default=False)
+
     parser.add_argument("--package", default="gevent.tests")
     parser.add_argument(
         "--processes", "-j", default=DEFAULT_NWORKERS, type=int,
@@ -768,9 +827,17 @@ def main():
                         'For example, "-u-network". GEVENTTEST_USE_RESOURCES is used '
                         'if no argument is given. To only use one resources, specify '
                         '"-unone,resource".')
-
     parser.add_argument("--travis-fold", metavar="MSG",
                         help="Emit Travis CI log fold markers around the output.")
+
+    fail_parser = parser.add_mutually_exclusive_group()
+    fail_parser.add_argument(
+        "--second-chance", action="store_true", default=False,
+        help="Give failed tests a second chance.")
+    fail_parser.add_argument(
+        '--failfast', '-x', action='store_true', default=False,
+        help="Stop running after the first failure.")
+
     parser.add_argument('tests', nargs='*')
     options = parser.parse_args()
     # options.use will be either None for not given, or a list
@@ -862,6 +929,7 @@ def main():
             quiet=options.quiet,
             configured_run_alone_tests=RUN_ALONE,
             worker_count=options.processes,
+            second_chance=options.second_chance,
         )
 
         if options.travis_fold:
