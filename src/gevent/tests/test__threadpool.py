@@ -721,5 +721,92 @@ class TestThreadResult(greentest.TestCase):
         self.assertIsNotNone(tr.receiver)
 
 
+class TestWorkerProfileAndTrace(TestCase):
+    # Worker threads should execute the test and trace functions.
+    # (When running the user code.)
+    # https://github.com/gevent/gevent/issues/1670
+
+    old_profile = None
+    old_trace = None
+
+    def setUp(self):
+        super(TestWorkerProfileAndTrace, self).setUp()
+        self.old_profile = gevent.threadpool._get_thread_profile()
+        self.old_trace = gevent.threadpool._get_thread_trace()
+
+    def tearDown(self):
+        import threading
+        threading.setprofile(self.old_profile)
+        threading.settrace(self.old_trace)
+
+    def test_get_profile(self):
+        import threading
+        threading.setprofile(self)
+        self.assertIs(gevent.threadpool._get_thread_profile(), self)
+
+    def test_get_trace(self):
+        import threading
+        threading.settrace(self)
+        self.assertIs(gevent.threadpool._get_thread_trace(), self)
+
+    def _test_func_called_in_task(self, func):
+        import threading
+        import sys
+
+        setter = getattr(threading, 'set' + func)
+        getter = getattr(sys, 'get' + func)
+
+        called = [0]
+        def callback(*_args):
+            called[0] += 1
+
+        def task():
+            test.assertIsNotNone(getter)
+            return 1701
+
+
+        before_task = []
+        after_task = []
+
+        test = self
+        class Pool(ThreadPool):
+            class _WorkerGreenlet(ThreadPool._WorkerGreenlet):
+                # pylint:disable=signature-differs
+                def _before_run_task(self, func, *args):
+                    before_task.append(func)
+                    before_task.append(getter())
+                    ThreadPool._WorkerGreenlet._before_run_task(self, func, *args)
+                    before_task.append(getter())
+
+                def _after_run_task(self, func, *args):
+                    after_task.append(func)
+                    after_task.append(getter())
+                    ThreadPool._WorkerGreenlet._after_run_task(self, func, *args)
+                    after_task.append(getter())
+
+        self.ClassUnderTest = Pool
+
+        pool = self._makeOne(1)
+        assert isinstance(pool, Pool)
+
+        setter(callback)
+
+
+        res = pool.apply(task)
+        self.assertEqual(res, 1701)
+        self.assertGreaterEqual(called[0], 1)
+
+        # The function is active only for the scope of the function
+        self.assertEqual(before_task, [task, None, callback])
+        self.assertEqual(after_task, [task, callback, None])
+
+    def test_profile_called_in_task(self):
+        self._test_func_called_in_task('profile')
+
+    def test_trace_called_in_task(self):
+        self._test_func_called_in_task('trace')
+
+
+
 if __name__ == '__main__':
     greentest.main()
