@@ -40,6 +40,17 @@ def _format_hub(hub):
         hub.__class__.__name__, id(hub), hub.thread_ident
     )
 
+
+def _get_thread_profile(_sys=sys):
+    if 'threading' in _sys.modules:
+        return _sys.modules['threading']._profile_hook
+
+
+def _get_thread_trace(_sys=sys):
+    if 'threading' in _sys.modules:
+        return _sys.modules['threading']._trace_hook
+
+
 class _WorkerGreenlet(RawGreenlet):
     # Exists to produce a more useful repr for worker pool
     # threads/greenlets, and manage the communication of the worker
@@ -137,12 +148,27 @@ class _WorkerGreenlet(RawGreenlet):
                   file=stderr)
             tb = tb.tb_next
 
+    def _before_run_task(self, func, args, kwargs, thread_result,
+                         _sys=sys,
+                         _get_thread_profile=_get_thread_profile,
+                         _get_thread_trace=_get_thread_trace):
+        # pylint:disable=unused-argument
+        _sys.setprofile(_get_thread_profile())
+        _sys.settrace(_get_thread_trace())
+
+    def _after_run_task(self, func, args, kwargs, thread_result, _sys=sys):
+        # pylint:disable=unused-argument
+        _sys.setprofile(None)
+        _sys.settrace(None)
+
     def __run_task(self, func, args, kwargs, thread_result):
+        self._before_run_task(func, args, kwargs, thread_result)
         try:
             thread_result.set(func(*args, **kwargs))
         except: # pylint:disable=bare-except
             thread_result.handle_error((self, func), self._exc_info())
         finally:
+            self._after_run_task(func, args, kwargs, thread_result)
             del func, args, kwargs, thread_result
 
     def run(self):
@@ -236,12 +262,23 @@ class ThreadPool(GroupMappingMixin):
     The `len` of instances of this class is the number of enqueued
     (unfinished) tasks.
 
+    Just before a task starts running in a worker thread,
+    the values of :func:`threading.setprofile` and :func:`threading.settrace`
+    are consulted. Any values there are installed in that thread for the duration
+    of the task (using :func:`sys.setprofile` and :func:`sys.settrace`, respectively).
+    (Because worker threads are long-lived and outlast any given task, this arrangement
+    lets the hook functions change between tasks, but does not let them see the
+    bookkeeping done by the worker thread itself.)
+
     .. caution:: Instances of this class are only true if they have
        unfinished tasks.
 
     .. versionchanged:: 1.5a3
        The undocumented ``apply_e`` function, deprecated since 1.1,
        was removed.
+    .. versionchanged:: NEXT
+       Install the profile and trace functions in the worker thread while
+       the worker thread is running the supplied task.
     """
 
     __slots__ = (
@@ -267,6 +304,8 @@ class ThreadPool(GroupMappingMixin):
         # native threads.
         'task_queue',
     )
+
+    _WorkerGreenlet = _WorkerGreenlet
 
     def __init__(self, maxsize, hub=None):
         if hub is None:
@@ -421,7 +460,7 @@ class ThreadPool(GroupMappingMixin):
             self.fork_watcher.stop()
 
     def _adjust_wait(self):
-        delay = 0.0001
+        delay = self.hub.loop.approx_timer_resolution
         while True:
             self._adjust_step()
             if len(self._worker_greenlets) <= self._maxsize:
@@ -437,7 +476,7 @@ class ThreadPool(GroupMappingMixin):
             self.manager = Greenlet.spawn(self._adjust_wait)
 
     def _add_thread(self):
-        _WorkerGreenlet(self)
+        self._WorkerGreenlet(self)
 
     def spawn(self, func, *args, **kwargs):
         """
