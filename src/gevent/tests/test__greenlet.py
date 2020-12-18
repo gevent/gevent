@@ -610,7 +610,7 @@ class TestBasic(greentest.TestCase):
         import sys
         limit = sys.getrecursionlimit()
         self.addCleanup(sys.setrecursionlimit, limit)
-        sys.setrecursionlimit(limit // 2)
+        sys.setrecursionlimit(limit // 3)
         def recur():
             recur() # This is expected to raise RecursionError
 
