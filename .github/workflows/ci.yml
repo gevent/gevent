@@ -141,13 +141,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: [2.7, pypy2, pypy3, 3.6, 3.7, 3.8, 3.9]
+        python-version: [2.7, pypy-2.7, pypy-3.6, 3.6, 3.7, 3.8, 3.9]
         os: [ubuntu-latest, macos-latest]
         exclude:
           - os: macos-latest
-            python-version: pypy2
+            python-version: pypy-2.7
           - os: macos-latest
-            python-version: pypy3
+            python-version: pypy-3.6
           - os: macos-latest
             python-version: 3.5
           - os: macos-latest
@@ -224,7 +224,7 @@ jobs:
       # First, the build dependencies (see setup.cfg)
       # so that we don't have to use build isolation and can better use the cache;
       # Note that we can't use -U for cffi and greenlet on PyPy.
-      # The -q is because PyPy2 sometimes started raising
+      # The -q is because Pypy-2.7 sometimes started raising
       #   UnicodeEncodeError: 'ascii' codec can't encode character u'\u2588' in position 6: ordinal not in range(128)
       # when downloading files. This started sometime in mid 2020. It's from
       # pip's vendored progress.bar class.
@@ -309,7 +309,7 @@ jobs:
         run: |
           python -mgevent.tests --second-chance $G_USE_COV --ignore tests_that_dont_use_resolver.txt
       - name: "Tests: dnspython resolver"
-        # This has known issues on PyPy3. Also, save mac minutes.
+        # This has known issues on Pypy-3.6. Also, save mac minutes.
         if: (matrix.python-version == 2.7 || matrix.python-version == 3.9) && startsWith(runner.os, 'Linux')
         env:
           GEVENT_RESOLVER: dnspython
