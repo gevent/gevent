@@ -602,6 +602,15 @@ class TestBasic(greentest.TestCase):
         # https://github.com/gevent/gevent/issues/1704
         # A RuntimeError: recursion depth exceeded
         # does not break things.
+        #
+        # However, sometimes, on some interpreter versions on some
+        # systems, actually exhausting the stack results in "Fatal
+        # Python error: Cannot recover from stack overflow.". So we
+        # need to use a low recursion limit so that doesn't happen.
+        import sys
+        limit = sys.getrecursionlimit()
+        self.addCleanup(sys.setrecursionlimit, limit)
+        sys.setrecursionlimit(limit // 2)
         def recur():
             recur() # This is expected to raise RecursionError
 
