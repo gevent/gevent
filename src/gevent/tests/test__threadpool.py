@@ -738,6 +738,7 @@ class TestWorkerProfileAndTrace(TestCase):
         import threading
         threading.setprofile(self.old_profile)
         threading.settrace(self.old_trace)
+        super(TestWorkerProfileAndTrace, self).tearDown()
 
     def test_get_profile(self):
         import threading
