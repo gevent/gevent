@@ -83,6 +83,7 @@ class ResultCollector(object):
         self.total_skipped = 0
         # Every RunResult reported: failed, passed, rerun
         self._all_results = []
+        self.reran = {}
 
     def __iadd__(self, result):
         self._all_results.append(result)
@@ -103,6 +104,7 @@ class ResultCollector(object):
         the number of cases run, skipped, passed or failed.
         """
         self._all_results.append(result)
+        self.reran[result.name] = result
         return self
 
     @property
@@ -670,6 +672,10 @@ def report(result_collector, # type: ResultCollector
     if passed_unexpected:
         util.log('\n%s/%s unexpected passes', len(passed_unexpected), total, color='error')
         print_list(passed_unexpected)
+
+    if result_collector.reran:
+        util.log('\n%s/%s tests rerun', len(result_collector.reran), total, color='warning')
+        print_list(result_collector.reran)
 
     if failed:
         util.log('\n%s/%s tests failed%s', len(failed), total, took, color='warning')
