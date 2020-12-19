@@ -432,18 +432,35 @@ class TestNoChunks(CommonTestMixin, TestCase):
     # when returning a list of strings a shortcut is employed by the server:
     # it calculates the content-length and joins all the chunks before sending
     validator = None
+    last_environ = None
+
+    def _check_environ(self, input_terminated=True):
+        if input_terminated:
+            self.assertTrue(self.last_environ.get('wsgi.input_terminated'))
+        else:
+            self.assertFalse(self.last_environ['wsgi.input_terminated'])
 
     def application(self, env, start_response):
-        self.assertTrue(env.get('wsgi.input_terminated'))
+        self.last_environ = env
         path = env['PATH_INFO']
         if path == '/':
             start_response('200 OK', [('Content-Type', 'text/plain')])
             return [b'hello ', b'world']
+        if path == '/websocket':
+            write = start_response('101 Switching Protocols',
+                                   [('Content-Type', 'text/plain'),
+                                    # Con:close is to make our simple client
+                                    # happy; otherwise it wants to read data from the
+                                    # body thot's being kept open.
+                                    ('Connection', 'close')])
+            write(b'') # Trigger finalizing the headers now.
+            return [b'upgrading to', b'websocket']
         start_response('404 Not Found', [('Content-Type', 'text/plain')])
         return [b'not ', b'found']
 
     def test_basic(self):
         response, dne_response = super(TestNoChunks, self).test_basic()
+        self._check_environ()
         self.assertFalse(response.chunks)
         response.assertHeader('Content-Length', '11')
         if dne_response is not None:
@@ -455,7 +472,27 @@ class TestNoChunks(CommonTestMixin, TestCase):
             fd.write(self.format_request(path='/notexist'))
             response = read_http(fd, code=404, reason='Not Found', body='not found')
         self.assertFalse(response.chunks)
+        self._check_environ()
         response.assertHeader('Content-Length', '9')
+
+class TestConnectionUpgrades(TestNoChunks):
+
+    def test_connection_upgrade(self):
+        with self.makefile() as fd:
+            fd.write(self.format_request(path='/websocket', Connection='upgrade'))
+            response = read_http(fd, code=101)
+
+        self._check_environ(input_terminated=False)
+        self.assertFalse(response.chunks)
+
+    def test_upgrade_websocket(self):
+        with self.makefile() as fd:
+            fd.write(self.format_request(path='/websocket', Upgrade='websocket'))
+            response = read_http(fd, code=101)
+
+        self._check_environ(input_terminated=False)
+        self.assertFalse(response.chunks)
+
 
 class TestNoChunks10(TestNoChunks):
     HTTP_CLIENT_VERSION = '1.0'
@@ -475,6 +512,7 @@ class TestExplicitContentLength(TestNoChunks): # pylint:disable=too-many-ancesto
     # server - it caculates the content-length
 
     def application(self, env, start_response):
+        self.last_environ = env
         self.assertTrue(env.get('wsgi.input_terminated'))
         path = env['PATH_INFO']
         if path == '/':

@@ -415,6 +415,9 @@ class WSGIHandler(object):
     time_finish = 0 # time.time() when done handling request
     headers_sent = False # Have we already sent headers?
     response_use_chunked = False # Write with transfer-encoding chunked
+    # Was the connection upgraded? We shouldn't try to chunk writes in that
+    # case.
+    connection_upgraded = False
     environ = None # Dict from self.get_environ
     application = None # application callable from self.server.application
     requestline = None # native str 'GET / HTTP/1.1'
@@ -486,6 +489,7 @@ class WSGIHandler(object):
                     pass
             self.__dict__.pop('socket', None)
             self.__dict__.pop('rfile', None)
+            self.__dict__.pop('wsgi_input', None)
 
     def _check_http_version(self):
         version_str = self.request_version
@@ -697,9 +701,18 @@ class WSGIHandler(object):
 
         return True  # read more requests
 
+    def _connection_upgrade_requested(self):
+        if self.headers.get('Connection', '').lower() == 'upgrade':
+            return True
+        if self.headers.get('Upgrade', '').lower() == 'websocket':
+            return True
+        return False
+
     def finalize_headers(self):
         if self.provided_date is None:
             self.response_headers.append((b'Date', format_date_time(time.time())))
+
+        self.connection_upgraded = self.code == 101
 
         if self.code not in (304, 204):
             # the reply will include message-body; make sure we have either Content-Length or chunked
@@ -711,8 +724,11 @@ class WSGIHandler(object):
                         total_len_str = total_len_str.encode("latin-1")
                     self.response_headers.append((b'Content-Length', total_len_str))
                 else:
-                    if self.request_version != 'HTTP/1.0':
-                        self.response_use_chunked = True
+                    self.response_use_chunked = (
+                        not self.connection_upgraded
+                        and self.request_version != 'HTTP/1.0'
+                    )
+                    if self.response_use_chunked:
                         self.response_headers.append((b'Transfer-Encoding', b'chunked'))
 
     def _sendall(self, data):
@@ -975,6 +991,7 @@ class WSGIHandler(object):
 
         self.result = None
         self.response_use_chunked = False
+        self.connection_upgraded = False
         self.response_length = 0
 
         try:
@@ -1103,10 +1120,7 @@ class WSGIHandler(object):
         # See https://github.com/gevent/gevent/issues/1667 for discussion.
         env['SCRIPT_NAME'] = ''
 
-        if '?' in self.path:
-            path, query = self.path.split('?', 1)
-        else:
-            path, query = self.path, ''
+        path, query = self.path.split('?', 1) if '?' in self.path else (self.path, '')
         # Note that self.path contains the original str object; if it contains
         # encoded escapes, it will NOT match PATH_INFO.
         env['PATH_INFO'] = unquote_latin1(path)
@@ -1134,18 +1148,20 @@ class WSGIHandler(object):
             else:
                 env[key] = value
 
-        if env.get('HTTP_EXPECT') == '100-continue':
-            sock = self.socket
-        else:
-            sock = None
+        sock = self.socket if env.get('HTTP_EXPECT') == '100-continue' else None
 
         chunked = env.get('HTTP_TRANSFER_ENCODING', '').lower() == 'chunked'
+        # Input refuses to read if the data isn't chunked, and there is no content_length
+        # provided. For 'Upgrade: Websocket' requests, neither of those things is true.
+        handling_reads = not self._connection_upgrade_requested()
+
         self.wsgi_input = Input(self.rfile, self.content_length, socket=sock, chunked_input=chunked)
-        env['wsgi.input'] = self.wsgi_input
+
+        env['wsgi.input'] = self.wsgi_input if handling_reads else self.rfile
         # This is a non-standard flag indicating that our input stream is
         # self-terminated (returns EOF when consumed).
         # See https://github.com/gevent/gevent/issues/1308
-        env['wsgi.input_terminated'] = True
+        env['wsgi.input_terminated'] = handling_reads
         return env
 
 
