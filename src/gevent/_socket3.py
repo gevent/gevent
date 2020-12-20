@@ -115,8 +115,6 @@ class socket(_socketcommon.SocketMixin):
 
     _io_refs = 0
     _closed = False
-    _read_event = None
-    _write_event = None
 
 
     # Take the same approach as socket2: wrap a real socket object,
