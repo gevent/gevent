@@ -12,7 +12,6 @@ import sys
 from gevent import _socketcommon
 from gevent._util import copy_globals
 from gevent._compat import PYPY
-from gevent.timeout import Timeout
 
 copy_globals(_socketcommon, globals(),
              names_to_ignore=_socketcommon.__py3_imports__ + _socketcommon.__extensions__,
@@ -25,17 +24,10 @@ __imports__ = [i for i in _socketcommon.__imports__ if i not in _socketcommon.__
 __dns__ = _socketcommon.__dns__
 try:
     _fileobject = __socket__._fileobject
-    _socketmethods = __socket__._socketmethods
 except AttributeError:
     # Allow this module to be imported under Python 3
     # for building the docs
     _fileobject = object
-    _socketmethods = ('bind', 'connect', 'connect_ex',
-                      'fileno', 'listen', 'getpeername',
-                      'getsockname', 'getsockopt',
-                      'setsockopt', 'sendall',
-                      'setblocking', 'settimeout',
-                      'gettimeout', 'shutdown')
 else:
     # Python 2 doesn't natively support with statements on _fileobject;
     # but it substantially eases our test cases if we can do the same with on both Py3
@@ -74,8 +66,6 @@ else:
             super(_fileobject, self).close()
 
 
-from gevent._greenlet_primitives import get_memory as _get_memory
-
 class _closedsocket(object):
     __slots__ = ()
 
@@ -100,10 +90,7 @@ class _closedsocket(object):
     __getattr__ = _dummy
 
 
-timeout_default = object()
 gtype = type
-
-from gevent._hub_primitives import wait_on_socket as _wait_on_socket
 
 _Base = _socketcommon.SocketMixin
 
@@ -189,17 +176,6 @@ class socket(_Base):
             result += ' timeout=' + str(self.timeout)
         return result
 
-    def _get_ref(self):
-        return self._read_event.ref or self._write_event.ref
-
-    def _set_ref(self, value):
-        self._read_event.ref = value
-        self._write_event.ref = value
-
-    ref = property(_get_ref, _set_ref)
-
-    _wait = _wait_on_socket
-
     def accept(self):
         while 1:
             try:
@@ -255,46 +231,6 @@ class socket(_Base):
     def closed(self):
         return isinstance(self._sock, _closedsocket)
 
-    def connect(self, address):
-        """
-        Connect to *address*.
-
-        .. versionchanged:: 20.6.0
-            If the host part of the address includes an IPv6 scope ID,
-            it will be used instead of ignored, if the platform supplies
-            :func:`socket.inet_pton`.
-        """
-        if self.timeout == 0.0:
-            return self._sock.connect(address)
-
-        address = _socketcommon._resolve_addr(self._sock, address)
-
-        timer = Timeout._start_new_or_dummy(self.timeout, timeout('timed out'))
-        try:
-            while 1:
-                err = self._sock.getsockopt(SOL_SOCKET, SO_ERROR)
-                if err:
-                    raise error(err, strerror(err))
-                result = self._sock.connect_ex(address)
-                if not result or result == EISCONN:
-                    break
-                if (result in (EWOULDBLOCK, EINPROGRESS, EALREADY)) or (result == EINVAL and is_windows):
-                    self._wait(self._write_event)
-                else:
-                    raise error(result, strerror(result))
-        finally:
-            timer.close()
-
-    def connect_ex(self, address):
-        try:
-            return self.connect(address) or 0
-        except timeout:
-            return EAGAIN
-        except error as ex:
-            if type(ex) is error: # pylint:disable=unidiomatic-typecheck
-                return ex.args[0]
-            raise  # gaierror is not silenced by connect_ex
-
     def dup(self):
         """dup() -> socket object
 
@@ -321,123 +257,10 @@ class socket(_Base):
             self._sock._drop()
         return fobj
 
-    def recv(self, *args):
-        while 1:
-            try:
-                return self._sock.recv(*args)
-            except error as ex:
-                if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
-                    raise
-                # QQQ without clearing exc_info test__refcount.test_clean_exit fails
-                sys.exc_clear()
-            self._wait(self._read_event)
-
-    def recvfrom(self, *args):
-        while 1:
-            try:
-                return self._sock.recvfrom(*args)
-            except error as ex:
-                if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
-                    raise
-                sys.exc_clear()
-            self._wait(self._read_event)
-
-    def recvfrom_into(self, *args):
-        while 1:
-            try:
-                return self._sock.recvfrom_into(*args)
-            except error as ex:
-                if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
-                    raise
-                sys.exc_clear()
-            self._wait(self._read_event)
-
-    def recv_into(self, *args):
-        while 1:
-            try:
-                return self._sock.recv_into(*args)
-            except error as ex:
-                if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
-                    raise
-                sys.exc_clear()
-            self._wait(self._read_event)
-
-    def send(self, data, flags=0, timeout=timeout_default):
-        if timeout is timeout_default:
-            timeout = self.timeout
-        try:
-            return self._sock.send(data, flags)
-        except error as ex:
-            if ex.args[0] not in _socketcommon.GSENDAGAIN or timeout == 0.0:
-                raise
-            sys.exc_clear()
-            self._wait(self._write_event)
-            try:
-                return self._sock.send(data, flags)
-            except error as ex2:
-                if ex2.args[0] == EWOULDBLOCK:
-                    return 0
-                raise
-
     def sendall(self, data, flags=0):
         if isinstance(data, unicode):
             data = data.encode()
-        # this sendall is also reused by gevent.ssl.SSLSocket subclass,
-        # so it should not call self._sock methods directly
-        data_memory = _get_memory(data)
-        return _socketcommon._sendall(self, data_memory, flags)
-
-    def sendto(self, *args):
-        try:
-            return self._sock.sendto(*args)
-        except error as ex:
-            if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
-                raise
-            sys.exc_clear()
-            self._wait(self._write_event)
-            try:
-                return self._sock.sendto(*args)
-            except error as ex2:
-                if ex2.args[0] == EWOULDBLOCK:
-                    return 0
-                raise
-
-    def setblocking(self, flag):
-        if flag:
-            self.timeout = None
-        else:
-            self.timeout = 0.0
-
-    def shutdown(self, how):
-        if how == 0:  # SHUT_RD
-            self.hub.cancel_wait(self._read_event, cancel_wait_ex)
-        elif how == 1:  # SHUT_WR
-            self.hub.cancel_wait(self._write_event, cancel_wait_ex)
-        else:
-            self.hub.cancel_wait(self._read_event, cancel_wait_ex)
-            self.hub.cancel_wait(self._write_event, cancel_wait_ex)
-        self._sock.shutdown(how)
-
-    family = property(lambda self: self._sock.family)
-    type = property(lambda self: self._sock.type)
-    proto = property(lambda self: self._sock.proto)
-
-    def fileno(self):
-        return self._sock.fileno()
-
-    def getsockname(self):
-        return self._sock.getsockname()
-
-    def getpeername(self):
-        return self._sock.getpeername()
-
-    # delegate the functions that we haven't implemented to the real socket object
-
-    _s = "def %s(self, *args): return self._sock.%s(*args)\n\n"
-    _m = None
-    for _m in set(_socketmethods) - set(locals()) - {'settimeout', 'gettimeout'}:
-        exec(_s % (_m, _m,))
-    del _m, _s
+        return _Base.sendall(self, data, flags)
 
     if PYPY:
 

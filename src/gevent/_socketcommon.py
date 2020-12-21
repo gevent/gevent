@@ -76,7 +76,12 @@ from gevent._compat import PY38
 from gevent._compat import PY39
 from gevent._compat import WIN as is_windows
 from gevent._compat import OSX as is_macos
+from gevent._compat import exc_clear
 from gevent._util import copy_globals
+from gevent._greenlet_primitives import get_memory as _get_memory
+from gevent._hub_primitives import wait_on_socket as _wait_on_socket
+
+from gevent.timeout import Timeout
 
 if PY38:
     __imports__.extend([
@@ -114,6 +119,16 @@ try:
 except ImportError:
     EBADF = 9
 
+try:
+    from errno import EHOSTUNREACH
+except ImportError:
+    EHOSTUNREACH = -1
+
+try:
+    from errno import ECONNREFUSED
+except ImportError:
+    ECONNREFUSED = -1
+
 # macOS can return EPROTOTYPE when writing to a socket that is shutting
 # Down. Retrying the write should return the expected EPIPE error.
 # Downstream classes (like pywsgi) know how to handle/ignore EPIPE.
@@ -133,6 +148,8 @@ try:
     import backports.socketpair
 except ImportError:
     pass
+
+_SocketError = __socket__.error
 
 _name = _value = None
 __imports__ = copy_globals(__socket__, globals(),
@@ -413,7 +430,7 @@ def _resolve_addr(sock, address):
     except AttributeError: # pragma: no cover
         # inet_pton might not be available.
         pass
-    except __socket__.error:
+    except _SocketError:
         # Not parseable, needs resolved.
         pass
 
@@ -432,7 +449,11 @@ def _resolve_addr(sock, address):
         address = (address[0], port, address[2], address[3])
     return address
 
+
+timeout_default = object()
+
 class SocketMixin(object):
+    # pylint:disable=too-many-public-methods
     __slots__ = (
         'hub',
         'timeout',
@@ -472,6 +493,22 @@ class SocketMixin(object):
     def _drop_ref_on_close(self, sock):
         raise NotImplementedError
 
+    def _get_ref(self):
+        return self._read_event.ref or self._write_event.ref
+
+    def _set_ref(self, value):
+        self._read_event.ref = value
+        self._write_event.ref = value
+
+    ref = property(_get_ref, _set_ref)
+
+    _wait = _wait_on_socket
+
+    ###
+    # Common methods defined here need to be added to the
+    # API documentation specifically.
+    ###
+
     def settimeout(self, howlong):
         if howlong is not None:
             try:
@@ -487,3 +524,232 @@ class SocketMixin(object):
     def gettimeout(self):
         # avoid recursion with any property on self.timeout
         return SocketMixin.timeout.__get__(self, type(self))
+
+    def setblocking(self, flag):
+        # Beginning in 3.6.0b3 this is supposed to raise
+        # if the file descriptor is closed, but the test for it
+        # involves closing the fileno directly. Since we
+        # don't touch the fileno here, it doesn't make sense for
+        # us.
+        if flag:
+            self.timeout = None
+        else:
+            self.timeout = 0.0
+
+    def shutdown(self, how):
+        if how == 0:  # SHUT_RD
+            self.hub.cancel_wait(self._read_event, cancel_wait_ex)
+        elif how == 1:  # SHUT_WR
+            self.hub.cancel_wait(self._write_event, cancel_wait_ex)
+        else:
+            self.hub.cancel_wait(self._read_event, cancel_wait_ex)
+            self.hub.cancel_wait(self._write_event, cancel_wait_ex)
+        self._sock.shutdown(how)
+
+    family = property(lambda self: self._sock.family)
+    type = property(lambda self: self._sock.type)
+    proto = property(lambda self: self._sock.proto)
+
+    def fileno(self):
+        return self._sock.fileno()
+
+    def getsockname(self):
+        return self._sock.getsockname()
+
+    def getpeername(self):
+        return self._sock.getpeername()
+
+    def bind(self, address):
+        return self._sock.bind(address)
+
+    def listen(self, *args):
+        return self._sock.listen(*args)
+
+    def getsockopt(self, *args):
+        return self._sock.getsockopt(*args)
+
+    def setsockopt(self, *args):
+        return self._sock.setsockopt(*args)
+
+    if hasattr(__socket__.socket, 'ioctl'): # os.name == 'nt'
+        def ioctl(self, *args):
+            return self._sock.ioctl(*args)
+    if hasattr(__socket__.socket, 'sleeptaskw'): # os.name == 'riscos
+        def sleeptaskw(self, *args):
+            return self._sock.sleeptaskw(*args)
+
+    def getblocking(self):
+        """
+        Returns whether the socket will approximate blocking
+        behaviour.
+
+        .. versionadded:: 1.3a2
+            Added in Python 3.7.
+        """
+        return self.timeout != 0.0
+
+    def connect(self, address):
+        """
+        Connect to *address*.
+
+        .. versionchanged:: 20.6.0
+            If the host part of the address includes an IPv6 scope ID,
+            it will be used instead of ignored, if the platform supplies
+            :func:`socket.inet_pton`.
+        """
+        if self.timeout == 0.0:
+            return self._sock.connect(address)
+        address = _resolve_addr(self._sock, address)
+        with Timeout._start_new_or_dummy(self.timeout, __socket__.timeout("timed out")):
+            while 1:
+                err = self.getsockopt(__socket__.SOL_SOCKET, __socket__.SO_ERROR)
+                if err:
+                    raise _SocketError(err, strerror(err))
+                result = self._sock.connect_ex(address)
+
+                if not result or result == EISCONN:
+                    break
+                if (result in (EWOULDBLOCK, EINPROGRESS, EALREADY)) or (result == EINVAL and is_windows):
+                    self._wait(self._write_event)
+                else:
+                    if (isinstance(address, tuple)
+                            and address[0] == 'fe80::1'
+                            and result == EHOSTUNREACH):
+                        # On Python 3.7 on mac, we see EHOSTUNREACH
+                        # returned for this link-local address, but it really is
+                        # supposed to be ECONNREFUSED according to the standard library
+                        # tests (test_socket.NetworkConnectionNoServer.test_create_connection)
+                        # (On previous versions, that code passed the '127.0.0.1' IPv4 address, so
+                        # ipv6 link locals were never a factor; 3.7 passes 'localhost'.)
+                        # It is something of a mystery how the stdlib socket code doesn't
+                        # produce EHOSTUNREACH---I (JAM) can't see how socketmodule.c would avoid
+                        # that. The normal connect just calls connect_ex much like we do.
+                        result = ECONNREFUSED
+                    raise _SocketError(result, strerror(result))
+
+    def connect_ex(self, address):
+        try:
+            return self.connect(address) or 0
+        except __socket__.timeout:
+            return EAGAIN
+        except __socket__.gaierror: # pylint:disable=try-except-raise
+            # gaierror/overflowerror/typerror is not silenced by connect_ex;
+            # gaierror extends error so catch it first
+            raise
+        except _SocketError as ex:
+            # Python 3: error is now OSError and it has various subclasses.
+            # Only those that apply to actually connecting are silenced by
+            # connect_ex.
+            # On Python 3, we want to check ex.errno; on Python 2
+            # there is no such attribute, we need to look at the first
+            # argument.
+            try:
+                err = ex.errno
+            except AttributeError:
+                err = ex.args[0]
+            if err:
+                return err
+            raise
+
+    def recv(self, *args):
+        while 1:
+            try:
+                return self._sock.recv(*args)
+            except _SocketError as ex:
+                if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
+                    raise
+                # QQQ without clearing exc_info test__refcount.test_clean_exit fails
+                exc_clear() # Python 2
+            self._wait(self._read_event)
+
+    def recvfrom(self, *args):
+        while 1:
+            try:
+                return self._sock.recvfrom(*args)
+            except _SocketError as ex:
+                if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
+                    raise
+                exc_clear() # Python 2
+            self._wait(self._read_event)
+
+    def recvfrom_into(self, *args):
+        while 1:
+            try:
+                return self._sock.recvfrom_into(*args)
+            except _SocketError as ex:
+                if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
+                    raise
+                exc_clear() # Python 2
+            self._wait(self._read_event)
+
+    def recv_into(self, *args):
+        while 1:
+            try:
+                return self._sock.recv_into(*args)
+            except _SocketError as ex:
+                if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
+                    raise
+                exc_clear() # Python 2
+            self._wait(self._read_event)
+
+    def sendall(self, data, flags=0):
+        # this sendall is also reused by gevent.ssl.SSLSocket subclass,
+        # so it should not call self._sock methods directly
+        data_memory = _get_memory(data)
+        return _sendall(self, data_memory, flags)
+
+    def sendto(self, *args):
+        try:
+            return self._sock.sendto(*args)
+        except _SocketError as ex:
+            if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
+                raise
+            exc_clear()
+            self._wait(self._write_event)
+
+            try:
+                return self._sock.sendto(*args)
+            except _SocketError as ex2:
+                if ex2.args[0] == EWOULDBLOCK:
+                    exc_clear()
+                    return 0
+                raise
+
+    def send(self, data, flags=0, timeout=timeout_default):
+        if timeout is timeout_default:
+            timeout = self.timeout
+        try:
+            return self._sock.send(data, flags)
+        except _SocketError as ex:
+            if ex.args[0] not in GSENDAGAIN or timeout == 0.0:
+                raise
+            exc_clear()
+            self._wait(self._write_event)
+            try:
+                return self._sock.send(data, flags)
+            except _SocketError as ex2:
+                if ex2.args[0] == EWOULDBLOCK:
+                    exc_clear()
+                    return 0
+                raise
+
+    @classmethod
+    def _fixup_docstrings(cls):
+        for k, v in vars(cls).items():
+            if k.startswith('_'):
+                continue
+            if not hasattr(v, '__doc__') or v.__doc__:
+                continue
+            smeth =  getattr(__socket__.socket, k, None)
+            if not smeth or not smeth.__doc__:
+                continue
+
+            try:
+                v.__doc__ = smeth.__doc__
+            except (AttributeError, TypeError):
+                # slots can't have docs. Py2 raises TypeError,
+                # Py3 raises AttributeError
+                continue
+
+SocketMixin._fixup_docstrings()
+del SocketMixin._fixup_docstrings
