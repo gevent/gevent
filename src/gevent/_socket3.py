@@ -113,11 +113,10 @@ class socket(_socketcommon.SocketMixin):
     # of _wrefsocket. (gevent internal usage only)
     _gevent_sock_class = _wrefsocket
 
-    _io_refs = 0
-    _closed = False
-    _read_event = None
-    _write_event = None
-
+    __slots__ = (
+        '_io_refs',
+        '_closed',
+    )
 
     # Take the same approach as socket2: wrap a real socket object,
     # don't subclass it. This lets code that needs the raw _sock (not tied to the hub)
@@ -125,6 +124,8 @@ class socket(_socketcommon.SocketMixin):
 
     if sys.version_info[:2] < (3, 7):
         def __init__(self, family=AF_INET, type=SOCK_STREAM, proto=0, fileno=None):
+            super().__init__()
+            self._closed = False
             self._sock = self._gevent_sock_class(family, type, proto, fileno)
             self.timeout = None
             self.__init_common()
@@ -132,6 +133,8 @@ class socket(_socketcommon.SocketMixin):
         # In 3.7, socket changed to auto-detecting family, type, and proto
         # when given a fileno.
         def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+            super().__init__()
+            self._closed = False
             if fileno is None:
                 if family == -1:
                     family = AF_INET
@@ -144,6 +147,7 @@ class socket(_socketcommon.SocketMixin):
             self.__init_common()
 
     def __init_common(self):
+        self._io_refs = 0
         _socket.socket.setblocking(self._sock, False)
         fileno = _socket.socket.fileno(self._sock)
         self.hub = get_hub()
@@ -578,20 +582,6 @@ class socket(_socketcommon.SocketMixin):
             self.timeout = None
         else:
             self.timeout = 0.0
-
-    def settimeout(self, howlong):
-        if howlong is not None:
-            try:
-                f = howlong.__float__
-            except AttributeError:
-                raise TypeError('a float is required')
-            howlong = f()
-            if howlong < 0.0:
-                raise ValueError('Timeout value out of range')
-        self.__dict__['timeout'] = howlong
-
-    def gettimeout(self):
-        return self.__dict__['timeout']
 
     def shutdown(self, how):
         if how == 0:  # SHUT_RD

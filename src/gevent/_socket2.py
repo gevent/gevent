@@ -105,7 +105,9 @@ gtype = type
 
 from gevent._hub_primitives import wait_on_socket as _wait_on_socket
 
-class socket(_socketcommon.SocketMixin):
+_Base = _socketcommon.SocketMixin
+
+class socket(_Base):
     """
     gevent `socket.socket <https://docs.python.org/2/library/socket.html#socket-objects>`_
     for Python 2.
@@ -120,9 +122,12 @@ class socket(_socketcommon.SocketMixin):
 
     # pylint:disable=too-many-public-methods
 
-    # TODO: Define __slots__.
+    __slots__ = (
+
+    )
 
     def __init__(self, family=AF_INET, type=SOCK_STREAM, proto=0, _sock=None):
+        _Base.__init__(self)
         timeout = _socket.getdefaulttimeout()
         if _sock is None:
             self._sock = _realsocket(family, type, proto)
@@ -403,20 +408,6 @@ class socket(_socketcommon.SocketMixin):
         else:
             self.timeout = 0.0
 
-    def settimeout(self, howlong):
-        if howlong is not None:
-            try:
-                f = howlong.__float__
-            except AttributeError:
-                raise TypeError('a float is required')
-            howlong = f()
-            if howlong < 0.0:
-                raise ValueError('Timeout value out of range')
-        self.__dict__['timeout'] = howlong # avoid recursion with any property on self.timeout
-
-    def gettimeout(self):
-        return self.__dict__['timeout'] # avoid recursion with any property on self.timeout
-
     def shutdown(self, how):
         if how == 0:  # SHUT_RD
             self.hub.cancel_wait(self._read_event, cancel_wait_ex)
@@ -444,7 +435,7 @@ class socket(_socketcommon.SocketMixin):
 
     _s = "def %s(self, *args): return self._sock.%s(*args)\n\n"
     _m = None
-    for _m in set(_socketmethods) - set(locals()):
+    for _m in set(_socketmethods) - set(locals()) - {'settimeout', 'gettimeout'}:
         exec(_s % (_m, _m,))
     del _m, _s
 

@@ -1,9 +1,9 @@
-# This line can be commented out so that most tests run with the
-# system socket for comparison.
 from __future__ import print_function
 from __future__ import absolute_import
 
 from gevent import monkey
+# This line can be commented out so that most tests run with the
+# system socket for comparison.
 monkey.patch_all()
 
 import sys
@@ -598,6 +598,26 @@ class TestSocket(greentest.TestCase):
         s.close()
         with self.assertRaises(socket.error):
             s.shutdown(socket.SHUT_RDWR)
+
+    def test_can_be_weak_ref(self):
+        # stdlib socket can be weak reffed.
+        import weakref
+        s = socket.socket()
+        try:
+            w = weakref.ref(s)
+            self.assertIsNotNone(w)
+        finally:
+            s.close()
+
+    def test_has_no_dict(self):
+        # stdlib socket has no dict
+        s = socket.socket()
+        try:
+            with self.assertRaises(AttributeError):
+                getattr(s, '__dict__')
+        finally:
+            s.close()
+
 
 if __name__ == '__main__':
     greentest.main()
