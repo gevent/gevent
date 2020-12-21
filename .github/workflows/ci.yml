@@ -112,6 +112,10 @@ jobs:
       - name: Enable emulation
         run: |
           docker run --rm --privileged hypriot/qemu-register
+        # This one was seen in pyca/bcrypt. What's the difference?
+        # (Other than this one not working.)
+        #run: |
+        #  docker run --rm --privileged multiarch/qemu-user-static:register --reset
       - name: Build and test gevent
         # Skip the bulk of the tests, running them emulated on arm takes
         # forever. Likewise, don't build or even configure c-ares; in the emulated platform
@@ -275,7 +279,7 @@ jobs:
           python -c 'import gevent.ares; print(gevent.ares)'
           ccache -s
       - name: Lint (Python 3.9)
-        if: ${{ matrix.python-version == 3.9 }}
+        if: matrix.python-version == 3.9 && startsWith(runner.os, 'Linux')
         # We only need to do this on one version, and it should be Python 3, because
         # pylint has stopped updating for Python 2.
         # We do this here rather than a separate job to avoid the compilation overhead.

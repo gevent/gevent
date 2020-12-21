@@ -14,7 +14,6 @@ import sys
 from gevent import _socketcommon
 from gevent._util import copy_globals
 from gevent._compat import PYPY
-from gevent.timeout import Timeout
 import _socket
 from os import dup
 
@@ -22,13 +21,6 @@ from os import dup
 copy_globals(_socketcommon, globals(),
              names_to_ignore=_socketcommon.__extensions__,
              dunder_names_to_keep=())
-
-try:
-    from errno import EHOSTUNREACH
-    from errno import ECONNREFUSED
-except ImportError:
-    EHOSTUNREACH = -1
-    ECONNREFUSED = -1
 
 
 __socket__ = _socketcommon.__socket__
@@ -40,9 +32,6 @@ __dns__ = _socketcommon.__dns__
 
 SocketIO = __socket__.SocketIO # pylint:disable=no-member
 
-from gevent._greenlet_primitives import get_memory as _get_memory
-
-timeout_default = object()
 
 class _closedsocket(object):
     __slots__ = ('family', 'type', 'proto', 'orig_fileno', 'description')
@@ -96,7 +85,6 @@ class _wrefsocket(_socket.socket):
         timeout = property(lambda s: s.gettimeout(),
                            lambda s, nv: s.settimeout(nv))
 
-from gevent._hub_primitives import wait_on_socket as _wait_on_socket
 
 class socket(_socketcommon.SocketMixin):
     """
@@ -168,16 +156,6 @@ class socket(_socketcommon.SocketMixin):
                 return self._sock.type & ~_socket.SOCK_NONBLOCK # pylint:disable=no-member
             return self._sock.type
 
-    def getblocking(self):
-        """
-        Returns whether the socket will approximate blocking
-        behaviour.
-
-        .. versionadded:: 1.3a2
-            Added in Python 3.7.
-        """
-        return self.timeout != 0.0
-
     def __enter__(self):
         return self
 
@@ -211,17 +189,6 @@ class socket(_socketcommon.SocketMixin):
 
     def __getstate__(self):
         raise TypeError("Cannot serialize socket object")
-
-    def _get_ref(self):
-        return self._read_event.ref or self._write_event.ref
-
-    def _set_ref(self, value):
-        self._read_event.ref = value
-        self._write_event.ref = value
-
-    ref = property(_get_ref, _set_ref)
-
-    _wait = _wait_on_socket
 
     def dup(self):
         """dup() -> socket object
@@ -392,71 +359,6 @@ class socket(_socketcommon.SocketMixin):
         self._detach_socket('detached')
         return sock.detach()
 
-    def connect(self, address):
-        """
-        Connect to *address*.
-
-        .. versionchanged:: 20.6.0
-            If the host part of the address includes an IPv6 scope ID,
-            it will be used instead of ignored, if the platform supplies
-            :func:`socket.inet_pton`.
-        """
-        if self.timeout == 0.0:
-            return _socket.socket.connect(self._sock, address)
-        address = _socketcommon._resolve_addr(self._sock, address)
-        with Timeout._start_new_or_dummy(self.timeout, timeout("timed out")):
-            while True:
-                err = self.getsockopt(SOL_SOCKET, SO_ERROR)
-                if err:
-                    raise error(err, strerror(err))
-                result = _socket.socket.connect_ex(self._sock, address)
-
-                if not result or result == EISCONN:
-                    break
-                if (result in (EWOULDBLOCK, EINPROGRESS, EALREADY)) or (result == EINVAL and is_windows):
-                    self._wait(self._write_event)
-                else:
-                    if (isinstance(address, tuple)
-                            and address[0] == 'fe80::1'
-                            and result == EHOSTUNREACH):
-                        # On Python 3.7 on mac, we see EHOSTUNREACH
-                        # returned for this link-local address, but it really is
-                        # supposed to be ECONNREFUSED according to the standard library
-                        # tests (test_socket.NetworkConnectionNoServer.test_create_connection)
-                        # (On previous versions, that code passed the '127.0.0.1' IPv4 address, so
-                        # ipv6 link locals were never a factor; 3.7 passes 'localhost'.)
-                        # It is something of a mystery how the stdlib socket code doesn't
-                        # produce EHOSTUNREACH---I (JAM) can't see how socketmodule.c would avoid
-                        # that. The normal connect just calls connect_ex much like we do.
-                        result = ECONNREFUSED
-                    raise error(result, strerror(result))
-
-    def connect_ex(self, address):
-        try:
-            return self.connect(address) or 0
-        except timeout:
-            return EAGAIN
-        except gaierror: # pylint:disable=try-except-raise
-            # gaierror/overflowerror/typerror is not silenced by connect_ex;
-            # gaierror extends OSError (aka error) so catch it first
-            raise
-        except error as ex:
-            # error is now OSError and it has various subclasses.
-            # Only those that apply to actually connecting are silenced by
-            # connect_ex.
-            if ex.errno:
-                return ex.errno
-            raise # pragma: no cover
-
-    def recv(self, *args):
-        while True:
-            try:
-                return self._sock.recv(*args)
-            except error as ex:
-                if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
-                    raise
-            self._wait(self._read_event)
-
     if hasattr(_socket.socket, 'recvmsg'):
         # Only on Unix; PyPy 3.5 5.10.0 provides sendmsg and recvmsg, but not
         # recvmsg_into (at least on os x)
@@ -485,72 +387,6 @@ class socket(_socketcommon.SocketMixin):
                         raise
                 self._wait(self._read_event)
 
-    def recvfrom(self, *args):
-        while True:
-            try:
-                return self._sock.recvfrom(*args)
-            except error as ex:
-                if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
-                    raise
-            self._wait(self._read_event)
-
-    def recvfrom_into(self, *args):
-        while True:
-            try:
-                return self._sock.recvfrom_into(*args)
-            except error as ex:
-                if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
-                    raise
-            self._wait(self._read_event)
-
-    def recv_into(self, *args):
-        while True:
-            try:
-                return self._sock.recv_into(*args)
-            except error as ex:
-                if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
-                    raise
-            self._wait(self._read_event)
-
-    def send(self, data, flags=0, timeout=timeout_default):
-        if timeout is timeout_default:
-            timeout = self.timeout
-        try:
-            return self._sock.send(data, flags)
-        except error as ex:
-            if ex.args[0] not in _socketcommon.GSENDAGAIN or timeout == 0.0:
-                raise
-            self._wait(self._write_event)
-            try:
-                return _socket.socket.send(self._sock, data, flags)
-            except error as ex2:
-                if ex2.args[0] == EWOULDBLOCK:
-                    return 0
-                raise
-
-    def sendall(self, data, flags=0):
-        # XXX Now that we run on PyPy3, see the notes in _socket2.py's sendall()
-        # and implement that here if needed.
-        # PyPy3 is not optimized for performance yet, and is known to be slower than
-        # PyPy2, so it's possibly premature to do this. However, there is a 3.5 test case that
-        # possibly exposes this in a severe way.
-        data_memory = _get_memory(data)
-        return _socketcommon._sendall(self, data_memory, flags)
-
-    def sendto(self, *args):
-        try:
-            return self._sock.sendto(*args)
-        except error as ex:
-            if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
-                raise
-            self._wait(self._write_event)
-            try:
-                return self._sock.sendto(*args)
-            except error as ex2:
-                if ex2.args[0] == EWOULDBLOCK:
-                    return 0
-                raise
-
     if hasattr(_socket.socket, 'sendmsg'):
         # Only on Unix
         def sendmsg(self, buffers, ancdata=(), flags=0, address=None):
@@ -572,26 +408,6 @@ class socket(_socketcommon.SocketMixin):
                         return 0
                     raise
 
-    def setblocking(self, flag):
-        # Beginning in 3.6.0b3 this is supposed to raise
-        # if the file descriptor is closed, but the test for it
-        # involves closing the fileno directly. Since we
-        # don't touch the fileno here, it doesn't make sense for
-        # us.
-        if flag:
-            self.timeout = None
-        else:
-            self.timeout = 0.0
-
-    def shutdown(self, how):
-        if how == 0:  # SHUT_RD
-            self.hub.cancel_wait(self._read_event, cancel_wait_ex)
-        elif how == 1:  # SHUT_WR
-            self.hub.cancel_wait(self._write_event, cancel_wait_ex)
-        else:
-            self.hub.cancel_wait(self._read_event, cancel_wait_ex)
-            self.hub.cancel_wait(self._write_event, cancel_wait_ex)
-        self._sock.shutdown(how)
 
     # sendfile: new in 3.5. But there's no real reason to not
     # support it everywhere. Note that we can't use os.sendfile()
