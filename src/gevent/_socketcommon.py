@@ -434,10 +434,26 @@ def _resolve_addr(sock, address):
 
 class SocketMixin(object):
     __slots__ = (
+        'hub',
+        'timeout',
         '_read_event',
         '_write_event',
         '_sock',
+        '__weakref__',
     )
+
+    def __init__(self):
+        # Writing:
+        #    (self.a, self.b) = (None,) * 2
+        # generates the fastest bytecode. But At least on PyPy,
+        # where the SSLSocket subclass has a timeout property,
+        # it results in the settimeout() method getting the tuple
+        # as the value, not the unpacked None.
+        self._read_event = None
+        self._write_event = None
+        self._sock = None
+        self.hub = None
+        self.timeout = None
 
     def _drop_events_and_close(self, closefd=True, _cancel_wait_ex=cancel_wait_ex):
         hub = self.hub
@@ -455,3 +471,19 @@ class SocketMixin(object):
 
     def _drop_ref_on_close(self, sock):
         raise NotImplementedError
+
+    def settimeout(self, howlong):
+        if howlong is not None:
+            try:
+                f = howlong.__float__
+            except AttributeError:
+                raise TypeError('a float is required', howlong, type(howlong))
+            howlong = f()
+            if howlong < 0.0:
+                raise ValueError('Timeout value out of range')
+        # avoid recursion with any property on self.timeout
+        SocketMixin.timeout.__set__(self, howlong)
+
+    def gettimeout(self):
+        # avoid recursion with any property on self.timeout
+        return SocketMixin.timeout.__get__(self, type(self))

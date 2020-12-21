@@ -1,0 +1,4 @@
+Remove the ``__dict__`` attribute from `gevent.socket.socket` objects. The
+standard library socket do not have a ``__dict__``.
+
+Noticed by Carson Ip.
