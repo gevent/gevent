@@ -45,6 +45,12 @@ Python 2 and Python 3, respectively.
     The cooperative socket object. See the version documentation for
     specifics.
 
+    .. versionchanged:: 20.12.0
+
+       Socket objects no longer have a ``__dict__`` or accept
+       arbitrary instance variables. Previously they did, but
+       standard library sockets never have.
+
 
 .. toctree::
 

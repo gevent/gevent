@@ -311,6 +311,8 @@ def prereleaser_middle(data): # pragma: no cover
         new_version_bytes = new_version
     new_version_bytes = new_version.encode('ascii')
     replacement = br'.. \1:: %s' % (new_version_bytes,)
+    # TODO: This should also look in the docs/ directory at
+    # *.rst
     for path, _ in modules.walk_modules(
             # Start here
             basedir=os.path.join(data['reporoot'], 'src', 'gevent'),
