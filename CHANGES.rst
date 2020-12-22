@@ -72,7 +72,7 @@ Bugfixes
   standard library (and gevent prior to 1.5). The number of bytes
   written is still returned (instead of ``None``).
   See :issue:`1711`.
-- Make `gevent.pywsgi` trying to enforce the rules for reading chunked input or
+- Make `gevent.pywsgi` stop trying to enforce the rules for reading chunked input or
   ``Content-Length`` terminated input when the connection is being
   upgraded, for example to a websocket connection. Likewise, if the
   protocol was switched by returning a ``101`` status, stop trying to
@@ -88,13 +88,6 @@ Bugfixes
   As part of this refactoring, share more common socket code between Python 2
   and Python 3.
   See :issue:`1724`.
-
-
-Misc
-----
-
-- See :issue:`1692`.
-
 
 ----
 
