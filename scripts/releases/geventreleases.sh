@@ -8,20 +8,21 @@ mkdir /tmp/gevent/
 
 
 # 2.7 is a python.org build, builds a 10_6_intel wheel
-./geventrel.sh /usr/local/bin/python2.7 
+./geventrel.sh /usr/local/bin/python2.7
 
 # 3.5 is a python.org build, builds a 10_6_intel wheel
-./geventrel.sh /usr/local/bin/python3.5 
+./geventrel.sh /usr/local/bin/python3.5
 
 # 3.6 is a python.org build, builds a 10_6_intel wheel
-./geventrel.sh /usr/local/bin/python3.6 
+./geventrel.sh /usr/local/bin/python3.6
 
 # 3.7 is a python.org build, builds a 10_6_intel wheel
-./geventrel.sh /usr/local/bin/python3.7 
-./geventrel.sh /usr/local/bin/python3.8 
+./geventrel.sh /usr/local/bin/python3.7
+./geventrel.sh /usr/local/bin/python3.8
+./geventrel.sh /usr/local/bin/python3.9
 
 
 # PyPy 4.0
-./geventrel.sh `which pypy` 
+./geventrel.sh `which pypy`
 
 wait
