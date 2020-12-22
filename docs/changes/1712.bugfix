@@ -1,7 +1,0 @@
-Make `gevent.pywsgi` trying to enforce the rules for reading chunked input or
-``Content-Length`` terminated input when the connection is being
-upgraded, for example to a websocket connection. Likewise, if the
-protocol was switched by returning a ``101`` status, stop trying to
-automatically chunk the responses.
-
-Reported by Kavindu Santhusa.

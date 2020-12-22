@@ -1,4 +1,0 @@
-Make error reporting when a greenlet suffers a `RecursionError` more
-reliable.
-
-Reported by Dan Milon.

@@ -1,7 +1,0 @@
-PyPy 7.3.2 (2.7 and 3.6) have been tested, and a small issue with 2.7
-was corrected.
-
-These are not yet tested on Travis CI.
-
-.. note:: Support for Python 3.5 will be removed in 2021, as it has
-          now reached end-of-life.

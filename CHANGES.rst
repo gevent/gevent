@@ -6,6 +6,99 @@
 
 .. towncrier release notes start
 
+20.12.0 (2020-12-22)
+====================
+
+
+Features
+--------
+
+- Make worker threads created by :class:`gevent.threadpool.ThreadPool` install
+  the :func:`threading.setprofile` and :func:`threading.settrace` hooks
+  while tasks are running. This provides visibility to profiling and
+  tracing tools like yappi.
+
+  Reported by Suhail Muhammed.
+  See :issue:`1678`.
+
+
+Bugfixes
+--------
+
+- Incorrectly passing an exception *instance* instead of an exception
+  *type* to `gevent.Greenlet.kill` or `gevent.killall` no longer prints
+  an exception to stderr.
+  See :issue:`1663`.
+- Make destroying a hub try harder to more forcibly stop loop processing
+  when there are outstanding callbacks or IO operations scheduled.
+
+  Thanks to Josh Snyder (:issue:`1686`) and Jan-Philip Gehrcke
+  (:issue:`1669`).
+  See :issue:`1686`.
+- Improve the ability to use monkey-patched locks, and
+  `gevent.lock.BoundedSemaphore`, across threads, especially when the
+  various threads might not have a gevent hub or any other active
+  greenlets. In particular, this handles some cases that previously
+  raised ``LoopExit`` or would hang. Note that this may not be reliable
+  on PyPy on Windows; such an environment is not currently recommended.
+
+  The semaphore tries to avoid creating a hub if it seems unnecessary,
+  automatically creating one in the single-threaded case when it would
+  block, but not in the multi-threaded case. While the differences
+  should be correctly detected, it's possible there are corner cases
+  where they might not be.
+
+  If your application appears to hang acquiring semaphores, but adding a
+  call to ``gevent.get_hub()`` in the thread attempting to acquire the
+  semaphore before doing so fixes it, please file an issue.
+  See :issue:`1698`.
+- Make error reporting when a greenlet suffers a `RecursionError` more
+  reliable.
+
+  Reported by Dan Milon.
+  See :issue:`1704`.
+- gevent.pywsgi: Avoid printing an extra traceback ("TypeError: not
+  enough arguments for format string") to standard error on certain
+  invalid client requests.
+
+  Reported by Steven Grimm.
+  See :issue:`1708`.
+- Add support for PyPy2 7.3.3.
+  See :issue:`1709`.
+- Python 2: Make ``gevent.subprocess.Popen.stdin`` objects have a
+  ``write`` method that guarantees to write the entire argument in
+  binary, unbuffered mode. This may require multiple trips around the
+  event loop, but more closely matches the behaviour of the Python 2
+  standard library (and gevent prior to 1.5). The number of bytes
+  written is still returned (instead of ``None``).
+  See :issue:`1711`.
+- Make `gevent.pywsgi` trying to enforce the rules for reading chunked input or
+  ``Content-Length`` terminated input when the connection is being
+  upgraded, for example to a websocket connection. Likewise, if the
+  protocol was switched by returning a ``101`` status, stop trying to
+  automatically chunk the responses.
+
+  Reported by Kavindu Santhusa.
+  See :issue:`1712`.
+- Remove the ``__dict__`` attribute from `gevent.socket.socket` objects. The
+  standard library socket do not have a ``__dict__``.
+
+  Noticed by Carson Ip.
+
+  As part of this refactoring, share more common socket code between Python 2
+  and Python 3.
+  See :issue:`1724`.
+
+
+Misc
+----
+
+- See :issue:`1692`.
+
+
+----
+
+
 20.9.0 (2020-09-22)
 ===================
 

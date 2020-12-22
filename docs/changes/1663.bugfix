@@ -1,3 +1,0 @@
-Incorrectly passing an exception *instance* instead of an exception
-*type* to `gevent.Greenlet.kill` or `gevent.killall` no longer prints
-an exception to stderr.

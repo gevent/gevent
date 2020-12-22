@@ -1,5 +1,0 @@
-gevent.pywsgi: Avoid printing an extra traceback ("TypeError: not
-enough arguments for format string") to standard error on certain
-invalid client requests.
-
-Reported by Steven Grimm.

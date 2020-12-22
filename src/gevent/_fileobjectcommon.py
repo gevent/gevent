@@ -88,7 +88,7 @@ class WriteallMixin(object):
 
         Returns the length of *value*.
 
-        .. versionadded:: NEXT
+        .. versionadded:: 20.12.0
         """
         # Do we need to play the same get_memory games we do with sockets?
         # And what about chunking for large values? See _socketcommon.py

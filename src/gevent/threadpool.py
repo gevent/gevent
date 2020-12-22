@@ -276,7 +276,7 @@ class ThreadPool(GroupMappingMixin):
     .. versionchanged:: 1.5a3
        The undocumented ``apply_e`` function, deprecated since 1.1,
        was removed.
-    .. versionchanged:: NEXT
+    .. versionchanged:: 20.12.0
        Install the profile and trace functions in the worker thread while
        the worker thread is running the supplied task.
     """

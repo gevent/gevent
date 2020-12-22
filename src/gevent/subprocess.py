@@ -617,7 +617,7 @@ class Popen(object):
        were added to Python 3.9, but are available in any gevent version, provided
        the underlying platform support is present.
 
-    .. versionchanged:: NEXT
+    .. versionchanged:: 20.12.0
        On Python 2 only, if unbuffered binary communication is requested,
        the ``stdin`` attribute of this object will have a ``write`` method that
        actually performs internal buffering and looping, similar to the standard library.

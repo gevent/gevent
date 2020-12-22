@@ -42,7 +42,7 @@ class LoopExit(Exception):
         """
         The (optional) hub that raised the error.
 
-        .. versionadded:: NEXT
+        .. versionadded:: 20.12.0
         """
         # XXX: Note that semaphore.py does this manually.
         if len(self.args) == 3: # From the hub
@@ -128,7 +128,7 @@ class HubDestroyed(GreenletExit):
 
     Clients outside of gevent must not raise this exception.
 
-    .. versionadded:: NEXT
+    .. versionadded:: 20.12.0
     """
 
     def __init__(self, destroy_loop):

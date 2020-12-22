@@ -71,7 +71,7 @@ class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
     .. versionchanged:: 1.5a3
        The low-level ``rawlink`` method (most users won't use this) now automatically
        unlinks waiters before calling them.
-    .. versionchanged:: NEXT
+    .. versionchanged:: 20.12.0
        Improved support for multi-threaded usage. When multi-threaded usage is detected,
        instances will no longer create the thread's hub if it's not present.
     """
