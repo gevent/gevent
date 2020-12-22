@@ -41,6 +41,7 @@ import os
 import traceback
 import signal as signalmodule
 from gevent import getswitchinterval
+from gevent.exceptions import HubDestroyed
 
 
 __all__ = ['get_version',
@@ -334,6 +335,10 @@ cdef class CallbackFIFO(object):
         self.head = None
         self.tail = None
 
+    cdef inline clear(self):
+        self.head = None
+        self.tail = None
+
     cdef inline callback popleft(self):
         cdef callback head = self.head
         self.head = head.next
@@ -341,7 +346,6 @@ cdef class CallbackFIFO(object):
             self.tail = None
         head.next = None
         return head
-
 
     cdef inline append(self, callback new_tail):
         assert not new_tail.next
@@ -352,7 +356,6 @@ cdef class CallbackFIFO(object):
                 self.head = new_tail
                 return
             self.tail = self.head
-
 
         assert self.head is not None
         old_tail = self.tail
@@ -560,6 +563,11 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
     cpdef handle_error(self, context, type, value, tb):
         cdef object handle_error
         cdef object error_handler = self.error_handler
+        if type is HubDestroyed:
+            self._callbacks.clear()
+            self.break_()
+            return
+
         if error_handler is not None:
             # we do want to do getattr every time so that setting Hub.handle_error property just works
             handle_error = getattr(error_handler, 'handle_error', error_handler)

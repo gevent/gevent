@@ -10,6 +10,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from greenlet import GreenletExit
 
 __all__ = [
     'LoopExit',
@@ -116,3 +117,20 @@ class InvalidThreadUseError(RuntimeError):
 
     .. versionadded:: 1.5a3
     """
+
+
+class HubDestroyed(GreenletExit):
+    """
+    Internal exception, raised when we're trying to destroy the
+    hub and we want the loop to stop running callbacks now.
+
+    This must not be subclassed; the type is tested by identity.
+
+    Clients outside of gevent must not raise this exception.
+
+    .. versionadded:: NEXT
+    """
+
+    def __init__(self, destroy_loop):
+        GreenletExit.__init__(self, destroy_loop)
+        self.destroy_loop = destroy_loop

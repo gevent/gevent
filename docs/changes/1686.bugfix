@@ -1,0 +1,5 @@
+Make destroying a hub try harder to more forcibly stop loop processing
+when there are outstanding callbacks or IO operations scheduled.
+
+Thanks to Josh Snyder (:issue:`1686`) and Jan-Philip Gehrcke
+(:issue:`1669`).

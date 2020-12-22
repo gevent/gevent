@@ -31,6 +31,7 @@ __all__ = [
 
 from gevent._config import config as GEVENT_CONFIG
 from gevent._compat import thread_mod_name
+from gevent._compat import reraise
 from gevent._util import readproperty
 from gevent._util import Lazy
 from gevent._util import gmctime
@@ -54,6 +55,7 @@ iwait = _hub_primitives.iwait_on_objects
 
 
 from gevent.exceptions import LoopExit
+from gevent.exceptions import HubDestroyed
 
 from gevent._waiter import Waiter
 
@@ -62,6 +64,7 @@ from gevent._waiter import Waiter
 # that we can be sure nothing is monkey patched yet.
 get_thread_ident = __import__(thread_mod_name).get_ident
 MAIN_THREAD_IDENT = get_thread_ident() # XXX: Assuming import is done on the main thread.
+
 
 
 def spawn_raw(function, *args, **kwargs):
@@ -529,6 +532,11 @@ class Hub(WaitOperationsGreenlet):
         """
         type, value, tb = self._normalize_exception(type, value, tb)
 
+        if type is HubDestroyed:
+            # We must continue propagating this for it to properly
+            # exit.
+            reraise(type, value, tb)
+
         if not issubclass(type, self.NOT_ERROR):
             self.print_exception(context, type, value, tb)
         if context is None or issubclass(type, self.SYSTEM_ERROR):
@@ -773,6 +781,9 @@ class Hub(WaitOperationsGreenlet):
             is running in. If the hub is destroyed by a different thread
             after a ``fork()``, for example, expect some garbage to leak.
         """
+        if destroy_loop is None:
+            destroy_loop = not self.loop.default
+
         if self.periodic_monitoring_thread is not None:
             self.periodic_monitoring_thread.kill()
             self.periodic_monitoring_thread = None
@@ -791,7 +802,7 @@ class Hub(WaitOperationsGreenlet):
         # loop; if we destroy the loop and then switch into the hub,
         # things will go VERY, VERY wrong.
         try:
-            self.throw(GreenletExit)
+            self.throw(HubDestroyed(destroy_loop))
         except LoopExit:
             # Expected.
             pass
@@ -801,8 +812,6 @@ class Hub(WaitOperationsGreenlet):
             # in this case.
             pass
 
-        if destroy_loop is None:
-            destroy_loop = not self.loop.default
         if destroy_loop:
             if get_loop() is self.loop:
                 # Don't let anyone try to reuse this
