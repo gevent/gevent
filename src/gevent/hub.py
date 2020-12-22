@@ -800,7 +800,9 @@ class Hub(WaitOperationsGreenlet):
         # cleaned up. Otherwise there are likely to be reference
         # cycles still around. We MUST do this before we destroy the
         # loop; if we destroy the loop and then switch into the hub,
-        # things will go VERY, VERY wrong.
+        # things will go VERY, VERY wrong (because we will have destroyed
+        # the C datastructures in the middle of the C function that's
+        # using them; the best we can hope for is a segfault).
         try:
             self.throw(HubDestroyed(destroy_loop))
         except LoopExit:
