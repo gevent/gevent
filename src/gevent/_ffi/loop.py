@@ -14,6 +14,7 @@ from gevent._ffi import GEVENT_DEBUG_LEVEL
 from gevent._ffi import TRACE
 from gevent._ffi.callback import callback
 from gevent._compat import PYPY
+from gevent.exceptions import HubDestroyed
 
 from gevent import getswitchinterval
 
@@ -601,6 +602,11 @@ class AbstractLoop(object):
         self.handle_error(None, SystemError, SystemError(message), None)
 
     def handle_error(self, context, type, value, tb):
+        if type is HubDestroyed:
+            self._callbacks.clear()
+            self.break_()
+            return
+
         handle_error = None
         error_handler = self.error_handler
         if error_handler is not None:
