@@ -105,6 +105,16 @@ distributed as binary `wheels`_.
    <https://musl.libc.org>`_, including `Alpine Linux
    <https://alpinelinux.org>`_. Those systems must install from source.
 
+.. tip::
+
+   Beginning with gevent 20.12.0, 64-bit ARM binaries are distributed
+   on PyPI for aarch64 manylinux2014 compatible systems. Installing these
+   needs a very recent version of ``pip``. These wheels *do not*
+   contain the c-ares resolver, are not tested, and are built with
+   very low levels of optimizations. Serious production users of
+   gevent on 64-bit ARM systems are encouraged to build their own
+   binary wheels.
+
 Installing From Source
 ----------------------
 
