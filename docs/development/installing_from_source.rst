@@ -42,6 +42,10 @@ General Notes
 
      yum install python3-devel gcc kernel-devel kernel-headers make diffutils file
 
+  (Newer versions of Fedora use ``dnf`` for package management but as
+  of this writing ``yum`` is still available and widely used,
+  especially for backwards compatibility.)
+
   See :issue:`1567`, :issue:`1559`, and :issue:`1566`.
 
   .. note::
