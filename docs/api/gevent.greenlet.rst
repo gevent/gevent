@@ -17,19 +17,33 @@ Starting Greenlets
 To start a new greenlet, pass the target function and its arguments to
 :class:`Greenlet` constructor and call :meth:`Greenlet.start`:
 
->>> g = Greenlet(myfunction, 'arg1', 'arg2', kwarg1=1)
->>> g.start()
+   >>> from gevent import Greenlet
+   >>> def myfunction(arg1, arg2, kwarg1=None):
+   ...    pass
+   >>> g = Greenlet(myfunction, 'arg1', 'arg2', kwarg1=1)
+   >>> g.start()
 
 or use classmethod :meth:`Greenlet.spawn` which is a shortcut that
 does the same:
 
->>> g = Greenlet.spawn(myfunction, 'arg1', 'arg2', kwarg1=1)
+   >>> g = Greenlet.spawn(myfunction, 'arg1', 'arg2', kwarg1=1)
 
 There are also various spawn helpers in :mod:`gevent`, including:
 
 - :func:`gevent.spawn`
 - :func:`gevent.spawn_later`
 - :func:`gevent.spawn_raw`
+
+Waiting For Greenlets
+=====================
+
+You can wait for a greenlet to finish with its :meth:`Greenlet.join`
+method. There are helper functions to join multiple greenlets or
+heterogenous collections of objects:
+
+- :func:`gevent.joinall`
+- :func:`gevent.wait`
+- :func:`gevent.iwait`
 
 Stopping Greenlets
 ==================
@@ -40,6 +54,48 @@ circumstances (if you might have a :class:`raw greenlet <greenlet.greenlet>`):
 
 - :func:`gevent.kill`
 - :func:`gevent.killall`
+
+Context Managers
+================
+
+.. versionadded:: 21.1.0
+
+
+Greenlets also function as context managers, so you can combine
+spawning and waiting for a greenlet to finish in a single line:
+
+.. doctest::
+
+    >>> def in_greenlet():
+    ...     print("In the greenlet")
+    ...     return 42
+    >>> with Greenlet.spawn(in_greenlet) as g:
+    ...     print("In the with suite")
+    In the with suite
+    In the greenlet
+    >>> g.get(block=False)
+    42
+
+Normally, the greenlet is joined to wait for it to finish, but if the
+body of the suite raises an exception, the greenlet is killed with
+that exception.
+
+.. doctest::
+
+   >>> import gevent
+   >>> try:
+   ...    with Greenlet.spawn(gevent.sleep, 0.1) as g:
+   ...       raise Exception("From with body")
+   ... except Exception:
+   ...     pass
+   >>> g.dead
+   True
+   >>> g.successful()
+   False
+   >>> g.get(block=False)
+   Traceback (most recent call last):
+   ...
+   Exception: From with body
 
 .. _subclassing-greenlet:
 

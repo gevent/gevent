@@ -14,7 +14,7 @@ The following example shows how to run tasks concurrently.
     >>> from gevent import socket
     >>> urls = ['www.google.com', 'www.example.com', 'www.python.org']
     >>> jobs = [gevent.spawn(socket.gethostbyname, url) for url in urls]
-    >>> gevent.joinall(jobs, timeout=2)
+    >>> _ = gevent.joinall(jobs, timeout=2)
     >>> [job.value for job in jobs]
     ['74.125.79.106', '208.77.188.166', '82.94.164.162']
 
@@ -44,7 +44,7 @@ counterparts. That way even the modules that are unaware of gevent can benefit f
 in a multi-greenlet environment.
 
     >>> from gevent import monkey; monkey.patch_socket()
-    >>> import urllib2 # it's usable from multiple greenlets now
+    >>> import requests # it's usable from multiple greenlets now
 
 See :doc:`examples/concurrent_download`.
 
@@ -170,7 +170,7 @@ If there is an error during execution it won't escape the greenlet's
 boundaries. An unhandled error results in a stacktrace being printed,
 annotated by the failed function's signature and arguments:
 
-    >>> gevent.spawn(lambda : 1/0)
+    >>> glet = gevent.spawn(lambda : 1/0); glet.join()
     >>> gevent.sleep(1)
     Traceback (most recent call last):
      ...
@@ -195,6 +195,7 @@ Greenlets can be killed synchronously from another greenlet. Killing
 will resume the sleeping greenlet, but instead of continuing
 execution, a :exc:`GreenletExit` will be raised.
 
+    >>> from gevent import Greenlet
     >>> g = Greenlet(gevent.sleep, 4)
     >>> g.start()
     >>> g.kill()
@@ -225,10 +226,10 @@ catch it), thus it's a good idea always to pass a timeout to
 :meth:`kill <gevent.Greenlet.kill>` (otherwise, the greenlet doing the
 killing will remain blocked forever).
 
-.. tip:: The exact timing at which an exception is raised within a
-		  target greenlet as the result of :meth:`kill
-		  <gevent.Greenlet.kill>` is not defined. See that function's
-		  documentation for more details.
+.. tip::
+   The exact timing at which an exception is raised within a target
+   greenlet as the result of :meth:`kill <gevent.Greenlet.kill>` is
+   not defined. See that function's documentation for more details.
 
 .. caution::
    Use care when killing greenlets, especially arbitrary
@@ -248,6 +249,22 @@ killing will remain blocked forever).
    `This document
    <http://docs.oracle.com/javase/8/docs/technotes/guides/concurrency/threadPrimitiveDeprecation.html>`_
    describes a similar situation for threads.
+
+
+Greenlets also function as context managers, so you can combine
+spawning and waiting for a greenlet to finish in a single line:
+
+.. doctest::
+
+    >>> def in_greenlet():
+    ...     print("In the greenlet")
+    ...     return 42
+    >>> with Greenlet.spawn(in_greenlet) as g:
+    ...     print("In the with suite")
+    In the with suite
+    In the greenlet
+    >>> g.get(block=False)
+    42
 
 Timeouts
 ========

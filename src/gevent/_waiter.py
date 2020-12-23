@@ -38,6 +38,8 @@ class Waiter(object):
     The :meth:`switch` and :meth:`throw` methods must only be called from the :class:`Hub` greenlet.
     The :meth:`get` method must be called from a greenlet other than :class:`Hub`.
 
+        >>> from gevent.hub import Waiter
+        >>> from gevent import get_hub
         >>> result = Waiter()
         >>> timer = get_hub().loop.timer(0.1)
         >>> timer.start(result.switch, 'hello from Waiter')
@@ -48,6 +50,7 @@ class Waiter(object):
     If switch is called before the greenlet gets a chance to call :meth:`get` then
     :class:`Waiter` stores the value.
 
+        >>> from gevent.time import sleep
         >>> result = Waiter()
         >>> timer = get_hub().loop.timer(0.1)
         >>> timer.start(result.switch, 'hi from Waiter')
