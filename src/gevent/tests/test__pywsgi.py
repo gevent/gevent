@@ -508,7 +508,7 @@ class TestNoChunks10KeepAlive(TestNoChunks10):
 
 
 class TestExplicitContentLength(TestNoChunks): # pylint:disable=too-many-ancestors
-    # when returning a list of strings a shortcut is empoyed by the
+    # when returning a list of strings a shortcut is employed by the
     # server - it caculates the content-length
 
     def application(self, env, start_response):
