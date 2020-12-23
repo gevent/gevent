@@ -175,6 +175,7 @@ class AsyncResult(AbstractLinkable): # pylint:disable=undefined-variable
     To pass a value call :meth:`set`. Calls to :meth:`get` (those that are currently blocking as well as
     those made in the future) will return the value:
 
+        >>> from gevent.event import AsyncResult
         >>> result = AsyncResult()
         >>> result.set(100)
         >>> result.get()

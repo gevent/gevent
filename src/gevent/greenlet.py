@@ -202,6 +202,13 @@ class Greenlet(greenlet):
         .. versionchanged:: 1.5
            Greenlet objects are now more careful to verify that their ``parent`` is really
            a gevent hub, raising a ``TypeError`` earlier instead of an ``AttributeError`` later.
+
+        .. versionchanged:: NEXT
+           Greenlet objects now function as context managers. Exiting the ``with`` suite
+           ensures that the greenlet has completed by :meth:`joining <join>`
+           the greenlet (blocking, with
+           no timeout). If the body of the suite raises an exception, the greenlet is
+           :meth:`killed <kill>` with the default arguments and not joined in that case.
         """
         # The attributes are documented in the .rst file
 
@@ -477,6 +484,8 @@ class Greenlet(greenlet):
                 args = (GreenletExit, GreenletExit(), None)
             if not issubclass(args[0], BaseException):
                 # Random non-type, non-exception arguments.
+                print("RANDOM CRAP", args)
+                import traceback; traceback.print_stack()
                 args = (BaseException, BaseException(args), None)
             assert issubclass(args[0], BaseException)
             self.__report_error(args)
@@ -707,7 +716,11 @@ class Greenlet(greenlet):
         self.__free()
         dead = self.dead
         if dead:
-            self.__handle_death_before_start((exception,))
+            if isinstance(exception, tuple) and len(exception) == 3:
+                args = exception
+            else:
+                args = (exception,)
+            self.__handle_death_before_start(args)
         return dead
 
     def kill(self, exception=GreenletExit, block=True, timeout=None):
@@ -756,8 +769,14 @@ class Greenlet(greenlet):
             If this greenlet had never been switched to, killing it will
             prevent it from *ever* being switched to. Links (:meth:`rawlink`)
             will still be executed, though.
+        .. versionchanged:: NEXT
+            If this greenlet is :meth:`ready`, immediately return instead of
+            requiring a trip around the event loop.
         """
         if not self._maybe_kill_before_start(exception):
+            if self.ready():
+                return
+
             waiter = Waiter() if block else None # pylint:disable=undefined-variable
             hub = get_my_hub(self) # pylint:disable=undefined-variable
             hub.loop.run_callback(_kill, self, exception, waiter)
@@ -836,6 +855,18 @@ class Greenlet(greenlet):
         except:
             self.unlink(switch)
             raise
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, v, tb):
+        if t is None:
+            try:
+                self.join()
+            finally:
+                self.kill()
+        else:
+            self.kill((t, v, tb))
 
     def __report_result(self, result):
         self._exc_info = (None, None, None)
@@ -1012,7 +1043,10 @@ _start_completed_event = _dummy_event()
 # and its first argument is the Greenlet. So we can be sure about the types.
 def _kill(glet, exception, waiter):
     try:
-        glet.throw(exception)
+        if isinstance(exception, tuple) and len(exception) == 3:
+            glet.throw(*exception)
+        else:
+            glet.throw(exception)
     except: # pylint:disable=bare-except, undefined-variable
         # XXX do we need this here?
         get_my_hub(glet).handle_error(glet, *sys_exc_info())

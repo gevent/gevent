@@ -11,6 +11,8 @@ Greenlet-local objects support the management of greenlet-local data.
 If you have data that you want to be local to a greenlet, simply create
 a greenlet-local object and use its attributes:
 
+  >>> import gevent
+  >>> from gevent.local import local
   >>> mydata = local()
   >>> mydata.number = 42
   >>> mydata.number

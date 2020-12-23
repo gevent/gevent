@@ -41,6 +41,26 @@ greentest.TestCase.error_fatal = False
 class ExpectedError(greentest.ExpectedException):
     pass
 
+class ExpectedJoinError(ExpectedError):
+    pass
+
+class SuiteExpectedException(ExpectedError):
+    pass
+
+class GreenletRaisesJoin(gevent.Greenlet):
+    killed = False
+    joined = False
+    raise_on_join = True
+
+    def join(self, timeout=None):
+        self.joined += 1
+        if self.raise_on_join:
+            raise ExpectedJoinError
+        return gevent.Greenlet.join(self, timeout)
+
+    def kill(self, *args, **kwargs): # pylint:disable=signature-differs
+        self.killed += 1
+        return gevent.Greenlet.kill(self, *args, **kwargs)
 
 class TestLink(greentest.TestCase):
 
@@ -878,6 +898,68 @@ class TestKillallRawGreenlet(greentest.TestCase):
     def test_killall_raw(self):
         g = gevent.spawn_raw(lambda: 1)
         gevent.killall([g])
+
+
+class TestContextManager(greentest.TestCase):
+
+    def test_simple(self):
+        with gevent.spawn(gevent.sleep, timing.SMALL_TICK) as g:
+            self.assert_greenlet_spawned(g)
+        # It is completed after the suite
+        self.assert_greenlet_finished(g)
+
+    def test_wait_in_suite(self):
+        with gevent.spawn(self._raise_exception) as g:
+            with self.assertRaises(greentest.ExpectedException):
+                g.get()
+        self.assert_greenlet_finished(g)
+
+    @staticmethod
+    def _raise_exception():
+        raise greentest.ExpectedException
+
+    def test_greenlet_raises(self):
+        with gevent.spawn(self._raise_exception) as g:
+            pass
+
+        self.assert_greenlet_finished(g)
+        with self.assertRaises(greentest.ExpectedException):
+            g.get()
+
+    def test_join_raises(self):
+        suite_ran = 0
+        with self.assertRaises(ExpectedJoinError):
+            with GreenletRaisesJoin.spawn(gevent.sleep, timing.SMALL_TICK) as g:
+                self.assert_greenlet_spawned(g)
+                suite_ran = 1
+
+        self.assertTrue(suite_ran)
+        self.assert_greenlet_finished(g)
+        self.assertTrue(g.killed)
+
+    def test_suite_body_raises(self, delay=None):
+        greenlet_sleep = timing.SMALL_TICK if not delay else timing.LARGE_TICK
+        with self.assertRaises(SuiteExpectedException):
+            with GreenletRaisesJoin.spawn(gevent.sleep, greenlet_sleep) as g:
+                self.assert_greenlet_spawned(g)
+                if delay:
+                    g.raise_on_join = False
+                    gevent.sleep(delay)
+                raise SuiteExpectedException
+
+        self.assert_greenlet_finished(g)
+        self.assertTrue(g.killed)
+        if delay:
+            self.assertTrue(g.joined)
+        else:
+            self.assertFalse(g.joined)
+        self.assertFalse(g.successful())
+
+        with self.assertRaises(SuiteExpectedException):
+            g.get()
+
+    def test_suite_body_raises_with_delay(self):
+        self.test_suite_body_raises(delay=timing.SMALL_TICK)
 
 class TestStart(greentest.TestCase):
 

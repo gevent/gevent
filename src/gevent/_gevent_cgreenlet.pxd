@@ -128,6 +128,7 @@ cdef class Greenlet(greenlet):
 
     cpdef bint has_links(self)
     cpdef join(self, timeout=*)
+    cpdef kill(self, exception=*, block=*, timeout=*)
     cpdef bint ready(self)
     cpdef bint successful(self)
     cpdef rawlink(self, object callback)

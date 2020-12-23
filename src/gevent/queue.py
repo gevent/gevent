@@ -13,6 +13,7 @@ over a queue means repeatedly calling :meth:`get <Queue.get>` until
 :meth:`get <Queue.get>` returns ``StopIteration`` (specifically that
 class, not an instance or subclass).
 
+    >>> import gevent.queue
     >>> queue = gevent.queue.Queue()
     >>> queue.put(1)
     >>> queue.put(2)
