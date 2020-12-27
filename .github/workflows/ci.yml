@@ -257,12 +257,14 @@ jobs:
           name: gevent-${{ runner.os }}-${{ matrix.python-version }}.whl
           path: dist/*whl
       - name: Publish package to PyPI (mac)
-        uses: pypa/gh-action-pypi-publish@v1.4.1
+        # We cannot 'uses: pypa/gh-action-pypi-publish@v1.4.1' because
+        # that's apparently a container action, and those don't run on
+        # the Mac.
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags') && startsWith(runner.os, 'Mac')
-        with:
-          user: __token__
-          password: ${{ secrets.TWINE_PASSWORD }}
-          skip_existing: true
+        env:
+          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
+        run: |
+          twine upload --skip-existing dist/*
 
       - name: Install gevent
         # I'd prefer to install the wheel in non-editable mode, but that seems to
