@@ -12,14 +12,25 @@ cdef _native_sleep
 cdef monotonic
 cdef spawn_raw
 
+cdef _UNSET
+cdef _MULTI
+
 cdef class _LockReleaseLink(object):
     cdef object lock
 
 
 cdef class Semaphore(AbstractLinkable):
     cdef public int counter
+    # On Python 3, thread.get_ident() returns a ``unsigned long``; on
+    # Python 2, it's a plain ``long``. We can conditionally change
+    # the type here (depending on which version is cythonizing the
+    # .py files), but: our algorithm for testing whether it has been
+    # set or not was initially written with ``long`` in mind and used
+    # -1 as a sentinel. That doesn't work on Python 3. Thus, we can't
+    # use the native C type and must keep the wrapped Python object, which
+    # we can test for None.
+    cdef object _multithreaded
 
-    cdef long _multithreaded
 
     cpdef bint locked(self)
     cpdef int release(self) except -1000
