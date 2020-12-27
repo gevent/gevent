@@ -6,6 +6,37 @@
 
 .. towncrier release notes start
 
+20.12.1 (2020-12-27)
+====================
+
+
+Features
+--------
+
+- Make :class:`gevent.Greenlet` objects function as context managers.
+  When the ``with`` suite finishes, execution doesn't continue until the
+  greenlet is finished. This can be a simpler alternative to a
+  :class:`gevent.pool.Group` when the lifetime of greenlets can be
+  lexically scoped.
+
+  Suggested by André Caron.
+  See :issue:`1324`.
+
+
+Bugfixes
+--------
+
+- Make gevent's ``Semaphore`` objects properly handle native thread
+  identifiers larger than can be stored in a C ``long`` on Python 3,
+  instead of raising an ``OverflowError``.
+
+  Reported by TheYOSH.
+  See :issue:`1733`.
+
+
+----
+
+
 20.12.0 (2020-12-22)
 ====================
 

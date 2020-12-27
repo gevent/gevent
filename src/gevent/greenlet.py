@@ -203,7 +203,7 @@ class Greenlet(greenlet):
            Greenlet objects are now more careful to verify that their ``parent`` is really
            a gevent hub, raising a ``TypeError`` earlier instead of an ``AttributeError`` later.
 
-        .. versionchanged:: NEXT
+        .. versionchanged:: 20.12.1
            Greenlet objects now function as context managers. Exiting the ``with`` suite
            ensures that the greenlet has completed by :meth:`joining <join>`
            the greenlet (blocking, with
@@ -769,7 +769,7 @@ class Greenlet(greenlet):
             If this greenlet had never been switched to, killing it will
             prevent it from *ever* being switched to. Links (:meth:`rawlink`)
             will still be executed, though.
-        .. versionchanged:: NEXT
+        .. versionchanged:: 20.12.1
             If this greenlet is :meth:`ready`, immediately return instead of
             requiring a trip around the event loop.
         """
