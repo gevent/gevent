@@ -42,6 +42,9 @@ class _LockReleaseLink(object):
     def __call__(self, _):
         self.lock.release()
 
+_UNSET = object()
+_MULTI = object()
+
 class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
     """
     Semaphore(value=1) -> Semaphore
@@ -78,9 +81,11 @@ class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
 
     __slots__ = (
         'counter',
-        # Integer. Set to 0 initially. Set to the ident of the first
-        # thread that acquires us. If we later see a different thread
-        # ident, set to -1.
+        # long integer, signed (Py2) or unsigned (Py3); see comments
+        # in the .pxd file for why we store as Python object. Set to ``_UNSET``
+        # initially. Set to the ident of the first thread that
+        # acquires us. If we later see a different thread ident, set
+        # to ``_MULTI``.
         '_multithreaded',
     )
 
@@ -90,7 +95,7 @@ class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
             raise ValueError("semaphore initial value must be >= 0")
         super(Semaphore, self).__init__(hub)
         self._notify_all = False
-        self._multithreaded = 0
+        self._multithreaded = _UNSET
 
     def __str__(self):
         return '<%s at 0x%x counter=%s _links[%s]>' % (
@@ -196,10 +201,10 @@ class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
         """
         # pylint:disable=too-many-return-statements,too-many-branches
         # Sadly, the body of this method is rather complicated.
-        if self._multithreaded == 0:
+        if self._multithreaded is _UNSET:
             self._multithreaded = self._get_thread_ident()
         elif self._multithreaded != self._get_thread_ident():
-            self._multithreaded = -1
+            self._multithreaded = _MULTI
 
         # We conceptually now belong to the hub of the thread that
         # called this, whether or not we have to block. Note that we
@@ -225,7 +230,7 @@ class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
         if not blocking:
             return False
 
-        if self._multithreaded != -1 and self.hub is None: # pylint:disable=access-member-before-definition
+        if self._multithreaded is not _MULTI and self.hub is None: # pylint:disable=access-member-before-definition
             self.hub = get_hub() # pylint:disable=attribute-defined-outside-init
 
         if self.hub is None and not invalid_thread_use:

@@ -1,0 +1,5 @@
+Make gevent's ``Semaphore`` objects properly handle native thread
+identifiers larger than can be stored in a C ``long`` on Python 3,
+instead of raising an ``OverflowError``.
+
+Reported by TheYOSH.
