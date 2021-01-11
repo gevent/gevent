@@ -1,4 +1,6 @@
-from __future__ import absolute_import, print_function, division
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
 
 import weakref
 
@@ -137,6 +139,62 @@ class TestAsyncResult(greentest.TestCase):
         ar = AsyncResult()
         self.assertRaises(gevent.Timeout, ar.get, block=False)
         self.assertRaises(gevent.Timeout, ar.get_nowait)
+
+    def test_cross_thread_use(self):
+        # Issue 1739.
+        # AsyncResult has *never* been thread safe, and using it from one
+        # thread to another is not safe. However, in some very careful use cases
+        # that can actually work.
+        #
+        # This test makes sure it doesn't hang in one careful use
+        # scenario.
+        self.assertNotMonkeyPatched() # Need real threads, event objects
+        from threading import Thread as NativeThread
+        from threading import Event as NativeEvent
+
+        class Thread(NativeThread):
+            def __init__(self):
+                NativeThread.__init__(self)
+                self.daemon = True
+                self.running_event = NativeEvent()
+                self.finished_event = NativeEvent()
+
+                self.async_result = AsyncResult()
+                self.result = '<never set>'
+
+            def run(self):
+                # Give the loop in this thread something to do
+                g_event = Event()
+                def spin():
+                    while not g_event.is_set():
+                        g_event.wait(DELAY * 2)
+
+                glet = gevent.spawn(spin)
+
+                self.running_event.set()
+
+                print("Entering wait")
+                # XXX: If we use a timed wait(), the bug doesn't manifest.
+                # Why not?
+                self.result = self.async_result.wait()
+
+                g_event.set()
+                glet.join()
+                self.finished_event.set()
+
+
+        thread = Thread()
+        thread.start()
+        try:
+            print("Waiting for thread")
+            thread.running_event.wait()
+            print("Thread is running")
+            thread.async_result.set('from main')
+            thread.finished_event.wait(DELAY * 5)
+        finally:
+            thread.join(DELAY * 15)
+
+        self.assertEqual(thread.result, 'from main')
 
 
 class TestAsyncResultAsLinkTarget(greentest.TestCase):

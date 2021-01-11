@@ -166,7 +166,8 @@ class Event(AbstractLinkable): # pylint:disable=undefined-variable
 
 
 class AsyncResult(AbstractLinkable): # pylint:disable=undefined-variable
-    """A one-time event that stores a value or an exception.
+    """
+    A one-time event that stores a value or an exception.
 
     Like :class:`Event` it wakes up all the waiters when :meth:`set` or :meth:`set_exception`
     is called. Waiters may receive the passed value or exception by calling :meth:`get`
