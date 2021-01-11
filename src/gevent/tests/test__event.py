@@ -173,9 +173,11 @@ class TestAsyncResult(greentest.TestCase):
 
                 self.running_event.set()
 
-                print("Entering wait")
                 # XXX: If we use a timed wait(), the bug doesn't manifest.
                 # Why not?
+                # TODO: Add a test for that.
+                # TODO: Add a test where it's the greenlet we spawn that does
+                # the wait. This is a separate code path.
                 self.result = self.async_result.wait()
 
                 g_event.set()
@@ -186,9 +188,7 @@ class TestAsyncResult(greentest.TestCase):
         thread = Thread()
         thread.start()
         try:
-            print("Waiting for thread")
             thread.running_event.wait()
-            print("Thread is running")
             thread.async_result.set('from main')
             thread.finished_event.wait(DELAY * 5)
         finally:

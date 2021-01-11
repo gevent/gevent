@@ -9,6 +9,7 @@ cdef InvalidThreadUseError
 cdef Timeout
 cdef _get_thread_ident
 cdef bint _greenlet_imported
+cdef get_objects
 
 cdef extern from "greenlet/greenlet.h":
 
@@ -31,6 +32,8 @@ cdef inline void greenlet_init():
         _greenlet_imported = True
 
 cdef void _init()
+
+cdef dict get_roots_and_hubs()
 
 cdef class _FakeNotifier(object):
     cdef bint pending
@@ -65,6 +68,9 @@ cdef class AbstractLinkable(object):
 
    @cython.nonecheck(False)
    cpdef _notify_links(self, list arrived_while_waiting)
+
+   cdef _handle_unswitched_notifications(self, list unswitched)
+   cdef __print_unswitched_warning(self, link, bint printed_tb)
 
    cpdef _drop_lock_for_switch_out(self)
    cpdef _acquire_lock_for_switch_in(self)
