@@ -281,6 +281,31 @@ class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
     def __exit__(self, t, v, tb):
         self.release()
 
+    def _handle_unswitched_notifications(self, unswitched):
+        # If we fail to switch to a greenlet in another thread to send
+        # a notification, just re-queue it, in the hopes that the
+        # other thread will eventually run notifications itself.
+        #
+        # We CANNOT do what the ``super()`` does and actually allow
+        # this notification to get run sometime in the future by
+        # scheduling a callback in the other thread. The algorithm
+        # that we use to handle cross-thread locking/unlocking was
+        # designed before the schedule-a-callback mechanism was
+        # implemented. If we allow this to be run as a callback, we
+        # can find ourself the victim of ``InvalidSwitchError`` (or
+        # worse, silent corruption) because the switch can come at an
+        # unexpected time: *after* the destination thread has already
+        # acquired the lock.
+        #
+        # This manifests in a fairly reliable test failure,
+        # ``gevent.tests.test__semaphore``
+        # ``TestSemaphoreMultiThread.test_dueling_threads_with_hub``,
+        # but ONLY when running in PURE_PYTHON mode.
+        #
+        # TODO: Maybe we can rewrite that part of the algorithm to be friendly to
+        # running the callbacks?
+        self._links.extend(unswitched)
+
     def __add_link(self, link):
         if not self._notifier:
             self.rawlink(link)

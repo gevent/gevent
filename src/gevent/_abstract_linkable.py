@@ -9,7 +9,9 @@ from __future__ import division
 from __future__ import print_function
 
 import sys
+from gc import get_objects
 
+from greenlet import greenlet
 from greenlet import error as greenlet_error
 
 from gevent._compat import thread_mod_name
@@ -39,6 +41,15 @@ class _FakeNotifier(object):
 
     def __init__(self):
         self.pending = False
+
+def get_roots_and_hubs():
+    from gevent.hub import Hub # delay import
+    return {
+        x.parent: x
+        for x in get_objects()
+        if isinstance(x, Hub)
+    }
+
 
 class AbstractLinkable(object):
     # Encapsulates the standard parts of the linking and notifying
@@ -328,13 +339,82 @@ class AbstractLinkable(object):
         # must have more links than we started with. We need to schedule the
         # wakeup.
         self._check_and_notify()
-        # If we added unswitched greenlets, however, don't add them back to the links yet.
-        # We wouldn't be able to call them in this hub anyway.
-        # TODO: Instead of just adding these back to self._links, we should try to detect their
-        # "home" hub and mode the callback to that hub. As it stands, there's a chance that
-        # if no greenlet tries to acquire/release this object in that hub, these objects
-        # will never get to run.
-        self._links.extend(unswitched)
+        if unswitched:
+            self._handle_unswitched_notifications(unswitched)
+
+
+    def _handle_unswitched_notifications(self, unswitched):
+        # Given a list of callable objects that raised
+        # ``greenlet.error`` when we called them: If we can determine
+        # that it is a parked greenlet (the callablle is a
+        # ``greenlet.switch`` method) and we can determine the hub
+        # that the greenlet belongs to (either its parent, or, in the
+        # case of a main greenlet, find a hub with the same parent as
+        # this greenlet object) then:
+
+        # Move this to be a callback in that thread.
+        # (This relies on holding the GIL *or* ``Hub.loop.run_callback`` being
+        # thread-safe! Note that the CFFI implementations are definitely
+        # NOT thread-safe. TODO: Make them? Or an alternative?)
+        #
+        # Otherwise, print some error messages.
+
+        # TODO: Inline this for individual links. That handles the
+        # "only while ready" case automatically. Be careful about locking in that case.
+        #
+        # TODO: Add a 'strict' mode that prevents doing this dance, since it's
+        # inherently not safe.
+        root_greenlets = None
+        printed_tb = False
+        only_while_ready = not self._notify_all
+
+        while unswitched:
+            if only_while_ready and not self.ready():
+                self.__print_unswitched_warning(unswitched, printed_tb)
+                break
+
+            link = unswitched.pop(0)
+
+            hub = None # Also serves as a "handled?" flag
+            # Is it a greenlet.switch method?
+            if (getattr(link, '__name__', None) == 'switch'
+                and isinstance(getattr(link, '__self__', None), greenlet)):
+                glet = link.__self__
+                parent = glet.parent
+
+                while parent is not None:
+                    if hasattr(parent, 'loop'): # Assuming the hub.
+                        hub = glet.parent
+                        break
+                    parent = glet.parent
+
+                if hub is None:
+                    if root_greenlets is None:
+                        root_greenlets = get_roots_and_hubs()
+                    hub = root_greenlets.get(glet)
+
+                if hub is not None:
+                    hub.loop.run_callback(link, self)
+            if hub is None:
+                # We couldn't handle it
+                self.__print_unswitched_warning(link, printed_tb)
+                printed_tb = True
+
+
+    def __print_unswitched_warning(self, link, printed_tb):
+        print('gevent: error: Unable to switch to greenlet', link,
+              'from', self, '; crossing thread boundaries is not allowed.',
+              file=sys.stderr)
+
+        if not printed_tb:
+            printed_tb = True
+            print(
+                'gevent: error: '
+                'This is a result of using gevent objects from multiple threads,',
+                'and is a bug in the calling code.', file=sys.stderr)
+
+            import traceback
+            traceback.print_stack()
 
     def _quiet_unlink_all(self, obj):
         if obj is None:

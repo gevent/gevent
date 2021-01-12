@@ -201,6 +201,8 @@ def _ignores_DoNotPatch(func):
 
 # maps module name -> {attribute name: original item}
 # e.g. "time" -> {"sleep": built-in function sleep}
+# NOT A PUBLIC API. However, third-party monkey-patchers may be using
+# it? TODO: Provide better API for them.
 saved = {}
 
 
@@ -227,6 +229,18 @@ def is_object_patched(mod_name, item_name):
 
     """
     return is_module_patched(mod_name) and item_name in saved[mod_name]
+
+
+def is_anything_patched():
+    # Check if this module has done any patching in the current process.
+    # This is currently only used in gevent tests.
+    #
+    # Not currently a documented, public API, because I'm not convinced
+    # it is 100% reliable in the event of third-party patch functions that
+    # don't use ``saved``.
+    #
+    # .. versionadded:: NEXT
+    return bool(saved)
 
 
 def _get_original(name, items):

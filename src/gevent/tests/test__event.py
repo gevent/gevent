@@ -1,4 +1,6 @@
-from __future__ import absolute_import, print_function, division
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
 
 import weakref
 
@@ -138,6 +140,88 @@ class TestAsyncResult(greentest.TestCase):
         self.assertRaises(gevent.Timeout, ar.get, block=False)
         self.assertRaises(gevent.Timeout, ar.get_nowait)
 
+    @greentest.ignores_leakcheck
+    def test_cross_thread_use(self, timed_wait=False, wait_in_bg=False):
+        # Issue 1739.
+        # AsyncResult has *never* been thread safe, and using it from one
+        # thread to another is not safe. However, in some very careful use cases
+        # that can actually work.
+        #
+        # This test makes sure it doesn't hang in one careful use
+        # scenario.
+        self.assertNotMonkeyPatched() # Need real threads, event objects
+        from threading import Thread as NativeThread
+        from threading import Event as NativeEvent
+
+        # On PyPy 7.3.3, switching to the main greenlet of a thread from a
+        # different thread silently does nothing. We can't detect the cross-thread
+        # switch, and so this test breaks
+        # https://foss.heptapod.net/pypy/pypy/-/issues/3381
+        if not wait_in_bg and greentest.PYPY:
+            import sys
+            if sys.pypy_version_info[:3] <= (7, 3, 3): # pylint:disable=no-member
+                self.skipTest("PyPy bug: https://foss.heptapod.net/pypy/pypy/-/issues/3381")
+
+        class Thread(NativeThread):
+            def __init__(self):
+                NativeThread.__init__(self)
+                self.daemon = True
+                self.running_event = NativeEvent()
+                self.finished_event = NativeEvent()
+
+                self.async_result = AsyncResult()
+                self.result = '<never set>'
+
+            def run(self):
+                # Give the loop in this thread something to do
+                g_event = Event()
+                def spin():
+                    while not g_event.is_set():
+                        g_event.wait(DELAY * 2)
+                glet = gevent.spawn(spin)
+
+                def work():
+                    self.running_event.set()
+                    # XXX: If we use a timed wait(), the bug doesn't manifest.
+                    # Why not?
+                    if timed_wait:
+                        self.result = self.async_result.wait(DELAY * 5)
+                    else:
+                        self.result = self.async_result.wait()
+
+                if wait_in_bg:
+                    # This results in a separate code path
+                    worker = gevent.spawn(work)
+                    worker.join()
+                    del worker
+                else:
+                    work()
+
+                g_event.set()
+                glet.join()
+                del glet
+                self.finished_event.set()
+                gevent.get_hub().destroy(destroy_loop=True)
+
+        thread = Thread()
+        thread.start()
+        try:
+            thread.running_event.wait()
+            thread.async_result.set('from main')
+            thread.finished_event.wait(DELAY * 5)
+        finally:
+            thread.join(DELAY * 15)
+
+        self.assertEqual(thread.result, 'from main')
+
+    def test_cross_thread_use_bg(self):
+        self.test_cross_thread_use(timed_wait=False, wait_in_bg=True)
+
+    def test_cross_thread_use_timed(self):
+        self.test_cross_thread_use(timed_wait=True, wait_in_bg=False)
+
+    def test_cross_thread_use_timed_bg(self):
+        self.test_cross_thread_use(timed_wait=True, wait_in_bg=True)
 
 class TestAsyncResultAsLinkTarget(greentest.TestCase):
     error_fatal = False

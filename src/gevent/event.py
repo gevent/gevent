@@ -29,6 +29,10 @@ class Event(AbstractLinkable): # pylint:disable=undefined-variable
     one or more others. It has the same interface as
     :class:`threading.Event` but works across greenlets.
 
+    .. important::
+       This object is for communicating among greenlets within the
+       same thread *only*! Do not try to use it to communicate across threads.
+
     An event object manages an internal flag that can be set to true
     with the :meth:`set` method and reset to false with the
     :meth:`clear` method. The :meth:`wait` method blocks until the
@@ -166,14 +170,21 @@ class Event(AbstractLinkable): # pylint:disable=undefined-variable
 
 
 class AsyncResult(AbstractLinkable): # pylint:disable=undefined-variable
-    """A one-time event that stores a value or an exception.
+    """
+    A one-time event that stores a value or an exception.
 
-    Like :class:`Event` it wakes up all the waiters when :meth:`set` or :meth:`set_exception`
-    is called. Waiters may receive the passed value or exception by calling :meth:`get`
-    instead of :meth:`wait`. An :class:`AsyncResult` instance cannot be reset.
+    Like :class:`Event` it wakes up all the waiters when :meth:`set`
+    or :meth:`set_exception` is called. Waiters may receive the passed
+    value or exception by calling :meth:`get` instead of :meth:`wait`.
+    An :class:`AsyncResult` instance cannot be reset.
 
-    To pass a value call :meth:`set`. Calls to :meth:`get` (those that are currently blocking as well as
-    those made in the future) will return the value:
+    .. important::
+       This object is for communicating among greenlets within the
+       same thread *only*! Do not try to use it to communicate across threads.
+
+    To pass a value call :meth:`set`. Calls to :meth:`get` (those that
+    are currently blocking as well as those made in the future) will
+    return the value::
 
         >>> from gevent.event import AsyncResult
         >>> result = AsyncResult()
@@ -181,7 +192,8 @@ class AsyncResult(AbstractLinkable): # pylint:disable=undefined-variable
         >>> result.get()
         100
 
-    To pass an exception call :meth:`set_exception`. This will cause :meth:`get` to raise that exception:
+    To pass an exception call :meth:`set_exception`. This will cause
+    :meth:`get` to raise that exception::
 
         >>> result = AsyncResult()
         >>> result.set_exception(RuntimeError('failure'))
@@ -190,7 +202,8 @@ class AsyncResult(AbstractLinkable): # pylint:disable=undefined-variable
          ...
         RuntimeError: failure
 
-    :class:`AsyncResult` implements :meth:`__call__` and thus can be used as :meth:`link` target:
+    :class:`AsyncResult` implements :meth:`__call__` and thus can be
+    used as :meth:`link` target::
 
         >>> import gevent
         >>> result = AsyncResult()
@@ -202,6 +215,7 @@ class AsyncResult(AbstractLinkable): # pylint:disable=undefined-variable
         ZeroDivisionError
 
     .. note::
+
         The order and timing in which waiting greenlets are awakened is not determined.
         As an implementation note, in gevent 1.1 and 1.0, waiting greenlets are awakened in a
         undetermined order sometime *after* the current greenlet yields to the event loop. Other greenlets
@@ -209,16 +223,25 @@ class AsyncResult(AbstractLinkable): # pylint:disable=undefined-variable
         the waiting greenlets being awakened. These details may change in the future.
 
     .. versionchanged:: 1.1
-       The exact order in which waiting greenlets are awakened is not the same
-       as in 1.0.
+
+       The exact order in which waiting greenlets
+       are awakened is not the same as in 1.0.
+
     .. versionchanged:: 1.1
-       Callbacks :meth:`linked <rawlink>` to this object are required to be hashable, and duplicates are
-       merged.
+
+       Callbacks :meth:`linked <rawlink>` to this object are required to
+       be hashable, and duplicates are merged.
+
     .. versionchanged:: 1.5a3
-       Waiting greenlets are now awakened in the order in which they waited.
+
+       Waiting greenlets are now awakened in the order in which they
+       waited.
+
     .. versionchanged:: 1.5a3
-       The low-level ``rawlink`` method (most users won't use this) now automatically
-       unlinks waiters before calling them.
+
+       The low-level ``rawlink`` method
+       (most users won't use this) now automatically unlinks waiters
+       before calling them.
     """
 
     __slots__ = ('_value', '_exc_info', '_imap_task_index')

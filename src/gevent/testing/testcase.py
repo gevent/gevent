@@ -435,3 +435,7 @@ class TestCase(TestCaseMetaClass("NewBase",
 
     def assertStartsWith(self, it, has_prefix):
         self.assertTrue(it.startswith(has_prefix), (it, has_prefix))
+
+    def assertNotMonkeyPatched(self):
+        from gevent import monkey
+        self.assertFalse(monkey.is_anything_patched())
