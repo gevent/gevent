@@ -267,8 +267,10 @@ class TestSemaphoreMultiThread(greentest.TestCase):
                     if not run:
                         break
 
-                    sem.acquire(*acquire_args)
-                    sem.release()
+                    acquired = sem.acquire(*acquire_args)
+                    assert acquire_args or acquired
+                    if acquired:
+                        sem.release()
                     results[ix] = i
                     if not create_hub:
                         # We don't artificially create the hub.

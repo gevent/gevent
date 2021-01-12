@@ -354,12 +354,16 @@ class AbstractLinkable(object):
 
         # Move this to be a callback in that thread.
         # (This relies on holding the GIL *or* ``Hub.loop.run_callback`` being
-        # thread-safe!)
+        # thread-safe! Note that the CFFI implementations are definitely
+        # NOT thread-safe. TODO: Make them? Or an alternative?)
         #
         # Otherwise, print some error messages.
 
         # TODO: Inline this for individual links. That handles the
-        # "only while ready" case automatically.
+        # "only while ready" case automatically. Be careful about locking in that case.
+        #
+        # TODO: Add a 'strict' mode that prevents doing this dance, since it's
+        # inherently not safe.
         root_greenlets = None
         printed_tb = False
         only_while_ready = not self._notify_all
