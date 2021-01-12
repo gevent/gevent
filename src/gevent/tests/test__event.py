@@ -140,6 +140,7 @@ class TestAsyncResult(greentest.TestCase):
         self.assertRaises(gevent.Timeout, ar.get, block=False)
         self.assertRaises(gevent.Timeout, ar.get_nowait)
 
+    @greentest.ignores_leakcheck
     def test_cross_thread_use(self, timed_wait=False, wait_in_bg=False):
         # Issue 1739.
         # AsyncResult has *never* been thread safe, and using it from one
@@ -192,13 +193,15 @@ class TestAsyncResult(greentest.TestCase):
                     # This results in a separate code path
                     worker = gevent.spawn(work)
                     worker.join()
+                    del worker
                 else:
                     work()
 
                 g_event.set()
                 glet.join()
+                del glet
                 self.finished_event.set()
-
+                gevent.get_hub().destroy(destroy_loop=True)
 
         thread = Thread()
         thread.start()
