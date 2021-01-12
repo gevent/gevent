@@ -358,7 +358,8 @@ class AbstractLinkable(object):
         #
         # Otherwise, print some error messages.
 
-        # TODO: Inline this for individual links.
+        # TODO: Inline this for individual links. That handles the
+        # "only while ready" case automatically.
         root_greenlets = None
         printed_tb = False
         only_while_ready = not self._notify_all

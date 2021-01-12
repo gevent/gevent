@@ -140,7 +140,7 @@ class TestAsyncResult(greentest.TestCase):
         self.assertRaises(gevent.Timeout, ar.get, block=False)
         self.assertRaises(gevent.Timeout, ar.get_nowait)
 
-    def test_cross_thread_use(self):
+    def test_cross_thread_use(self, timed_wait=False, wait_in_bg=False):
         # Issue 1739.
         # AsyncResult has *never* been thread safe, and using it from one
         # thread to another is not safe. However, in some very careful use cases
@@ -151,6 +151,15 @@ class TestAsyncResult(greentest.TestCase):
         self.assertNotMonkeyPatched() # Need real threads, event objects
         from threading import Thread as NativeThread
         from threading import Event as NativeEvent
+
+        # On PyPy 7.3.3, switching to the main greenlet of a thread from a
+        # different thread silently does nothing. We can't detect the cross-thread
+        # switch, and so this test breaks
+        # https://foss.heptapod.net/pypy/pypy/-/issues/3381
+        if not wait_in_bg and greentest.PYPY:
+            import sys
+            if sys.pypy_version_info[:3] <= (7, 3, 3): # pylint:disable=no-member
+                self.skipTest("PyPy bug: https://foss.heptapod.net/pypy/pypy/-/issues/3381")
 
         class Thread(NativeThread):
             def __init__(self):
@@ -168,17 +177,23 @@ class TestAsyncResult(greentest.TestCase):
                 def spin():
                     while not g_event.is_set():
                         g_event.wait(DELAY * 2)
-
                 glet = gevent.spawn(spin)
 
-                self.running_event.set()
+                def work():
+                    self.running_event.set()
+                    # XXX: If we use a timed wait(), the bug doesn't manifest.
+                    # Why not?
+                    if timed_wait:
+                        self.result = self.async_result.wait(DELAY * 5)
+                    else:
+                        self.result = self.async_result.wait()
 
-                # XXX: If we use a timed wait(), the bug doesn't manifest.
-                # Why not?
-                # TODO: Add a test for that.
-                # TODO: Add a test where it's the greenlet we spawn that does
-                # the wait. This is a separate code path.
-                self.result = self.async_result.wait()
+                if wait_in_bg:
+                    # This results in a separate code path
+                    worker = gevent.spawn(work)
+                    worker.join()
+                else:
+                    work()
 
                 g_event.set()
                 glet.join()
@@ -196,6 +211,14 @@ class TestAsyncResult(greentest.TestCase):
 
         self.assertEqual(thread.result, 'from main')
 
+    def test_cross_thread_use_bg(self):
+        self.test_cross_thread_use(timed_wait=False, wait_in_bg=True)
+
+    def test_cross_thread_use_timed(self):
+        self.test_cross_thread_use(timed_wait=True, wait_in_bg=False)
+
+    def test_cross_thread_use_timed_bg(self):
+        self.test_cross_thread_use(timed_wait=True, wait_in_bg=True)
 
 class TestAsyncResultAsLinkTarget(greentest.TestCase):
     error_fatal = False
