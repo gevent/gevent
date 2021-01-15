@@ -428,6 +428,30 @@ class OpenDescriptor(object): # pylint:disable=too-many-instance-attributes
         return result
 
 
+class _ClosedIO(object):
+    # Used for FileObjectBase._io when FOB.close()
+    # is called. Lets us drop references to ``_io``
+    # for GC/resource cleanup reasons, but keeps some useful
+    # information around.
+    __slots__ = ('name',)
+
+    def __init__(self, io_obj):
+        try:
+            self.name = io_obj.name
+        except AttributeError:
+            pass
+
+    def __getattr__(self, name):
+        if name == 'name':
+            # We didn't set it in __init__ because there wasn't one
+            raise AttributeError
+        raise FileObjectClosed
+
+    def __bool__(self):
+        return False
+    __nonzero__ = __bool__
+
+
 class FileObjectBase(object):
     """
     Internal base class to ensure a level of consistency
@@ -472,7 +496,6 @@ class FileObjectBase(object):
         # We don't actually use this property ourself, but we save it (and
         # pass it along) for compatibility.
         self._close = descriptor.closefd
-
         self._do_delegate_methods()
 
 
@@ -503,14 +526,14 @@ class FileObjectBase(object):
     @property
     def closed(self):
         """True if the file is closed"""
-        return self._io is None
+        return isinstance(self._io, _ClosedIO)
 
     def close(self):
-        if self._io is None:
+        if isinstance(self._io, _ClosedIO):
             return
 
         fobj = self._io
-        self._io = None
+        self._io = _ClosedIO(self._io)
         try:
             self._do_close(fobj, self._close)
         finally:
@@ -525,8 +548,6 @@ class FileObjectBase(object):
         raise NotImplementedError()
 
     def __getattr__(self, name):
-        if self._io is None:
-            raise FileObjectClosed()
         return getattr(self._io, name)
 
     def __repr__(self):
@@ -656,8 +677,6 @@ class FileObjectThread(FileObjectBase):
 
     def _do_delegate_methods(self):
         FileObjectBase._do_delegate_methods(self)
-        # if not hasattr(self, 'read1') and 'r' in getattr(self._io, 'mode', ''):
-        #     self.read1 = self.read
         self.__io_holder[0] = self._io
 
     def _extra_repr(self):
@@ -676,7 +695,7 @@ class FileObjectThread(FileObjectBase):
                 # This is different than FileObjectPosix, etc,
                 # because we want to save the expensive trip through
                 # the threadpool.
-                raise FileObjectClosed()
+                raise FileObjectClosed
             with lock:
                 return threadpool.apply(method, args, kwargs)
 

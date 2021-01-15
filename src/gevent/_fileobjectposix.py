@@ -43,6 +43,7 @@ class GreenFileDescriptorIO(RawIOBase):
 
         self._closefd = closefd
         self._fileno = fileno
+        self.name = fileno
         self.mode = open_descriptor.fileio_mode
         make_nonblocking(fileno)
         readable = open_descriptor.can_read
@@ -235,6 +236,11 @@ class GreenOpenDescriptor(OpenDescriptor):
             fileno = raw.fileno()
             fileio = GreenFileDescriptorIO(fileno, self, closefd=closefd)
             fileio._keep_alive = raw
+            # We can usually do better for a name, though.
+            try:
+                fileio.name = raw.name
+            except AttributeError:
+                del fileio.name
         return fileio
 
     def _make_atomic_write(self, result, raw):
