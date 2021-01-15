@@ -239,7 +239,7 @@ def is_anything_patched():
     # it is 100% reliable in the event of third-party patch functions that
     # don't use ``saved``.
     #
-    # .. versionadded:: NEXT
+    # .. versionadded:: 21.1.0
     return bool(saved)
 
 

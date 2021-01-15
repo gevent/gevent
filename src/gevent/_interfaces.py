@@ -243,7 +243,7 @@ class ILoop(Interface):
         loop to notice that the *func* has been scheduled (e.g., it causes
         the loop to wake up).
 
-        .. versionadded:: NEXT
+        .. versionadded:: 21.1.0
 
         .. seealso:: :meth:`asyncio.loop.call_soon_threadsafe`
            The :mod:`asyncio` equivalent.

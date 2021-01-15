@@ -6,6 +6,61 @@
 
 .. towncrier release notes start
 
+21.1.0 (2021-01-15)
+===================
+
+
+Bugfixes
+--------
+
+- Make gevent ``FileObjects`` more closely match the semantics of native
+  file objects for the ``name`` attribute:
+
+  - Objects opened from a file descriptor integer have that integer as
+    their ``name.`` (Note that this is the Python 3 semantics; Python 2
+    native file objects returned from ``os.fdopen()`` have the string
+    "<fdopen>" as their name , but here gevent always follows Python 3.)
+  - The ``name`` remains accessible after the file object is closed.
+
+  Thanks to Dan Milon.
+  See :issue:`1745`.
+
+
+Misc
+----
+
+Make ``gevent.event.AsyncResult`` print a warning when it detects improper
+cross-thread usage instead of hanging.
+
+``AsyncResult`` has *never* been safe to use from multiple threads.
+It, like most gevent objects, is intended to work with greenlets from
+a single thread. Using ``AsyncResult`` from multiple threads has
+undefined semantics. The safest way to communicate between threads is
+using an event loop async watcher.
+
+Those undefined semantics changed in recent gevent versions, making it
+more likely that an abused ``AsyncResult`` would misbehave in ways
+that could cause the program to hang.
+
+Now, when ``AsyncResult`` detects a situation that would hang, it
+prints a warning to stderr. Note that this is best-effort, and hangs
+are still possible, especially under PyPy 7.3.3.
+
+At the same time, ``AsyncResult`` is tuned to behave more like it did
+in older versions, meaning that the hang is once again much less
+likely. If you were getting lucky and using ``AsyncResult``
+successfully across threads, this may restore your luck. In addition,
+cross-thread wakeups are faster. Note that the gevent hub now uses an
+extra file descriptor to implement this.
+
+Similar changes apply to ``gevent.event.Event`` (see :issue:`1735`).
+
+See :issue:`1739`.
+
+
+----
+
+
 20.12.1 (2020-12-27)
 ====================
 
