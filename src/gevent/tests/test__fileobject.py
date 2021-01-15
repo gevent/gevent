@@ -1,4 +1,5 @@
-from __future__ import print_function, absolute_import
+from __future__ import print_function
+from __future__ import absolute_import
 
 import functools
 import gc
@@ -51,7 +52,24 @@ def skipUnlessWorksWithRegularFiles(func):
         func(self)
     return f
 
-class TestFileObjectBlock(greentest.TestCase): # serves as a base for the concurrent tests too
+
+class CleanupMixin(object):
+    def _mkstemp(self, suffix):
+        fileno, path = tempfile.mkstemp(suffix)
+        self.addCleanup(os.remove, path)
+        self.addCleanup(close_fd_quietly, fileno)
+        return fileno, path
+
+    def _pipe(self):
+        r, w = os.pipe()
+        self.addCleanup(close_fd_quietly, r)
+        self.addCleanup(close_fd_quietly, w)
+        return r, w
+
+
+class TestFileObjectBlock(CleanupMixin,
+                          greentest.TestCase):
+    # serves as a base for the concurrent tests too
 
     WORKS_WITH_REGULAR_FILES = True
 
@@ -62,10 +80,7 @@ class TestFileObjectBlock(greentest.TestCase): # serves as a base for the concur
         return self._getTargetClass()(*args, **kwargs)
 
     def _test_del(self, **kwargs):
-        r, w = os.pipe()
-        self.addCleanup(close_fd_quietly, r)
-        self.addCleanup(close_fd_quietly, w)
-
+        r, w = self._pipe()
         self._do_test_del((r, w), **kwargs)
 
     def _do_test_del(self, pipe, **kwargs):
@@ -104,10 +119,10 @@ class TestFileObjectBlock(greentest.TestCase): # serves as a base for the concur
     def test_del_close(self):
         self._test_del(close=True)
 
+
     @skipUnlessWorksWithRegularFiles
     def test_seek(self):
-        fileno, path = tempfile.mkstemp('.gevent.test__fileobject.test_seek')
-        self.addCleanup(os.remove, path)
+        fileno, path = self._mkstemp('.gevent.test__fileobject.test_seek')
 
         s = b'a' * 1024
         os.write(fileno, b'B' * 15)
@@ -139,8 +154,7 @@ class TestFileObjectBlock(greentest.TestCase): # serves as a base for the concur
     def __check_native_matches(self, byte_data, open_mode,
                                meth='read', open_path=True,
                                **open_kwargs):
-        fileno, path = tempfile.mkstemp('.gevent_test_' + open_mode)
-        self.addCleanup(os.remove, path)
+        fileno, path = self._mkstemp('.gevent_test_' + open_mode)
 
         os.write(fileno, byte_data)
         os.close(fileno)
@@ -232,6 +246,67 @@ class TestFileObjectBlock(greentest.TestCase): # serves as a base for the concur
         x.close()
         y.close()
 
+    @skipUnlessWorksWithRegularFiles
+    @greentest.ignores_leakcheck
+    def test_name_after_close(self):
+        fileno, path = self._mkstemp('.gevent_test_named_path_after_close')
+
+        # Passing the fileno; the name is the same as the fileno, and
+        # doesn't change when closed.
+        f = self._makeOne(fileno)
+        nf = os.fdopen(fileno)
+        # On Python 2, os.fdopen() produces a name of <fdopen>;
+        # we follow the Python 3 semantics everywhere.
+        nf_name = '<fdopen>' if greentest.PY2 else fileno
+        self.assertEqual(f.name, fileno)
+        self.assertEqual(nf.name, nf_name)
+
+        # A file-like object that has no name; we'll close the
+        # `f` after this because we reuse the fileno, which
+        # gets passed to fcntl and so must still be valid
+        class Nameless(object):
+            def fileno(self):
+                return fileno
+            close = flush = isatty = closed = writable = lambda self: False
+            seekable = readable = lambda self: True
+
+        nameless = self._makeOne(Nameless(), 'rb')
+        with self.assertRaises(AttributeError):
+            getattr(nameless, 'name')
+        nameless.close()
+        with self.assertRaises(AttributeError):
+            getattr(nameless, 'name')
+
+        f.close()
+        try:
+            nf.close()
+        except (OSError, IOError):
+            # OSError: Py3, IOError: Py2
+            pass
+        self.assertEqual(f.name, fileno)
+        self.assertEqual(nf.name, nf_name)
+
+        def check(arg):
+            f = self._makeOne(arg)
+            self.assertEqual(f.name, path)
+            f.close()
+            # Doesn't change after closed.
+            self.assertEqual(f.name, path)
+
+        # Passing the string
+        check(path)
+
+        # Passing an opened native object
+        with open(path) as nf:
+            check(nf)
+
+        # An io object
+        with io.open(path) as nf:
+            check(nf)
+
+
+
+
 
 class ConcurrentFileObjectMixin(object):
     # Additional tests for fileobjects that cooperate
@@ -239,7 +314,7 @@ class ConcurrentFileObjectMixin(object):
 
     def test_read1_binary_present(self):
         # Issue #840
-        r, w = os.pipe()
+        r, w = self._pipe()
         reader = self._makeOne(r, 'rb')
         self._close_on_teardown(reader)
         writer = self._makeOne(w, 'w')
@@ -248,7 +323,7 @@ class ConcurrentFileObjectMixin(object):
 
     def test_read1_text_not_present(self):
         # Only defined for binary.
-        r, w = os.pipe()
+        r, w = self._pipe()
         reader = self._makeOne(r, 'rt')
         self._close_on_teardown(reader)
         self.addCleanup(os.close, w)
@@ -257,7 +332,7 @@ class ConcurrentFileObjectMixin(object):
     def test_read1_default(self):
         # If just 'r' is given, whether it has one or not
         # depends on if we're Python 2 or 3.
-        r, w = os.pipe()
+        r, w = self._pipe()
         self.addCleanup(os.close, w)
         reader = self._makeOne(r)
         self._close_on_teardown(reader)
@@ -265,7 +340,7 @@ class ConcurrentFileObjectMixin(object):
 
     def test_bufsize_0(self):
         # Issue #840
-        r, w = os.pipe()
+        r, w = self._pipe()
         x = self._makeOne(r, 'rb', bufsize=0)
         y = self._makeOne(w, 'wb', bufsize=0)
         self._close_on_teardown(x)
@@ -280,7 +355,7 @@ class ConcurrentFileObjectMixin(object):
 
     def test_newlines(self):
         import warnings
-        r, w = os.pipe()
+        r, w = self._pipe()
         lines = [b'line1\n', b'line2\r', b'line3\r\n', b'line4\r\nline5', b'\nline6']
         g = gevent.spawn(Writer, self._makeOne(w, 'wb'), lines)
 
@@ -296,7 +371,7 @@ class ConcurrentFileObjectMixin(object):
             g.kill()
 
 
-class TestFileObjectThread(ConcurrentFileObjectMixin,
+class TestFileObjectThread(ConcurrentFileObjectMixin, # pylint:disable=too-many-ancestors
                            TestFileObjectBlock):
 
     def _getTargetClass(self):
@@ -329,7 +404,7 @@ class TestFileObjectThread(ConcurrentFileObjectMixin,
     hasattr(fileobject, 'FileObjectPosix'),
     "Needs FileObjectPosix"
 )
-class TestFileObjectPosix(ConcurrentFileObjectMixin,
+class TestFileObjectPosix(ConcurrentFileObjectMixin, # pylint:disable=too-many-ancestors
                           TestFileObjectBlock):
 
     if sysinfo.LIBUV and sysinfo.LINUX:
@@ -345,10 +420,7 @@ class TestFileObjectPosix(ConcurrentFileObjectMixin,
         # https://github.com/gevent/gevent/issues/1323
 
         # Get a non-seekable file descriptor
-        r, w = os.pipe()
-
-        self.addCleanup(close_fd_quietly, r)
-        self.addCleanup(close_fd_quietly, w)
+        r, _w = self._pipe()
 
         with self.assertRaises(OSError) as ctx:
             os.lseek(r, 0, os.SEEK_SET)
@@ -367,7 +439,7 @@ class TestFileObjectPosix(ConcurrentFileObjectMixin,
         self.assertEqual(io_ex.args, os_ex.args)
         self.assertEqual(str(io_ex), str(os_ex))
 
-class TestTextMode(unittest.TestCase):
+class TestTextMode(CleanupMixin, unittest.TestCase):
 
     def test_default_mode_writes_linesep(self):
         # See https://github.com/gevent/gevent/issues/1282
@@ -376,9 +448,7 @@ class TestTextMode(unittest.TestCase):
         # First, make sure we initialize gevent
         gevent.get_hub()
 
-        fileno, path = tempfile.mkstemp('.gevent.test__fileobject.test_default')
-        self.addCleanup(os.remove, path)
-
+        fileno, path = self._mkstemp('.gevent.test__fileobject.test_default')
         os.close(fileno)
 
         with open(path, "w") as f:
@@ -389,7 +459,7 @@ class TestTextMode(unittest.TestCase):
 
         self.assertEqual(data, os.linesep.encode('ascii'))
 
-class TestOpenDescriptor(greentest.TestCase):
+class TestOpenDescriptor(CleanupMixin, greentest.TestCase):
 
     def _getTargetClass(self):
         return OpenDescriptor
@@ -421,7 +491,8 @@ class TestOpenDescriptor(greentest.TestCase):
     def test_atomicwrite_fd(self):
         from gevent._fileobjectcommon import WriteallMixin
         # It basically only does something when buffering is otherwise disabled
-        desc = self._makeOne(1, 'wb',
+        fileno, _w = self._pipe()
+        desc = self._makeOne(fileno, 'wb',
                              buffering=0,
                              closefd=False,
                              atomic_write=True)
@@ -429,6 +500,7 @@ class TestOpenDescriptor(greentest.TestCase):
 
         fobj = desc.opened()
         self.assertIsInstance(fobj, WriteallMixin)
+        os.close(fileno)
 
 def pop():
     for regex, kind, kwargs in TestOpenDescriptor.CASES:

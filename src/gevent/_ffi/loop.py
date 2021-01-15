@@ -437,6 +437,8 @@ class AbstractLoop(object):
         self._init_callback_timer()
 
         self._threadsafe_async = self.async_(ref=False)
+        # No need to do anything with this on ``fork()``, both libev and libuv
+        # take care of creating a new pipe in their respective ``loop_fork()`` methods.
         self._threadsafe_async.start(lambda: None)
         # TODO: We may be able to do something nicer and use the existing python_callback
         # combined with onerror and the class check/timer/prepare to simplify things
