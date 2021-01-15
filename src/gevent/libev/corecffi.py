@@ -284,6 +284,7 @@ class loop(AbstractLoop):
         libev.ev_timer_start(self._ptr, self._timer0)
 
     def _stop_aux_watchers(self):
+        super(loop, self)._stop_aux_watchers()
         if libev.ev_is_active(self._prepare):
             self.ref()
             libev.ev_prepare_stop(self._ptr, self._prepare)

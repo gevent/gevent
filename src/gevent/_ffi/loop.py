@@ -392,6 +392,7 @@ class AbstractLoop(object):
     _default = None
 
     _keepaliveset = _DiscardedSet()
+    _threadsafe_async = None
 
     def __init__(self, ffi, lib, watchers, flags=None, default=None):
         self._ffi = ffi
@@ -404,7 +405,6 @@ class AbstractLoop(object):
         # Stores python watcher objects while they are started
         self._keepaliveset = set()
         self._init_loop_and_aux_watchers(flags, default)
-
 
     def _init_loop_and_aux_watchers(self, flags=None, default=None):
         self._ptr = self._init_loop(flags, default)
@@ -436,6 +436,8 @@ class AbstractLoop(object):
         self._timer0.data = self._handle_to_self
         self._init_callback_timer()
 
+        self._threadsafe_async = self.async_(ref=False)
+        self._threadsafe_async.start(lambda: None)
         # TODO: We may be able to do something nicer and use the existing python_callback
         # combined with onerror and the class check/timer/prepare to simplify things
         # and unify our handling
@@ -546,7 +548,9 @@ class AbstractLoop(object):
             self.starting_timer_may_update_loop_time = False
 
     def _stop_aux_watchers(self):
-        raise NotImplementedError()
+        if self._threadsafe_async is not None:
+            self._threadsafe_async.close()
+            self._threadsafe_async = None
 
     def destroy(self):
         ptr = self.ptr
@@ -739,9 +743,13 @@ class AbstractLoop(object):
         # _run_callbacks), this could happen almost immediately,
         # without the loop cycling.
         cb = callback(func, args)
-        self._callbacks.append(cb)
-        self._setup_for_run_callback()
+        self._callbacks.append(cb) # Relying on the GIL for this to be threadsafe
+        self._setup_for_run_callback() # XXX: This may not be threadsafe.
+        return cb
 
+    def run_callback_threadsafe(self, func, *args):
+        cb = self.run_callback(func, *args)
+        self._threadsafe_async.send()
         return cb
 
     def _format(self):

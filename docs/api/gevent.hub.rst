@@ -30,6 +30,7 @@ All implementations of the loop provide a common minimum interface.
 
 .. autointerface:: gevent._interfaces.ILoop
 .. autointerface:: gevent._interfaces.IWatcher
+.. autointerface:: gevent._interfaces.ICallback
 
 Utilities
 =========

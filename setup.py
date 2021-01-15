@@ -406,6 +406,7 @@ def run_setup(ext_modules):
             'docs': [
                 'repoze.sphinx.autointerface',
                 'sphinxcontrib-programoutput',
+                'zope.schema',
             ],
             # To the extent possible, we should work to make sure
             # our tests run, at least a basic set, without any of

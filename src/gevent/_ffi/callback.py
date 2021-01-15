@@ -1,10 +1,16 @@
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import
+from __future__ import print_function
+
+from zope.interface import implementer
+
+from gevent._interfaces import ICallback
 
 __all__ = [
     'callback',
 ]
 
 
+@implementer(ICallback)
 class callback(object):
 
     __slots__ = ('callback', 'args')

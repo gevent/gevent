@@ -69,6 +69,7 @@ cdef class AbstractLinkable(object):
    @cython.nonecheck(False)
    cpdef _notify_links(self, list arrived_while_waiting)
 
+   @cython.locals(hub=SwitchOutGreenletWithLoop)
    cdef _handle_unswitched_notifications(self, list unswitched)
    cdef __print_unswitched_warning(self, link, bint printed_tb)
 

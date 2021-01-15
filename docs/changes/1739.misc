@@ -1,4 +1,4 @@
-Make ``AsyncResult`` print a warning when it detects improper
+Make ``gevent.event.AsyncResult`` print a warning when it detects improper
 cross-thread usage instead of hanging.
 
 ``AsyncResult`` has *never* been safe to use from multiple threads.
@@ -18,4 +18,8 @@ are still possible, especially under PyPy 7.3.3.
 At the same time, ``AsyncResult`` is tuned to behave more like it did
 in older versions, meaning that the hang is once again much less
 likely. If you were getting lucky and using ``AsyncResult``
-successfully across threads, this may restore your luck.
+successfully across threads, this may restore your luck. In addition,
+cross-thread wakeups are faster. Note that the gevent hub now uses an
+extra file descriptor to implement this.
+
+Similar changes apply to ``gevent.event.Event`` (see :issue:`1735`).

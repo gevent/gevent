@@ -337,6 +337,24 @@ class TestLoopInterface(unittest.TestCase):
 
         verify.verifyObject(ILoop, loop)
 
+    def test_callback_implements_ICallback(self):
+        from gevent.testing import verify
+        from gevent._interfaces import ICallback
+
+        loop = get_hub().loop
+
+        cb = loop.run_callback(lambda: None)
+        verify.verifyObject(ICallback, cb)
+
+    def test_callback_ts_implements_ICallback(self):
+        from gevent.testing import verify
+        from gevent._interfaces import ICallback
+
+        loop = get_hub().loop
+
+        cb = loop.run_callback_threadsafe(lambda: None)
+        verify.verifyObject(ICallback, cb)
+
 
 class TestHandleError(unittest.TestCase):
 
