@@ -334,6 +334,7 @@ class loop(AbstractLoop):
 
 
     def _stop_aux_watchers(self):
+        super(loop, self)._stop_aux_watchers()
         assert self._prepare
         assert self._check
         assert self._signal_idle
@@ -456,7 +457,8 @@ class loop(AbstractLoop):
         pass
 
     def break_(self, how=None):
-        libuv.uv_stop(self.ptr)
+        if self.ptr:
+            libuv.uv_stop(self.ptr)
 
     def reinit(self):
         # TODO: How to implement? We probably have to simply

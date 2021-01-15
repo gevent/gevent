@@ -140,6 +140,26 @@ class TestAsyncResult(greentest.TestCase):
         self.assertRaises(gevent.Timeout, ar.get, block=False)
         self.assertRaises(gevent.Timeout, ar.get_nowait)
 
+class TestAsyncResultCrossThread(greentest.TestCase):
+
+    def _makeOne(self):
+        return AsyncResult()
+
+    def _setOne(self, one):
+        one.set('from main')
+
+    BG_WAIT_DELAY = 60
+
+    def _check_pypy_switch(self):
+        # On PyPy 7.3.3, switching to the main greenlet of a thread from a
+        # different thread silently does nothing. We can't detect the cross-thread
+        # switch, and so this test breaks
+        # https://foss.heptapod.net/pypy/pypy/-/issues/3381
+        if greentest.PYPY:
+            import sys
+            if sys.pypy_version_info[:3] <= (7, 3, 3): # pylint:disable=no-member
+                self.skipTest("PyPy bug: https://foss.heptapod.net/pypy/pypy/-/issues/3381")
+
     @greentest.ignores_leakcheck
     def test_cross_thread_use(self, timed_wait=False, wait_in_bg=False):
         # Issue 1739.
@@ -153,15 +173,10 @@ class TestAsyncResult(greentest.TestCase):
         from threading import Thread as NativeThread
         from threading import Event as NativeEvent
 
-        # On PyPy 7.3.3, switching to the main greenlet of a thread from a
-        # different thread silently does nothing. We can't detect the cross-thread
-        # switch, and so this test breaks
-        # https://foss.heptapod.net/pypy/pypy/-/issues/3381
-        if not wait_in_bg and greentest.PYPY:
-            import sys
-            if sys.pypy_version_info[:3] <= (7, 3, 3): # pylint:disable=no-member
-                self.skipTest("PyPy bug: https://foss.heptapod.net/pypy/pypy/-/issues/3381")
+        if not wait_in_bg:
+            self._check_pypy_switch()
 
+        test = self
         class Thread(NativeThread):
             def __init__(self):
                 NativeThread.__init__(self)
@@ -169,7 +184,7 @@ class TestAsyncResult(greentest.TestCase):
                 self.running_event = NativeEvent()
                 self.finished_event = NativeEvent()
 
-                self.async_result = AsyncResult()
+                self.async_result = test._makeOne()
                 self.result = '<never set>'
 
             def run(self):
@@ -182,10 +197,12 @@ class TestAsyncResult(greentest.TestCase):
 
                 def work():
                     self.running_event.set()
-                    # XXX: If we use a timed wait(), the bug doesn't manifest.
-                    # Why not?
+                    # If we use a timed wait(), the bug doesn't manifest.
+                    # This is probably because the loop wakes up to handle the timer,
+                    # and notices the callback.
+                    # See https://github.com/gevent/gevent/issues/1735
                     if timed_wait:
-                        self.result = self.async_result.wait(DELAY * 5)
+                        self.result = self.async_result.wait(test.BG_WAIT_DELAY)
                     else:
                         self.result = self.async_result.wait()
 
@@ -207,12 +224,15 @@ class TestAsyncResult(greentest.TestCase):
         thread.start()
         try:
             thread.running_event.wait()
-            thread.async_result.set('from main')
+            self._setOne(thread.async_result)
             thread.finished_event.wait(DELAY * 5)
         finally:
             thread.join(DELAY * 15)
 
-        self.assertEqual(thread.result, 'from main')
+        self._check_result(thread.result)
+
+    def _check_result(self, result):
+        self.assertEqual(result, 'from main')
 
     def test_cross_thread_use_bg(self):
         self.test_cross_thread_use(timed_wait=False, wait_in_bg=True)
@@ -222,6 +242,57 @@ class TestAsyncResult(greentest.TestCase):
 
     def test_cross_thread_use_timed_bg(self):
         self.test_cross_thread_use(timed_wait=True, wait_in_bg=True)
+
+    @greentest.ignores_leakcheck
+    def test_cross_thread_use_set_in_bg(self):
+        self.assertNotMonkeyPatched() # Need real threads, event objects
+        from threading import Thread as NativeThread
+        from threading import Event as NativeEvent
+
+        self._check_pypy_switch()
+        test = self
+        class Thread(NativeThread):
+            def __init__(self):
+                NativeThread.__init__(self)
+                self.daemon = True
+                self.running_event = NativeEvent()
+                self.finished_event = NativeEvent()
+
+                self.async_result = test._makeOne()
+                self.result = '<never set>'
+
+            def run(self):
+                self.running_event.set()
+                test._setOne(self.async_result)
+
+                self.finished_event.set()
+                gevent.get_hub().destroy(destroy_loop=True)
+
+        thread = Thread()
+        try:
+            glet = gevent.spawn(thread.start)
+            result = thread.async_result.wait(self.BG_WAIT_DELAY)
+        finally:
+            thread.join(DELAY * 15)
+            glet.join(DELAY)
+        self._check_result(result)
+
+    @greentest.ignores_leakcheck
+    def test_cross_thread_use_set_in_bg2(self):
+        # Do it again to make sure it works multiple times.
+        self.test_cross_thread_use_set_in_bg()
+
+class TestEventCrossThread(TestAsyncResultCrossThread):
+
+    def _makeOne(self):
+        return Event()
+
+    def _setOne(self, one):
+        one.set()
+
+    def _check_result(self, result):
+        self.assertTrue(result)
+
 
 class TestAsyncResultAsLinkTarget(greentest.TestCase):
     error_fatal = False

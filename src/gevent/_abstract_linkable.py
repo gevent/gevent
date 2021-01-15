@@ -47,7 +47,11 @@ def get_roots_and_hubs():
     return {
         x.parent: x
         for x in get_objects()
-        if isinstance(x, Hub)
+        # Make sure to only find hubs that have a loop
+        # and aren't destroyed. If we don't do that, we can
+        # get an old hub that no longer works leading to issues in
+        # combined test cases.
+        if isinstance(x, Hub) and x.loop is not None
     }
 
 
@@ -393,9 +397,9 @@ class AbstractLinkable(object):
                         root_greenlets = get_roots_and_hubs()
                     hub = root_greenlets.get(glet)
 
-                if hub is not None:
-                    hub.loop.run_callback(link, self)
-            if hub is None:
+                if hub is not None and hub.loop is not None:
+                    hub.loop.run_callback_threadsafe(link, self)
+            if hub is None or hub.loop is None:
                 # We couldn't handle it
                 self.__print_unswitched_warning(link, printed_tb)
                 printed_tb = True

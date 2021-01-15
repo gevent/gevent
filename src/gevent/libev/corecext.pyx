@@ -392,6 +392,7 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
     ## embedded struct members
     cdef libev.ev_prepare _prepare
     cdef libev.ev_timer _timer0
+    cdef libev.ev_async _threadsafe_async
     # We'll only actually start this timer if we're on Windows,
     # but it doesn't hurt to compile it in on all platforms.
     cdef libev.ev_timer _periodic_signal_checker
@@ -421,6 +422,8 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         libev.ev_timer_init(&self._timer0,
                             <void*>gevent_noop,
                             0.0, 0.0)
+        libev.ev_async_init(&self._threadsafe_async,
+                            <void*>gevent_noop)
 
         cdef unsigned int c_flags
         if ptr:
@@ -453,6 +456,10 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
 
         libev.ev_prepare_start(self._ptr, &self._prepare)
         libev.ev_unref(self._ptr)
+
+        libev.ev_async_start(self._ptr, &self._threadsafe_async)
+        libev.ev_unref(self._ptr)
+
 
     def __init__(self, object flags=None, object default=None, libev.intptr_t ptr=0):
         self._callbacks = CallbackFIFO()
@@ -507,6 +514,9 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         if libev.ev_is_active(&self._periodic_signal_checker):
             libev.ev_ref(ptr)
             libev.ev_timer_stop(ptr, &self._periodic_signal_checker)
+        if libev.ev_is_active(&self._threadsafe_async):
+            libev.ev_ref(ptr)
+            libev.ev_async_stop(ptr, &self._threadsafe_async)
 
     def destroy(self):
         cdef libev.ev_loop* ptr = self._ptr
@@ -520,8 +530,8 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
                 # else with it will likely cause a crash.
                 return
             # Mark as destroyed
-            libev.ev_set_userdata(ptr, NULL)
             self._stop_watchers(ptr)
+            libev.ev_set_userdata(ptr, NULL)
             if SYSERR_CALLBACK == self._handle_syserr:
                 set_syserr_cb(None)
             libev.ev_loop_destroy(ptr)
@@ -715,6 +725,12 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         libev.ev_ref(self._ptr)
         return cb
 
+    def run_callback_threadsafe(self, func, *args):
+        # We rely on the GIL to make this threadsafe.
+        cb = self.run_callback(func, *args)
+        libev.ev_async_send(self._ptr, &self._threadsafe_async)
+        return cb
+
     def _format(self):
         if not self._ptr:
             return 'destroyed'
@@ -775,15 +791,17 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         # Explicitly not EV_USE_SIGNALFD
         raise AttributeError("sigfd")
 
-try:
-    from zope.interface import classImplements
-except ImportError:
-    pass
-else:
-    # XXX: This invokes the side-table lookup, we would
-    # prefer to have it stored directly on the class.
-    from gevent._interfaces import ILoop
-    classImplements(loop, ILoop)
+
+from zope.interface import classImplements
+
+# XXX: This invokes the side-table lookup, we would
+# prefer to have it stored directly on the class. That means we
+# need a class variable ``__implemented__``, but that's hard in
+# Cython
+from gevent._interfaces import ILoop
+from gevent._interfaces import ICallback
+classImplements(loop, ILoop)
+classImplements(callback, ICallback)
 
 # about readonly _flags attribute:
 # bit #1 set if object owns Python reference to itself (Py_INCREF was

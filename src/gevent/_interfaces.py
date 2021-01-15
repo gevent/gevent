@@ -19,12 +19,31 @@ import sys
 from zope.interface import Interface
 from zope.interface import Attribute
 
+try:
+    from zope import schema
+except ImportError: # pragma: no cover
+    class _Field(Attribute):
+        __allowed_kw__ = ('readonly', 'min',)
+        def __init__(self, description, required=False, **kwargs):
+            description = "%s (required? %s)" % (description, required)
+            for k in self.__allowed_kw__:
+                kwargs.pop(k, None)
+            if kwargs:
+                raise TypeError("Unexpected keyword arguments: %r" % (kwargs,))
+            Attribute.__init__(self, description)
+
+    class schema(object):
+        Bool = _Field
+        Float = _Field
+
+
 # pylint:disable=no-method-argument, unused-argument, no-self-argument
 # pylint:disable=inherit-non-class
 
 __all__ = [
     'ILoop',
     'IWatcher',
+    'ICallback',
 ]
 
 class ILoop(Interface):
@@ -46,13 +65,20 @@ class ILoop(Interface):
     this watcher is still started. *priority* is event loop specific.
     """
 
-    default = Attribute("Boolean indicating whether this is the default loop")
+    default = schema.Bool(
+        description=u"Boolean indicating whether this is the default loop",
+        required=True,
+        readonly=True,
+    )
 
-    approx_timer_resolution = Attribute(
-        "Floating point number of seconds giving (approximately) the minimum "
+    approx_timer_resolution = schema.Float(
+        description=u"Floating point number of seconds giving (approximately) the minimum "
         "resolution of a timer (and hence the minimun value the sleep can sleep for). "
         "On libuv, this is fixed by the library, but on libev it is just a guess "
-        "and the actual value is system dependent."
+        "and the actual value is system dependent.",
+        required=True,
+        min=0.0,
+        readonly=True,
     )
 
     def run(nowait=False, once=False):
@@ -160,7 +186,7 @@ class ILoop(Interface):
         """
         Create a watcher that fires when the process forks.
 
-        Availability: POSIX
+        Availability: Unix.
         """
 
     def async_(ref=True, priority=None):
@@ -182,6 +208,8 @@ class ILoop(Interface):
             Create a watcher that fires for events on the child with process ID *pid*.
 
             This is platform specific and not available on Windows.
+
+            Availability: Unix.
             """
 
     def stat(path, interval=0.0, ref=True, priority=None):
@@ -196,8 +224,29 @@ class ILoop(Interface):
         """
         Run the *func* passing it *args* at the next opportune moment.
 
-        This is a way of handing control to the event loop and deferring
-        an action.
+        The next opportune moment may be the next iteration of the event loop,
+        the current iteration, or some other time in the future.
+
+        Returns a :class:`ICallback` object. See that documentation for
+        important caveats.
+
+        .. seealso:: :meth:`asyncio.loop.call_soon`
+           The :mod:`asyncio` equivalent.
+        """
+
+    def run_callback_threadsafe(func, *args):
+        """
+        Like :meth:`run_callback`, but for use from *outside* the
+        thread that is running this loop.
+
+        This not only schedules the *func* to run, it also causes the
+        loop to notice that the *func* has been scheduled (e.g., it causes
+        the loop to wake up).
+
+        .. versionadded:: NEXT
+
+        .. seealso:: :meth:`asyncio.loop.call_soon_threadsafe`
+           The :mod:`asyncio` equivalent.
         """
 
 class IWatcher(Interface):
@@ -241,4 +290,26 @@ class IWatcher(Interface):
         Attempting to operate on this object after calling close is
         undefined. You should dispose of any references you have to it
         after calling this method.
+        """
+
+class ICallback(Interface):
+    """
+    Represents a function that will be run some time in the future.
+
+    Callback functions run in the hub, and as such they cannot use
+    gevent's blocking API; any exception they raise cannot be caught.
+    """
+
+    pending = schema.Bool(description="Has this callback run yet?",
+                          readonly=True)
+
+    def stop():
+        """
+        If this object is still `pending`, cause it to
+        no longer be `pending`; the function will not be run.
+        """
+
+    def close():
+        """
+        An alias of `stop`.
         """

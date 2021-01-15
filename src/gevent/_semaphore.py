@@ -405,7 +405,7 @@ class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
         thread_lock.acquire()
         results = []
 
-        owning_hub.loop.run_callback(
+        owning_hub.loop.run_callback_threadsafe(
             spawn_raw,
             self.__acquire_from_other_thread_cb,
             results,
