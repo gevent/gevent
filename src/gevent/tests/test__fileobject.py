@@ -491,7 +491,7 @@ class TestOpenDescriptor(CleanupMixin, greentest.TestCase):
     def test_atomicwrite_fd(self):
         from gevent._fileobjectcommon import WriteallMixin
         # It basically only does something when buffering is otherwise disabled
-        fileno, _path = self._mkstemp('.gevent_test_atomicwrite_fd')
+        fileno, _w = self._pipe()
         desc = self._makeOne(fileno, 'wb',
                              buffering=0,
                              closefd=False,
