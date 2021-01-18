@@ -22,7 +22,7 @@ installed. Reported by Josh Zuech.
 Changes
 -------
 
-- Supporting newer releases and the ``arm64`` platformrequired dropping building binary wheels for manylinux 3.6. Users of that version of Python will have to ``build from source <https://www.gevent.org/development/installing_from_source.html>``__.
+- Supporting newer releases and the ``arm64`` platform required dropping building binary wheels for manylinux 3.6. Users of that version of Python will have to `build from source <https://www.gevent.org/development/installing_from_source.html>`__.
 
 Bugfixes
 --------
