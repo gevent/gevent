@@ -6,7 +6,7 @@
 
 .. towncrier release notes start
 
-21.1.1 (unreleased)
+21.1.1 (2021-01-18)
 ===================
 
 Bugfixes
