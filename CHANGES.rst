@@ -6,9 +6,18 @@
 
 .. towncrier release notes start
 
-21.1.0 (2021-01-15)
+21.1.1 (unreleased)
 ===================
 
+Bugfixes
+--------
+
+Fix a ``TypeError`` on startup on Python 2 with ``zope.schema``
+installed. Reported by Josh Zuech.
+
+
+21.1.0 (2021-01-15)
+===================
 
 Bugfixes
 --------

@@ -19,6 +19,8 @@ import sys
 from zope.interface import Interface
 from zope.interface import Attribute
 
+_text_type = type(u'')
+
 try:
     from zope import schema
 except ImportError: # pragma: no cover
@@ -26,6 +28,7 @@ except ImportError: # pragma: no cover
         __allowed_kw__ = ('readonly', 'min',)
         def __init__(self, description, required=False, **kwargs):
             description = "%s (required? %s)" % (description, required)
+            assert isinstance(description, _text_type)
             for k in self.__allowed_kw__:
                 kwargs.pop(k, None)
             if kwargs:
@@ -300,7 +303,7 @@ class ICallback(Interface):
     gevent's blocking API; any exception they raise cannot be caught.
     """
 
-    pending = schema.Bool(description="Has this callback run yet?",
+    pending = schema.Bool(description=u"Has this callback run yet?",
                           readonly=True)
 
     def stop():
