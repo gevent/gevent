@@ -19,6 +19,11 @@ installed. Reported by Josh Zuech.
 21.1.0 (2021-01-15)
 ===================
 
+Changes
+-------
+
+- Supporting newer releases and the ``arm64`` platformrequired dropping building binary wheels for manylinux 3.6. Users of that version of Python will have to ``build from source <https://www.gevent.org/development/installing_from_source.html>``__.
+
 Bugfixes
 --------
 
