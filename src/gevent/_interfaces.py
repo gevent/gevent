@@ -27,7 +27,7 @@ except ImportError: # pragma: no cover
     class _Field(Attribute):
         __allowed_kw__ = ('readonly', 'min',)
         def __init__(self, description, required=False, **kwargs):
-            description = "%s (required? %s)" % (description, required)
+            description = u"%s (required? %s)" % (description, required)
             assert isinstance(description, _text_type)
             for k in self.__allowed_kw__:
                 kwargs.pop(k, None)
