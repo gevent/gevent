@@ -21,6 +21,9 @@ this code, ideally before any other imports::
     from gevent import monkey
     monkey.patch_all()
 
+You can use `python -m gevent.monkey` to start python, this will do the
+monkey patch automatically before any codes are run from your program.
+
 A corollary of the above is that patching **should be done on the main
 thread** and **should be done while the program is single-threaded**.
 
