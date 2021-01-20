@@ -6,6 +6,28 @@
 
 .. towncrier release notes start
 
+21.1.2 (2021-01-20)
+===================
+
+
+Features
+--------
+
+- Update the embedded libev from 4.31 to 4.33.
+  See :issue:`1754`.
+- Update the embedded libuv from 1.38.0 to 1.40.0.
+  See :issue:`1755`.
+
+
+Misc
+----
+
+- See :issue:`1753`.
+
+
+----
+
+
 21.1.1 (2021-01-18)
 ===================
 
