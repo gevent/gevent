@@ -41,6 +41,13 @@ environment:
     # a later point release.
 
     # 64-bit
+
+    - PYTHON: "C:\\Python39-x64"
+      PYTHON_VERSION: "3.9.x"
+      PYTHON_ARCH: "64"
+      PYTHON_EXE: python
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+
     - PYTHON: "C:\\Python27-x64"
       PYTHON_VERSION: "2.7.x" # currently 2.7.13
       PYTHON_ARCH: "64"
@@ -74,6 +81,13 @@ environment:
       PYTHON_ARCH: "32"
 
     # 32-bit, wheel only (no testing)
+    - PYTHON: "C:\\Python39"
+      PYTHON_VERSION: "3.9.x"
+      PYTHON_ARCH: "32"
+      PYTHON_EXE: python
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+      GWHEEL_ONLY: true
+
     - PYTHON: "C:\\Python38"
       PYTHON_VERSION: "3.8.x"
       PYTHON_ARCH: "32"
