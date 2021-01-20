@@ -1,7 +1,7 @@
 /*
  * libev native API header
  *
- * Copyright (c) 2007-2019 Marc Alexander Lehmann <libev@schmorp.de>
+ * Copyright (c) 2007-2020 Marc Alexander Lehmann <libev@schmorp.de>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modifica-
@@ -215,7 +215,7 @@ struct ev_loop;
 /*****************************************************************************/
 
 #define EV_VERSION_MAJOR 4
-#define EV_VERSION_MINOR 31
+#define EV_VERSION_MINOR 33
 
 /* eventmask, revents, events... */
 enum {
@@ -392,14 +392,12 @@ typedef struct ev_stat
 } ev_stat;
 #endif
 
-#if EV_IDLE_ENABLE
 /* invoked when the nothing else needs to be done, keeps the process from blocking */
 /* revent EV_IDLE */
 typedef struct ev_idle
 {
   EV_WATCHER (ev_idle)
 } ev_idle;
-#endif
 
 /* invoked for each run of the mainloop, just before the blocking call */
 /* you can still change events in any way you like */
@@ -416,23 +414,19 @@ typedef struct ev_check
   EV_WATCHER (ev_check)
 } ev_check;
 
-#if EV_FORK_ENABLE
 /* the callback gets invoked before check in the child process when a fork was detected */
 /* revent EV_FORK */
 typedef struct ev_fork
 {
   EV_WATCHER (ev_fork)
 } ev_fork;
-#endif
 
-#if EV_CLEANUP_ENABLE
 /* is invoked just before the loop gets destroyed */
 /* revent EV_CLEANUP */
 typedef struct ev_cleanup
 {
   EV_WATCHER (ev_cleanup)
 } ev_cleanup;
-#endif
 
 #if EV_EMBED_ENABLE
 /* used to embed an event loop inside another */
@@ -442,16 +436,18 @@ typedef struct ev_embed
   EV_WATCHER (ev_embed)
 
   struct ev_loop *other; /* ro */
+#undef EV_IO_ENABLE
+#define EV_IO_ENABLE 1
   ev_io io;              /* private */
+#undef EV_PREPARE_ENABLE
+#define EV_PREPARE_ENABLE 1
   ev_prepare prepare;    /* private */
   ev_check check;        /* unused */
   ev_timer timer;        /* unused */
   ev_periodic periodic;  /* unused */
   ev_idle idle;          /* unused */
   ev_fork fork;          /* private */
-#if EV_CLEANUP_ENABLE
   ev_cleanup cleanup;    /* unused */
-#endif
 } ev_embed;
 #endif
 
@@ -526,7 +522,7 @@ enum {
   EVBACKEND_KQUEUE   = 0x00000008U, /* bsd, broken on osx */
   EVBACKEND_DEVPOLL  = 0x00000010U, /* solaris 8 */ /* NYI */
   EVBACKEND_PORT     = 0x00000020U, /* solaris 10 */
-  EVBACKEND_LINUXAIO = 0x00000040U, /* linuix AIO, 4.19+ */
+  EVBACKEND_LINUXAIO = 0x00000040U, /* linux AIO, 4.19+ */
   EVBACKEND_IOURING  = 0x00000080U, /* linux io_uring, 5.1+ */
   EVBACKEND_ALL      = 0x000000FFU, /* all known backends */
   EVBACKEND_MASK     = 0x0000FFFFU  /* all future backends */
@@ -660,6 +656,8 @@ EV_API_DECL void ev_unref (EV_P) EV_NOEXCEPT;
  */
 EV_API_DECL void ev_once (EV_P_ int fd, int events, ev_tstamp timeout, void (*cb)(int revents, void *arg), void *arg) EV_NOEXCEPT;
 
+EV_API_DECL void ev_invoke_pending (EV_P); /* invoke all pending watchers */
+
 # if EV_FEATURE_API
 EV_API_DECL unsigned int ev_iteration (EV_P) EV_NOEXCEPT; /* number of loop iterations */
 EV_API_DECL unsigned int ev_depth     (EV_P) EV_NOEXCEPT; /* #ev_loop enters - #ev_loop leaves */
@@ -677,7 +675,6 @@ EV_API_DECL void ev_set_invoke_pending_cb (EV_P_ ev_loop_callback invoke_pending
 EV_API_DECL void ev_set_loop_release_cb (EV_P_ void (*release)(EV_P) EV_NOEXCEPT, void (*acquire)(EV_P) EV_NOEXCEPT) EV_NOEXCEPT;
 
 EV_API_DECL unsigned int ev_pending_count (EV_P) EV_NOEXCEPT; /* number of pending events, if any */
-EV_API_DECL void ev_invoke_pending (EV_P); /* invoke all pending watchers */
 
 /*
  * stop/start the timer handling.
@@ -697,6 +694,7 @@ EV_API_DECL void ev_resume  (EV_P) EV_NOEXCEPT;
   ev_set_cb ((ev), cb_);			\
 } while (0)
 
+#define ev_io_modify(ev,events_)             do { (ev)->events = (ev)->events & EV__IOFDSET | (events_); } while (0)
 #define ev_io_set(ev,fd_,events_)            do { (ev)->fd = (fd_); (ev)->events = (events_) | EV__IOFDSET; } while (0)
 #define ev_timer_set(ev,after_,repeat_)      do { ((ev_watcher_time *)(ev))->at = (after_); (ev)->repeat = (repeat_); } while (0)
 #define ev_periodic_set(ev,ofs_,ival_,rcb_)  do { (ev)->offset = (ofs_); (ev)->interval = (ival_); (ev)->reschedule_cb = (rcb_); } while (0)
@@ -742,6 +740,7 @@ EV_API_DECL void ev_resume  (EV_P) EV_NOEXCEPT;
 #define ev_periodic_at(ev)                   (+((ev_watcher_time *)(ev))->at)
 
 #ifndef ev_set_cb
+/* memmove is used here to avoid strict aliasing violations, and hopefully is optimized out by any reasonable compiler */
 # define ev_set_cb(ev,cb_)                   (ev_cb_ (ev) = (cb_), memmove (&((ev_watcher *)(ev))->cb, &ev_cb_ (ev), sizeof (ev_cb_ (ev))))
 #endif
 

@@ -1,7 +1,33 @@
 Revision history for libev, a high-performance and full-featured event loop.
 
-TODO: revisit 59.x timer in the light of modern powersaving
+TODO: for next ABI/API change, consider moving EV__IOFDSSET into io->fd instead and provide a getter.
 TODO: document EV_TSTAMP_T
+
+4.33 Wed Mar 18 13:22:29 CET 2020
+	- no changes w.r.t. 4.32.
+
+4.32 (EV only)
+	- the 4.31 timerfd code wrongly changed the priority of the signal
+          fd watcher, which is usually harmless unless signal fds are
+          also used (found via cpan tester service).
+        - the documentation wrongly claimed that user may modify fd and events
+          members in io watchers when the watcher was stopped
+          (found by b_jonas).
+        - new ev_io_modify mutator which changes only the events member,
+          which can be faster. also added ev::io::set (int events) method
+          to ev++.h.
+        - officially allow a zero events mask for io watchers. this should
+          work with older libev versions as well but was not officially
+          allowed before.
+        - do not wake up every minute when timerfd is used to detect timejumps.
+        - do not wake up every minute when periodics are disabled and we have
+          a monotonic clock.
+        - support a lot more "uncommon" compile time configurations,
+          such as ev_embed enabled but ev_timer disabled.
+        - use a start/stop wrapper class to reduce code duplication in
+          ev++.h and make it needlessly more c++-y.
+        - the linux aio backend is no longer compiled in by default.
+        - update to libecb version 0x00010008.
 
 4.31 Fri Dec 20 21:58:29 CET 2019
 	- handle backends with minimum wait time a bit better by not

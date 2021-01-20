@@ -1220,8 +1220,9 @@ with a watcher-specific start function (C<< ev_TYPE_start (loop, watcher
 corresponding stop function (C<< ev_TYPE_stop (loop, watcher *) >>.
 
 As long as your watcher is active (has been started but not stopped) you
-must not touch the values stored in it. Most specifically you must never
-reinitialise it or call its C<ev_TYPE_set> macro.
+must not touch the values stored in it except when explicitly documented
+otherwise. Most specifically you must never reinitialise it or call its
+C<ev_TYPE_set> macro.
 
 Each and every callback receives the event loop pointer as first, the
 registered watcher structure as second, and a bitset of received events as
@@ -1650,15 +1651,18 @@ This section describes each watcher in detail, but will not repeat
 information given in the last section. Any initialisation/set macros,
 functions and members specific to the watcher type are explained.
 
-Members are additionally marked with either I<[read-only]>, meaning that,
-while the watcher is active, you can look at the member and expect some
-sensible content, but you must not modify it (you can modify it while the
-watcher is stopped to your hearts content), or I<[read-write]>, which
-means you can expect it to have some sensible content while the watcher
-is active, but you can also modify it. Modifying it may not do something
+Most members are additionally marked with either I<[read-only]>, meaning
+that, while the watcher is active, you can look at the member and expect
+some sensible content, but you must not modify it (you can modify it while
+the watcher is stopped to your hearts content), or I<[read-write]>, which
+means you can expect it to have some sensible content while the watcher is
+active, but you can also modify it (within the same thread as the event
+loop, i.e. without creating data races). Modifying it may not do something
 sensible or take immediate effect (or do anything at all), but libev will
 not crash or malfunction in any way.
 
+In any case, the documentation for each member will explain what the
+effects are, and if there are any additional access restrictions.
 
 =head2 C<ev_io> - is this file descriptor readable or writable?
 
@@ -1828,16 +1832,36 @@ opportunity for a DoS attack.
 =item ev_io_set (ev_io *, int fd, int events)
 
 Configures an C<ev_io> watcher. The C<fd> is the file descriptor to
-receive events for and C<events> is either C<EV_READ>, C<EV_WRITE> or
-C<EV_READ | EV_WRITE>, to express the desire to receive the given events.
+receive events for and C<events> is either C<EV_READ>, C<EV_WRITE>, both
+C<EV_READ | EV_WRITE> or C<0>, to express the desire to receive the given
+events.
 
-=item int fd [read-only]
+Note that setting the C<events> to C<0> and starting the watcher is
+supported, but not specially optimized - if your program sometimes happens
+to generate this combination this is fine, but if it is easy to avoid
+starting an io watcher watching for no events you should do so.
 
-The file descriptor being watched.
+=item ev_io_modify (ev_io *, int events)
 
-=item int events [read-only]
+Similar to C<ev_io_set>, but only changes the requested events. Using this
+might be faster with some backends, as libev can assume that the C<fd>
+still refers to the same underlying file description, something it cannot
+do when using C<ev_io_set>.
 
-The events being watched.
+=item int fd [no-modify]
+
+The file descriptor being watched. While it can be read at any time, you
+must not modify this member even when the watcher is stopped - always use
+C<ev_io_set> for that.
+
+=item int events [no-modify]
+
+The set of events the fd is being watched for, among other flags. Remember
+that this is a bit set - to test for C<EV_READ>, use C<< w->events &
+EV_READ >>, and similarly for C<EV_WRITE>.
+
+As with C<fd>, you must not modify this member even when the watcher is
+stopped, always use C<ev_io_set> or C<ev_io_modify> for that.
 
 =back
 
@@ -4244,6 +4268,9 @@ method.
 
 For C<ev::embed> watchers this method is called C<set_embed>, to avoid
 clashing with the C<set (loop)> method.
+
+For C<ev::io> watchers there is an additional C<set> method that acepts a
+new event mask only, and internally calls C<ev_io_modfify>.
 
 =item w->start ()
 

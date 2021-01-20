@@ -270,9 +270,8 @@ linuxaio_modify (EV_P_ int fd, int oev, int nev)
       ++anfd->egen;
     }
 
-  iocb->io.aio_buf =
-      (nev & EV_READ ? POLLIN : 0)
-      | (nev & EV_WRITE ? POLLOUT : 0);
+  iocb->io.aio_buf = (nev & EV_READ  ? POLLIN  : 0)
+                   | (nev & EV_WRITE ? POLLOUT : 0);
 
   if (nev)
     {

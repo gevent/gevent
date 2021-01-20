@@ -119,7 +119,7 @@
    
 # if HAVE_LINUX_AIO_ABI_H
 #  ifndef EV_USE_LINUXAIO
-#   define EV_USE_LINUXAIO EV_FEATURE_BACKENDS
+#   define EV_USE_LINUXAIO 0 /* was: EV_FEATURE_BACKENDS, always off by default */
 #  endif
 # else
 #  undef EV_USE_LINUXAIO
@@ -346,7 +346,7 @@
 
 #ifndef EV_USE_LINUXAIO
 # if __linux /* libev currently assumes linux/aio_abi.h is always available on linux */
-#  define EV_USE_LINUXAIO 1
+#  define EV_USE_LINUXAIO 0 /* was: 1, always off by default */
 # else
 #  define EV_USE_LINUXAIO 0
 # endif
@@ -581,6 +581,7 @@ struct signalfd_siginfo
 
 #define MIN_TIMEJUMP   1. /* minimum timejump that gets detected (if monotonic clock available) */
 #define MAX_BLOCKTIME  59.743 /* never wait longer than this time (to detect time jumps) */
+#define MAX_BLOCKTIME2 1500001.07 /* same, but when timerfd is used to detect jumps, also safe delay to not overflow */
 
 /* find a portable timestamp that is "always" in the future but fits into time_t.
  * this is quite hard, and we are mostly guessing - we handle 32 bit signed/unsigned time_t,
@@ -605,7 +606,7 @@ struct signalfd_siginfo
 /*
  * libecb - http://software.schmorp.de/pkg/libecb
  *
- * Copyright (©) 2009-2015 Marc Alexander Lehmann <libecb@schmorp.de>
+ * Copyright (©) 2009-2015,2018-2020 Marc Alexander Lehmann <libecb@schmorp.de>
  * Copyright (©) 2011 Emanuele Giaquinta
  * All rights reserved.
  *
@@ -646,15 +647,23 @@ struct signalfd_siginfo
 #define ECB_H
 
 /* 16 bits major, 16 bits minor */
-#define ECB_VERSION 0x00010006
+#define ECB_VERSION 0x00010008
 
-#ifdef _WIN32
+#include <string.h> /* for memcpy */
+
+#if defined (_WIN32) && !defined (__MINGW32__)
   typedef   signed char   int8_t;
   typedef unsigned char  uint8_t;
+  typedef   signed char   int_fast8_t;
+  typedef unsigned char  uint_fast8_t;
   typedef   signed short  int16_t;
   typedef unsigned short uint16_t;
+  typedef   signed int    int_fast16_t;
+  typedef unsigned int   uint_fast16_t;
   typedef   signed int    int32_t;
   typedef unsigned int   uint32_t;
+  typedef   signed int    int_fast32_t;
+  typedef unsigned int   uint_fast32_t;
   #if __GNUC__
     typedef   signed long long int64_t;
     typedef unsigned long long uint64_t;
@@ -662,6 +671,8 @@ struct signalfd_siginfo
     typedef   signed __int64   int64_t;
     typedef unsigned __int64   uint64_t;
   #endif
+  typedef  int64_t  int_fast64_t;
+  typedef uint64_t uint_fast64_t;
   #ifdef _WIN64
     #define ECB_PTRSIZE 8
     typedef uint64_t uintptr_t;
@@ -682,6 +693,14 @@ struct signalfd_siginfo
 
 #define ECB_GCC_AMD64 (__amd64 || __amd64__ || __x86_64 || __x86_64__)
 #define ECB_MSVC_AMD64 (_M_AMD64 || _M_X64)
+
+#ifndef ECB_OPTIMIZE_SIZE
+  #if __OPTIMIZE_SIZE__
+    #define ECB_OPTIMIZE_SIZE 1
+  #else
+    #define ECB_OPTIMIZE_SIZE 0
+  #endif
+#endif
 
 /* work around x32 idiocy by defining proper macros */
 #if ECB_GCC_AMD64 || ECB_MSVC_AMD64
@@ -1198,6 +1217,44 @@ ecb_inline ecb_const uint32_t ecb_rotr32 (uint32_t x, unsigned int count) { retu
 ecb_inline ecb_const uint64_t ecb_rotl64 (uint64_t x, unsigned int count) { return (x >> (64 - count)) | (x << count); }
 ecb_inline ecb_const uint64_t ecb_rotr64 (uint64_t x, unsigned int count) { return (x << (64 - count)) | (x >> count); }
 
+#if ECB_CPP
+
+inline uint8_t  ecb_ctz (uint8_t  v) { return ecb_ctz32 (v); }
+inline uint16_t ecb_ctz (uint16_t v) { return ecb_ctz32 (v); }
+inline uint32_t ecb_ctz (uint32_t v) { return ecb_ctz32 (v); }
+inline uint64_t ecb_ctz (uint64_t v) { return ecb_ctz64 (v); }
+
+inline bool ecb_is_pot (uint8_t  v) { return ecb_is_pot32 (v); }
+inline bool ecb_is_pot (uint16_t v) { return ecb_is_pot32 (v); }
+inline bool ecb_is_pot (uint32_t v) { return ecb_is_pot32 (v); }
+inline bool ecb_is_pot (uint64_t v) { return ecb_is_pot64 (v); }
+
+inline int ecb_ld (uint8_t  v) { return ecb_ld32 (v); }
+inline int ecb_ld (uint16_t v) { return ecb_ld32 (v); }
+inline int ecb_ld (uint32_t v) { return ecb_ld32 (v); }
+inline int ecb_ld (uint64_t v) { return ecb_ld64 (v); }
+
+inline int ecb_popcount (uint8_t  v) { return ecb_popcount32 (v); }
+inline int ecb_popcount (uint16_t v) { return ecb_popcount32 (v); }
+inline int ecb_popcount (uint32_t v) { return ecb_popcount32 (v); }
+inline int ecb_popcount (uint64_t v) { return ecb_popcount64 (v); }
+
+inline uint8_t  ecb_bitrev (uint8_t  v) { return ecb_bitrev8  (v); }
+inline uint16_t ecb_bitrev (uint16_t v) { return ecb_bitrev16 (v); }
+inline uint32_t ecb_bitrev (uint32_t v) { return ecb_bitrev32 (v); }
+
+inline uint8_t  ecb_rotl (uint8_t  v, unsigned int count) { return ecb_rotl8  (v, count); }
+inline uint16_t ecb_rotl (uint16_t v, unsigned int count) { return ecb_rotl16 (v, count); }
+inline uint32_t ecb_rotl (uint32_t v, unsigned int count) { return ecb_rotl32 (v, count); }
+inline uint64_t ecb_rotl (uint64_t v, unsigned int count) { return ecb_rotl64 (v, count); }
+
+inline uint8_t  ecb_rotr (uint8_t  v, unsigned int count) { return ecb_rotr8  (v, count); }
+inline uint16_t ecb_rotr (uint16_t v, unsigned int count) { return ecb_rotr16 (v, count); }
+inline uint32_t ecb_rotr (uint32_t v, unsigned int count) { return ecb_rotr32 (v, count); }
+inline uint64_t ecb_rotr (uint64_t v, unsigned int count) { return ecb_rotr64 (v, count); }
+
+#endif
+
 #if ECB_GCC_VERSION(4,3) || (ECB_CLANG_BUILTIN(__builtin_bswap32) && ECB_CLANG_BUILTIN(__builtin_bswap64))
   #if ECB_GCC_VERSION(4,8) || ECB_CLANG_BUILTIN(__builtin_bswap16)
   #define ecb_bswap16(x)  __builtin_bswap16 (x)
@@ -1278,6 +1335,78 @@ ecb_inline ecb_const ecb_bool ecb_big_endian    (void) { return ecb_byteorder_he
 ecb_inline ecb_const ecb_bool ecb_little_endian (void);
 ecb_inline ecb_const ecb_bool ecb_little_endian (void) { return ecb_byteorder_helper () == 0x44332211; }
 
+/*****************************************************************************/
+/* unaligned load/store */
+
+ecb_inline uint_fast16_t ecb_be_u16_to_host (uint_fast16_t v) { return ecb_little_endian () ? ecb_bswap16 (v) : v; }
+ecb_inline uint_fast32_t ecb_be_u32_to_host (uint_fast32_t v) { return ecb_little_endian () ? ecb_bswap32 (v) : v; }
+ecb_inline uint_fast64_t ecb_be_u64_to_host (uint_fast64_t v) { return ecb_little_endian () ? ecb_bswap64 (v) : v; }
+
+ecb_inline uint_fast16_t ecb_le_u16_to_host (uint_fast16_t v) { return ecb_big_endian    () ? ecb_bswap16 (v) : v; }
+ecb_inline uint_fast32_t ecb_le_u32_to_host (uint_fast32_t v) { return ecb_big_endian    () ? ecb_bswap32 (v) : v; }
+ecb_inline uint_fast64_t ecb_le_u64_to_host (uint_fast64_t v) { return ecb_big_endian    () ? ecb_bswap64 (v) : v; }
+
+ecb_inline uint_fast16_t ecb_peek_u16_u (const void *ptr) { uint16_t v; memcpy (&v, ptr, sizeof (v)); return v; }
+ecb_inline uint_fast32_t ecb_peek_u32_u (const void *ptr) { uint32_t v; memcpy (&v, ptr, sizeof (v)); return v; }
+ecb_inline uint_fast64_t ecb_peek_u64_u (const void *ptr) { uint64_t v; memcpy (&v, ptr, sizeof (v)); return v; }
+
+ecb_inline uint_fast16_t ecb_peek_be_u16_u (const void *ptr) { return ecb_be_u16_to_host (ecb_peek_u16_u (ptr)); }
+ecb_inline uint_fast32_t ecb_peek_be_u32_u (const void *ptr) { return ecb_be_u32_to_host (ecb_peek_u32_u (ptr)); }
+ecb_inline uint_fast64_t ecb_peek_be_u64_u (const void *ptr) { return ecb_be_u64_to_host (ecb_peek_u64_u (ptr)); }
+
+ecb_inline uint_fast16_t ecb_peek_le_u16_u (const void *ptr) { return ecb_le_u16_to_host (ecb_peek_u16_u (ptr)); }
+ecb_inline uint_fast32_t ecb_peek_le_u32_u (const void *ptr) { return ecb_le_u32_to_host (ecb_peek_u32_u (ptr)); }
+ecb_inline uint_fast64_t ecb_peek_le_u64_u (const void *ptr) { return ecb_le_u64_to_host (ecb_peek_u64_u (ptr)); }
+
+ecb_inline uint_fast16_t ecb_host_to_be_u16 (uint_fast16_t v) { return ecb_little_endian () ? ecb_bswap16 (v) : v; }
+ecb_inline uint_fast32_t ecb_host_to_be_u32 (uint_fast32_t v) { return ecb_little_endian () ? ecb_bswap32 (v) : v; }
+ecb_inline uint_fast64_t ecb_host_to_be_u64 (uint_fast64_t v) { return ecb_little_endian () ? ecb_bswap64 (v) : v; }
+
+ecb_inline uint_fast16_t ecb_host_to_le_u16 (uint_fast16_t v) { return ecb_big_endian    () ? ecb_bswap16 (v) : v; }
+ecb_inline uint_fast32_t ecb_host_to_le_u32 (uint_fast32_t v) { return ecb_big_endian    () ? ecb_bswap32 (v) : v; }
+ecb_inline uint_fast64_t ecb_host_to_le_u64 (uint_fast64_t v) { return ecb_big_endian    () ? ecb_bswap64 (v) : v; }
+
+ecb_inline void ecb_poke_u16_u (void *ptr, uint16_t v) { memcpy (ptr, &v, sizeof (v)); }
+ecb_inline void ecb_poke_u32_u (void *ptr, uint32_t v) { memcpy (ptr, &v, sizeof (v)); }
+ecb_inline void ecb_poke_u64_u (void *ptr, uint64_t v) { memcpy (ptr, &v, sizeof (v)); }
+
+ecb_inline void ecb_poke_be_u16_u (void *ptr, uint_fast16_t v) { ecb_poke_u16_u (ptr, ecb_host_to_be_u16 (v)); }
+ecb_inline void ecb_poke_be_u32_u (void *ptr, uint_fast32_t v) { ecb_poke_u32_u (ptr, ecb_host_to_be_u32 (v)); }
+ecb_inline void ecb_poke_be_u64_u (void *ptr, uint_fast64_t v) { ecb_poke_u64_u (ptr, ecb_host_to_be_u64 (v)); }
+                                                                                                
+ecb_inline void ecb_poke_le_u16_u (void *ptr, uint_fast16_t v) { ecb_poke_u16_u (ptr, ecb_host_to_le_u16 (v)); }
+ecb_inline void ecb_poke_le_u32_u (void *ptr, uint_fast32_t v) { ecb_poke_u32_u (ptr, ecb_host_to_le_u32 (v)); }
+ecb_inline void ecb_poke_le_u64_u (void *ptr, uint_fast64_t v) { ecb_poke_u64_u (ptr, ecb_host_to_le_u64 (v)); }
+
+#if ECB_CPP
+
+inline uint8_t  ecb_bswap (uint8_t  v) { return v; }
+inline uint16_t ecb_bswap (uint16_t v) { return ecb_bswap16 (v); }
+inline uint32_t ecb_bswap (uint32_t v) { return ecb_bswap32 (v); }
+inline uint64_t ecb_bswap (uint64_t v) { return ecb_bswap64 (v); }
+
+template<typename T> inline T ecb_be_to_host (T v) { return ecb_little_endian () ? ecb_bswap (v) : v; }
+template<typename T> inline T ecb_le_to_host (T v) { return ecb_big_endian    () ? ecb_bswap (v) : v; }
+template<typename T> inline T ecb_peek       (const void *ptr) { return *(const T *)ptr; }
+template<typename T> inline T ecb_peek_be    (const void *ptr) { return ecb_be_to_host (ecb_peek  <T> (ptr)); }
+template<typename T> inline T ecb_peek_le    (const void *ptr) { return ecb_le_to_host (ecb_peek  <T> (ptr)); }
+template<typename T> inline T ecb_peek_u     (const void *ptr) { T v; memcpy (&v, ptr, sizeof (v)); return v; }
+template<typename T> inline T ecb_peek_be_u  (const void *ptr) { return ecb_be_to_host (ecb_peek_u<T> (ptr)); }
+template<typename T> inline T ecb_peek_le_u  (const void *ptr) { return ecb_le_to_host (ecb_peek_u<T> (ptr)); }
+
+template<typename T> inline T ecb_host_to_be (T v) { return ecb_little_endian () ? ecb_bswap (v) : v; }
+template<typename T> inline T ecb_host_to_le (T v) { return ecb_big_endian    () ? ecb_bswap (v) : v; }
+template<typename T> inline void ecb_poke      (void *ptr, T v) { *(T *)ptr = v; }
+template<typename T> inline void ecb_poke_be   (void *ptr, T v) { return ecb_poke  <T> (ptr, ecb_host_to_be (v)); }
+template<typename T> inline void ecb_poke_le   (void *ptr, T v) { return ecb_poke  <T> (ptr, ecb_host_to_le (v)); }
+template<typename T> inline void ecb_poke_u    (void *ptr, T v) { memcpy (ptr, &v, sizeof (v)); }
+template<typename T> inline void ecb_poke_be_u (void *ptr, T v) { return ecb_poke_u<T> (ptr, ecb_host_to_be (v)); }
+template<typename T> inline void ecb_poke_le_u (void *ptr, T v) { return ecb_poke_u<T> (ptr, ecb_host_to_le (v)); }
+
+#endif
+
+/*****************************************************************************/
+
 #if ECB_GCC_VERSION(3,0) || ECB_C99
   #define ecb_mod(m,n) ((m) % (n) + ((m) % (n) < 0 ? (n) : 0))
 #else
@@ -1310,6 +1439,8 @@ ecb_inline ecb_const ecb_bool ecb_little_endian (void) { return ecb_byteorder_he
 #else
   #define ecb_array_length(name) (sizeof (name) / sizeof (name [0]))
 #endif
+
+/*****************************************************************************/
 
 ecb_function_ ecb_const uint32_t ecb_binary16_to_binary32 (uint32_t x);
 ecb_function_ ecb_const uint32_t
@@ -1428,7 +1559,6 @@ ecb_binary32_to_binary16 (uint32_t x)
     || (defined __arm__ && (defined __ARM_EABI__ || defined __EABI__ || defined __VFP_FP__ || defined _WIN32_WCE || defined __ANDROID__)) \
     || defined __aarch64__
   #define ECB_STDFP 1
-  #include <string.h> /* for memcpy */
 #else
   #define ECB_STDFP 0
 #endif
@@ -1660,7 +1790,7 @@ ecb_binary32_to_binary16 (uint32_t x)
  * TODO: arm is also common nowadays, maybe even mips and x86
  * TODO: after implementing this, it suddenly looks like overkill, but its hard to remove...
  */
-#if __GNUC__ && __linux && ECB_AMD64 && !defined __OPTIMIZE_SIZE__
+#if __GNUC__ && __linux && ECB_AMD64 && !EV_FEATURE_CODE
   /* the costly errno access probably kills this for size optimisation */
 
   #define ev_syscall(nr,narg,arg1,arg2,arg3,arg4,arg5,arg6)            \
@@ -2264,8 +2394,20 @@ fd_reify (EV_P)
 {
   int i;
 
+  /* most backends do not modify the fdchanges list in backend_modfiy.
+   * except io_uring, which has fixed-size buffers which might force us
+   * to handle events in backend_modify, causing fdchanges to be amended,
+   * which could result in an endless loop.
+   * to avoid this, we do not dynamically handle fds that were added
+   * during fd_reify. that means that for those backends, fdchangecnt
+   * might be non-zero during poll, which must cause them to not block.
+   * to not put too much of a burden on other backends, this detail
+   * needs to be handled in the backend.
+   */
+  int changecnt = fdchangecnt;
+
 #if EV_SELECT_IS_WINSOCKET || EV_USE_IOCP
-  for (i = 0; i < fdchangecnt; ++i)
+  for (i = 0; i < changecnt; ++i)
     {
       int fd = fdchanges [i];
       ANFD *anfd = anfds + fd;
@@ -2289,7 +2431,7 @@ fd_reify (EV_P)
     }
 #endif
 
-  for (i = 0; i < fdchangecnt; ++i)
+  for (i = 0; i < changecnt; ++i)
     {
       int fd = fdchanges [i];
       ANFD *anfd = anfds + fd;
@@ -2315,7 +2457,14 @@ fd_reify (EV_P)
         backend_modify (EV_A_ fd, o_events, anfd->events);
     }
 
-  fdchangecnt = 0;
+  /* normally, fdchangecnt hasn't changed. if it has, then new fds have been added.
+   * this is a rare case (see beginning comment in this function), so we copy them to the
+   * front and hope the backend handles this case.
+   */
+  if (ecb_expect_false (fdchangecnt != changecnt))
+    memmove (fdchanges, fdchanges + changecnt, (fdchangecnt - changecnt) * sizeof (*fdchanges));
+
+  fdchangecnt -= changecnt;
 }
 
 /* something about the given fd changed */
@@ -2324,7 +2473,7 @@ void
 fd_change (EV_P_ int fd, int flags)
 {
   unsigned char reify = anfds [fd].reify;
-  anfds [fd].reify |= flags;
+  anfds [fd].reify = reify | flags;
 
   if (ecb_expect_true (!reify))
     {
@@ -2563,7 +2712,7 @@ reheap (ANHE *heap, int N)
 
 /*****************************************************************************/
 
-/* associate signal watchers to a signal signal */
+/* associate signal watchers to a signal */
 typedef struct
 {
   EV_ATOMIC_T pending;
@@ -2886,10 +3035,7 @@ timerfdcb (EV_P_ ev_io *iow, int revents)
 {
   struct itimerspec its = { 0 };
 
-  /* since we can't easily come zup with a (portable) maximum value of time_t,
-   * we wake up once per month, which hopefully is rare enough to not
-   * be a problem. */
-  its.it_value.tv_sec = ev_rt_now + 86400 * 30;
+  its.it_value.tv_sec = ev_rt_now + (int)MAX_BLOCKTIME2;
   timerfd_settime (timerfd, TFD_TIMER_ABSTIME | TFD_TIMER_CANCEL_ON_SET, &its, 0);
 
   ev_rt_now = ev_time ();
@@ -2899,7 +3045,9 @@ timerfdcb (EV_P_ ev_io *iow, int revents)
   now_floor = EV_TS_CONST (0.);
   time_update (EV_A_ EV_TSTAMP_HUGE);
   */
+#if EV_PERIODIC_ENABLE
   periodics_reschedule (EV_A);
+#endif
 }
 
 ecb_noinline ecb_cold
@@ -2915,7 +3063,7 @@ evtimerfd_init (EV_P)
           fd_intern (timerfd); /* just to be sure */
 
           ev_io_init (&timerfd_w, timerfdcb, timerfd, EV_READ);
-          ev_set_priority (&sigfd_w, EV_MINPRI);
+          ev_set_priority (&timerfd_w, EV_MINPRI);
           ev_io_start (EV_A_ &timerfd_w);
           ev_unref (EV_A); /* watcher should not keep loop alive */
 
@@ -2984,14 +3132,14 @@ ev_supported_backends (void) EV_NOEXCEPT
 {
   unsigned int flags = 0;
 
-  if (EV_USE_PORT    ) flags |= EVBACKEND_PORT;
-  if (EV_USE_KQUEUE  ) flags |= EVBACKEND_KQUEUE;
-  if (EV_USE_EPOLL   ) flags |= EVBACKEND_EPOLL;
-  if (EV_USE_LINUXAIO) flags |= EVBACKEND_LINUXAIO;
-  if (EV_USE_IOURING ) flags |= EVBACKEND_IOURING;
-  if (EV_USE_POLL    ) flags |= EVBACKEND_POLL;
-  if (EV_USE_SELECT  ) flags |= EVBACKEND_SELECT;
-  
+  if (EV_USE_PORT                                      ) flags |= EVBACKEND_PORT;
+  if (EV_USE_KQUEUE                                    ) flags |= EVBACKEND_KQUEUE;
+  if (EV_USE_EPOLL                                     ) flags |= EVBACKEND_EPOLL;
+  if (EV_USE_LINUXAIO                                  ) flags |= EVBACKEND_LINUXAIO;
+  if (EV_USE_IOURING && ev_linux_version () >= 0x050601) flags |= EVBACKEND_IOURING; /* 5.6.1+ */
+  if (EV_USE_POLL                                      ) flags |= EVBACKEND_POLL;
+  if (EV_USE_SELECT                                    ) flags |= EVBACKEND_SELECT;
+
   return flags;
 }
 
@@ -3031,18 +3179,13 @@ ecb_cold
 unsigned int
 ev_embeddable_backends (void) EV_NOEXCEPT
 {
-  int flags = EVBACKEND_EPOLL | EVBACKEND_KQUEUE | EVBACKEND_PORT;
+  int flags = EVBACKEND_EPOLL | EVBACKEND_KQUEUE | EVBACKEND_PORT | EVBACKEND_IOURING;
 
   /* epoll embeddability broken on all linux versions up to at least 2.6.23 */
   if (ev_linux_version () < 0x020620) /* disable it on linux < 2.6.32 */
     flags &= ~EVBACKEND_EPOLL;
 
   /* EVBACKEND_LINUXAIO is theoretically embeddable, but suffers from a performance overhead */
-
-  /* EVBACKEND_IOURING is practically embeddable, but the current implementation is not
-   * because our backend_fd is the epoll fd we need as fallback.
-   * if the kernel ever is fixed, this might change...
-   */
 
   return flags;
 }
@@ -3950,6 +4093,18 @@ ev_run (EV_P_ int flags)
         if (ecb_expect_true (!(flags & EVRUN_NOWAIT || idleall || !activecnt || pipe_write_skipped)))
           {
             waittime = EV_TS_CONST (MAX_BLOCKTIME);
+
+#if EV_USE_TIMERFD
+            /* sleep a lot longer when we can reliably detect timejumps */
+            if (ecb_expect_true (timerfd >= 0))
+              waittime = EV_TS_CONST (MAX_BLOCKTIME2);
+#endif
+#if !EV_PERIODIC_ENABLE
+            /* without periodics but with monotonic clock there is no need */
+            /* for any time jump detection, so sleep longer */
+            if (ecb_expect_true (have_monotonic))
+              waittime = EV_TS_CONST (MAX_BLOCKTIME2);
+#endif
 
             if (timercnt)
               {
@@ -5078,6 +5233,7 @@ embed_prepare_cb (EV_P_ ev_prepare *prepare, int revents)
   }
 }
 
+#if EV_FORK_ENABLE
 static void
 embed_fork_cb (EV_P_ ev_fork *fork_w, int revents)
 {
@@ -5094,6 +5250,7 @@ embed_fork_cb (EV_P_ ev_fork *fork_w, int revents)
 
   ev_embed_start (EV_A_ w);
 }
+#endif
 
 #if 0
 static void
@@ -5124,8 +5281,10 @@ ev_embed_start (EV_P_ ev_embed *w) EV_NOEXCEPT
   ev_set_priority (&w->prepare, EV_MINPRI);
   ev_prepare_start (EV_A_ &w->prepare);
 
+#if EV_FORK_ENABLE
   ev_fork_init (&w->fork, embed_fork_cb);
   ev_fork_start (EV_A_ &w->fork);
+#endif
 
   /*ev_idle_init (&w->idle, e,bed_idle_cb);*/
 
@@ -5145,7 +5304,9 @@ ev_embed_stop (EV_P_ ev_embed *w) EV_NOEXCEPT
 
   ev_io_stop      (EV_A_ &w->io);
   ev_prepare_stop (EV_A_ &w->prepare);
+#if EV_FORK_ENABLE
   ev_fork_stop    (EV_A_ &w->fork);
+#endif
 
   ev_stop (EV_A_ (W)w);
 
