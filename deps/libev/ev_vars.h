@@ -145,7 +145,6 @@ VARx(uint32_t, iouring_cq_cqes)
 VARx(ev_tstamp, iouring_tfd_to)
 VARx(int, iouring_tfd)
 VARx(ev_io, iouring_tfd_w)
-VARx(ev_io, iouring_epoll_w)
 #endif
 
 #if EV_USE_KQUEUE || EV_GENWRAP
