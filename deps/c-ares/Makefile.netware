@@ -34,7 +34,7 @@ ifndef LIBARCH
 LIBARCH = LIBC
 endif
 
-# must be equal to NDEBUG or DEBUG, CURLDEBUG
+# must be equal to NDEBUG or DEBUG
 ifndef DB
 DB	= NDEBUG
 endif
@@ -134,9 +134,7 @@ else
 	# INCLUDES += -I$(SDK_CLIB)/include/nlm/obsolete
 	# INCLUDES += -I$(SDK_CLIB)/include
 endif
-ifeq ($(DB),CURLDEBUG)
-INCLUDES += -I../include
-endif
+
 CFLAGS	+= -I. $(INCLUDES)
 
 ifeq ($(MTSAFE),YES)

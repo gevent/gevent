@@ -334,11 +334,6 @@ provided that you installed Visual C/C++ 6 in the default directory.
 Further details in [README.msvc](README.msvc)
 
 
-### MSVC IDEs
-
-Details in [README.msvc](README.msvc)
-
-
 ### Important static c-ares usage note
 
 When building an application that uses the static c-ares library, you must

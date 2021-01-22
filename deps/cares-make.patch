@@ -1,138 +1,94 @@
+diff --git a/deps/c-ares/configure b/deps/c-ares/configure
+index ca35a191..50c8266b 100755
+--- a/deps/c-ares/configure
++++ b/deps/c-ares/configure
+@@ -31859,7 +31859,7 @@ fi
+
+
+
+-ac_config_files="$ac_config_files Makefile include/Makefile src/Makefile src/lib/Makefile src/tools/Makefile docs/Makefile libcares.pc"
++ac_config_files="$ac_config_files Makefile include/Makefile src/Makefile src/lib/Makefile src/tools/Makefile libcares.pc"
+
+
+ cat >confcache <<\_ACEOF
+@@ -33008,7 +33008,6 @@ do
+     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
+     "src/lib/Makefile") CONFIG_FILES="$CONFIG_FILES src/lib/Makefile" ;;
+     "src/tools/Makefile") CONFIG_FILES="$CONFIG_FILES src/tools/Makefile" ;;
+-    "docs/Makefile") CONFIG_FILES="$CONFIG_FILES docs/Makefile" ;;
+     "libcares.pc") CONFIG_FILES="$CONFIG_FILES libcares.pc" ;;
+
+   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
+@@ -34698,5 +34697,3 @@ done
+ ## -------------------------------- ##
+ ##  End of distclean amending code  ##
+ ## -------------------------------- ##
+-
+-
 diff --git a/deps/c-ares/Makefile.in b/deps/c-ares/Makefile.in
-index 33a6f627..ad201713 100644
+index 35994e4d..f75287f3 100644
 --- a/deps/c-ares/Makefile.in
 +++ b/deps/c-ares/Makefile.in
-@@ -746,63 +746,7 @@ HHEADERS = ares.h			\
-   ares_setup.h				\
-   setup_once.h
+@@ -401,7 +401,7 @@ EXTRA_DIST = AUTHORS CHANGES README.cares $(man_MANS) RELEASE-NOTES	\
+
+ CLEANFILES = $(PDFPAGES) $(HTMLPAGES)
+ DISTCLEANFILES = include/ares_build.h
+-DIST_SUBDIRS = include src test docs
++DIST_SUBDIRS = include src
+ SUBDIRS = @BUILD_SUBDIRS@
+ pkgconfigdir = $(libdir)/pkgconfig
+ pkgconfig_DATA = libcares.pc
+diff --git a/deps/c-ares/Makefile.am b/deps/c-ares/Makefile.am
+index eef3d3d1..c3e37f73 100644
+--- a/deps/c-ares/Makefile.am
++++ b/deps/c-ares/Makefile.am
+@@ -16,7 +16,7 @@ CLEANFILES = $(PDFPAGES) $(HTMLPAGES)
  
--MANPAGES = ares_cancel.3		\
--  ares_create_query.3			\
--  ares_destroy.3			\
--  ares_destroy_options.3		\
--  ares_dup.3				\
--  ares_expand_name.3			\
--  ares_expand_string.3			\
--  ares_fds.3				\
--  ares_free_data.3			\
--  ares_free_hostent.3			\
--  ares_free_string.3			\
--  ares_freeaddrinfo.3			\
--  ares_get_servers.3			\
--  ares_get_servers_ports.3		\
--  ares_getaddrinfo.3			\
--  ares_gethostbyaddr.3			\
--  ares_gethostbyname.3			\
--  ares_gethostbyname_file.3		\
--  ares_getnameinfo.3			\
--  ares_getsock.3			\
--  ares_inet_ntop.3			\
--  ares_inet_pton.3			\
--  ares_init.3				\
--  ares_init_options.3			\
--  ares_library_cleanup.3		\
--  ares_library_init.3			\
--  ares_library_init_android.3		\
--  ares_library_initialized.3		\
--  ares_mkquery.3			\
--  ares_parse_a_reply.3			\
--  ares_parse_aaaa_reply.3		\
--  ares_parse_mx_reply.3			\
--  ares_parse_naptr_reply.3		\
--  ares_parse_ns_reply.3			\
--  ares_parse_ptr_reply.3		\
--  ares_parse_soa_reply.3		\
--  ares_parse_srv_reply.3		\
--  ares_parse_txt_reply.3		\
--  ares_process.3			\
--  ares_query.3				\
--  ares_save_options.3			\
--  ares_search.3				\
--  ares_send.3				\
--  ares_set_local_dev.3			\
--  ares_set_local_ip4.3			\
--  ares_set_local_ip6.3			\
--  ares_set_servers.3			\
--  ares_set_servers_csv.3		\
--  ares_set_servers_ports.3		\
--  ares_set_servers_ports_csv.3		\
--  ares_set_socket_callback.3		\
--  ares_set_socket_configure_callback.3	\
--  ares_set_socket_functions.3		\
--  ares_set_sortlist.3			\
--  ares_strerror.3			\
--  ares_timeout.3			\
--  ares_version.3
-+MANPAGES =
+ DISTCLEANFILES = include/ares_build.h
  
- HTMLPAGES = ares_cancel.html		\
-   ares_create_query.html		\
-diff --git a/deps/c-ares/Makefile.inc b/deps/c-ares/Makefile.inc
-index f65df1f5..1499168a 100644
---- a/deps/c-ares/Makefile.inc
-+++ b/deps/c-ares/Makefile.inc
-@@ -80,63 +80,7 @@ HHEADERS = ares.h			\
-   ares_setup.h				\
-   setup_once.h
+-DIST_SUBDIRS = include src test docs
++DIST_SUBDIRS = include src
  
--MANPAGES = ares_cancel.3		\
--  ares_create_query.3			\
--  ares_destroy.3			\
--  ares_destroy_options.3		\
--  ares_dup.3				\
--  ares_expand_name.3			\
--  ares_expand_string.3			\
--  ares_fds.3				\
--  ares_free_data.3			\
--  ares_free_hostent.3			\
--  ares_free_string.3			\
--  ares_freeaddrinfo.3			\
--  ares_get_servers.3			\
--  ares_get_servers_ports.3		\
--  ares_getaddrinfo.3			\
--  ares_gethostbyaddr.3			\
--  ares_gethostbyname.3			\
--  ares_gethostbyname_file.3		\
--  ares_getnameinfo.3			\
--  ares_getsock.3			\
--  ares_inet_ntop.3			\
--  ares_inet_pton.3			\
--  ares_init.3				\
--  ares_init_options.3			\
--  ares_library_cleanup.3		\
--  ares_library_init.3			\
--  ares_library_init_android.3		\
--  ares_library_initialized.3		\
--  ares_mkquery.3			\
--  ares_parse_a_reply.3			\
--  ares_parse_aaaa_reply.3		\
--  ares_parse_mx_reply.3			\
--  ares_parse_naptr_reply.3		\
--  ares_parse_ns_reply.3			\
--  ares_parse_ptr_reply.3		\
--  ares_parse_soa_reply.3		\
--  ares_parse_srv_reply.3		\
--  ares_parse_txt_reply.3		\
--  ares_process.3			\
--  ares_query.3				\
--  ares_save_options.3			\
--  ares_search.3				\
--  ares_send.3				\
--  ares_set_local_dev.3			\
--  ares_set_local_ip4.3			\
--  ares_set_local_ip6.3			\
--  ares_set_servers.3			\
--  ares_set_servers_csv.3		\
--  ares_set_servers_ports.3		\
--  ares_set_servers_ports_csv.3		\
--  ares_set_socket_callback.3		\
--  ares_set_socket_configure_callback.3	\
--  ares_set_socket_functions.3		\
--  ares_set_sortlist.3			\
--  ares_strerror.3			\
--  ares_timeout.3			\
--  ares_version.3
-+MANPAGES =
+ SUBDIRS = @BUILD_SUBDIRS@
  
- HTMLPAGES = ares_cancel.html		\
-   ares_create_query.html		\
+diff --git a/deps/c-ares/configure.ac b/deps/c-ares/configure.ac
+index 703bde01..06c02c63 100644
+--- a/deps/c-ares/configure.ac
++++ b/deps/c-ares/configure.ac
+@@ -909,7 +909,7 @@ fi
+ AC_MSG_RESULT([$build_tests])
+ 
+ 
+-BUILD_SUBDIRS="include src docs"
++BUILD_SUBDIRS="include src"
+ if test "x$build_tests" = "xyes" ; then
+   AC_CONFIG_SUBDIRS([test])
+   BUILD_SUBDIRS="${BUILD_SUBDIRS} test"
+@@ -922,7 +922,6 @@ AC_CONFIG_FILES([Makefile           \
+                  src/Makefile       \
+                  src/lib/Makefile   \
+                  src/tools/Makefile \
+-                 docs/Makefile      \
+                  libcares.pc ])
+ 
+ AC_OUTPUT
+diff --git a/deps/c-ares/configure b/deps/c-ares/configure
+index 50c8266b..96387b37 100755
+--- a/deps/c-ares/configure
++++ b/deps/c-ares/configure
+@@ -31848,13 +31848,13 @@ fi
+ $as_echo "$build_tests" >&6; }
+ 
+ 
+-BUILD_SUBDIRS="include src docs"
++BUILD_SUBDIRS="include src"
+ if test "x$build_tests" = "xyes" ; then
+ 
+ 
+ subdirs="$subdirs test"
+ 
+-  BUILD_SUBDIRS="${BUILD_SUBDIRS} test"
++  BUILD_SUBDIRS="${BUILD_SUBDIRS}"
+ fi
+ 
+ 

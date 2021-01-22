@@ -41,11 +41,11 @@ cflags = ('CFLAGS="%s"' % (cflags,)) if cflags else ''
 # https://github.com/gevent/gevent/issues/777
 ares_configure_command = ' '.join([
     "(cd ", quoted_dep_abspath('c-ares'),
-    " && if [ -r ares_build.h ]; then cp ares_build.h ares_build.h.orig; fi ",
+    " && if [ -r include/ares_build.h ]; then cp include/ares_build.h include/ares_build.h.orig; fi ",
     " && sh ./configure --disable-dependency-tracking -C " + cflags,
-    " && cp ares_config.h ares_build.h \"$OLDPWD\" ",
-    " && cat ares_build.h ",
-    " && if [ -r ares_build.h.orig ]; then mv ares_build.h.orig ares_build.h; fi)",
+    " && cp src/lib/ares_config.h include/ares_build.h \"$OLDPWD\" ",
+    " && cat include/ares_build.h ",
+    " && if [ -r include/ares_build.h.orig ]; then mv include/ares_build.h.orig include/ares_build.h; fi)",
     "> configure-output.txt"
 ])
 
@@ -57,7 +57,7 @@ if 'GEVENT_MANYLINUX' in os.environ:
 
 def configure_ares(bext, ext):
     print("Embedding c-ares", bext, ext)
-    bdir = os.path.join(bext.build_temp, 'c-ares')
+    bdir = os.path.join(bext.build_temp, 'c-ares', 'include')
     ext.include_dirs.insert(0, bdir)
     print("Inserted ", bdir, "in include dirs", ext.include_dirs)
 
@@ -65,7 +65,7 @@ def configure_ares(bext, ext):
         os.makedirs(bdir)
 
     if WIN:
-        src = "deps\\c-ares\\ares_build.h.dist"
+        src = "deps\\c-ares\\include\\ares_build.h.dist"
         dest = os.path.join(bdir, "ares_build.h")
         print("Copying %r to %r" % (src, dest))
         shutil.copy(src, dest)
@@ -91,7 +91,11 @@ ARES = Extension(
     sources=[
         'src/gevent/resolver/cares.pyx'
     ],
-    include_dirs=get_include_dirs(*([dep_abspath('c-ares')] if CARES_EMBED else [])),
+    include_dirs=get_include_dirs(*(
+        [os.path.join(dep_abspath('c-ares'), 'include'),
+         os.path.join(dep_abspath('c-ares'), 'src', 'lib')]
+        if CARES_EMBED
+        else [])),
     libraries=list(LIBRARIES),
     define_macros=list(DEFINE_MACROS),
     depends=glob_many(
@@ -103,11 +107,7 @@ ARES.optional = not ares_required
 
 
 if CARES_EMBED:
-    ARES.sources += glob_many('deps/c-ares/*.c')
-    # Strip the standalone binaries that would otherwise
-    # cause linking issues
-    for bin_c in ('acountry', 'adig', 'ahost'):
-        ARES.sources.remove('deps/c-ares' + os.sep + bin_c + '.c')
+    ARES.sources += glob_many('deps/c-ares/src/lib/*.c')
     ARES.configure = configure_ares
     if WIN:
         ARES.libraries += ['advapi32']
