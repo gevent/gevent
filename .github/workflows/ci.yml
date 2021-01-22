@@ -458,6 +458,7 @@ jobs:
           objdump -p build/lib*/gevent/libev/_corecffi*so | grep "NEEDED.*libev.so"
           objdump -p build/lib*/gevent/libev/corecext*so | grep "NEEDED.*libev.so"
           objdump -p build/lib*/gevent/libuv/_corecffi*so | grep "NEEDED.*libuv.so"
+          objdump -p build/lib*/gevent/resolver/cares*so | grep "NEEDED.*libcares.so"
       - name: test non-embedded
         run: |
           # Verify that we got non-embedded builds

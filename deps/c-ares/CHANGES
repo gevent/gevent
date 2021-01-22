@@ -1,5 +1,330 @@
    Changelog for the c-ares project. Generated with git2changes.pl
 
+Version 1.17.1 (19 Nov 2020)
+
+GitHub (19 Nov 2020)
+- [Brad House brought this change]
+
+  Travis: add iOS target built with CMake (#378)
+  
+  Issue #377 suggested that CMake builds for iOS with c-ares were broken. This PR adds an automatic Travis build for iOS CMake.
+  
+  Fix By: Brad House (@bradh352)
+
+bradh352 (18 Nov 2020)
+- fix build
+
+GitHub (18 Nov 2020)
+- [Fabrice Fontaine brought this change]
+
+  External projects were using non-public header ares_dns.h, make public again (#376)
+  
+  It appears some outside projects were relying on macros in ares_dns.h, even though it doesn't appear that header was ever meant to be public.  That said, we don't want to break external integrators so we should distribute this header again.
+  
+  Fix By: Fabrice Fontaine (@ffontaine)
+
+bradh352 (17 Nov 2020)
+- note that so versioning has moved to configure.ac
+
+- note about 1.17.1
+
+- fix sed gone wrong
+
+GitHub (17 Nov 2020)
+- [Daniel Stenberg brought this change]
+
+  autotools cleanup (#372)
+  
+  * remove: install-sh mkinstalldirs
+  
+  They're generated when needed, no need to store in it.
+  
+  * buildconf: remove custom logic with autoreconf
+  
+  Fix By: Daniel Stenberg (@bagder)
+
+bradh352 (17 Nov 2020)
+- attempt to fix 1.17.0 release distribution issues
+
+Version 1.17.0 (16 Nov 2020)
+
+bradh352 (16 Nov 2020)
+- 1.17.0 release prep
+
+- ares_getaddrinfo(): duplicate hints ai_socktype and ai_protocol into output
+  
+  ai_socktype and ai_protocol were ignored from the hints input.  They are now
+  duplicated into the output as expected.  Currently no sanity checks on
+  proper values are taking place.
+  
+  Fixes: #317
+  Fix By: Brad House (@bradh352)
+
+- ares_parse_{a,aaaa}_reply could return larger *naddrttls than passed in
+  
+  If there are more ttls returned than the maximum provided by the requestor, then
+  the *naddrttls response would be larger than the actual number of elements in
+  the addrttls array.
+  
+  This bug could lead to invalid memory accesses in applications using c-ares.
+  
+  This behavior appeared to break with PR #257
+  
+  Fixes: #371
+  Reported By: Momtchil Momtchev (@mmomtchev)
+  Fix By: Brad House (@bradh352)
+
+GitHub (5 Nov 2020)
+- [Dustin Lundquist brought this change]
+
+  docs: ares_set_local_ip4() uses host byte order (#368)
+  
+  Properly document brain-dead behavior of ares_set_local_ip4() using host byte order instead of expected network byte order.
+  
+  Fix By: Dustin Lundquist <d.lundquist@tempered.io>
+
+- [Łukasz Marszał brought this change]
+
+  empty hquery->name could lead to invalid memory access (#367)
+  
+  If hquery->name is empty (=="\0"), &hquery->name[strlen(hquery->name)-1] would point to "random" place in memory. This is causing some of my address sanitizer tests to fail.
+  
+  Fix By: Łukasz Marszał (@lmarszal)
+
+bradh352 (28 Sep 2020)
+- Fix OSSFuzz reported issue in CAA reply parsing
+  
+  OSS-Fuzz is reporting a use-of-uninitialized-value:
+  https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=26012
+  
+  Reported By: David Drysdale (@daviddrysdale)
+
+GitHub (26 Sep 2020)
+- [David Hotham brought this change]
+
+  fuzz CAA parsing (#363)
+  
+  Add fuzz support for CAA parsing
+  
+  Fix By: David Hotham (@dimbleby)
+
+- [Daniela Sonnenschein brought this change]
+
+  Allow parsing of CAA Resource Record (#360)
+  
+  CAA (Certification Authority Authorization) was introduced in RFC 6844.
+  This has been obsoleted by RFC 8659. This commit added the possibility
+  to query CAA resource records with adig and adds a parser for CAA
+  records, that can be used in conjunction with ares_query(3).
+  
+  Closes Bug: #292
+  Fix By: Daniela Sonnenschein (@lxdicted)
+
+Daniel Stenberg (17 Sep 2020)
+- docs: remove the html and pdf make targets
+  
+  They're rarely used in our daily work flow and mostly just add friction,
+  
+  Closes #362
+
+bradh352 (14 Sep 2020)
+- ares_process needs to always include nameser.h as it has compat
+
+- Define T_OPT if system doesn't provide it
+
+GitHub (12 Sep 2020)
+- [Gisle Vanem brought this change]
+
+  Change the mailman links (#358)
+  
+  Links when wrapping become misleading.  Insert newline to prevent wrapping.
+  
+  Fix By: Gisle Vanem (@gvanem)
+
+- [Gisle Vanem brought this change]
+
+  [adig] Update man-page for the '-x' option (#357)
+  
+  Fix By: Gisle Vanem (@gvanem)
+
+- [Gisle Vanem brought this change]
+
+  [adig] add '-x' option. (#356)
+  
+  Added a 'dig-style' '-x' option. Also support '-xx' for a
+  IPv6 bit-string PTR query.
+  
+  Fix By: Gisle Vanem (@gvanem)
+
+bradh352 (12 Sep 2020)
+- fix indentation
+
+- ns_t_opt -> T_OPT
+
+GitHub (12 Sep 2020)
+- [Gisle Vanem brought this change]
+
+  Fixes for Watt-32 on djgpp + Windows (#355)
+  
+  No longer any relation to libcurl since '<libcurl-root>/packages/DOS/common.dj' is dropped.
+  This Makefile.dj has been tested on Win-10 only (using the Windows hosted djgpp cross compiler).
+  
+  Fix By: Gisle Vanem (@gvanem)
+
+- [Gisle Vanem brought this change]
+
+  Fixes for Watt-32 on Windows and MSDOS (#354)
+  
+  Move the prototype to 'ares_private.h'.
+  
+  Fix By: Gisle Vanem (@gvanem)
+
+bradh352 (11 Sep 2020)
+- update path for include
+
+- remove stale information
+
+- remove stale information
+
+Brad House (9 Sep 2020)
+- silence compiler warnings
+
+- Remove stale msvc files from makefile
+
+GitHub (9 Sep 2020)
+- [Brad House brought this change]
+
+  Reorganize source tree (#349)
+  
+  Originally started by Daniel Stenberg (@bagder) with #123, this patch reorganizes the c-ares source tree to have a more modern layout.  It also fixes out of tree builds for autotools, and automatically builds the tests if tests are enabled.  All tests are passing which tests each of the supported build systems (autotools, cmake, nmake, mingw gmake).  There may be some edge cases that will have to be caught later on for things I'm not aware of.
+  
+  Fix By: Brad House (@bradh352)
+
+Brad House (1 Sep 2020)
+- remove CURLDEBUG as per #82
+
+GitHub (1 Sep 2020)
+- [Erik Lax brought this change]
+
+  Detect remote DNS server does not support EDNS as per RFC 6891 (#244)
+  
+  EDNS retry should be based on FORMERR returned without an OPT RR record as per https://tools.ietf.org/html/rfc6891#section-7 rather than just treating any unexpected error condition as a reason to disable EDNS on the channel.
+  
+  Fix By: Erik Lax (@eriklax)
+
+Brad House (27 Aug 2020)
+- Fix for #345, don't use 'true' use 1
+
+GitHub (27 Aug 2020)
+- [Seraphime Kirkovski brought this change]
+
+  ares_gethostbyname: Fix AF_UNSPEC support when using an ip address (#204)
+  
+  fake_hostent() was not supporting AF_UNSPEC, so when an ip address was specified when using AF_UNSPEC it would attempt to do a DNS lookup rather than returning a fake hostent using the ip address.
+  
+  Fix By: Seraphime Kirkovski (@Seraphime)
+
+- [apenn-msft brought this change]
+
+  Tests should use dynamic system-assigned ports rather than static port (#346)
+  
+  The c-ares test suite was hardcoded to use port 5300 (and possibly 5301, 5302) for the test suite.  Especially in containers, there may be no guarantee these ports are available and cause tests to fail when they could otherwise succeed.  Instead, request the system to assign a port to use dynamically.  This is now the default.  To override, the test suite still takes the "-p <port>" option as it always has and will honor that.
+  
+  Fix By: Anthony Penniston (@apenn-msft)
+
+Brad House (25 Aug 2020)
+- Unset members of the addr struct contain garbage values (#343)
+  
+  When generating the ares_sockaddr data by getaddrinfo() it was only filling
+  in certain members while leaving others uninitialized.  This left garbage
+  data if a user tried to use the unset values.  memset() the ares_sockaddr
+  to 0 prior to filling in the values to prevent this.
+  
+  Reported By: @SmorkalovG
+  Fix By: Brad House (@bradh352)
+
+GitHub (24 Aug 2020)
+- [Jonathan Maye-Hobbs brought this change]
+
+  FQDN with trailing period should be queried first with larger ndot value (#345)
+  
+  If a query is performed for dynamodb.us-east-1.amazonaws.com. with ndots=5, it was attempting to search the search domains rather than just attempting the FQDN that was passed it.  This patch now at least attempts the FQDN first.
+  
+  We may need to determine if we should abort any further searching, however as is probably intended.
+  
+  Fix by: Jonathan Maye-Hobbs (@wheelpharoah)
+
+- [Gisle Vanem brought this change]
+
+  Update acountry.c country code list (#341)
+  
+  Updated country_list[]:
+   * 2-letter ISO-3166 country-codes.
+   * Add, rename some names + codes in accordance with latest table at https://en.wikipedia.org/wiki/ISO_3166-1.
+  
+  Fix By: Gisle Vanem (@gvanem)
+
+- [Bulat Gaifullin brought this change]
+
+  Test case should honor flag HAVE_WRITEV rather than WIN32 (#344)
+  
+  Test cases where not honoring the HAVE_WRITEV flag but instead using WIN32 to determine if WRITEV was available or not.  This patch fixes that.
+  
+  Fix By: Bulat Gaifullin (@bgaifullin)
+
+Brad House (18 Jul 2020)
+- Ensure c89 support
+  
+  A couple of for loops in Mac-specific code were using integer declarations
+  inside a for loop.  Move the declaration to the top of the preceding
+  code block to retain c89 compliance.
+  
+  Reported By: Jeffrey Walton
+
+GitHub (2 Jul 2020)
+- [Fionn Fitzmaurice brought this change]
+
+  Avoid buffer overflow in RC4 loop comparison (#336)
+  
+  The rc4 function iterates over a buffer of size buffer_len who's maximum
+  value is INT_MAX with a counter of type short that is not guaranteed to
+  have maximum size INT_MAX.
+  
+  In circumstances where short is narrower than int and where buffer_len
+  is larger than the maximum value of a short, it may be possible to loop
+  infinitely as counter will overflow and never be greater than or equal
+  to buffer_len.
+  
+  The solution is to make the comparison be between types of equal width.
+  This commit defines counter as an int.
+  
+  Fix By: Fionn Fitzmaurice (@fionn)
+
+- [anonymoushelpishere brought this change]
+
+  Updated help information for adig, acountry, and ahost. (#334)
+  
+  Provide more descriptive help information for various utilities.
+  
+  Fix By: @anonymoushelpishere
+
+- [lutianxiong brought this change]
+
+  avoid read-heap-buffer-overflow (#332)
+  
+  Fix invalid read in ares_parse_soa_reply.c found during fuzzing
+  
+  Fixes Bug: #333
+  Fix By: lutianxiong (@ltx2018)
+
+- [Ivan Baidakou brought this change]
+
+  Fix: sizeof(sizeof(addr.saX)) -> sizeof(addr.saX) in readaddrinfo (#331)
+  
+  Looks like a sed-gone-wrong, a sizeof inside of a sizeof.
+  
+  Fix By: Ivan Baidakou (@basiliscos)
+
 Version 1.16.1 (11 May 2020)
 
 Brad House (11 May 2020)
@@ -4608,116 +4933,3 @@ Yang Tse (8 Jun 2009)
   to definition taking place in socket.h instead of time.h
 
 - Fix compiler warning: out of bound access
-
-- fix compilation on AIX
-
-- c-ares' --enable-curldebug adjustments
-
-- Remove temporarily introduced memory leak.
-
-- Temporarily introduce a memory leak to verify curl debug memory tracking works.
-
-- Allow curl debug memory tracking when building a shared library on
-  systems which support external, undefined, symbols in shared libraries.
-
-Daniel Stenberg (26 May 2009)
-- language fix
-
-Yang Tse (26 May 2009)
-- Make ares_init(), ares_dup() and ares_init_options() return ARES_ENOTINITIALIZED
-  if library initialization has not been performed calling ares_library_init().
-
-- c-ares's --enable-curldebug configure option decoupled from c-ares's --enable-debug
-
-- Prevent copying 'sourced' manpages for build targets that don't use them.
-
-Daniel Stenberg (23 May 2009)
-- minor edits
-
-Yang Tse (21 May 2009)
-- Include .pdf versions of c-ares man pages in distribution tarball.
-
-- Allow generation of .html and .pdf versions of c-ares man pages.
-
-Gisle Vanem (21 May 2009)
-- $(OBJ_DIR)/ares_getopt.o must be cleaned explicitly.
-
-Yang Tse (20 May 2009)
-- Mention last changes
-
-- Initial ares_library_cleanup(3) man page
-
-- Update man page
-
-- Update man page
-
-- Initial ares_library_init(3) man page attempt
-
-- Force revision update, to force CVS to update the $Id date string format
-
-- Add same copyright notice as other c-ares files
-
-- Fix case
-
-- Remove run-time requirement for advapi32.dll since
-  c-ares can work even with no advapi32.dll at all.
-
-- Intentionally avoid checking if the address of SystemFunction036, a.k.a.
-  RtlGenRandom, has been located or not. This function is only available on
-  WinXP and later. When unavailable c-ares uses portable rand() function.
-
-- - Provide in external interface preprocessor symbol definitions for
-    CARES_HAVE_ARES_LIBRARY_INIT and CARES_HAVE_ARES_LIBRARY_CLEANUP
-    to ease the use of new capabilities.
-  
-  - Move ares_version() prototype to ares.h
-
-- Introduction of ares_library_init() and ares_library_cleanup()
-
-- Introduction of ares_library_init() and ares_library_cleanup()
-
-- remove outdated comment
-
-- Fix preprocessor conditional expression
-
-- fiX *__SOCKLEN_T definitions for remaining targets
-
-- *__SOCKLEN_T definitions for OS400 already fixed
-
-- fIX *__SOCKLEN_T definitions for SYMBIAN32 and VMS targets
-
-Daniel Stenberg (11 May 2009)
-- - Gregor Jasny made c-ares link with libtool 's -export-symbols-regex option to
-    only expose functions starting with ares_.
-
-Yang Tse (11 May 2009)
-- Remove experimental check. Currently there's no need for it.
-
-- Fix an m4 overquoting triggering a spurious 'AS_TR_CPP' symbol definition
-  attempt in generated config.h
-
-- Proper naming for the experimental compiler test and moved to *-compilers.m4
-
-- Moved *_CHECK_COMPILER_HALT_ON_ERROR and *_CHECK_COMPILER_ARRAY_SIZE_NEGATIVE to *-compilers.m4 along with other *_CHECK_COMPILER_*
-
-- fIX *__SOCKLEN_T definitions for OS400 and generic GCC targets
-
-- fIX *__SOCKLEN_T definitions for MVS and 370 targets
-
-- fIX *__SOCKLEN_T definitions for several Windows target tool-chains
-
-- HP-UX's X/Open network library requirement check follow-up
-
-- HP-UX's X/Open network library requirement check follow-up
-
-- Use build-time configured ares_socklen_t instead of socklen_t
-
-- David McCreedy's "TPF-platform specific changes to various files" patch follow-up
-
-Daniel Stenberg (1 May 2009)
-- s/libcurl/c-ares
-
-- version number typo fix
-
-Yang Tse (1 May 2009)
-- David McCreedy's "TPF-platform specific changes to various files" patch

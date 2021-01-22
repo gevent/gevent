@@ -18,45 +18,6 @@
 # serial 11
 
 
-dnl CARES_CHECK_OPTION_CURLDEBUG
-dnl -------------------------------------------------
-dnl Verify if configure has been invoked with option
-dnl --enable-curldebug or --disable-curldebug, and set
-dnl shell variable want_curldebug value as appropriate.
-
-AC_DEFUN([CARES_CHECK_OPTION_CURLDEBUG], [
-  AC_BEFORE([$0],[CARES_CHECK_CURLDEBUG])dnl
-  AC_MSG_CHECKING([whether to enable curl debug memory tracking])
-  OPT_CURLDEBUG_BUILD="default"
-  AC_ARG_ENABLE(curldebug,
-AC_HELP_STRING([--enable-curldebug],[Enable curl debug memory tracking])
-AC_HELP_STRING([--disable-curldebug],[Disable curl debug memory tracking]),
-  OPT_CURLDEBUG_BUILD=$enableval)
-  case "$OPT_CURLDEBUG_BUILD" in
-    no)
-      dnl --disable-curldebug option used
-      want_curldebug="no"
-      ;;
-    default)
-      dnl configure option not specified
-      want_curldebug="no"
-      ;;
-    *)
-      dnl --enable-curldebug option used.
-      dnl The use of this option value is a request to enable curl's
-      dnl debug memory tracking for the c-ares library. This is a big
-      dnl hack that can only be done when a whole bunch of requisites
-      dnl are simultaneously satisfied. Later on, these requisites are
-      dnl verified and if they are not fully satisfied the option will
-      dnl be ignored and act as if --disable-curldebug had been given
-      dnl setting shell variable want_curldebug to 'no'.
-      want_curldebug="yes"
-      ;;
-  esac
-  AC_MSG_RESULT([$want_curldebug])
-])
-
-
 dnl CARES_CHECK_OPTION_DEBUG
 dnl -------------------------------------------------
 dnl Verify if configure has been invoked with option
@@ -65,7 +26,6 @@ dnl variable want_debug value as appropriate.
 
 AC_DEFUN([CARES_CHECK_OPTION_DEBUG], [
   AC_BEFORE([$0],[CARES_CHECK_OPTION_WARNINGS])dnl
-  AC_BEFORE([$0],[CARES_CHECK_OPTION_CURLDEBUG])dnl
   AC_BEFORE([$0],[XC_CHECK_PROG_CC])dnl
   AC_MSG_CHECKING([whether to enable debug build options])
   OPT_DEBUG_BUILD="default"

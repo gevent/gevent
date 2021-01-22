@@ -70,6 +70,13 @@ deps/c-ares/test/config.log
 deps/c-ares/test/config.status
 deps/c-ares/test/libtool
 deps/c-ares/test/stamp-h1
+deps/c-ares/include/Makefile
+deps/c-ares/include/stamp-h2
+deps/c-ares/src/Makefile
+deps/c-ares/src/lib/Makefile
+deps/c-ares/src/lib/ares_config.h
+deps/c-ares/src/lib/stamp-h1
+deps/c-ares/src/tools/Makefile
 
 deps/libev/.deps
 deps/libev/Makefile

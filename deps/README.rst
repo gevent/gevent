@@ -40,17 +40,17 @@ Updating c-ares
     tar -xf c-ares-$CARES_VER.tar.gz
     rm -rf c-ares c-ares-$CARES_VER.tar.gz
     mv c-ares-$CARES_VER c-ares
-    cp c-ares/ares_build.h c-ares/ares_build.h.dist
-    rm -f c-ares/*.3 c-ares/*.1
+    cp c-ares/include/ares_build.h c-ares/include/ares_build.h.dist
+    rm -rf c-ares/docs
     rm -rf c-ares/test
-    rm -rf c-ares/vc
     rm -f c-ares/maketgz
     rm -f c-ares/CMakeLists.txt
-    rm -f c-ares/RELEASE-PROCEDURE.md
+    rm -f c-ares/RELEASE-PROCEDURE.md c-ares/CONTRIBUTING.md c-ares/SECURITY.md
     rm -f c-ares/*.cmake c-ares/*.cmake.in
+    rm -f c-ares/buildconf.bat
     git apply cares-make.patch
 
-  At this point there might be new files in libuv that need added to
+  At this point there might be new files in c-ares that need added to
   git, evaluate them and add them.
 
 - Follow the same 'config.guess' and 'config.sub' steps as libev.
