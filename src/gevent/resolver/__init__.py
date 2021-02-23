@@ -164,7 +164,7 @@ class AbstractResolver(object):
         # behaviour with special names. Notably, ``gethostbyname`` will handle
         # both "<broadcast>" and "255.255.255.255", while ``gethostbyname_ex`` refuses to
         # handle those; they result in different errors, too. So we can't
-        # pass those throgh.
+        # pass those through.
         hostname = self._hostname_to_bytes(hostname)
         if hostname in self._LOCAL_AND_BROADCAST_HOSTNAMES:
             return native_gethostbyname(hostname)
