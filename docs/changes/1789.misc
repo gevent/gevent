@@ -1,0 +1,2 @@
+Fix build on the unsupported IBM i platform. Contributed in
+:pr:`1789` by Jesse Gorzinski.
