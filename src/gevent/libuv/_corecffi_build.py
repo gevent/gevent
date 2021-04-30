@@ -272,7 +272,8 @@ elif sys.platform.startswith('sunos'): # pragma: no cover
         _define_macro('SUNOS_NO_IFADDRS', '')
 elif sys.platform.startswith('aix'): # pragma: no cover
     _define_macro('_LINUX_SOURCE_COMPAT', 1)
-    _add_library('perfstat')
+    if os.uname().sysname != 'OS400':
+        _add_library('perfstat')
 elif WIN:
     _define_macro('_GNU_SOURCE', 1)
     _define_macro('WIN32', 1)
