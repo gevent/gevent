@@ -14,6 +14,7 @@ libev = _corecffi.lib # pylint:disable=no-member
 
 if hasattr(libev, 'vfd_open'):
     # Must be on windows
+    # pylint:disable=c-extension-no-member
     assert sys.platform.startswith("win"), "vfd functions only needed on windows"
     vfd_open = libev.vfd_open
     vfd_free = libev.vfd_free

@@ -288,7 +288,7 @@ jobs:
         # TODO: Revisit this when we have caching of that part.
         run: |
           pip install -U pylint
-          python -m pylint --limit-inference-results=1 --rcfile=.pylintrc gevent
+          python -m pylint --rcfile=.pylintrc gevent
       - name: "Tests: Basic"
         run: |
           python -m gevent.tests --second-chance $G_USE_COV

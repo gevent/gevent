@@ -327,6 +327,7 @@ class ConditionTests(BaseTestCase):
         cond = self.condtype()
         # Be default we have an RLock: the condition can be acquired multiple
         # times.
+        # pylint:disable=consider-using-with
         cond.acquire()
         cond.acquire()
         cond.release()

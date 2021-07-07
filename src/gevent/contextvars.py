@@ -51,7 +51,7 @@ __all__ = [
 try:
     from collections.abc import Mapping
 except ImportError:
-    from collections import Mapping
+    from collections import Mapping # pylint:disable=deprecated-class
 
 from gevent._compat import PY37
 from gevent._util import _NONE

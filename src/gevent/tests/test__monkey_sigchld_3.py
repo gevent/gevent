@@ -45,6 +45,7 @@ if hasattr(signal, 'SIGCHLD'):
 
         # Go through subprocess because we expect it to automatically
         # set up the waiting for us.
+        # not on Py2 pylint:disable=consider-using-with
         popen = subprocess.Popen([sys.executable, '-c', 'import sys'],
                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         popen.stderr.read()

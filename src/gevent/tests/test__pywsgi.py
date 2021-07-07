@@ -315,7 +315,7 @@ class TestCase(greentest.TestCase):
 
     def urlopen(self, *args, **kwargs):
         with self.connect() as sock:
-            with sock.makefile(bufsize=1) as fd:
+            with sock.makefile(bufsize=1) as fd: # pylint:disable=unexpected-keyword-arg
                 fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
                 return read_http(fd, *args, **kwargs)
 
@@ -857,7 +857,7 @@ class HttpsTestCase(TestCase):
     def urlopen(self, method='GET', post_body=None, **kwargs): # pylint:disable=arguments-differ
         import ssl
         with self.connect() as raw_sock:
-            with ssl.wrap_socket(raw_sock) as sock:
+            with ssl.wrap_socket(raw_sock) as sock: # pylint:disable=deprecated-method
                 with sock.makefile(bufsize=1) as fd: # pylint:disable=unexpected-keyword-arg
                     fd.write('%s / HTTP/1.1\r\nHost: localhost\r\n' % method)
                     if post_body is not None:
@@ -1632,10 +1632,10 @@ class TestInputRaw(greentest.BaseTestCase):
         return Input(StringIO(data), content_length=content_length, chunked_input=chunked_input)
 
     if PY3:
-        def assertEqual(self, data, expected, *args): # pylint:disable=arguments-differ
-            if isinstance(expected, str):
-                expected = expected.encode('ascii')
-            super(TestInputRaw, self).assertEqual(data, expected, *args)
+        def assertEqual(self, first, second, msg=None):
+            if isinstance(second, str):
+                second = second.encode('ascii')
+            super(TestInputRaw, self).assertEqual(first, second, msg)
 
     def test_short_post(self):
         i = self.make_input("1", content_length=2)

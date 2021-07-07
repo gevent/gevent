@@ -33,6 +33,9 @@ from threading import Event
 
 errno_types = int
 
+# socket.accept/unwrap/makefile aren't found for some reason
+# pylint:disable=no-member
+
 class BaseThread(object):
     terminal_exc = None
 

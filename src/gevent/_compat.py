@@ -80,7 +80,7 @@ try:
     # deprecated. Avoid that warning.
     import _imp as imp
 except ImportError:
-    import imp
+    import imp # pylint:disable=deprecated-module
 imp_acquire_lock = imp.acquire_lock
 imp_release_lock = imp.release_lock
 

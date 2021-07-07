@@ -230,7 +230,7 @@ class PeriodicMonitoringThread(object):
         if not did_block:
             return
 
-        active_greenlet = did_block[1]
+        active_greenlet = did_block[1] # pylint:disable=unsubscriptable-object
         report = self._greenlet_tracer.did_block_hub_report(
             hub, active_greenlet,
             dict(greenlet_stacks=False, current_thread_ident=self.monitor_thread_ident))

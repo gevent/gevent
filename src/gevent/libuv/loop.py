@@ -47,10 +47,6 @@ class _Callbacks(AbstractCallbacks):
 
         the_watcher.loop._queue_callback(watcher_ptr, revents)
 
-    def __loop_from_loop_ptr(self, loop_ptr):
-        loop_handle = loop_ptr.data
-        return self.from_handle(loop_handle)
-
 
 _callbacks = assign_standard_callbacks(
     ffi, libuv, _Callbacks,
@@ -116,7 +112,6 @@ class loop(AbstractLoop):
 
     def __init__(self, flags=None, default=None):
         AbstractLoop.__init__(self, ffi, libuv, _watchers, flags, default)
-        self.__loop_pid = os.getpid()
         self._child_watchers = defaultdict(list)
         self._io_watchers = dict()
         self._fork_watchers = set()

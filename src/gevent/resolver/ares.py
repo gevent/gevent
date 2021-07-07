@@ -242,6 +242,7 @@ class Resolver(AbstractResolver):
                     (SOCK_DGRAM, SOL_UDP),
                 ]
 
+            # pylint:disable=not-an-iterable,unsubscriptable-object
             result = [
                 (rfamily,
                  hard_type if not rtype else rtype,
@@ -275,6 +276,7 @@ class Resolver(AbstractResolver):
                                        proto=0, flags=0)
             if not result:
                 raise
+            # pylint:disable=unsubscriptable-object
             _ip_address = result[0][-1][0]
             if isinstance(_ip_address, text_type):
                 _ip_address = _ip_address.encode('ascii')

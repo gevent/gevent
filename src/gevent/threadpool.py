@@ -552,7 +552,7 @@ class _FakeAsync(object):
         pass
     close = stop = send
 
-    def __call_(self, result):
+    def __call__(self, result):
         "fake out for 'receiver'"
 
     def __bool__(self):

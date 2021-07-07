@@ -9,7 +9,7 @@ from __future__ import absolute_import
 
 import dns
 assert dns
-import gevent.socket as socket
+import gevent.socket as socket # pylint:disable=consider-using-from-import
 socket.getfqdn() # create the resolver
 
 from gevent.resolver.dnspython import dns as gdns

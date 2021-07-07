@@ -25,6 +25,7 @@ libev = _corecffi.lib # pylint:disable=no-member
 
 if hasattr(libev, 'vfd_open'):
     # Must be on windows
+    # pylint:disable=c-extension-no-member
     assert sys.platform.startswith("win"), "vfd functions only needed on windows"
     vfd_open = libev.vfd_open
     vfd_free = libev.vfd_free
@@ -52,7 +53,7 @@ from gevent._ffi.loop import AbstractCallbacks
 from gevent._ffi.loop import assign_standard_callbacks
 
 class _Callbacks(AbstractCallbacks):
-    # pylint:disable=arguments-differ
+    # pylint:disable=arguments-differ,arguments-renamed
 
     def python_check_callback(self, _loop, watcher_ptr, _events):
         pass

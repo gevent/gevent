@@ -1,3 +1,5 @@
+# (No idea where this comes from; it warns about 'configuration')
+# pylint:disable=invalid-all-format
 # Wrapper module for _ssl. Written by Bill Janssen.
 # Ported to gevent by Denis Bilenko.
 """
@@ -324,7 +326,7 @@ class SSLSocket(socket):
                 else:
                     raise
 
-    def connect(self, addr):
+    def connect(self, addr): # renamed addr -> address in Python 3 pylint:disable=arguments-renamed
         """Connects to remote ADDR, and then wraps the connection in
         an SSL channel."""
         # Here we assume that the socket is client-side, and not

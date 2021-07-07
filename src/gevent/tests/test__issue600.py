@@ -26,7 +26,7 @@ class TestIssue600(greentest.TestCase):
         # Run a subprocess through Popen to make sure
         # libev is handling SIGCHLD. This could *probably* be simplified to use
         # just hub.loop.install_sigchld
-
+        # (no __enter__/__exit__ on Py2) pylint:disable=consider-using-with
         p = Popen([sys.executable, '-V'], stdout=PIPE, stderr=PIPE)
         gevent.sleep(0)
         p.communicate()

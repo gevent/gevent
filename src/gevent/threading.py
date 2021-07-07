@@ -143,6 +143,7 @@ class _DummyThread(_DummyThread_):
             ref = self.__weakref_ref
             ref = ref(g, _make_cleanup_id(gid)) # pylint:disable=too-many-function-args
             self.__raw_ref = ref
+            assert self.__raw_ref is ref # prevent pylint thinking its unused
 
     def _Thread__stop(self):
         pass

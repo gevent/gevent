@@ -629,12 +629,12 @@ class SSLSocket(socket):
             self._sslobj = None
             raise
 
-    def connect(self, addr):
+    def connect(self, addr): # pylint:disable=arguments-renamed
         """Connects to remote ADDR, and then wraps the connection in
         an SSL channel."""
         self._real_connect(addr, False)
 
-    def connect_ex(self, addr):
+    def connect_ex(self, addr): # pylint:disable=arguments-renamed
         """Connects to remote ADDR, and then wraps the connection in
         an SSL channel."""
         return self._real_connect(addr, True)

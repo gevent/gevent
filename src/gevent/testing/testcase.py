@@ -274,7 +274,8 @@ class TestCase(TestCaseMetaClass("NewBase",
     error_fatal = True
     uses_handle_error = True
     close_on_teardown = ()
-    __old_subscribers = ()
+    # This is really used by the SubscriberCleanupMixin
+    __old_subscribers = () # pylint:disable=unused-private-member
 
     def run(self, *args, **kwargs): # pylint:disable=signature-differs
         if self.switch_expected == 'default':
