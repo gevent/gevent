@@ -55,7 +55,7 @@ from gevent._ffi.loop import assign_standard_callbacks
 class _Callbacks(AbstractCallbacks):
     # pylint:disable=arguments-differ,arguments-renamed
 
-    def python_check_callback(self, _loop, watcher_ptr, _events):
+    def python_check_callback(self, *args):
         pass
 
     def python_prepare_callback(self, _loop_ptr, watcher_ptr, _events):
