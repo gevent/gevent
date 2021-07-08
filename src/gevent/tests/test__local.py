@@ -12,7 +12,7 @@ from zope import interface
 try:
     from collections.abc import Mapping
 except ImportError:
-    from collections import Mapping
+    from collections import Mapping # pylint:disable=deprecated-class
 
 class ReadProperty(object):
     """A property that can be overridden"""
@@ -72,7 +72,7 @@ class WithGetattr(local):
     def __getattr__(self, name):
         if name == 'foo':
             return 42
-        return super(WithGetattr, self).__getattr__(name)
+        return super(WithGetattr, self).__getattr__(name) # pylint:disable=no-member
 
 class LocalWithABC(local, Mapping):
 
@@ -263,7 +263,7 @@ class TestGeventLocal(greentest.TestCase):
 
         mylocal.CLASS_PROP = 1
         self.assertEqual(1, mylocal.CLASS_PROP)
-        self.assertEqual(mylocal.__dict__['CLASS_PROP'], 1)
+        self.assertEqual(mylocal.__dict__['CLASS_PROP'], 1) # pylint:disable=unsubscriptable-object
 
         del mylocal.CLASS_PROP
         self.assertEqual(42, mylocal.CLASS_PROP)

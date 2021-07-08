@@ -33,6 +33,8 @@ try:
 except ImportError:
     psutil = None
 
+# wrap_socket() is considered deprecated in 3.9
+# pylint:disable=deprecated-method
 
 class Test(greentest.TestCase):
 

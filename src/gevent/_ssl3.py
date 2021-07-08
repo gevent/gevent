@@ -186,13 +186,13 @@ class SSLContext(orig_SSLContext):
         def sni_callback(self, value):
             if value and callable(value):
                 value = _Callback(value)
-            super(orig_SSLContext, orig_SSLContext).sni_callback.__set__(self, value)
+            super(orig_SSLContext, orig_SSLContext).sni_callback.__set__(self, value) # pylint:disable=no-member
     else:
         # In newer versions, this just sets sni_callback.
-        def set_servername_callback(self, cb): # pylint:disable=arguments-differ
-            if cb and callable(cb):
-                cb = _Callback(cb)
-            super().set_servername_callback(cb)
+        def set_servername_callback(self, server_name_callback):
+            if server_name_callback and callable(server_name_callback):
+                server_name_callback = _Callback(server_name_callback)
+            super().set_servername_callback(server_name_callback)
 
 
 class SSLSocket(socket):
@@ -681,7 +681,7 @@ class SSLSocket(socket):
             if not self.server_hostname:
                 raise ValueError("check_hostname needs server_hostname "
                                  "argument")
-            match_hostname(self.getpeercert(), self.server_hostname)
+            match_hostname(self.getpeercert(), self.server_hostname) # pylint:disable=deprecated-method
 
     if hasattr(SSLObject, '_create'):
         # 3.7+, making it difficult to create these objects.

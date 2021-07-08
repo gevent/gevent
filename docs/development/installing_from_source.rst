@@ -46,6 +46,10 @@ General Notes
   of this writing ``yum`` is still available and widely used,
   especially for backwards compatibility.)
 
+  On the Docker image for Ubuntu 20.04, one might need to do this::
+
+    apt-get install python3.9-full python3.9-dev linux-headers-virtual make gcc libtool
+
   See :issue:`1567`, :issue:`1559`, and :issue:`1566`.
 
   .. note::

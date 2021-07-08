@@ -45,6 +45,8 @@ import weakref
 
 from gevent.tests import lock_tests
 verbose = False
+# pylint:disable=consider-using-with
+
 # A trivial mutable counter.
 
 def skipDueToHang(cls):

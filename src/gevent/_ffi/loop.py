@@ -302,7 +302,7 @@ class AbstractCallbacks(object):
         loop._run_callbacks()
 
     def check_callback_onerror(self, t, v, tb):
-        watcher_ptr = tb.tb_frame.f_locals['watcher_ptr'] if tb is not None else None
+        watcher_ptr = self._find_watcher_ptr_in_traceback(tb)
         if watcher_ptr:
             loop = self._find_loop_from_c_watcher(watcher_ptr)
         if loop is not None:
@@ -315,6 +315,8 @@ class AbstractCallbacks(object):
     def _find_loop_from_c_watcher(self, watcher_ptr):
         raise NotImplementedError()
 
+    def _find_watcher_ptr_in_traceback(self, tb):
+        return tb.tb_frame.f_locals['watcher_ptr'] if tb is not None else None
 
 
 def assign_standard_callbacks(ffi, lib, callbacks_class, extras=()): # pylint:disable=unused-argument
@@ -332,7 +334,7 @@ def assign_standard_callbacks(ffi, lib, callbacks_class, extras=()): # pylint:di
     # callbacks keeps these cdata objects alive at the python level
     callbacks = callbacks_class(ffi)
     extras = [extra if len(extra) == 2 else (extra, None) for extra in extras]
-    extras = tuple([(getattr(callbacks, name), error) for name, error in extras])
+    extras = tuple((getattr(callbacks, name), error) for name, error in extras)
     for (func, error_func) in (
             (callbacks.python_callback, None),
             (callbacks.python_handle_error, None),

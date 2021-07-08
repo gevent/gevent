@@ -45,6 +45,7 @@ else:
                 kwargs = {'creationflags': CREATE_NEW_PROCESS_GROUP}
             else:
                 kwargs = {}
+            # (not on Py2) pylint:disable=consider-using-with
             p = Popen([sys.executable, __file__, 'subprocess'], stdout=PIPE, **kwargs)
             line = p.stdout.readline()
             if not isinstance(line, str):

@@ -59,6 +59,7 @@ class TestLockThread(greentest.TestCase):
 
     def test_spin_lock_switches(self):
         # https://github.com/gevent/gevent/issues/1464
+        # pylint:disable=consider-using-with
         lock = threading.Lock()
         lock.acquire()
         spawned = []

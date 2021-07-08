@@ -70,10 +70,11 @@ test_name = os.path.splitext(test_filename)[0]
 # string. Passing unicode to `compile` on Python 2 can
 # do bad things: it conflicts with a 'coding:' directive,
 # and it can cause some TypeError with string literals
+# We do use with; just not on the same line!
 if sys.version_info[0] >= 3:
-    module_file = open(test_filename, encoding='utf-8')
+    module_file = open(test_filename, encoding='utf-8') # pylint:disable=consider-using-with
 else:
-    module_file = open(test_filename)
+    module_file = open(test_filename) # pylint:disable=consider-using-with
 with module_file:
     module_source = module_file.read()
 module_source = disable_tests_in_source(module_source, test_name)

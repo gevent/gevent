@@ -146,16 +146,33 @@ jobs:
     strategy:
       matrix:
         python-version: [2.7, pypy-2.7, pypy-3.6, 3.6, 3.7, 3.8, 3.9]
-        os: [ubuntu-latest, macos-latest]
+        # ubuntu-latest is at least 20.04. But this breaks the SSL
+        # tests because Ubuntu increased the default OpenSSL
+        # strictness.
+        # The standard library has only been updated with fixes for
+        # this in 3.8+.
+        os: [ubuntu-18.04, macos-latest, ubuntu-latest]
         exclude:
           - os: macos-latest
             python-version: pypy-2.7
           - os: macos-latest
             python-version: pypy-3.6
           - os: macos-latest
-            python-version: 3.5
-          - os: macos-latest
             python-version: 3.6
+          - os: ubuntu-latest
+            python-version: 2.7
+          - os: ubuntu-latest
+            python-version: pypy-2.7
+          - os: ubuntu-latest
+            python-version: pypy-3.6
+          - os: ubuntu-latest
+            python-version: 3.6
+          - os: ubuntu-latest
+            python-version: 3.7
+          - os: ubuntu-18.04
+            python-version: 3.8
+          - os: ubuntu-18.04
+            python-version: 3.9
     steps:
       - name: checkout
         uses: actions/checkout@v2
@@ -166,7 +183,7 @@ jobs:
       - name: Install ccache (ubuntu)
         if: startsWith(runner.os, 'Linux')
         run: |
-          sudo apt-get install -y ccache
+          sudo apt-get install -y ccache sed gcc
       - name: Install ccache (macos)
         if: startsWith(runner.os, 'macOS')
         run: |
@@ -218,7 +235,7 @@ jobs:
           # without that setting here. The whole thing is being
           # matched even without the CFLAGS matching. Perhaps the - is
           # a generic search separator?
-          key: ${{ runner.os }}-configcache3-${{ matrix.python-version }}-${{ env.CFLAGS }}
+          key: ${{ runner.os }}-${{ matrix.os }}-configcache3-${{ matrix.python-version }}-${{ env.CFLAGS }}
 
       # Install gevent. Yes, this will create different files each time,
       # leading to a fresh cache. But because of CCache stats, we had already been doing
@@ -288,7 +305,7 @@ jobs:
         # TODO: Revisit this when we have caching of that part.
         run: |
           pip install -U pylint
-          python -m pylint --limit-inference-results=1 --rcfile=.pylintrc gevent
+          python -m pylint --rcfile=.pylintrc gevent
       - name: "Tests: Basic"
         run: |
           python -m gevent.tests --second-chance $G_USE_COV
@@ -375,7 +392,7 @@ jobs:
     strategy:
       matrix:
         python-version: [2.7, 3.9]
-        os: [ubuntu-latest]
+        os: [ubuntu-18.04]
     steps:
       - name: checkout
         uses: actions/checkout@v2
@@ -386,7 +403,7 @@ jobs:
       - name: Install ccache (ubuntu)
         if: startsWith(runner.os, 'Linux')
         run: |
-          sudo apt-get install -y ccache
+          sudo apt-get install -y ccache sed gcc
       - name: Cache ~/.ccache
         uses: actions/cache@v2
         with:
@@ -420,7 +437,7 @@ jobs:
           # without that setting here. The whole thing is being
           # matched even without the CFLAGS matching. Perhaps the - is
           # a generic search separator?
-          key: ${{ runner.os }}-configcache_embed-${{ matrix.python-version }}-${{ env.CFLAGS }}
+          key: ${{ runner.os }}-${{ matrix.os }}-configcache_embed-${{ matrix.python-version }}-${{ env.CFLAGS }}
       - name: Install dependencies
         run: |
           pip install -U pip
@@ -441,11 +458,12 @@ jobs:
           export LDFLAGS=-L$BUILD_LIBS/lib
           export CPPFLAGS="-I$BUILD_LIBS/include"
           env | sort
+          echo which sed? `which sed`
           echo LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$BUILD_LIBS/lib >>$GITHUB_ENV
-          pushd deps/libev && ./configure -C --prefix=$BUILD_LIBS && make install && popd
-          pushd deps/c-ares && ./configure -C --prefix=$BUILD_LIBS && make -j4 install && popd
+          (pushd deps/libev && sh ./configure -C --prefix=$BUILD_LIBS && make install && popd)
+          (pushd deps/c-ares && sh ./configure -C --prefix=$BUILD_LIBS && make -j4 install && popd)
 
-          pushd deps/libuv && ./autogen.sh && ./configure -C --disable-static --prefix=$BUILD_LIBS && make -j4 install && popd
+          (pushd deps/libuv && ./autogen.sh && sh ./configure -C --disable-static --prefix=$BUILD_LIBS && make -j4 install && popd)
           # libev builds a manpage each time, and it includes today's date, so it frequently changes.
           # delete to avoid repacking the archive
           rm -rf $BUILD_LIBS/share/man/

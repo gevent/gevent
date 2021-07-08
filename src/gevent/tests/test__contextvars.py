@@ -370,11 +370,9 @@ class ContextTest(unittest.TestCase):
                 self.assertEqual(cvar.get(), num + i)
             return num
 
-        tp = concurrent.futures.ThreadPoolExecutor(max_workers=10)
-        try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as tp:
             results = list(tp.map(sub, range(10)))
-        finally:
-            tp.shutdown()
+
         self.assertEqual(results, list(range(10)))
 
     # gevent: clases's can't be subscripted on Python 3.6

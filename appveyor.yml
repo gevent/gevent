@@ -57,19 +57,16 @@ environment:
       PYTHON_VERSION: "3.8.x"
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
 
     - PYTHON: "C:\\Python37-x64"
       PYTHON_VERSION: "3.7.x"
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
 
     - PYTHON: "C:\\Python36-x64"
-      PYTHON_VERSION: "3.6.x" # currently 3.6.0
-      PYTHON_ARCH: "64"
-      PYTHON_EXE: python
-
-    - PYTHON: "C:\\Python35-x64"
-      PYTHON_VERSION: "3.5.x" # currently 3.5.2
+      PYTHON_VERSION: "3.6.x" # currently 3.6.8
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
 
@@ -92,22 +89,18 @@ environment:
       PYTHON_VERSION: "3.8.x"
       PYTHON_ARCH: "32"
       PYTHON_EXE: python
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       GWHEEL_ONLY: true
 
     - PYTHON: "C:\\Python37"
       PYTHON_VERSION: "3.7.x"
       PYTHON_ARCH: "32"
       PYTHON_EXE: python
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       GWHEEL_ONLY: true
 
     - PYTHON: "C:\\Python36"
       PYTHON_VERSION: "3.6.x" # currently 3.6.3
-      PYTHON_ARCH: "32"
-      PYTHON_EXE: python
-      GWHEEL_ONLY: true
-
-    - PYTHON: "C:\\Python35"
-      PYTHON_VERSION: "3.5.x" # currently 3.5.2
       PYTHON_ARCH: "32"
       PYTHON_EXE: python
       GWHEEL_ONLY: true

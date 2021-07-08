@@ -15,12 +15,15 @@ from gevent.testing import PY2
 def ssl_listener(private_key, certificate):
     raw_listener = socket.socket()
     greentest.bind_and_listen(raw_listener)
+    # pylint:disable=deprecated-method
     sock = ssl.wrap_socket(raw_listener, private_key, certificate, server_side=True)
     return sock, raw_listener
 
 
 class TestSSL(test__socket.TestTCP):
 
+    # To generate:
+    # openssl req -x509 -newkey rsa:4096 -keyout test_server.key -out test_server.crt -days 36500 -nodes -subj '/CN=localhost'
     certfile = os.path.join(os.path.dirname(__file__), 'test_server.crt')
     privfile = os.path.join(os.path.dirname(__file__), 'test_server.key')
     # Python 2.x has socket.sslerror (which  is an alias for
@@ -40,6 +43,7 @@ class TestSSL(test__socket.TestTCP):
 
     def create_connection(self, *args, **kwargs): # pylint:disable=signature-differs
         return self._close_on_teardown(
+            # pylint:disable=deprecated-method
             ssl.wrap_socket(super(TestSSL, self).create_connection(*args, **kwargs)))
 
     # The SSL library can take a long time to buffer the large amount of data we're trying
@@ -67,7 +71,9 @@ class TestSSL(test__socket.TestTCP):
         # Issue #317: SSL_WRITE_PENDING in some corner cases
 
         server_sock = []
-        acceptor = test__socket.Thread(target=lambda: server_sock.append(self.listener.accept()))
+        acceptor = test__socket.Thread(target=lambda: server_sock.append(
+            # pylint:disable=no-member
+            self.listener.accept()))
         client = self.create_connection()
         client.setblocking(False)
         try:

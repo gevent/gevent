@@ -15,6 +15,7 @@ else:
 
     import subprocess
     for _ in range(5):
+        # not on Py2 pylint:disable=consider-using-with
         out, err = subprocess.Popen([sys.executable, '-W', 'ignore',
                                      __file__, 'runtestcase'],
                                     stderr=subprocess.PIPE).communicate()

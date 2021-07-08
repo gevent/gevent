@@ -2,6 +2,6 @@
 from gevent import monkey
 monkey.patch_all()
 
-import _import_wait
+import _import_wait # pylint:disable=import-error
 
 assert _import_wait.x

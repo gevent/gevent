@@ -341,8 +341,8 @@ class TestPeriodicMonitorMemory(_AbstractTestPeriodicMonitoringThread,
         event = self.pmt.monitor_memory_usage(None)
         self.assertIsInstance(event, events.MemoryUsageThresholdExceeded)
         self.assertEqual(2, event.mem_usage)
-        self.assertEqual(1, event.max_allowed)
-        self.assertIsInstance(event.memory_info, MockProcess)
+        self.assertEqual(1, event.max_allowed) # pylint:disable=no-member
+        self.assertIsInstance(event.memory_info, MockProcess) # pylint:disable=no-member
 
         # No growth, no event
         event = self.pmt.monitor_memory_usage(None)

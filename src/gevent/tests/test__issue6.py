@@ -6,6 +6,7 @@ import sys
 
 if not sys.argv[1:]:
     from subprocess import Popen, PIPE
+    # not on Py2 pylint:disable=consider-using-with
     p = Popen([sys.executable, __file__, 'subprocess'], stdin=PIPE, stdout=PIPE, stderr=PIPE)
     out, err = p.communicate(b'hello world\n')
     code = p.poll()
