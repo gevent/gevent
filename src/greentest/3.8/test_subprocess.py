@@ -195,6 +195,28 @@ class ProcessTestCase(BaseTestCase):
                 input=b'pear')
         self.assertIn(b'PEAR', output)
 
+    def test_check_output_input_none(self):
+        """input=None has a legacy meaning of input='' on check_output."""
+        output = subprocess.check_output(
+                [sys.executable, "-c",
+                 "import sys; print('XX' if sys.stdin.read() else '')"],
+                input=None)
+        self.assertNotIn(b'XX', output)
+
+    def test_check_output_input_none_text(self):
+        output = subprocess.check_output(
+                [sys.executable, "-c",
+                 "import sys; print('XX' if sys.stdin.read() else '')"],
+                input=None, text=True)
+        self.assertNotIn('XX', output)
+
+    def test_check_output_input_none_universal_newlines(self):
+        output = subprocess.check_output(
+                [sys.executable, "-c",
+                 "import sys; print('XX' if sys.stdin.read() else '')"],
+                input=None, universal_newlines=True)
+        self.assertNotIn('XX', output)
+
     def test_check_output_stdout_arg(self):
         # check_output() refuses to accept 'stdout' argument
         with self.assertRaises(ValueError) as c:
@@ -372,7 +394,9 @@ class ProcessTestCase(BaseTestCase):
         # matches *expected_cwd*.
         p = subprocess.Popen([python_arg, "-c",
                               "import os, sys; "
-                              "sys.stdout.write(os.getcwd()); "
+                              "buf = sys.stdout.buffer; "
+                              "buf.write(os.getcwd().encode()); "
+                              "buf.flush(); "
                               "sys.exit(47)"],
                               stdout=subprocess.PIPE,
                               **kwargs)
@@ -381,7 +405,7 @@ class ProcessTestCase(BaseTestCase):
         self.assertEqual(47, p.returncode)
         normcase = os.path.normcase
         self.assertEqual(normcase(expected_cwd),
-                         normcase(p.stdout.read().decode("utf-8")))
+                         normcase(p.stdout.read().decode()))
 
     def test_cwd(self):
         # Check that cwd changes the cwd for the child process.
@@ -682,7 +706,6 @@ class ProcessTestCase(BaseTestCase):
             # on adding even when the environment in exec is empty.
             # Gentoo sandboxes also force LD_PRELOAD and SANDBOX_* to exist.
             return ('VERSIONER' in n or '__CF' in n or  # MacOS
-                    '__PYVENV_LAUNCHER__' in n or # MacOS framework build
                     n == 'LD_PRELOAD' or n.startswith('SANDBOX') or # Gentoo
                     n == 'LC_CTYPE') # Locale coercion triggered
 
@@ -2909,6 +2932,17 @@ class POSIXProcessTestCase(BaseTestCase):
             returncode = proc.wait()
 
         self.assertEqual(returncode, -3)
+
+    def test_communicate_repeated_call_after_stdout_close(self):
+        proc = subprocess.Popen([sys.executable, '-c',
+                                 'import os, time; os.close(1), time.sleep(2)'],
+                                stdout=subprocess.PIPE)
+        while True:
+            try:
+                proc.communicate(timeout=0.1)
+                return
+            except subprocess.TimeoutExpired:
+                pass
 
 
 @unittest.skipUnless(mswindows, "Windows specific tests")

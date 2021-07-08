@@ -1280,11 +1280,25 @@ if PY38:
         'test_threading.ExceptHookTests.test_excepthook_thread_None',
     ]
 
-    if sys.version_info < (3, 8, 1):
+    if sys.version_info[:3] < (3, 8, 1):
         disabled_tests += [
             # Earlier versions parse differently so the newer test breaks
             'test_ssl.BasicSocketTests.test_parse_all_sans',
             'test_ssl.BasicSocketTests.test_parse_cert_CVE_2013_4238',
+        ]
+
+    if sys.version_info[:3] < (3, 8, 10):
+        disabled_tests += [
+            # These were added for fixes sometime between 3.8.1 and 3.8.10
+            'test_ftplib.TestFTPClass.test_makepasv_issue43285_security_disabled',
+            'test_ftplib.TestFTPClass.test_makepasv_issue43285_security_enabled_default',
+            'test_httplib.BasicTest.test_dir_with_added_behavior_on_status',
+            'test_httplib.TunnelTests.test_tunnel_connect_single_send_connection_setup',
+            'test_ssl.TestSSLDebug.test_msg_callback_deadlock_bpo43577',
+            # This one fails with the updated certs
+            'test_ssl.ContextTests.test_load_verify_cadata',
+            # This one times out on 3.7.1 on Appveyor
+            'test_ftplib.TestTLS_FTPClassMixin.test_retrbinary_rest',
         ]
 
 if RESOLVER_DNSPYTHON:
@@ -1354,7 +1368,7 @@ if PY39:
             'test_ssl.TestSSLDebug.test_msg_callback_deadlock_bpo43577',
             # This one fails with the updated certs
             'test_ssl.ContextTests.test_load_verify_cadata',
-            # This one times out on 3.7.1 on Appveyor
+            # This one times out on 3.9.1 on Appveyor
             'test_ftplib.TestTLS_FTPClassMixin.test_retrbinary_rest',
         ]
 
