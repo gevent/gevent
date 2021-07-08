@@ -1368,8 +1368,9 @@ if PY39:
             'test_ssl.TestSSLDebug.test_msg_callback_deadlock_bpo43577',
             # This one fails with the updated certs
             'test_ssl.ContextTests.test_load_verify_cadata',
-            # This one times out on 3.9.1 on Appveyor
+            # These time out on 3.9.1 on Appveyor
             'test_ftplib.TestTLS_FTPClassMixin.test_retrbinary_rest',
+            'test_ftplib.TestTLS_FTPClassMixin.test_retrlines_too_long',
         ]
 
 if TRAVIS:
