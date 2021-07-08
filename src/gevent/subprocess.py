@@ -890,6 +890,17 @@ class Popen(object):
 
                     gids.append(grp.getgrnam(extra_group).gr_gid)
                 elif isinstance(extra_group, int):
+                    if extra_group >= 2**64:
+                        # This check is implicit in the C version of _Py_Gid_Converter.
+                        #
+                        # We actually need access to the C type ``gid_t`` to get
+                        # its actual length. This just makes the test that was added
+                        # for the bug pass. That's OK though, if we guess too big here,
+                        # we should get an OverflowError from the setgroups()
+                        # call we make. The only difference is the type of exception.
+                        #
+                        # See https://bugs.python.org/issue42655
+                        raise ValueError("Item in extra_groups is too large")
                     gids.append(extra_group)
                 else:
                     raise TypeError("Items in extra_groups must be a string "

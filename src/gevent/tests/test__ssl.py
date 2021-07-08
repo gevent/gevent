@@ -22,6 +22,8 @@ def ssl_listener(private_key, certificate):
 
 class TestSSL(test__socket.TestTCP):
 
+    # To generate:
+    # openssl req -x509 -newkey rsa:4096 -keyout test_server.key -out test_server.crt -days 36500 -nodes -subj '/CN=localhost'
     certfile = os.path.join(os.path.dirname(__file__), 'test_server.crt')
     privfile = os.path.join(os.path.dirname(__file__), 'test_server.key')
     # Python 2.x has socket.sslerror (which  is an alias for
