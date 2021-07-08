@@ -401,7 +401,7 @@ jobs:
       - name: Install ccache (ubuntu)
         if: startsWith(runner.os, 'Linux')
         run: |
-          sudo apt-get install -y ccache
+          sudo apt-get install -y ccache sed
       - name: Cache ~/.ccache
         uses: actions/cache@v2
         with:
