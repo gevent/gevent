@@ -456,11 +456,12 @@ jobs:
           export LDFLAGS=-L$BUILD_LIBS/lib
           export CPPFLAGS="-I$BUILD_LIBS/include"
           env | sort
+          echo which sed? `which sed`
           echo LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$BUILD_LIBS/lib >>$GITHUB_ENV
-          pushd deps/libev && ./configure -C --prefix=$BUILD_LIBS && make install && popd
-          pushd deps/c-ares && ./configure -C --prefix=$BUILD_LIBS && make -j4 install && popd
+          (pushd deps/libev && sh ./configure -C --prefix=$BUILD_LIBS && make install && popd)
+          (pushd deps/c-ares && sh ./configure -C --prefix=$BUILD_LIBS && make -j4 install && popd)
 
-          pushd deps/libuv && ./autogen.sh && ./configure -C --disable-static --prefix=$BUILD_LIBS && make -j4 install && popd
+          (pushd deps/libuv && ./autogen.sh && sh ./configure -C --disable-static --prefix=$BUILD_LIBS && make -j4 install && popd)
           # libev builds a manpage each time, and it includes today's date, so it frequently changes.
           # delete to avoid repacking the archive
           rm -rf $BUILD_LIBS/share/man/
