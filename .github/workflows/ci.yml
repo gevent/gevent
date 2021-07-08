@@ -233,7 +233,7 @@ jobs:
           # without that setting here. The whole thing is being
           # matched even without the CFLAGS matching. Perhaps the - is
           # a generic search separator?
-          key: ${{ runner.os }}-configcache3-${{ matrix.python-version }}-${{ env.CFLAGS }}
+          key: ${{ runner.os }}-${{ matrix.os }}-configcache3-${{ matrix.python-version }}-${{ env.CFLAGS }}
 
       # Install gevent. Yes, this will create different files each time,
       # leading to a fresh cache. But because of CCache stats, we had already been doing
@@ -435,7 +435,7 @@ jobs:
           # without that setting here. The whole thing is being
           # matched even without the CFLAGS matching. Perhaps the - is
           # a generic search separator?
-          key: ${{ runner.os }}-configcache_embed-${{ matrix.python-version }}-${{ env.CFLAGS }}
+          key: ${{ runner.os }}-${{ matrix.os }}-configcache_embed-${{ matrix.python-version }}-${{ env.CFLAGS }}
       - name: Install dependencies
         run: |
           pip install -U pip
