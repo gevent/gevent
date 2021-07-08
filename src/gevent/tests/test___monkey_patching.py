@@ -54,8 +54,11 @@ def TESTRUNNER(tests=None):
 
     PYTHONPATH = (os.getcwd() + os.pathsep + get_absolute_pythonpath()).rstrip(':')
 
-    tests = [os.path.basename(x) for x in tests]
-    version_tests = [os.path.basename(x) for x in version_tests]
+    tests = sorted(set(os.path.basename(x) for x in tests))
+    version_tests = sorted(set(os.path.basename(x) for x in version_tests))
+
+    util.log("Discovered %d tests in %s", len(tests), test_dir)
+    util.log("Discovered %d version-specific tests in %s", len(version_tests), version_test_dir)
 
     options = {
         'cwd': test_dir,
