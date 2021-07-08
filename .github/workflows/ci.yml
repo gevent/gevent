@@ -146,16 +146,31 @@ jobs:
     strategy:
       matrix:
         python-version: [2.7, pypy-2.7, pypy-3.6, 3.6, 3.7, 3.8, 3.9]
-        os: [ubuntu-latest, macos-latest]
+        # ubuntu-latest is at least 20.04. But this breaks the SSL
+        # tests because Ubuntu increased the default OpenSSL
+        # strictness.
+        # The standard library has only been updated with fixes for
+        # this in 3.8+.
+        os: [ubuntu-18.04, macos-latest, ubuntu-latest]
         exclude:
           - os: macos-latest
             python-version: pypy-2.7
           - os: macos-latest
             python-version: pypy-3.6
           - os: macos-latest
-            python-version: 3.5
-          - os: macos-latest
             python-version: 3.6
+          - os: ubuntu-latest
+            python-version: 2.7
+          - os: ubuntu-latest
+            python-version: pypy-2.7
+          - os: ubuntu-latest
+            python-version: pypy-3.6
+          - os: ubuntu-latest
+            python-version: 3.6
+          - os: ubuntu-latest
+            python-version: 3.7
+          - os: ubuntu-latest
+            python-version: 3.8
     steps:
       - name: checkout
         uses: actions/checkout@v2
@@ -375,7 +390,7 @@ jobs:
     strategy:
       matrix:
         python-version: [2.7, 3.9]
-        os: [ubuntu-latest]
+        os: [ubuntu-18.04]
     steps:
       - name: checkout
         uses: actions/checkout@v2

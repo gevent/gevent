@@ -1336,6 +1336,16 @@ if PY39:
         'test_subprocess.POSIXProcessTestTest.test_send_signal_race',
     ]
 
+    # These were added for fixes sometime between 3.9.1 and 3.9.5
+    if sys.version_info[:3] < (3, 9, 5):
+        disabled_tests += [
+            'test_ftplib.TestFTPClass.test_makepasv_issue43285_security_disabled',
+            'test_ftplib.TestFTPClass.test_makepasv_issue43285_security_enabled_default',
+            'test_httplib.BasicTest.test_dir_with_added_behavior_on_status',
+            'test_httplib.TunnelTests.test_tunnel_connect_single_send_connection_setup',
+            'test_ssl.TestSSLDebug.test_msg_callback_deadlock_bpo43577',
+        ]
+
 if TRAVIS:
     disabled_tests += [
         # These tests frequently break when we try to use newer Travis CI images,
