@@ -56,7 +56,12 @@ class _Callbacks(AbstractCallbacks):
     # pylint:disable=arguments-differ,arguments-renamed
 
     def python_check_callback(self, *args):
-        pass
+        # There's a pylint bug (pylint 2.9.3, astroid 2.6.2) that causes pylint to crash
+        # with an AttributeError on certain types of arguments-differ errors
+        # But code in _ffi/loop depends on being able to find the watcher_ptr
+        # argument is the local frame.
+        # pylint:disable=unused-variable
+        _loop, watcher_ptr, _events = args
 
     def python_prepare_callback(self, _loop_ptr, watcher_ptr, _events):
         AbstractCallbacks.python_prepare_callback(self, watcher_ptr)

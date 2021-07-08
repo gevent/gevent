@@ -1352,6 +1352,8 @@ if PY39:
             'test_httplib.BasicTest.test_dir_with_added_behavior_on_status',
             'test_httplib.TunnelTests.test_tunnel_connect_single_send_connection_setup',
             'test_ssl.TestSSLDebug.test_msg_callback_deadlock_bpo43577',
+            # This one fails with the updated certs
+            'test_ssl.ContextTests.test_load_verify_cadata',
             # This one times out on 3.7.1 on Appveyor
             'test_ftplib.TestTLS_FTPClassMixin.test_retrbinary_rest',
         ]

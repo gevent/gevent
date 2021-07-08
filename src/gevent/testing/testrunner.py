@@ -536,12 +536,16 @@ class Discovery(object):
             self.__add_test(qualified_name, filename, contents)
 
         def visit_files(self, filenames):
+            print("\tBegin visit")
             for filename in filenames:
+                print("\tVisiting", filename)
                 self.visit_file(filename)
             with Discovery._in_dir(self.orig_dir):
                 self.__expand_imports()
             self.__combine_commands(self.std_monkey_patch_files)
             self.__combine_commands(self.no_monkey_patch_files)
+            print("\tCommands", self.commands)
+            print("\tEnd visit")
 
     @staticmethod
     @contextmanager
