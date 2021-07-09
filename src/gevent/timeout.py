@@ -83,15 +83,16 @@ class Timeout(BaseException):
         finally:
             timeout.close()
 
-    .. note::
+    .. warning::
 
-        If the code that the timeout was protecting finishes
-        executing before the timeout elapses, be sure to ``close`` the
-        timeout so it is not unexpectedly raised in the future. Even if it
-        is raised, it is a best practice to close it. This ``try/finally``
-        construct or a ``with`` statement is a recommended pattern. (If
-        the timeout object will be started again, use ``cancel`` instead
-        of ``close``; this is rare.)
+        You must **always** call `close` on a ``Timeout`` object you have created,
+        whether or not the code that the timeout was protecting finishes
+        executing before the timeout elapses (whether or not the
+        ``Timeout`` exception is raised)  This ``try/finally``
+        construct or a ``with`` statement is a good pattern. (If
+        the timeout object will be started again, use `cancel` instead
+        of `close`; this is rare. You must still `close` it when you are
+        done.)
 
     When *exception* is omitted or ``None``, the ``Timeout`` instance
     itself is raised::
@@ -187,7 +188,7 @@ class Timeout(BaseException):
     .. versionchanged:: 1.3a1
 
         Timeout objects now have a :meth:`close`
-        method that must be called when the timeout will no longer be
+        method that *must* be called when the timeout will no longer be
         used to properly clean up native resources.
         The ``with`` statement does this automatically.
 
