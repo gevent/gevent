@@ -9,7 +9,7 @@ If you have a success story for gevent, contact post to the `google group`_.
 Reddit
 ======
 
-According to `this 2020 post on r/RedditEng`_:
+According to `this 2021 post on r/RedditEng`_:
 
     [Reddit needs] a web stack that can handle many concurrent
     requests. Reddit’s stack for most microservices is Python 3,
@@ -24,7 +24,7 @@ According to `this 2020 post on r/RedditEng`_:
     drained as threads acquire the lock and execute serially, all
     without exhausting the thread pool.
 
-.. _this 2020 post on r/RedditEng: https://www.reddit.com/r/RedditEng/comments/obqtfm/solving_the_three_stooges_problem/
+.. _this 20210 post on r/RedditEng: https://www.reddit.com/r/RedditEng/comments/obqtfm/solving_the_three_stooges_problem/
 .. _Baseplate: https://github.com/reddit/baseplate.py
 
 Omegle_
