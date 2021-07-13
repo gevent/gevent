@@ -6,6 +6,26 @@ If you have a success story for gevent, contact post to the `google group`_.
 
 .. _google group: http://groups.google.com/group/gevent/
 
+Reddit
+======
+
+According to `this 2020 post on r/RedditEng`_:
+
+    [Reddit needs] a web stack that can handle many concurrent
+    requests. Reddit’s stack for most microservices is Python 3,
+    Baseplate_, and gevent. Django/Flask also work well when run with
+    gevent. gevent is a Python library that transparently enables your
+    microservice to handle high concurrency and I/O without requiring
+    changes to your code. It is the secret sauce that allows you to
+    run tens of thousands of pseudo-threads called greenlets (one per
+    concurrent request) on a small number of instances. It allows for
+    threads handling concurrent duplicate requests to be enqueued
+    while waiting to acquire the lock, and then for those queues to be
+    drained as threads acquire the lock and execute serially, all
+    without exhausting the thread pool.
+
+.. _this 2020 post on r/RedditEng: https://www.reddit.com/r/RedditEng/comments/obqtfm/solving_the_three_stooges_problem/
+.. _Baseplate: https://github.com/reddit/baseplate.py
 
 Omegle_
 =======
