@@ -6,6 +6,36 @@
 
 .. towncrier release notes start
 
+21.8.0 (2021-08-05)
+===================
+
+
+Features
+--------
+
+- Update the embedded c-ares from 1.16.1 to 1.17.1.
+  See :issue:`1758`.
+- Add support for Python 3.10rc1 and newer.
+
+  As part of this, the minimum required greenlet version was increased
+  to 1.1.0 (on CPython), and the minimum version of Cython needed to
+  build gevent from a source checkout is 3.0a9.
+
+  Note that the dnspython resolver is not available on Python 3.10.
+  See :issue:`1790`.
+- Update from Cython 3.0a6 to 3.0a9.
+  See :issue:`1801`.
+
+
+Misc
+----
+
+- See :issue:`1789`.
+
+
+----
+
+
 21.1.2 (2021-01-20)
 ===================
 
