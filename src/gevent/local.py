@@ -615,7 +615,8 @@ if local.__module__ == 'gevent.local':
 else: # pragma: no cover
     # Make sure we revisit in case of changes to the (accelerator) module names.
     if local.__module__ != 'gevent._gevent_clocal':
-        raise AssertionError("Module names changed; revisit this code.")
+        raise AssertionError("Module names changed (local: %r; __name__: %r); revisit this code" % (
+            local.__module__, __name__) )
 
 _init()
 
