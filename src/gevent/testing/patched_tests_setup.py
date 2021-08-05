@@ -1386,6 +1386,15 @@ if PY310:
         'test_threading.InterruptMainTests.test_can_interrupt_tight_loops',
     ]
 
+    if TRAVIS:
+        disabled_tests += [
+            # The mixing of subinterpreters (with threads) and gevent apparently
+            # leads to a segfault on Ubuntu/GitHubActions/3.10rc1. Not clear why.
+            # But that's not a great use case for gevent.
+            'test_threading.SubinterpThreadingTests.test_threads_join',
+            'test_threading.SubinterpThreadingTests.test_threads_join_2',
+        ]
+
 if TRAVIS:
     disabled_tests += [
         # These tests frequently break when we try to use newer Travis CI images,

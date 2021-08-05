@@ -34,6 +34,11 @@ thread** and **should be done while the program is single-threaded**.
     Patching too late can lead to unreliable behaviour (for example, some
     modules may still use blocking sockets) or even errors.
 
+.. tip::
+
+    Be sure to read the documentation for each patch function to check for
+    known incompatibilities.
+
 Querying
 ========
 
@@ -712,6 +717,10 @@ def patch_thread(threading=True, _threading_local=True, Event=True, logging=True
         :class:`multiprocessing.Queue` or
         :class:`concurrent.futures.ProcessPoolExecutor` (which uses a
         ``Queue``) will hang the process.
+
+        Monkey-patching with this function and using
+        sub-interpreters (and advanced C-level API) and threads may be
+        unstable on certain platforms.
 
     .. versionchanged:: 1.1b1
         Add *logging* and *existing_locks* params.
