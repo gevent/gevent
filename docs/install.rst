@@ -71,7 +71,10 @@ supported.
 |       |       |
 |       |       |
 +-------+-------+
-
+|3.5.x  | 20.9.0|
+|       |       |
+|       |       |
++-------+-------+
 
 Installation
 ============
@@ -145,10 +148,12 @@ events
     will be removed in gevent 21.0.
 
 dnspython
-    Enables the new pure-Python resolver, backed by `dnspython
+    Enables a pure-Python resolver, backed by `dnspython
     <https://pypi.org/project/dnspython>`_. On Python 2, this also
     includes `idna <https://pypi.org/project/idna>`_. They can be
     installed with the ``dnspython`` extra.
+
+    .. note:: This is not compatible with Python 3.10 or dnspython 2.
 
 monitor
     Enhancements to gevent's self-monitoring capabilities. This

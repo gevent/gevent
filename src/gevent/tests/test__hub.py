@@ -146,6 +146,8 @@ class TestPeriodicMonitoringThread(greentest.TestCase):
         super(TestPeriodicMonitoringThread, self).setUp()
         self.monitor_thread = gevent.config.monitor_thread
         gevent.config.monitor_thread = True
+        from gevent.monkey import get_original
+        self.lock = get_original('threading', 'Lock')()
         self.monitor_fired = 0
         self.monitored_hubs = set()
         self._reset_hub()
@@ -162,9 +164,10 @@ class TestPeriodicMonitoringThread(greentest.TestCase):
         super(TestPeriodicMonitoringThread, self).tearDown()
 
     def _monitor(self, hub):
-        self.monitor_fired += 1
-        if self.monitored_hubs is not None:
-            self.monitored_hubs.add(hub)
+        with self.lock:
+            self.monitor_fired += 1
+            if self.monitored_hubs is not None:
+                self.monitored_hubs.add(hub)
 
     def test_config(self):
         self.assertEqual(0.1, gevent.config.max_blocking_time)
@@ -177,7 +180,7 @@ class TestPeriodicMonitoringThread(greentest.TestCase):
 
         def monitor_cond(_hub):
             cond.acquire()
-            cond.notifyAll()
+            cond.notify_all()
             cond.release()
             if kill:
                 # Only run once. Especially helpful on PyPy, where
@@ -245,15 +248,29 @@ class TestPeriodicMonitoringThread(greentest.TestCase):
         threadpool = hub.threadpool
 
         worker_hub = threadpool.apply(get_hub)
-        stream = worker_hub.exception_stream = NativeStrIO()
+        assert hub is not worker_hub
+        stream = NativeStrIO()
 
         # It does not have a monitoring thread yet
         self.assertIsNone(worker_hub.periodic_monitoring_thread)
-        # So switch to it and give it one.
-        threadpool.apply(gevent.sleep, (0.01,))
-        self.assertIsNotNone(worker_hub.periodic_monitoring_thread)
-        worker_monitor = worker_hub.periodic_monitoring_thread
-        worker_monitor.add_monitoring_function(self._monitor, 0.1)
+        # So switch to it and give it one by letting it run.
+        # XXX: Python 3.10 appears to have made some changes in the memory model.
+        # Specifically, reading values from the background that are set in the
+        # background hub *from this thread* is flaky. It takes them awhile to show up.
+        # Really, that's correct and expected from a standard C point of view, as we
+        # don't insert any memory barriers or things like that. It just always used to
+        # work in the past. So now, rather than read them directly, we need to read them
+        # from the background thread itself. The same, apparently, goes for
+        # writing.
+        # Need to figure out what exactly the change was.
+        def task():
+            get_hub().exception_stream = stream
+            gevent.sleep(0.01)
+            mon = get_hub().periodic_monitoring_thread
+            mon.add_monitoring_function(self._monitor, 0.1)
+            return mon
+        worker_monitor = threadpool.apply(task)
+        self.assertIsNotNone(worker_monitor)
 
         return worker_hub, stream, worker_monitor
 
@@ -272,8 +289,9 @@ class TestPeriodicMonitoringThread(greentest.TestCase):
 
         # We did run the monitor in the worker thread, but it
         # did NOT report itself blocked by the worker thread sitting there.
-        self.assertIn(worker_hub, self.monitored_hubs)
-        self.assertEqual(stream.getvalue(), '')
+        with self.lock:
+            self.assertIn(worker_hub, self.monitored_hubs)
+            self.assertEqual(stream.getvalue(), '')
 
     @greentest.ignores_leakcheck
     def test_blocking_threadpool_thread_one_greenlet(self):
@@ -295,8 +313,9 @@ class TestPeriodicMonitoringThread(greentest.TestCase):
 
         # We did run the monitor in the worker thread, but it
         # did NOT report itself blocked by the worker thread
-        self.assertIn(worker_hub, self.monitored_hubs)
-        self.assertEqual(stream.getvalue(), '')
+        with self.lock:
+            self.assertIn(worker_hub, self.monitored_hubs)
+            self.assertEqual(stream.getvalue(), '')
 
 
     @greentest.ignores_leakcheck

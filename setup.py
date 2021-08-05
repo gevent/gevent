@@ -299,8 +299,10 @@ del _to_cythonize
 ## Extras
 
 EXTRA_DNSPYTHON = [
-    'dnspython >= 1.16.0, < 2.0',
-    'idna',
+    # We're not currently compatible with 2.0, and dnspython 1.x isn't
+    # compatible weth Python 3.10 because of the removal of ``collections.MutableMapping``.
+    'dnspython >= 1.16.0, < 2.0; python_version < "3.10"',
+    'idna; python_version < "3.10"',
 ]
 EXTRA_EVENTS = [
     # No longer does anything, but the extra must stay around

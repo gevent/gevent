@@ -25,7 +25,7 @@ t.start()
 
 def trace(frame, event, arg):
     if threading is not None:
-        threading.currentThread()
+        threading.current_thread()
     return trace
 
 

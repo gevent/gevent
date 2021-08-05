@@ -66,6 +66,7 @@ PY36 = None
 PY37 = None
 PY38 = None
 PY39 = None
+PY310 = None
 
 NON_APPLICABLE_SUFFIXES = ()
 if sys.version_info[0] >= 3:
@@ -83,6 +84,8 @@ if sys.version_info[0] >= 3:
         PY38 = True
     if sys.version_info[1] >= 9:
         PY39 = True
+    if sys.version_info[1] >= 10:
+        PY310 = True
 
 elif sys.version_info[0] == 2:
     # Any python 2
@@ -188,3 +191,12 @@ def libev_supports_linux_iouring():
     from platform import release
 
     return system() == 'Linux' and LooseVersion(release() or '0') >= LooseVersion('5.3')
+
+def resolver_dnspython_available():
+    # Try hard not to leave around junk we don't have to.
+    import pkg_resources
+    try:
+        pkg_resources.get_distribution('dnspython')
+    except pkg_resources.DistributionNotFound:
+        return False
+    return True

@@ -246,7 +246,7 @@ def start(command, quiet=False, **kwargs):
     if timeout is not None:
         t = get_original('threading', 'Timer')(timeout, kill, args=(popen, ))
         popen.timer = t
-        t.setDaemon(True)
+        t.daemon = True
         t.start()
         popen.timer = t
     return popen

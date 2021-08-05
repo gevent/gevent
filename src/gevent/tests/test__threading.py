@@ -13,7 +13,7 @@ import threading
 
 
 def helper():
-    threading.currentThread()
+    threading.current_thread()
     gevent.sleep(0.2)
 
 

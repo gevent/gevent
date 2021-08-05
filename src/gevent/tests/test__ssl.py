@@ -98,6 +98,7 @@ class TestSSL(test__socket.TestTCP):
     #         raise
 
     @greentest.ignores_leakcheck
+    @greentest.skipOnPy310("No longer raises SSLError")
     def test_empty_send(self):
         # Issue 719
         # Sending empty bytes with the 'send' method raises

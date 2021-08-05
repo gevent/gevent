@@ -82,6 +82,7 @@ from .sysinfo import RUNNING_ON_CI
 from .sysinfo import RESOLVER_NOT_SYSTEM
 from .sysinfo import RESOLVER_DNSPYTHON
 from .sysinfo import RESOLVER_ARES
+from .sysinfo import resolver_dnspython_available
 
 from .sysinfo import EXPECT_POOR_TIMER_RESOLUTION
 
@@ -107,6 +108,7 @@ from .skipping import skipOnPurePython
 from .skipping import skipWithCExtensions
 from .skipping import skipOnLibuvOnTravisOnCPython27
 from .skipping import skipOnPy37
+from .skipping import skipOnPy310
 from .skipping import skipOnPy3
 from .skipping import skipWithoutResource
 from .skipping import skipWithoutExternalNetwork
