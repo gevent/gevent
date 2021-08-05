@@ -308,7 +308,7 @@ class TestCase(greentest.TestCase):
     def makefile(self):
         with self.connect() as sock:
             try:
-                result = sock.makefile(bufsize=1)
+                result = sock.makefile(bufsize=1) # pylint:disable=unexpected-keyword-arg
                 yield result
             finally:
                 result.close()
