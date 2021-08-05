@@ -631,7 +631,7 @@ class alarm(threading.Thread):
 
     def __init__(self, timeout):
         threading.Thread.__init__(self)
-        self.setDaemon(True)
+        self.daemon = True
         self.timeout = timeout
         self.start()
 

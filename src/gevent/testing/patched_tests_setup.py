@@ -31,6 +31,7 @@ from .sysinfo import PY36
 from .sysinfo import PY37
 from .sysinfo import PY38
 from .sysinfo import PY39
+from .sysinfo import PY310
 
 from .sysinfo import WIN
 from .sysinfo import OSX
@@ -1372,6 +1373,18 @@ if PY39:
             'test_ftplib.TestTLS_FTPClassMixin.test_retrbinary_rest',
             'test_ftplib.TestTLS_FTPClassMixin.test_retrlines_too_long',
         ]
+
+if PY310:
+    disabled_tests += [
+        # They arbitrarily made some types so that they can't be created;
+        # that's an implementation detail we're not going to follow (
+        # it would require them to be factory functions).
+        'test_select.SelectTestCase.test_disallow_instantiation',
+        'test_threading.ThreadTests.test_disallow_instantiation',
+        # This wants two true threads to work, but a CPU bound loop
+        # in a greenlet can't be interrupted.
+        'test_threading.InterruptMainTests.test_can_interrupt_tight_loops',
+    ]
 
 if TRAVIS:
     disabled_tests += [

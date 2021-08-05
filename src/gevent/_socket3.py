@@ -604,8 +604,17 @@ else: # pragma: no cover
         return (ssock, csock)
 
 
-if hasattr(__socket__, 'close'): # Python 3.7b1+
-    close = __socket__.close # pylint:disable=no-member
-    __imports__ += ['close']
-
 __all__ = __implements__ + __extensions__ + __imports__
+__version_specific__ = (
+    # Python 3.7b1+
+    'close',
+    # Python 3.10rc1+
+    'TCP_KEEPALIVE',
+    'TCP_KEEPCNT',
+)
+for _x in __version_specific__:
+    if hasattr(__socket__, _x):
+        vars()[_x] = getattr(__socket__, _x)
+        if _x not in __all__:
+            __all__.append(_x)
+del _x
