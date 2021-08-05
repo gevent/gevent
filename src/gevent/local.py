@@ -581,16 +581,22 @@ def __new__(cls, *args, **kw):
     self.__cinit__(*args[1:], **kw)
     return self
 
-try:
+if local.__module__ == 'gevent.local':
     # PyPy2/3 and CPython handle adding a __new__ to the class
     # in different ways. In CPython and PyPy3, it must be wrapped with classmethod;
     # in PyPy2 < 7.3.3, it must not. In either case, the args that get passed to
     # it are stil wrong.
-    local.__new__ = 'None'
-except TypeError: # pragma: no cover
-    # Must be compiled
-    pass
-else:
+    #
+    # Prior to Python 3.10, Cython-compiled classes were immutable and
+    # raised a TypeError on assignment to __new__, and we relied on that
+    # to detect the compiled version; but that breaks in
+    # 3.10 as classes are now mutable. (See
+    # https://github.com/cython/cython/issues/4326).
+    #
+    # That's OK; post https://github.com/gevent/gevent/issues/1480, the Cython-compiled
+    # module has a different name than the pure-Python version and we can check for that.
+    # It's not as direct, but it works.
+    # So here we're not compiled
     from gevent._compat import PYPY
     from gevent._compat import PY2
     if PYPY and PY2:
@@ -606,6 +612,11 @@ else:
 
     del PYPY
     del PY2
+else: # pragma: no cover
+    # Make sure we revisit in case of changes to the (accelerator) module names.
+    if local.__module__ != 'gevent._gevent_clocal':
+        raise AssertionError("Module names changed (local: %r; __name__: %r); revisit this code" % (
+            local.__module__, __name__) )
 
 _init()
 

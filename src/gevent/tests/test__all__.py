@@ -142,11 +142,18 @@ class AbstractTestMixin(object):
             self.skipTest("%s Needs __all__" % self.modname)
 
     def test_all(self):
-        # Check that __all__ is present and does not contain invalid entries
+        # Check that __all__ is present in the gevent module,
+        # and only includes things that actually exist and can be
+        # imported from it.
         self.skipIfNoAll()
         names = {}
         six.exec_("from %s import *" % self.modname, names)
         names.pop('__builtins__', None)
+        self.maxDiff = None
+
+        # It should match both as a set
+        self.assertEqual(set(names), set(self.module.__all__))
+        # and it should not contain duplicates.
         self.assertEqual(sorted(names), sorted(self.module.__all__))
 
     def test_all_formula(self):

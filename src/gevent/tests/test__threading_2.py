@@ -145,13 +145,13 @@ class ThreadTests(unittest.TestCase):
         # The ident still must work for the main thread and dummy threads,
         # as must the repr and str.
 
-        t = threading.currentThread()
+        t = threading.current_thread()
         self.assertFalse(t.ident is None)
         str(t)
         repr(t)
 
         def f():
-            t = threading.currentThread()
+            t = threading.current_thread()
             ident.append(t.ident)
             str(t)
             repr(t)

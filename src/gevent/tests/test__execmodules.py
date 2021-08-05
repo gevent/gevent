@@ -8,14 +8,13 @@ from gevent.testing import six
 
 
 def make_exec_test(path, module):
-
     def test(_):
         with open(path, 'rb') as f:
             src = f.read()
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', DeprecationWarning)
             try:
-                six.exec_(src, {'__file__': path})
+                six.exec_(src, {'__file__': path, '__name__': module})
             except ImportError:
                 if module in modules.OPTIONAL_MODULES:
                     raise unittest.SkipTest("Unable to import optional module %s" % module)

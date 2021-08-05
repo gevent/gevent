@@ -246,7 +246,7 @@ def start(command, quiet=False, **kwargs):
     if timeout is not None:
         t = get_original('threading', 'Timer')(timeout, kill, args=(popen, ))
         popen.timer = t
-        t.setDaemon(True)
+        t.daemon = True
         t.start()
         popen.timer = t
     return popen
@@ -631,7 +631,7 @@ class alarm(threading.Thread):
 
     def __init__(self, timeout):
         threading.Thread.__init__(self)
-        self.setDaemon(True)
+        self.daemon = True
         self.timeout = timeout
         self.start()
 

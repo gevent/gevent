@@ -199,8 +199,9 @@ greenlet_requires = [
     # Binary compatibility would break if the greenlet struct changes.
     # (Which it did in 0.4.14 for Python 3.7 and again in 0.4.17; with
     # the release of 1.0a1 it began promising ABI stability with SemVer
-    # so we can add an upper bound)
-    'greenlet >= 0.4.17, < 2.0; platform_python_implementation=="CPython"',
+    # so we can add an upper bound).
+    # 1.1.0 is required for 3.10; it has a new ABI, but only on 1.1.0.
+    'greenlet >= 1.1.0, < 2.0; platform_python_implementation=="CPython"',
 ]
 
 # Note that we don't add cffi to install_requires, it's
@@ -298,8 +299,10 @@ del _to_cythonize
 ## Extras
 
 EXTRA_DNSPYTHON = [
-    'dnspython >= 1.16.0, < 2.0',
-    'idna',
+    # We're not currently compatible with 2.0, and dnspython 1.x isn't
+    # compatible weth Python 3.10 because of the removal of ``collections.MutableMapping``.
+    'dnspython >= 1.16.0, < 2.0; python_version < "3.10"',
+    'idna; python_version < "3.10"',
 ]
 EXTRA_EVENTS = [
     # No longer does anything, but the extra must stay around
@@ -441,12 +444,11 @@ def run_setup(ext_modules):
         classifiers=[
             "License :: OSI Approved :: MIT License",
             "Programming Language :: Python :: 2.7",
-            "Programming Language :: Python :: 3.4",
-            "Programming Language :: Python :: 3.5",
             "Programming Language :: Python :: 3.6",
             "Programming Language :: Python :: 3.7",
             "Programming Language :: Python :: 3.8",
             "Programming Language :: Python :: 3.9",
+            "Programming Language :: Python :: 3.10",
             "Programming Language :: Python :: Implementation :: CPython",
             "Programming Language :: Python :: Implementation :: PyPy",
             "Operating System :: MacOS :: MacOS X",
@@ -457,7 +459,7 @@ def run_setup(ext_modules):
             "Intended Audience :: Developers",
             "Development Status :: 4 - Beta"
         ],
-        python_requires=">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*",
+        python_requires=">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5",
         entry_points={
             'gevent.plugins.monkey.will_patch_all': [
                 "signal_os_incompat = gevent.monkey:_subscribe_signal_os",

@@ -20,8 +20,9 @@ requires = [
      # but once that was fixed, 3.0a4 led to all of our leak tests
      # failing in Python 2 (https://travis-ci.org/github/gevent/gevent/jobs/683782800);
      # This was fixed in 3.0a5 (https://github.com/cython/cython/issues/3578)
-     # 3.0a6 fixes an issue cythonizing source on 32-bit platforms
-     "Cython >= 3.0a8",
+     # 3.0a6 fixes an issue cythonizing source on 32-bit platforms.
+     # 3.0a9 is needed for Python 3.10.
+     "Cython >= 3.0a9",
      # See version requirements in setup.py
      "cffi >= 1.12.3 ; platform_python_implementation == 'CPython'",
      # Python 3.7 requires at least 0.4.14, which is ABI incompatible with earlier

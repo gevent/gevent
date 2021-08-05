@@ -38,6 +38,9 @@ typedef struct _greenlet {
 #if PY_VERSION_HEX >= 0x030700A3
     PyObject* context;
 #endif
+#if PY_VERSION_HEX >= 0x30A00B1
+    CFrame* cframe;
+#endif
 } PyGreenlet;
 
 #define PyGreenlet_Check(op) PyObject_TypeCheck(op, &PyGreenlet_Type)

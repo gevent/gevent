@@ -14,6 +14,8 @@ import os
 
 from gevent import testing as greentest
 
+@unittest.skipUnless(greentest.resolver_dnspython_available(),
+                     "dnspython not available")
 class TestDnsPython(unittest.TestCase):
 
     def _run_one(self, mod_name):

@@ -19,8 +19,9 @@
 Supported Platforms
 ===================
 
-This version of gevent runs on Python 2.7.9 and up, and Python 3.5, 3.6, 3.7 and
-3.8. gevent requires the `greenlet <https://greenlet.readthedocs.io>`_
+This version of gevent runs on Python 2.7.9 and up, and many versions
+of Python 3 (for exact details, see the classifiers on the PyPI page
+or in ``setup.py``). gevent requires the `greenlet <https://greenlet.readthedocs.io>`_
 library and will install the `cffi`_ library by default on Windows.
 The cffi library will become the default on all platforms in a future
 release of gevent.
@@ -70,7 +71,10 @@ supported.
 |       |       |
 |       |       |
 +-------+-------+
-
+|3.5.x  | 20.9.0|
+|       |       |
+|       |       |
++-------+-------+
 
 Installation
 ============
@@ -144,10 +148,12 @@ events
     will be removed in gevent 21.0.
 
 dnspython
-    Enables the new pure-Python resolver, backed by `dnspython
+    Enables a pure-Python resolver, backed by `dnspython
     <https://pypi.org/project/dnspython>`_. On Python 2, this also
     includes `idna <https://pypi.org/project/idna>`_. They can be
     installed with the ``dnspython`` extra.
+
+    .. note:: This is not compatible with Python 3.10 or dnspython 2.
 
 monitor
     Enhancements to gevent's self-monitoring capabilities. This

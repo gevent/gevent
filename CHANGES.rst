@@ -138,6 +138,7 @@ Features
   Reported by Suhail Muhammed.
   See :issue:`1678`.
 
+- Drop support for Python 3.5.
 
 Bugfixes
 --------
