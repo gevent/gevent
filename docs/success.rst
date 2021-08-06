@@ -24,7 +24,7 @@ According to `this 2021 post on r/RedditEng`_:
     drained as threads acquire the lock and execute serially, all
     without exhausting the thread pool.
 
-.. _this 20210 post on r/RedditEng: https://www.reddit.com/r/RedditEng/comments/obqtfm/solving_the_three_stooges_problem/
+.. _this 2021 post on r/RedditEng: https://www.reddit.com/r/RedditEng/comments/obqtfm/solving_the_three_stooges_problem/
 .. _Baseplate: https://github.com/reddit/baseplate.py
 
 Omegle_
