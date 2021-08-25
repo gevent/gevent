@@ -275,6 +275,14 @@ elif sys.platform.startswith('aix'): # pragma: no cover
     if os.uname().sysname != 'OS400':
         _add_library('perfstat')
 elif WIN:
+    # All other gevent .pyd files link to the specific minor-version Python
+    # DLL, so we should do the same here. In virtual environments that don't
+    # contain the major-version python?.dll stub, _corecffi.pyd would otherwise
+    # cause the Windows DLL loader to search the entire PATH for a DLL with
+    # that name. This might end up bringing a second, ABI-incompatible Python
+    # version into the process, which can easily lead to crashes.
+    _define_macro('_CFFI_NO_LIMITED_API', 1)
+
     _define_macro('_GNU_SOURCE', 1)
     _define_macro('WIN32', 1)
     _define_macro('_CRT_SECURE_NO_DEPRECATE', 1)
