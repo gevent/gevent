@@ -113,7 +113,7 @@ class loop(AbstractLoop):
     def __init__(self, flags=None, default=None):
         AbstractLoop.__init__(self, ffi, libuv, _watchers, flags, default)
         self._child_watchers = defaultdict(list)
-        self._io_watchers = dict()
+        self._io_watchers = {}
         self._fork_watchers = set()
         self._pid = os.getpid()
         self._default = (self._ptr == libuv.uv_default_loop())

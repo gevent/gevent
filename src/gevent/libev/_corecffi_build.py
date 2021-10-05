@@ -32,6 +32,7 @@ ffi = FFI()
 distutils_ext = _setuplibev.build_extension()
 
 def read_source(name):
+    # pylint:disable=unspecified-encoding
     with open(os.path.join(thisdir, name), 'r') as f:
         return f.read()
 

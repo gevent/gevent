@@ -368,7 +368,7 @@ class local(object):
 
     def __cinit__(self, *args, **kw):
         if args or kw:
-            if type(self).__init__ == object.__init__:
+            if type(self).__init__ == object.__init__: # pylint:disable=comparison-with-callable
                 raise TypeError("Initialization arguments are not supported", args, kw)
         impl = _localimpl(args, kw, type(self), id(self))
         # pylint:disable=attribute-defined-outside-init

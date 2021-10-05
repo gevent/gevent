@@ -77,7 +77,8 @@ else:
         if os.system(lsof_command):
             # XXX: This prints to the console an annoying message: 'lsof is not recognized'
             raise unittest.SkipTest("lsof failed")
-        with open(tmpname) as fobj:
+
+        with open(tmpname) as fobj: # pylint:disable=unspecified-encoding
             data = fobj.read().strip()
         os.remove(tmpname)
         return data
@@ -146,7 +147,7 @@ else:
            return sockets in a state like that.
         """
 
-        results = dict()
+        results = {}
 
         for _ in range(3):
             try:

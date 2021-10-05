@@ -536,7 +536,7 @@ class _CommunicatingGreenlets(object):
             # Python 2 doesn't have a BrokenPipeError.
             if isinstance(ex, BrokenPipeError) and ex.errno is None:
                 ex.errno = errno.EPIPE
-            if ex.errno != errno.EPIPE and ex.errno != errno.EINVAL:
+            if ex.errno not in (errno.EPIPE, errno.EINVAL):
                 raise
         finally:
             try:

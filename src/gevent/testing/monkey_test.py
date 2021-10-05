@@ -74,7 +74,7 @@ test_name = os.path.splitext(test_filename)[0]
 if sys.version_info[0] >= 3:
     module_file = open(test_filename, encoding='utf-8') # pylint:disable=consider-using-with
 else:
-    module_file = open(test_filename) # pylint:disable=consider-using-with
+    module_file = open(test_filename) # pylint:disable=consider-using-with,unspecified-encoding
 with module_file:
     module_source = module_file.read()
 module_source = disable_tests_in_source(module_source, test_name)

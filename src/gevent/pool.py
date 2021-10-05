@@ -204,7 +204,7 @@ class GroupMappingMixin(object):
     def map_cb(self, func, iterable, callback=None):
         result = self.map(func, iterable)
         if callback is not None:
-            callback(result)
+            callback(result) # pylint:disable=not-callable
         return result
 
     def map_async(self, func, iterable, callback=None):

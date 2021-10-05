@@ -184,7 +184,7 @@ class MultipleWaiter(Waiter):
         # more efficient, but since we're in the hub we avoid imports if
         # we can help it to better support monkey-patching, and delaying the import
         # here can be impractical (see https://github.com/gevent/gevent/issues/652)
-        self._values = list()
+        self._values = []
 
     def switch(self, value):
         self._values.append(value)

@@ -7,13 +7,13 @@ Test for issue #1526:
 from __future__ import print_function
 from __future__ import absolute_import
 
-import dns
+import dns # pylint:disable=import-error
 assert dns
 import gevent.socket as socket # pylint:disable=consider-using-from-import
 socket.getfqdn() # create the resolver
 
 from gevent.resolver.dnspython import dns as gdns
-import dns.rdtypes
+import dns.rdtypes # pylint:disable=import-error
 
 assert dns is not gdns, (dns, gdns)
 assert dns.rdtypes is not gdns.rdtypes

@@ -77,7 +77,7 @@ def get_ident(gr=None):
 
 def start_new_thread(function, args=(), kwargs=None):
     if kwargs is not None:
-        greenlet = Greenlet.spawn(function, *args, **kwargs)
+        greenlet = Greenlet.spawn(function, *args, **kwargs) # pylint:disable=not-a-mapping
     else:
         greenlet = Greenlet.spawn(function, *args)
     return get_ident(greenlet)

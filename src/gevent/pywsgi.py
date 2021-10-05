@@ -63,7 +63,7 @@ _MONTHNAME = [None,  # Dummy so we can use 1-based month numbers
 _HEX = string.hexdigits.encode('ascii')
 
 # Errors
-_ERRORS = dict()
+_ERRORS = {}
 _INTERNAL_ERROR_STATUS = '500 Internal Server Error'
 _INTERNAL_ERROR_BODY = b'Internal Server Error'
 _INTERNAL_ERROR_HEADERS = [('Content-Type', 'text/plain'),
@@ -467,7 +467,7 @@ class WSGIHandler(object):
                 if result is True:
                     continue
 
-                self.status, response_body = result
+                self.status, response_body = result # pylint:disable=unpacking-non-sequence
                 self.socket.sendall(response_body)
                 if self.time_finish == 0:
                     self.time_finish = time.time()

@@ -37,6 +37,7 @@ def TESTRUNNER(tests=None):
                  color="suboptimal-behaviour")
         return
 
+    # pylint:disable=unspecified-encoding
     with open(os.path.join(test_dir, 'version')) as f:
         preferred_version = f.read().strip()
 

@@ -37,6 +37,7 @@ setup_py_dir = os.path.abspath(os.path.join(thisdir, '..', '..', '..'))
 libuv_dir = os.path.abspath(os.path.join(setup_py_dir, 'deps', 'libuv'))
 
 def read_source(name):
+    # pylint:disable=unspecified-encoding
     with open(os.path.join(thisdir, name), 'r') as f:
         return f.read()
 

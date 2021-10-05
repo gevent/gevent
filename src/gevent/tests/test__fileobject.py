@@ -30,6 +30,7 @@ except NameError:
     class ResourceWarning(Warning):
         "Python 2 fallback"
 
+# pylint:disable=unspecified-encoding
 
 def Writer(fobj, line):
     for character in line:

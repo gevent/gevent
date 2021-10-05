@@ -49,6 +49,7 @@ class _AbstractTestMixin(util.ExampleMixin):
     def _check_resources(self):
         from gevent.testing import resources
 
+        # pylint:disable=unspecified-encoding
         with open(os.path.join(self.cwd, self.example), 'r') as f:
             contents = f.read()
 

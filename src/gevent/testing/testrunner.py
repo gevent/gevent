@@ -589,6 +589,7 @@ class Discovery(object):
 def load_list_from_file(filename, package):
     result = []
     if filename:
+        # pylint:disable=unspecified-encoding
         with open(_package_relative_filename(filename, package)) as f:
             for x in f:
                 x = x.split('#', 1)[0].strip()
@@ -899,7 +900,7 @@ def main():
     if options.config:
         config = {}
         options.config = _package_relative_filename(options.config, options.package)
-        with open(options.config) as f:
+        with open(options.config) as f: # pylint:disable=unspecified-encoding
             config_data = f.read()
         six.exec_(config_data, config)
         FAILING_TESTS = config['FAILING_TESTS']
