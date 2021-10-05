@@ -43,7 +43,9 @@ if [ "$DOCKER_IMAGE" == "quay.io/pypa/manylinux2014_aarch64" -a -n "$GITHUB_ACTI
     SLOW_ARM=1
 else
     echo "Compiling with -Ofast"
-    export CFLAGS="-Ofast $GEVENT_WARNFLAGS"
+    # Note: -Ofast includes -ffast-math which affects process-wide floating-point flags (e.g. can affect numpy).
+    #       We opt out of -ffast-math explicitly. Other libraries can still trigger it.
+    export CFLAGS="-Ofast -fno-fast-math $GEVENT_WARNFLAGS"
 fi
 # -lrt: Needed for clock_gettime libc support on this version.
 # -pthread: Needed for pthread_atfork (cffi).
