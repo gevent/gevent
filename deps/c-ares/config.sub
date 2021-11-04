@@ -1164,7 +1164,7 @@ case $cpu-$vendor in
 			| am33_2.0 \
 			| amdgcn \
 			| arc | arceb \
-			| arm  | arm[lb]e | arme[lb] | armv* \
+			| arm  | arm[lb]e | arme[lb] | armv* | arm64 \
 			| avr | avr32 \
 			| asmjs \
 			| ba \
