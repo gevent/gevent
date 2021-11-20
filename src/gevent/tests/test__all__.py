@@ -233,7 +233,7 @@ class AbstractTestMixin(object):
 
     @skip_if_no_stdlib_counterpart
     def test_completeness(self): # pylint:disable=too-many-branches
-        # Check that __all__ (or dir()) of the corresponsing stdlib is
+        # Check that __all__ (or dir()) of the corresponding stdlib is
         # a subset of __all__ of this module
 
         missed = []

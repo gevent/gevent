@@ -49,7 +49,7 @@ class GroupMappingMixin(object):
         until the results of func are available, and a ``rawlink`` method
         that calls a callback when the results are available.
 
-        If this object has an upper bound on how many asyncronously executing
+        If this object has an upper bound on how many asynchronously executing
         tasks can exist, this method may block until a slot becomes available.
         """
         raise NotImplementedError()

@@ -617,7 +617,7 @@ class StatMixin(object):
         # calling ev_stat_init(..., char*, ...), on PyPy the char* pointer is not
         # guaranteed to live past the function call. On CPython, only with a constant/interned
         # bytes object is the pointer guaranteed to last path the function call. (And since
-        # Python 3 is pretty much guaranteed to produce a newly-encoded bytes object above, thats
+        # Python 3 is pretty much guaranteed to produce a newly-encoded bytes object above, that's
         # rarely the case). Therefore, we must keep a reference to the produced cdata object
         # so that the struct ev_stat_watcher's `path` pointer doesn't become invalid/deallocated
         self._cpath = self._FFI.new('char[]', self._paths)

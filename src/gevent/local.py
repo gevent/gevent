@@ -585,7 +585,7 @@ if local.__module__ == 'gevent.local':
     # PyPy2/3 and CPython handle adding a __new__ to the class
     # in different ways. In CPython and PyPy3, it must be wrapped with classmethod;
     # in PyPy2 < 7.3.3, it must not. In either case, the args that get passed to
-    # it are stil wrong.
+    # it are still wrong.
     #
     # Prior to Python 3.10, Cython-compiled classes were immutable and
     # raised a TypeError on assignment to __new__, and we relied on that

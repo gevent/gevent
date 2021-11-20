@@ -358,7 +358,7 @@ class ConfiguringBuildExt(build_ext):
 
     def pre_run(self, *_args):
         # Called only from CFFI.
-        # With mulitple extensions, this probably gets called multiple
+        # With multiple extensions, this probably gets called multiple
         # times.
         for action in self.gevent_pre_run_actions:
             action()
@@ -417,7 +417,7 @@ class GeventClean(clean):
             dirs_to_remove += [
                 # tox
                 '.tox',
-                # instal.sh for pyenv
+                # install.sh for pyenv
                 '.runtimes',
                 # Built wheels from manylinux
                 'wheelhouse',

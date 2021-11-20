@@ -280,7 +280,7 @@ class PeriodicMonitoringThread(object):
 
         rusage = self._get_process().memory_full_info()
         # uss only documented available on Windows, Linux, and OS X.
-        # If not available, fall back to rss as an aproximation.
+        # If not available, fall back to rss as an approximation.
         mem_usage = getattr(rusage, 'uss', 0) or rusage.rss
 
         event = None # Return value for tests

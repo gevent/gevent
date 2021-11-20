@@ -73,7 +73,7 @@ Release 1.0rc2 (Dec 10, 2012)
 - Fixed AttributeError in hub.Waiter.
 - Fixed :issue:`181`: make hidden imports visible to freezing tools like py2exe. Patch by Ralf Schmitt.
 - Fixed :issue:`202`: periodically yield when running callbacks (sleep(0) cannot block the event loop now).
-- Fixed :issue:`204`: os.tp_read/tp_write did not propogate errors to the caller.
+- Fixed :issue:`204`: os.tp_read/tp_write did not propagate errors to the caller.
 - Fixed :issue:`217`: do not set SO_REUSEADDR on Windows.
 - Fixed bug in --module argument for gevent.monkey. Patch by Örjan Persson.
 - Remove warning from threadpool.py about mixing fork() and threads.
@@ -110,7 +110,7 @@ Release 1.0rc1 (Oct 30, 2012)
   be used by testrunner.py via expected option. It's used when running
   the test suite in travis.
 - Fixed socket, ssl and fileobject to not mask EBADF error - it is now
-  propogated to the caller. Previously EBADF was converted to empty
+  propagated to the caller. Previously EBADF was converted to empty
   read/write. Thanks to Vitaly Kruglikov
 - Removed gevent.event.waitall()
 - Renamed FileObjectThreadPool -> FileObjectThread
@@ -537,7 +537,7 @@ Release highlights:
   own Hub instance with its own event loop.
 - The release now includes and embeds the dependencies: libev and c-ares.
 - The standard :mod:`signal` works now as expected.
-- The unhandled errors are now handled uniformely by ``Hub.handle_error`` function.
+- The unhandled errors are now handled uniformly by ``Hub.handle_error`` function.
 - Added :class:`gevent.queue.Channel` class to :mod:`gevent.queue` module. It is
   equivalent to ``Queue(0)`` in gevent 0.x, which is deprecated now.
 - Added method ``peek`` to :class:`gevent.queue.Queue` class.

@@ -291,7 +291,7 @@ class Definitions(DefinitionsBase):
     test__monkey_sigchld_2 = Ignored(
         """
         This hangs for no apparent reason when run by the testrunner,
-        even wher maked standalone when run standalone from the
+        even where marked standalone when run standalone from the
         command line, it's fine. Issue in pypy2 6.0?
         """,
         when=PYPY & LIBUV

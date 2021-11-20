@@ -652,7 +652,7 @@ class TestGeventOrg(TestCase):
             return result
 
     def test_AI_CANONNAME(self):
-        # Not all systems support AI_CANONNAME; notably tha manylinux
+        # Not all systems support AI_CANONNAME; notably the manylinux
         # resolvers *sometimes* do not. Specifically, sometimes they
         # provide the canonical name *only* on the first result.
 

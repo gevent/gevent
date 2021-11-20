@@ -16,7 +16,7 @@ from collections import namedtuple
 _version_info = namedtuple('version_info',
                            ('major', 'minor', 'micro', 'releaselevel', 'serial'))
 
-#: The programatic version identifier. The fields have (roughly) the
+#: The programmatic version identifier. The fields have (roughly) the
 #: same meaning as :data:`sys.version_info`
 #: .. deprecated:: 1.2
 #:  Use ``pkg_resources.parse_version(__version__)`` (or the equivalent

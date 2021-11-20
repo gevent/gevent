@@ -76,7 +76,7 @@ class ILoop(Interface):
 
     approx_timer_resolution = schema.Float(
         description=u"Floating point number of seconds giving (approximately) the minimum "
-        "resolution of a timer (and hence the minimun value the sleep can sleep for). "
+        "resolution of a timer (and hence the minimum value the sleep can sleep for). "
         "On libuv, this is fixed by the library, but on libev it is just a guess "
         "and the actual value is system dependent.",
         required=True,

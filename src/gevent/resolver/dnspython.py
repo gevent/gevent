@@ -448,7 +448,7 @@ class Resolver(AbstractResolver):
             # dnspython does not do that.
             # ``test_getaddrinfo_ipv6_scopeid_symbolic`` also expect
             # the scopeid to be dropped, but again, dnspython does not
-            # do that; we cant fix that here so we skip that test.
+            # do that; we can't fix that here so we skip that test.
             host_bytes = 'ff02::1de:c0:face:8d'
 
         if family == AF_UNSPEC:

@@ -5,7 +5,7 @@
 set -e
 export PYTHONUNBUFFERED=1
 export PYTHONDONTWRITEBYTECODE=1
-# Use a fixed hash seed for reproducability
+# Use a fixed hash seed for reproducibility
 export PYTHONHASHSEED=8675309
 # Disable tests that use external network resources;
 # too often we get failures to resolve DNS names or failures
@@ -79,7 +79,7 @@ if [ -d /gevent -a -d /opt/python ]; then
     ls -ld /cache
     ls -ld /cache/pip
     yum -y install libffi-devel
-    # Some images/archs (specificaly 2014_aarch64) don't have ccache;
+    # Some images/archs (specifically 2014_aarch64) don't have ccache;
     # This also seems to have vanished for manylinux_2010 x64/64 after November 30
     # 2020 when the OS went EOL and the package repos switched to the "vault"
     if [ -n "$SLOW_ARM" ]; then

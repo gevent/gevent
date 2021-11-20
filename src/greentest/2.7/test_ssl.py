@@ -788,7 +788,7 @@ class BasicSocketTests(unittest.TestCase):
         self.cert_time_ok("Jan  5 09:34:61 2018 GMT", 1515144901)
         self.cert_time_fail("Jan  5 09:34:62 2018 GMT")  # invalid seconds
 
-        # no special treatement for the special value:
+        # no special treatment for the special value:
         #   99991231235959Z (rfc 5280)
         self.cert_time_ok("Dec 31 23:59:59 9999 GMT", 253402300799.0)
 
@@ -1281,7 +1281,7 @@ class ContextTests(unittest.TestCase):
         self._assert_context_options(ctx)
 
     def test__https_verify_certificates(self):
-        # Unit test to check the contect factory mapping
+        # Unit test to check the context factory mapping
         # The factories themselves are tested above
         # This test will fail by design if run under PYTHONHTTPSVERIFY=0
         # (as will various test_httplib tests)
@@ -1732,7 +1732,7 @@ else:
                     self.server.selected_alpn_protocols.append(self.sslconn.selected_alpn_protocol())
                 except (ssl.SSLError, socket.error, OSError) as e:
                     if e.errno in (errno.ECONNRESET, errno.EPIPE, errno.ESHUTDOWN):
-                        # Mimick Python 3:
+                        # Mimic Python 3:
                         #
                         #    except (ConnectionResetError, BrokenPipeError):
                         #

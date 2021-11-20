@@ -80,7 +80,7 @@ cdef class AbstractLinkable(object):
    cdef _wait_return_value(self, bint waited, bint wait_success)
    cdef _wait(self, timeout=*)
 
-   # Unreleated utilities
+   # Unrelated utilities
    cdef _allocate_lock(self)
    cdef greenlet _getcurrent(self)
    cdef _get_thread_ident(self)

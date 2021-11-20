@@ -16,7 +16,7 @@ class TestSelect(gevent.testing.timing.AbstractGenericWaitTestCase):
 
 
 
-@greentest.skipOnWindows("Cant select on files")
+@greentest.skipOnWindows("Can't select on files")
 class TestSelectRead(gevent.testing.timing.AbstractGenericWaitTestCase):
 
     def wait(self, timeout):
@@ -48,7 +48,7 @@ class TestSelectRead(gevent.testing.timing.AbstractGenericWaitTestCase):
 
 
 @unittest.skipUnless(hasattr(select, 'poll'), "Needs poll")
-@greentest.skipOnWindows("Cant poll on files")
+@greentest.skipOnWindows("Can't poll on files")
 class TestPollRead(gevent.testing.timing.AbstractGenericWaitTestCase):
     def wait(self, timeout):
         # On darwin, the read pipe is reported as writable

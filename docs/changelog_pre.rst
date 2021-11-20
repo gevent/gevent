@@ -64,7 +64,7 @@ Release 0.13.2 (Jan 28, 2011)
 
 - Added :mod:`gevent.httplib` -- **experimental** support for libevent-http client (:issue:`9`). Thanks to **Tommie Gannert**, **Örjan Persson**.
 - Fixed crash on Mac OS X (:issue:`31`). Patch by **Alexey Borzenkov**.
-- Fixed compatiblity of :mod:`gevent.wsgi` with libevent2 (:issue:`62`).
+- Fixed compatibility of :mod:`gevent.wsgi` with libevent2 (:issue:`62`).
 - Fixed compilation issues with libevent2. Patch by **Ralf Schmitt**.
 - Fixed :mod:`pywsgi` not to use chunked transfer encoding in case of 304 and 204 responses as it creates a non-empty message body which is against RFC and causes some browsers to fail. Patch by **Nicholas Piël**.
 - Fixed :func:`socket.getaddrinfo` to handle ``AF_UNSPEC`` properly and resolve service names (:issue:`56`). Thanks to **Elizabeth Jennifer Myers**.
@@ -158,7 +158,7 @@ Release highlights:
 Backward-incompatible changes:
 
 - Blocking is now the default behaviour for the :meth:`Greenlet.kill` method and other kill* methods.
-- Changed the inteface of :class:`http.HTTPServer` to match the interface of other servers.
+- Changed the interface of :class:`http.HTTPServer` to match the interface of other servers.
 - Changed :class:`Pool`'s :meth:`spawn` method to block until there's a free slot.
 - Removed deprecated :func:`backdoor.backdoor_server` function.
 - Removed deprecated functions in :mod:`socket` module:
@@ -228,12 +228,12 @@ Backward-incompatible changes:
   - Changed the response to send 500 error upon deallocation, if no response was sent by the user.
   - Made :attr:`input_buffer` and :attr:`output_buffer` store and reuse the :class:`buffer` object they create.
   - Fixed :meth:`__str__` and meth:`__repr__` to include spaces where needed.
-  - :class:`http` class no longer has :meth:`set_cb` and :meth:`set_gencb`. Instead its contructor accepts *handle* which will be called on each request.
+  - :class:`http` class no longer has :meth:`set_cb` and :meth:`set_gencb`. Instead its constructor accepts *handle* which will be called on each request.
 
 :mod:`gevent.http` and :mod:`gevent.wsgi` modules:
 
 - Made :class:`HTTPServer` use ``"Connection: close"`` header by default.
-- Class :class:`HTTPServer` now derives from :class:`baseserver.BaseServer`. Thus its :meth:`start` method no longer accepts socket to listen on, it must be passed to the contructor.
+- Class :class:`HTTPServer` now derives from :class:`baseserver.BaseServer`. Thus its :meth:`start` method no longer accepts socket to listen on, it must be passed to the constructor.
 - The *spawn* argument now accepts a :class:`Pool` instance. While the pool is full, the server replies with 503 error.
 - The server no longer links to the greenlets it spawns to detect errors. Instead, it relies on :class:`http_request` which will send 500 reply when deallocated if the user hasn't send any.
 

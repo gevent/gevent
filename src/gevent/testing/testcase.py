@@ -205,7 +205,7 @@ class TestCaseMetaClass(type):
     # d) totalrefcount check
     def __new__(cls, classname, bases, classDict):
         # pylint and pep8 fight over what this should be called (mcs or cls).
-        # pylint gets it right, but we cant scope disable pep8, so we go with
+        # pylint gets it right, but we can't scope disable pep8, so we go with
         # its convention.
         # pylint: disable=bad-mcs-classmethod-argument
         timeout = classDict.get('__timeout__', 'NONE')

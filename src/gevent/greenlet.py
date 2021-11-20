@@ -388,7 +388,7 @@ class Greenlet(greenlet):
     ### Lifecycle
 
     if _PYPY:
-        # oops - pypy's .dead relies on __nonzero__ which we overriden above
+        # oops - pypy's .dead relies on __nonzero__ which we overridden above
         @property
         def dead(self):
             "Boolean indicating that the greenlet is dead and will not run again."

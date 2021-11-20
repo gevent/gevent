@@ -319,7 +319,7 @@
 - PyPy: Fix a ``DistutilsModuleError`` or ``ImportError`` if the CFFI
   module backing ``gevent.core`` needs to be compiled when the hub is
   initialized (due to a missing or invalid ``__pycache__`` directory).
-  Now, the module will be automtically compiled when gevent is
+  Now, the module will be automatically compiled when gevent is
   imported (this may produce compiler output on stdout). Reported in
   :issue:`619` by Thinh Nguyen and :issue:`631` by Andy Freeland, with
   contributions by Jay Oster and Matt Dupre.

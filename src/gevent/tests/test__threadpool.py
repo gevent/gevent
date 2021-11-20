@@ -284,7 +284,7 @@ class TestPool(_AbstractPoolTest):
         return str(x)
 
     def test_imap_unordered_sleep(self):
-        # testing that imap_unordered returns items in competion order
+        # testing that imap_unordered returns items in completion order
         result = list(self.pool.imap_unordered(self.sleep, [10, 1, 2]))
         if self.pool.size == 1:
             expected = ['10', '1', '2']

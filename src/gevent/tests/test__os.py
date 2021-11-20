@@ -49,7 +49,7 @@ class TestOS_tp(greentest.TestCase):
         producer.start()
         consumer = Greenlet(consume)
         consumer.start_later(1)
-        # If patching was not succesful, the producer will have filled
+        # If patching was not successful, the producer will have filled
         # the pipe before the consumer starts, and would block the entire
         # process. Therefore the next line would never finish.
         joinall([producer, consumer])

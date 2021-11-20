@@ -482,7 +482,7 @@ class TestCreateConnection(greentest.TestCase):
                 # where/why we would get '[errno -2] name or service
                 # not known' but it seems some systems generate that.
                 # https://github.com/gevent/gevent/issues/1389 Somehow
-                # extremly rarely we've also seen 'address already in
+                # extremely rarely we've also seen 'address already in
                 # use', which makes even less sense. The manylinux
                 # 2010 environment produces 'errno 99 Cannot assign
                 # requested address', which, I guess?

@@ -15,7 +15,7 @@ environment:
     # /E:ON and /V:ON options are not enabled in the batch script interpreter
     # See: http://stackoverflow.com/a/13751649/163740
     CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\appveyor\\run_with_env.cmd"
-    # Use a fixed hash seed for reproducability
+    # Use a fixed hash seed for reproducibility
     PYTHONHASHSEED: 8675309
     # Disable tests that use external network resources;
     # too often we get failures to resolve DNS names or failures

@@ -39,7 +39,7 @@ Waiting For Greenlets
 
 You can wait for a greenlet to finish with its :meth:`Greenlet.join`
 method. There are helper functions to join multiple greenlets or
-heterogenous collections of objects:
+heterogeneous collections of objects:
 
 - :func:`gevent.joinall`
 - :func:`gevent.wait`

@@ -8,7 +8,7 @@ here.
 Examples can specify that they need particular test resources to be enabled
 by commenting (one per line) ``# gevent-test-requires-resource: <resource>``;
 most commonly the resource will be ``network``. You can use this technique to specify
-non-existant resources for things that should never be tested.
+non-existent resources for things that should never be tested.
 """
 import re
 import os
