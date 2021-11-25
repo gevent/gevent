@@ -51,11 +51,6 @@ can be done in one line by installing the ``dev-requirements.txt`` file::
 
   (gevent-env) $ pip install -r dev-requirements.txt
 
-.. warning::
-
-   This pip command does not work with pip 19.1. Either use pip 19.0
-   or below, or use pip 19.1.1 with ``--no-use-pep517``. See `issue
-   1412 <https://github.com/gevent/gevent/issues/1412>`_.
 
 Making Changes
 ==============
