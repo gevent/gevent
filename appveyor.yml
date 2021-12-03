@@ -155,7 +155,7 @@ install:
       }
       if ("${env:PYTHON_ID}" -eq "pypy") {
         if (!(Test-Path "${env:PYTMP}\pypy2-v7.3.1-win32.zip")) {
-          (New-Object Net.WebClient).DownloadFile('https://bitbucket.org/pypy/pypy/downloads/pypy2.7-v7.3.1-win32.zip', "${env:PYTMP}\pypy2-v7.3.1-win32.zip");
+          (New-Object Net.WebClient).DownloadFile('https://downloads.python.org/pypy/pypy2.7-v7.3.1-win32.zip', "${env:PYTMP}\pypy2-v7.3.1-win32.zip");
         }
         7z x -y "${env:PYTMP}\pypy2-v7.3.1-win32.zip" -oC:\ | Out-Null;
       }
