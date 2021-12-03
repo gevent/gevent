@@ -20,7 +20,7 @@ export PIP_NO_PYTHON_VERSION_WARNING=1
 export PIP_NO_WARN_SCRIPT_LOCATION=1
 
 # Build configuration.
-export CC="ccache gcc"
+export CC="ccache `which gcc`"
 export LDSHARED="$CC -shared"
 export LDCCSHARED="$LDSHARED"
 export LDCXXSHARED="$LDSHARED"
