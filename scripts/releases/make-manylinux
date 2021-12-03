@@ -108,7 +108,7 @@ if [ -d /gevent -a -d /opt/python ]; then
     mkdir /gevent/wheelhouse
     OPATH="$PATH"
     which auditwheel
-    for variant in `ls -d /opt/python/cp{27,36,37,38,39}*`; do
+    for variant in `ls -d /opt/python/cp{310,27,36,37,38,39}*`; do
         export PATH="$variant/bin:$OPATH"
         echo "Building $variant $(python --version)"
 

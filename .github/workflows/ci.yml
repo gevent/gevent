@@ -524,7 +524,10 @@ jobs:
         # An alternate way to do this is to run the container directly with a uses:
         # and then the script runs inside it. That may work better with caching.
         # See https://github.com/pyca/bcrypt/blob/f6b5ee2eda76d077c531362ac65e16f045cf1f29/.github/workflows/wheel-builder.yml
-        # The 2010 image is the last one that comes with Python 2.7.
+        # The 2010 image is the last one that comes with Python 2.7,
+        # and only up through the tag 2021-02-06-3d322a5.
+        # Unfortunately, this does not include Python 3.10, and the
+        # images that include Python 3.10 don't have 2.7. Sigh.
         env:
           DOCKER_IMAGE: quay.io/pypa/manylinux2010_x86_64
         run: scripts/releases/make-manylinux
