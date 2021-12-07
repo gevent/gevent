@@ -1,0 +1,1 @@
+Try to avoid linking to two different Python runtime DLLs on Windows.
