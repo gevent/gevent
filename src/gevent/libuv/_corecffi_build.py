@@ -282,6 +282,7 @@ elif WIN:
     # cause the Windows DLL loader to search the entire PATH for a DLL with
     # that name. This might end up bringing a second, ABI-incompatible Python
     # version into the process, which can easily lead to crashes.
+    # See https://github.com/gevent/gevent/pull/1814/files
     _define_macro('_CFFI_NO_LIMITED_API', 1)
 
     _define_macro('_GNU_SOURCE', 1)
