@@ -45,20 +45,23 @@ class Test(greentest.TestCase):
 
         # We generated some warnings
         if greentest.PY3:
-            self.assertEqual(all_warnings,
-                             ['Monkey-patching outside the main native thread. Some APIs will not be '
-                              'available. Expect a KeyError to be printed at shutdown.',
-                              'Monkey-patching not on the main thread; threading.main_thread().join() '
-                              'will hang from a greenlet'])
+            self.assertEqual(
+                all_warnings,
+                ['Monkey-patching outside the main native thread. Some APIs will not be '
+                 'available. Expect a KeyError to be printed at shutdown.',
+                 'Monkey-patching not on the main thread; threading.main_thread().join() '
+                 'will hang from a greenlet'])
         else:
-            self.assertEqual(all_warnings,
-                             ['Monkey-patching outside the main native thread. Some APIs will not be '
-                              'available. Expect a KeyError to be printed at shutdown.'])
+            self.assertEqual(
+                all_warnings,
+                ['Monkey-patching outside the main native thread. Some APIs will not be '
+                 'available. Expect a KeyError to be printed at shutdown.'])
 
 
         # Manual clean up so we don't get a KeyError
         del threading._active[current_id]
         threading._active[(getattr(threading, 'get_ident', None) or threading._get_ident)()] = current
+
 
 
 if __name__ == '__main__':

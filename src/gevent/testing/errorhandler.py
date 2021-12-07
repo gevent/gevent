@@ -26,7 +26,7 @@ def wrap_error_fatal(method):
     system_error = get_hub_class().SYSTEM_ERROR
 
     @wraps(method)
-    def wrapper(self, *args, **kwargs):
+    def fatal_error_wrapper(self, *args, **kwargs):
         # XXX should also be able to do gevent.SYSTEM_ERROR = object
         # which is a global default to all hubs
         get_hub_class().SYSTEM_ERROR = object
@@ -34,7 +34,7 @@ def wrap_error_fatal(method):
             return method(self, *args, **kwargs)
         finally:
             get_hub_class().SYSTEM_ERROR = system_error
-    return wrapper
+    return fatal_error_wrapper
 
 
 def wrap_restore_handle_error(method):
@@ -42,7 +42,7 @@ def wrap_restore_handle_error(method):
     from gevent import getcurrent
 
     @wraps(method)
-    def wrapper(self, *args, **kwargs):
+    def restore_fatal_error_wrapper(self, *args, **kwargs):
         try:
             return method(self, *args, **kwargs)
         finally:
@@ -54,4 +54,4 @@ def wrap_restore_handle_error(method):
                 pass
         if self.peek_error()[0] is not None:
             getcurrent().throw(*self.peek_error()[1:])
-    return wrapper
+    return restore_fatal_error_wrapper

@@ -862,6 +862,7 @@ def patch_thread(threading=True, _threading_local=True, Event=True, logging=True
         # gevent.threading.
         greenlet = __import__('greenlet')
         already_patched = is_object_patched('threading', '_shutdown')
+        orig_shutdown = threading_mod._shutdown
 
         if orig_current_thread == threading_mod.main_thread() and not already_patched:
             main_thread = threading_mod.main_thread()
@@ -879,7 +880,7 @@ def patch_thread(threading=True, _threading_local=True, Event=True, logging=True
             # C data structure).
             main_thread._tstate_lock = threading_mod.Lock()
             main_thread._tstate_lock.acquire()
-            orig_shutdown = threading_mod._shutdown
+
             def _shutdown():
                 # Release anyone trying to join() me,
                 # and let us switch to them.
@@ -932,6 +933,23 @@ def patch_thread(threading=True, _threading_local=True, Event=True, logging=True
             _queue_warning("Monkey-patching not on the main thread; "
                            "threading.main_thread().join() will hang from a greenlet",
                            _warnings)
+
+            main_thread = threading_mod.main_thread()
+            def _shutdown():
+                # We've patched get_ident but *did not* patch the
+                # main_thread.ident value. Beginning in Python 3.9.8
+                # and then later releases (3.10.1, probably), the
+                # _main_thread object is only _stop() if the ident of
+                # the current thread (the *real* main thread) matches
+                # the ident of the _main_thread object. But without doing that,
+                # the main thread's shutdown lock (threading._shutdown_locks) is never
+                # removed *or released*, thus hanging the interpreter.
+                # XXX: There's probably a better way to do this. Probably need to take a
+                # step back and look at the whole picture.
+                main_thread._ident = threading_mod.get_ident()
+                orig_shutdown()
+                patch_item(threading_mod, '_shutdown', orig_shutdown)
+            patch_item(threading_mod, '_shutdown', _shutdown)
 
     from gevent import events
     _notify_patch(events.GeventDidPatchModuleEvent('thread', gevent_thread_mod, thread_mod))

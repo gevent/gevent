@@ -177,11 +177,11 @@ def _wrap_timeout(timeout, method):
         return method
 
     @wraps(method)
-    def wrapper(self, *args, **kwargs):
+    def timeout_wrapper(self, *args, **kwargs):
         with TestTimeout(timeout, method):
             return method(self, *args, **kwargs)
 
-    return wrapper
+    return timeout_wrapper
 
 def _get_class_attr(classDict, bases, attr, default=AttributeError):
     NONE = object()

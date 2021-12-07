@@ -173,6 +173,10 @@ def get_python_version():
 
     return version
 
+# XXX: In Python 3.10, distutils is deprecated and slated for removal in
+# 3.12. The suggestion is to use setuptools, but it only has LooseVersion
+# in an internal package and suggests using the new dependency of 'packaging'
+
 def libev_supports_linux_aio():
     # libev requires kernel 4.19 or above to be able to support
     # linux AIO. It can still be compiled in, but will fail to create
