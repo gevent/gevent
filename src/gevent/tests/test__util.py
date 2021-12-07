@@ -19,6 +19,7 @@ from greenlet import getcurrent
 from gevent._compat import NativeStrIO
 
 class MyLocal(local.local):
+    # pylint:disable=disallowed-name
     def __init__(self, foo):
         self.foo = foo
 

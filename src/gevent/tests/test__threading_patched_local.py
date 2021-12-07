@@ -14,6 +14,9 @@ def func():
         raise AssertionError('localdata.x must raise AttributeError')
     except AttributeError:
         pass
+    # We really want to check this is exactly an empty dict,
+    # not just anything falsey
+    # pylint:disable=use-implicit-booleaness-not-comparison
     assert localdata.__dict__ == {}, localdata.__dict__
     success.append(1)
 
