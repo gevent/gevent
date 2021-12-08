@@ -42,7 +42,7 @@ environment:
 
     # 64-bit
     - PYTHON: "C:\\Python310-x64"
-      PYTHON_VERSION: "3.10.0rc1"
+      PYTHON_VERSION: "3.10.0"
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019

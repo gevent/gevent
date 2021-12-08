@@ -145,7 +145,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: [2.7, pypy-2.7, pypy-3.6, 3.6, 3.7, 3.8, 3.9, '3.10.0-rc.1']
+        python-version: [2.7, pypy-2.7, pypy-3.6, 3.6, 3.7, 3.8, 3.9, '3.10.0']
         # ubuntu-latest is at least 20.04. But this breaks the SSL
         # tests because Ubuntu increased the default OpenSSL
         # strictness.
@@ -174,7 +174,7 @@ jobs:
           - os: ubuntu-18.04
             python-version: 3.9
           - os: ubuntu-18.04
-            python-version: '3.10.0-rc.1'
+            python-version: '3.10.0'
     steps:
       - name: checkout
         uses: actions/checkout@v2
