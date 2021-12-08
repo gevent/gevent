@@ -262,7 +262,24 @@ if OSX:
         'test_ssl.SimpleBackgroundTests.test_connect_capath',
         'test_ssl.SimpleBackgroundTests.test_connect_with_context',
     ]
+    if PYPY and PY2:
+        disabled_tests += [
+            # This is broken in a standard download of PyPy.
+            'test_subprocess.ProcessTestCase.test_executable_with_cwd',
+        ]
 
+if PYPY and PY2 and WIN:
+    disabled_tests += [
+        # XXX: New in PyPy 7.3.7. This times out. This is testing for
+        # whether \0 in environment keys or values are excluded; they
+        # are, before any waiting is done. The same goes for an '=' in
+        # the key. It looks like we "hang" on the last clause that
+        # tests when there is an '=' in the *value*. It's utterly
+        # unclear to me why that causes an issue; we use the same
+        # underlying CreateProcess call that PyPy itself does, and
+        # no-where before that is the environment manipulated
+        'test_subprocess.ProcesstestCase.test_invalid_env',
+    ]
 
 if 'thread' in os.getenv('GEVENT_FILE', ''):
     disabled_tests += [

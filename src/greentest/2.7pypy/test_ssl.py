@@ -14,11 +14,12 @@ import gc
 import os
 import errno
 import pprint
-import tempfile
+import shutil
 import urllib2
 import traceback
 import weakref
 import platform
+import re
 import functools
 from contextlib import closing
 
@@ -72,9 +73,17 @@ NONEXISTINGCERT = data_file("XXXnonexisting.pem")
 BADKEY = data_file("badkey.pem")
 NOKIACERT = data_file("nokia.pem")
 NULLBYTECERT = data_file("nullbytecert.pem")
+TALOS_INVALID_CRLDP = data_file("talos-2019-0758.pem")
 
-DHFILE = data_file("dh1024.pem")
+DHFILE = data_file("ffdh3072.pem")
 BYTES_DHFILE = DHFILE.encode(sys.getfilesystemencoding())
+
+# Not defined in all versions of OpenSSL
+OP_NO_COMPRESSION = getattr(ssl, "OP_NO_COMPRESSION", 0)
+OP_SINGLE_DH_USE = getattr(ssl, "OP_SINGLE_DH_USE", 0)
+OP_SINGLE_ECDH_USE = getattr(ssl, "OP_SINGLE_ECDH_USE", 0)
+OP_CIPHER_SERVER_PREFERENCE = getattr(ssl, "OP_CIPHER_SERVER_PREFERENCE", 0)
+OP_ENABLE_MIDDLEBOX_COMPAT = getattr(ssl, "OP_ENABLE_MIDDLEBOX_COMPAT", 0)
 
 
 def handle_error(prefix):
@@ -151,6 +160,36 @@ def skip_if_broken_ubuntu_ssl(func):
     else:
         return func
 
+def skip_if_openssl_cnf_minprotocol_gt_tls1(func):
+    """Skip a test if the OpenSSL config MinProtocol is > TLSv1.
+    OS distros with an /etc/ssl/openssl.cnf and MinProtocol set often do so to
+    require TLSv1.2 or higher (Debian Buster).  Some of our tests for older
+    protocol versions will fail under such a config.
+    Alternative workaround: Run this test in a process with
+    OPENSSL_CONF=/dev/null in the environment.
+    """
+    @functools.wraps(func)
+    def f(*args, **kwargs):
+        openssl_cnf = os.environ.get("OPENSSL_CONF", "/etc/ssl/openssl.cnf")
+        try:
+            with open(openssl_cnf, "r") as config:
+                for line in config:
+                    match = re.match(r"MinProtocol\s*=\s*(TLSv\d+\S*)", line)
+                    if match:
+                        tls_ver = match.group(1)
+                        if tls_ver > "TLSv1":
+                            raise unittest.SkipTest(
+                                "%s has MinProtocol = %s which is > TLSv1." %
+                                (openssl_cnf, tls_ver))
+        except (EnvironmentError, UnicodeDecodeError) as err:
+            # no config file found, etc.
+            if support.verbose:
+                sys.stdout.write("\n Could not scan %s for MinProtocol: %s\n"
+                                 % (openssl_cnf, err))
+        return func(*args, **kwargs)
+    return f
+
+
 needs_sni = unittest.skipUnless(ssl.HAS_SNI, "SNI support needed for this test")
 
 
@@ -168,6 +207,13 @@ class BasicSocketTests(unittest.TestCase):
             ssl.OP_NO_COMPRESSION
         self.assertIn(ssl.HAS_SNI, {True, False})
         self.assertIn(ssl.HAS_ECDH, {True, False})
+        ssl.OP_NO_SSLv2
+        ssl.OP_NO_SSLv3
+        ssl.OP_NO_TLSv1
+        ssl.OP_NO_TLSv1_3
+        if ssl.OPENSSL_VERSION_INFO >= (1, 0, 1):
+            ssl.OP_NO_TLSv1_1
+            ssl.OP_NO_TLSv1_2
 
     def test_random(self):
         v = ssl.RAND_status()
@@ -194,9 +240,9 @@ class BasicSocketTests(unittest.TestCase):
                           (('commonName', 'localhost'),))
                         )
         # Note the next three asserts will fail if the keys are regenerated
-        self.assertEqual(p['notAfter'], asn1time('Oct  5 23:01:56 2020 GMT'))
-        self.assertEqual(p['notBefore'], asn1time('Oct  8 23:01:56 2010 GMT'))
-        self.assertEqual(p['serialNumber'], 'D7C7381919AFC24E')
+        self.assertEqual(p['notAfter'], asn1time('Aug 26 14:23:15 2028 GMT'))
+        self.assertEqual(p['notBefore'], asn1time('Aug 29 14:23:15 2018 GMT'))
+        self.assertEqual(p['serialNumber'], '98A7CF88C74A32ED')
         self.assertEqual(p['subject'],
                          ((('countryName', 'XY'),),
                           (('localityName', 'Castle Anthrax'),),
@@ -219,6 +265,27 @@ class BasicSocketTests(unittest.TestCase):
                          ('http://SVRIntl-G3-aia.verisign.com/SVRIntlG3.cer',))
         self.assertEqual(p['crlDistributionPoints'],
                          ('http://SVRIntl-G3-crl.verisign.com/SVRIntlG3.crl',))
+
+    def test_parse_cert_CVE_2019_5010(self):
+        p = ssl._ssl._test_decode_cert(TALOS_INVALID_CRLDP)
+        if support.verbose:
+            sys.stdout.write("\n" + pprint.pformat(p) + "\n")
+        self.assertEqual(
+            p,
+            {
+                'issuer': (
+                    (('countryName', 'UK'),), (('commonName', 'cody-ca'),)),
+                'notAfter': 'Jun 14 18:00:58 2028 GMT',
+                'notBefore': 'Jun 18 18:00:58 2018 GMT',
+                'serialNumber': '02',
+                'subject': ((('countryName', 'UK'),),
+                            (('commonName',
+                              'codenomicon-vm-2.test.lal.cisco.com'),)),
+                'subjectAltName': (
+                    ('DNS', 'codenomicon-vm-2.test.lal.cisco.com'),),
+                'version': 3
+            }
+        )
 
     def test_parse_cert_CVE_2013_4238(self):
         p = ssl._ssl._test_decode_cert(NULLBYTECERT)
@@ -334,6 +401,7 @@ class BasicSocketTests(unittest.TestCase):
             self.assertRaises(socket.error, ss.recvfrom_into, bytearray(b'x'), 1)
             self.assertRaises(socket.error, ss.send, b'x')
             self.assertRaises(socket.error, ss.sendto, b'x', ('0.0.0.0', 0))
+            self.assertRaises(NotImplementedError, ss.dup)
 
     def test_timeout(self):
         # Issue #8524: when creating an SSL socket, the timeout of the
@@ -986,6 +1054,13 @@ class ContextTests(unittest.TestCase):
 
 
     def test_load_dh_params(self):
+        filename = u'dhpäräm.pem'
+        fs_encoding = sys.getfilesystemencoding()
+        try:
+            filename.encode(fs_encoding)
+        except UnicodeEncodeError:
+            self.skipTest("filename %r cannot be encoded to the filesystem encoding %r" % (filename, fs_encoding))
+
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
         ctx.load_dh_params(DHFILE)
         if os.name != 'nt':
@@ -997,6 +1072,10 @@ class ContextTests(unittest.TestCase):
         self.assertEqual(cm.exception.errno, errno.ENOENT)
         with self.assertRaises(ssl.SSLError) as cm:
             ctx.load_dh_params(CERTFILE)
+        with support.temp_dir() as d:
+            fname = os.path.join(d, filename)
+            shutil.copy(DHFILE, fname)
+            ctx.load_dh_params(fname)
 
     @skip_if_broken_ubuntu_ssl
     def test_session_stats(self):
@@ -1141,16 +1220,29 @@ class ContextTests(unittest.TestCase):
             stats["x509"] += 1
             self.assertEqual(ctx.cert_store_stats(), stats)
 
+    def _assert_context_options(self, ctx):
+        self.assertEqual(ctx.options & ssl.OP_NO_SSLv2, ssl.OP_NO_SSLv2)
+        if OP_NO_COMPRESSION != 0:
+            self.assertEqual(ctx.options & OP_NO_COMPRESSION,
+                             OP_NO_COMPRESSION)
+        if OP_SINGLE_DH_USE != 0:
+            self.assertEqual(ctx.options & OP_SINGLE_DH_USE,
+                             OP_SINGLE_DH_USE)
+        if OP_SINGLE_ECDH_USE != 0:
+            self.assertEqual(ctx.options & OP_SINGLE_ECDH_USE,
+                             OP_SINGLE_ECDH_USE)
+        if OP_CIPHER_SERVER_PREFERENCE != 0:
+            self.assertEqual(ctx.options & OP_CIPHER_SERVER_PREFERENCE,
+                             OP_CIPHER_SERVER_PREFERENCE)
+
     def test_create_default_context(self):
         ctx = ssl.create_default_context()
+
         self.assertEqual(ctx.protocol, ssl.PROTOCOL_SSLv23)
         self.assertEqual(ctx.verify_mode, ssl.CERT_REQUIRED)
         self.assertTrue(ctx.check_hostname)
-        self.assertEqual(ctx.options & ssl.OP_NO_SSLv2, ssl.OP_NO_SSLv2)
-        self.assertEqual(
-            ctx.options & getattr(ssl, "OP_NO_COMPRESSION", 0),
-            getattr(ssl, "OP_NO_COMPRESSION", 0),
-        )
+        self._assert_context_options(ctx)
+
 
         with open(SIGNING_CA) as f:
             cadata = f.read().decode("ascii")
@@ -1158,40 +1250,24 @@ class ContextTests(unittest.TestCase):
                                          cadata=cadata)
         self.assertEqual(ctx.protocol, ssl.PROTOCOL_SSLv23)
         self.assertEqual(ctx.verify_mode, ssl.CERT_REQUIRED)
-        self.assertEqual(ctx.options & ssl.OP_NO_SSLv2, ssl.OP_NO_SSLv2)
-        self.assertEqual(
-            ctx.options & getattr(ssl, "OP_NO_COMPRESSION", 0),
-            getattr(ssl, "OP_NO_COMPRESSION", 0),
-        )
+        self._assert_context_options(ctx)
 
         ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         self.assertEqual(ctx.protocol, ssl.PROTOCOL_SSLv23)
         self.assertEqual(ctx.verify_mode, ssl.CERT_NONE)
-        self.assertEqual(ctx.options & ssl.OP_NO_SSLv2, ssl.OP_NO_SSLv2)
-        self.assertEqual(
-            ctx.options & getattr(ssl, "OP_NO_COMPRESSION", 0),
-            getattr(ssl, "OP_NO_COMPRESSION", 0),
-        )
-        self.assertEqual(
-            ctx.options & getattr(ssl, "OP_SINGLE_DH_USE", 0),
-            getattr(ssl, "OP_SINGLE_DH_USE", 0),
-        )
-        self.assertEqual(
-            ctx.options & getattr(ssl, "OP_SINGLE_ECDH_USE", 0),
-            getattr(ssl, "OP_SINGLE_ECDH_USE", 0),
-        )
+        self._assert_context_options(ctx)
 
     def test__create_stdlib_context(self):
         ctx = ssl._create_stdlib_context()
         self.assertEqual(ctx.protocol, ssl.PROTOCOL_SSLv23)
         self.assertEqual(ctx.verify_mode, ssl.CERT_NONE)
         self.assertFalse(ctx.check_hostname)
-        self.assertEqual(ctx.options & ssl.OP_NO_SSLv2, ssl.OP_NO_SSLv2)
+        self._assert_context_options(ctx)
 
         ctx = ssl._create_stdlib_context(ssl.PROTOCOL_TLSv1)
         self.assertEqual(ctx.protocol, ssl.PROTOCOL_TLSv1)
         self.assertEqual(ctx.verify_mode, ssl.CERT_NONE)
-        self.assertEqual(ctx.options & ssl.OP_NO_SSLv2, ssl.OP_NO_SSLv2)
+        self._assert_context_options(ctx)
 
         ctx = ssl._create_stdlib_context(ssl.PROTOCOL_TLSv1,
                                          cert_reqs=ssl.CERT_REQUIRED,
@@ -1199,12 +1275,12 @@ class ContextTests(unittest.TestCase):
         self.assertEqual(ctx.protocol, ssl.PROTOCOL_TLSv1)
         self.assertEqual(ctx.verify_mode, ssl.CERT_REQUIRED)
         self.assertTrue(ctx.check_hostname)
-        self.assertEqual(ctx.options & ssl.OP_NO_SSLv2, ssl.OP_NO_SSLv2)
+        self._assert_context_options(ctx)
 
         ctx = ssl._create_stdlib_context(purpose=ssl.Purpose.CLIENT_AUTH)
         self.assertEqual(ctx.protocol, ssl.PROTOCOL_SSLv23)
         self.assertEqual(ctx.verify_mode, ssl.CERT_NONE)
-        self.assertEqual(ctx.options & ssl.OP_NO_SSLv2, ssl.OP_NO_SSLv2)
+        self._assert_context_options(ctx)
 
     def test__https_verify_certificates(self):
         # Unit test to check the contect factory mapping
@@ -1592,34 +1668,6 @@ class NetworkedTests(unittest.TestCase):
                                         cert_reqs=ssl.CERT_NONE, ciphers="^$:,;?*'dorothyx")
                     s.connect(remote)
 
-    def test_algorithms(self):
-        # Issue #8484: all algorithms should be available when verifying a
-        # certificate.
-        # SHA256 was added in OpenSSL 0.9.8
-        if ssl.OPENSSL_VERSION_INFO < (0, 9, 8, 0, 15):
-            self.skipTest("SHA256 not available on %r" % ssl.OPENSSL_VERSION)
-        # sha256.tbs-internet.com needs SNI to use the correct certificate
-        if not ssl.HAS_SNI:
-            self.skipTest("SNI needed for this test")
-        # https://sha2.hboeck.de/ was used until 2011-01-08 (no route to host)
-        remote = ("sha256.tbs-internet.com", 443)
-        sha256_cert = os.path.join(os.path.dirname(__file__), "sha256.pem")
-        with support.transient_internet("sha256.tbs-internet.com"):
-            ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
-            ctx.verify_mode = ssl.CERT_REQUIRED
-            ctx.load_verify_locations(sha256_cert)
-            s = ctx.wrap_socket(socket.socket(socket.AF_INET),
-                                server_hostname="sha256.tbs-internet.com")
-            try:
-                s.connect(remote)
-                if support.verbose:
-                    sys.stdout.write("\nCipher with %r is %r\n" %
-                                     (remote, s.cipher()))
-                    sys.stdout.write("Certificate is:\n%s\n" %
-                                     pprint.pformat(s.getpeercert()))
-            finally:
-                s.close()
-
     def test_get_ca_certs_capath(self):
         # capath certs are loaded on request
         with support.transient_internet(REMOTE_HOST):
@@ -1684,23 +1732,43 @@ else:
                         self.sock, server_side=True)
                     self.server.selected_npn_protocols.append(self.sslconn.selected_npn_protocol())
                     self.server.selected_alpn_protocols.append(self.sslconn.selected_alpn_protocol())
-                except socket.error as e:
-                    # We treat ConnectionResetError as though it were an
-                    # SSLError - OpenSSL on Ubuntu abruptly closes the
-                    # connection when asked to use an unsupported protocol.
-                    #
-                    # XXX Various errors can have happened here, for example
-                    # a mismatching protocol version, an invalid certificate,
-                    # or a low-level bug. This should be made more discriminating.
-                    if not isinstance(e, ssl.SSLError) and e.errno != errno.ECONNRESET:
-                        raise
-                    self.server.conn_errors.append(e)
-                    if self.server.chatty:
-                        handle_error("\n server:  bad connection attempt from " + repr(self.addr) + ":\n")
-                    self.running = False
-                    self.server.stop()
-                    self.close()
-                    return False
+                except (ssl.SSLError, socket.error, OSError) as e:
+                    if e.errno in (errno.ECONNRESET, errno.EPIPE, errno.ESHUTDOWN):
+                        # Mimick Python 3:
+                        #
+                        #    except (ConnectionResetError, BrokenPipeError):
+                        #
+                        # We treat ConnectionResetError as though it were an
+                        # SSLError - OpenSSL on Ubuntu abruptly closes the
+                        # connection when asked to use an unsupported protocol.
+                        #
+                        # BrokenPipeError is raised in TLS 1.3 mode, when OpenSSL
+                        # tries to send session tickets after handshake.
+                        # https://github.com/openssl/openssl/issues/6342
+                        self.server.conn_errors.append(str(e))
+                        if self.server.chatty:
+                            handle_error(
+                                "\n server:  bad connection attempt from "
+                                + repr(self.addr) + ":\n")
+                        self.running = False
+                        self.close()
+                        return False
+                    else:
+                        # OSError may occur with wrong protocols, e.g. both
+                        # sides use PROTOCOL_TLS_SERVER.
+                        #
+                        # XXX Various errors can have happened here, for example
+                        # a mismatching protocol version, an invalid certificate,
+                        # or a low-level bug. This should be made more discriminating.
+                        if not isinstance(e, ssl.SSLError) and e.errno != errno.ECONNRESET:
+                            raise
+                        self.server.conn_errors.append(e)
+                        if self.server.chatty:
+                            handle_error("\n server:  bad connection attempt from " + repr(self.addr) + ":\n")
+                        self.running = False
+                        self.server.stop()
+                        self.close()
+                        return False
                 else:
                     if self.server.context.verify_mode == ssl.CERT_REQUIRED:
                         cert = self.sslconn.getpeercert()
@@ -1799,7 +1867,7 @@ else:
             else:
                 self.context = ssl.SSLContext(ssl_version
                                               if ssl_version is not None
-                                              else ssl.PROTOCOL_TLSv1)
+                                              else ssl.PROTOCOL_TLS)
                 self.context.verify_mode = (certreqs if certreqs is not None
                                             else ssl.CERT_NONE)
                 if cacerts:
@@ -1959,6 +2027,8 @@ else:
             self.join()
             if support.verbose:
                 sys.stdout.write(" cleanup: successfully joined.\n")
+            # make sure that ConnectionHandler is removed from socket_map
+            asyncore.close_all(ignore_all=True)
 
         def start(self, flag=None):
             self.flag = flag
@@ -2223,10 +2293,10 @@ else:
             connect to it with a wrong client certificate fails.
             """
             certfile = os.path.join(os.path.dirname(__file__) or os.curdir,
-                                       "wrongcert.pem")
-            server = ThreadedEchoServer(CERTFILE,
+                                       "keycert.pem")
+            server = ThreadedEchoServer(SIGNED_CERTFILE,
                                         certreqs=ssl.CERT_REQUIRED,
-                                        cacerts=CERTFILE, chatty=False,
+                                        cacerts=SIGNING_CA, chatty=False,
                                         connectionchatty=False)
             with server, \
                     closing(socket.socket()) as sock, \
@@ -2314,6 +2384,7 @@ else:
                                client_options=ssl.OP_NO_TLSv1)
 
         @skip_if_broken_ubuntu_ssl
+        @skip_if_openssl_cnf_minprotocol_gt_tls1
         def test_protocol_sslv23(self):
             """Connecting to an SSLv23 server with various client options"""
             if support.verbose:
@@ -2391,6 +2462,7 @@ else:
         @skip_if_broken_ubuntu_ssl
         @unittest.skipUnless(hasattr(ssl, "PROTOCOL_TLSv1_1"),
                              "TLS version 1.1 not supported.")
+        @skip_if_openssl_cnf_minprotocol_gt_tls1
         def test_protocol_tlsv1_1(self):
             """Connecting to a TLSv1.1 server with various client options.
                Testing against older TLS versions."""
@@ -2657,6 +2729,7 @@ else:
                 self.assertEqual(s.read(-1, buffer), len(data))
                 self.assertEqual(buffer, data)
 
+                self.assertRaises(NotImplementedError, s.dup)
                 s.write(b"over\n")
 
                 self.assertRaises(ValueError, s.recv, -1)
@@ -2753,7 +2826,7 @@ else:
                 # Block on the accept and wait on the connection to close.
                 evt.set()
                 remote[0], peer[0] = server.accept()
-                remote[0].recv(1)
+                remote[0].send(remote[0].recv(4))
 
             t = threading.Thread(target=serve)
             t.start()
@@ -2761,6 +2834,8 @@ else:
             evt.wait()
             client = context.wrap_socket(socket.socket())
             client.connect((host, port))
+            client.send(b'data')
+            client.recv()
             client_addr = client.getsockname()
             client.close()
             t.join()
@@ -2784,19 +2859,24 @@ else:
                     sock.do_handshake()
                 self.assertEqual(cm.exception.errno, errno.ENOTCONN)
 
-        def test_default_ciphers(self):
-            context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
-            try:
-                # Force a set of weak ciphers on our client context
-                context.set_ciphers("DES")
-            except ssl.SSLError:
-                self.skipTest("no DES cipher available")
-            with ThreadedEchoServer(CERTFILE,
-                                    ssl_version=ssl.PROTOCOL_SSLv23,
-                                    chatty=False) as server:
-                with closing(context.wrap_socket(socket.socket())) as s:
-                    with self.assertRaises(ssl.SSLError):
-                        s.connect((HOST, server.port))
+        def test_no_shared_ciphers(self):
+            server_context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
+            server_context.load_cert_chain(SIGNED_CERTFILE)
+            client_context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
+            client_context.verify_mode = ssl.CERT_REQUIRED
+            client_context.check_hostname = True
+
+            # OpenSSL enables all TLS 1.3 ciphers, enforce TLS 1.2 for test
+            client_context.options |= ssl.OP_NO_TLSv1_3
+            # Force different suites on client and master
+            client_context.set_ciphers("AES128")
+            server_context.set_ciphers("AES256")
+            with ThreadedEchoServer(context=server_context) as server:
+                s = client_context.wrap_socket(
+                        socket.socket(),
+                        server_hostname="localhost")
+                with self.assertRaises(ssl.SSLError):
+                    s.connect((HOST, server.port))
             self.assertIn("no shared cipher", str(server.conn_errors[0]))
 
         def test_version_basic(self):
@@ -2814,12 +2894,34 @@ else:
                     self.assertEqual(s.version(), 'TLSv1')
                 self.assertIs(s.version(), None)
 
+        @unittest.skipUnless(ssl.HAS_TLSv1_3,
+                             "test requires TLSv1.3 enabled OpenSSL")
+        def test_tls1_3(self):
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS)
+            context.load_cert_chain(CERTFILE)
+            # disable all but TLS 1.3
+            context.options |= (
+                ssl.OP_NO_TLSv1 | ssl.OP_NO_TLSv1_1 | ssl.OP_NO_TLSv1_2
+            )
+            with ThreadedEchoServer(context=context) as server:
+                s = context.wrap_socket(socket.socket())
+                with closing(s):
+                    s.connect((HOST, server.port))
+                    self.assertIn(s.cipher()[0], [
+                        'TLS_AES_256_GCM_SHA384',
+                        'TLS_CHACHA20_POLY1305_SHA256',
+                        'TLS_AES_128_GCM_SHA256',
+                    ])
+
         @unittest.skipUnless(ssl.HAS_ECDH, "test requires ECDH-enabled OpenSSL")
         def test_default_ecdh_curve(self):
             # Issue #21015: elliptic curve-based Diffie Hellman key exchange
             # should be enabled by default on SSL contexts.
             context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
             context.load_cert_chain(CERTFILE)
+            # TLSv1.3 defaults to PFS key agreement and no longer has KEA in
+            # cipher name.
+            context.options |= ssl.OP_NO_TLSv1_3
             # Prior to OpenSSL 1.0.0, ECDH ciphers have to be enabled
             # explicitly using the 'ECCdraft' cipher alias.  Otherwise,
             # our default cipher list should prefer ECDH-based ciphers
@@ -2968,8 +3070,9 @@ else:
                 except ssl.SSLError as e:
                     stats = e
 
-                if expected is None and IS_OPENSSL_1_1:
-                    # OpenSSL 1.1.0 raises handshake error
+                if (expected is None and IS_OPENSSL_1_1
+                        and ssl.OPENSSL_VERSION_INFO < (1, 1, 0, 6)):
+                    # OpenSSL 1.1.0 to 1.1.0e raises handshake error
                     self.assertIsInstance(stats, ssl.SSLError)
                 else:
                     msg = "failed trying %s (s) and %s (c).\n" \

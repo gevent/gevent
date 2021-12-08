@@ -41,12 +41,27 @@ environment:
     # a later point release.
 
     # 64-bit
+    - PYTHON: "C:\\pypy2.7-v7.3.6-win64"
+      PYTHON_ID: "pypy"
+      PYTHON_EXE: pypy
+      PYTHON_VERSION: "2.7.x"
+      PYTHON_ARCH: "64"
+      # If we leave this at 2015, we hit a bug in distutils+PyPy:
+      # https://ci.appveyor.com/project/jamadden/gevent/builds/41819005/job/nvv7udya8ylwoqhh
+      #      File "C:\pypy2.7-v7.3.6-win64\lib-python\2.7\distutils\_msvccompiler.py", line 122, in _get_vc_env
+      #     vcvarsall, _ = _find_vcvarsall(plat_spec)
+      #   File "C:\pypy2.7-v7.3.6-win64\lib-python\2.7\distutils\_msvccompiler.py", line 102, in _find_vcvarsall
+      #     best_version, best_dir = _find_vc2015()
+      #   File "C:\pypy2.7-v7.3.6-win64\lib-python\2.7\distutils\_msvccompiler.py", line 35, in _find_vc2015
+      #     access=winreg.KEY_READ | winreg.KEY_WOW64_32KEY
+      # TypeError: OpenKey() got an unexpected keyword argument 'access'
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+
     - PYTHON: "C:\\Python310-x64"
       PYTHON_VERSION: "3.10.0"
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-
 
     - PYTHON: "C:\\Python39-x64"
       PYTHON_VERSION: "3.9.x"
@@ -76,12 +91,6 @@ environment:
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
 
-    # 32-bit
-    - PYTHON: "C:\\pypy2.7-v7.3.1-win32"
-      PYTHON_ID: "pypy"
-      PYTHON_EXE: pypy
-      PYTHON_VERSION: "2.7.x"
-      PYTHON_ARCH: "32"
 
     # 32-bit, wheel only (no testing)
     - PYTHON: "C:\\Python39"
@@ -154,10 +163,10 @@ install:
         New-Item -ItemType directory -Path "$env:PYTMP" | Out-Null;
       }
       if ("${env:PYTHON_ID}" -eq "pypy") {
-        if (!(Test-Path "${env:PYTMP}\pypy2-v7.3.1-win32.zip")) {
-          (New-Object Net.WebClient).DownloadFile('https://downloads.python.org/pypy/pypy2.7-v7.3.1-win32.zip', "${env:PYTMP}\pypy2-v7.3.1-win32.zip");
+        if (!(Test-Path "${env:PYTMP}\pypy2-v7.3.6-win64.zip")) {
+          (New-Object Net.WebClient).DownloadFile('https://downloads.python.org/pypy/pypy2.7-v7.3.6-win64.zip', "${env:PYTMP}\pypy2-v7.3.6-win64.zip");
         }
-        7z x -y "${env:PYTMP}\pypy2-v7.3.1-win32.zip" -oC:\ | Out-Null;
+        7z x -y "${env:PYTMP}\pypy2-v7.3.6-win64.zip" -oC:\ | Out-Null;
       }
       elseif (-not(Test-Path($env:PYTHON))) {
         & appveyor\install.ps1;
@@ -200,7 +209,7 @@ test_script:
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -c "import gevent.core; print(gevent.core.loop)"
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -c "import gevent; print(gevent.config.settings['resolver'].get_options())"
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -c "from gevent._compat import get_clock_info; print(get_clock_info('perf_counter'))"
-  - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -mgevent.tests --second-chance --config known_failures.py --quiet
+  - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -mgevent.tests --second-chance --config known_failures.py
 
 after_test:
   # pycparser can't be built correctly in an isolated environment.

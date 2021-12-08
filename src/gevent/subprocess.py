@@ -64,6 +64,7 @@ from gevent._compat import PY35
 from gevent._compat import PY36
 from gevent._compat import PY37
 from gevent._compat import PY38
+from gevent._compat import PYPY
 from gevent._compat import reraise
 from gevent._compat import fsdecode
 from gevent._compat import fsencode
@@ -1275,6 +1276,33 @@ class Popen(object):
                     # stability of your system.  Cost is Ctrl+C wont
                     # kill children.
                     creationflags |= CREATE_NEW_CONSOLE
+
+            # PyPy 2.7 7.3.6 is now producing these errors. This
+            # happens automatically on Posix platforms, and is built
+            # in to the CreateProcess call on CPython 2 & 3. It's not
+            # clear why we don't pick it up for free from the
+            # CreateProcess call on PyPy. Currently we don't test PyPy3 on Windows,
+            # so we don't know for sure if it's built into CreateProcess there.
+            if PYPY:
+                def _check_nul(s, err_kind=(ValueError if PY3 else TypeError)):
+                    if not s:
+                        return
+                    nul = b'\0' if isinstance(s, bytes) else '\0'
+                    if nul in s:
+                        # PyPy 2 expects a TypeError; Python 3 raises ValueError always.
+                        raise err_kind("argument must be a string without NUL characters")
+                def _check_env():
+                    if not env:
+                        return
+                    for k, v in env.items():
+                        _check_nul(k)
+                        _check_nul(v)
+                        if '=' in k:
+                            raise ValueError("'=' not allowed in environment keys")
+
+                _check_nul(executable)
+                _check_nul(args)
+                _check_env()
 
             # Start the process
             try:
