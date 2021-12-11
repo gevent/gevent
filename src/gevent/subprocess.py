@@ -626,7 +626,7 @@ class Popen(object):
        it may make many system calls and/or trips around the event loop to accomplish this).
        See :issue:`1711`.
 
-    .. versionchanged:: NEXT
+    .. versionchanged:: 21.12.0
        Added the ``pipesize`` argument for compatibility with Python 3.10.
        This is ignored on all platforms.
     """

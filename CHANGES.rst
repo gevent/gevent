@@ -6,6 +6,50 @@
 
 .. towncrier release notes start
 
+21.12.0 (2021-12-11)
+====================
+
+
+Features
+--------
+
+- Update autoconf files for Apple Silicon Macs. Note that while there
+  are reports of compiling gevent on Apple Silicon Macs now, this is
+  *not* a tested configuration. There may be some remaining issues with
+  CFFI on some systems as well.
+  See :issue:`1721`.
+- Build and upload CPython 3.10 binary manylinux wheels.
+
+  Unfortunately, this required us to stop building and uploading CPython
+  2.7 binary manylinux wheels. Binary wheels for 2.7 continue to be
+  available for Windows and macOS.
+  See :issue:`1822`.
+- Test and distribute musllinux_1_1 wheels.
+  See :issue:`1837`.
+- Update the tested versions of PyPy2 and PyPy3. For PyPy2, there should
+  be no user visible changes, but for PyPy3, support has moved from
+  Python 3.6 to Python 3.7.
+  See :issue:`1843`.
+
+
+Bugfixes
+--------
+
+- Try to avoid linking to two different Python runtime DLLs on Windows.
+  See :issue:`1814`.
+- Stop compiling manylinux wheels with ``-ffast-math.`` This was
+  implicit in ``-Ofast``, but could alter the global state of the
+  process. Analysis and fix thanks to Ilya Konstantinov.
+  See :issue:`1820`.
+- Fix hanging the interpreter on shutdown if gevent monkey patching
+  occurred on a non-main thread in Python 3.9.8 and above. (Note that
+  this is not a recommended practice.)
+  See :issue:`1839`.
+
+
+----
+
+
 21.8.0 (2021-08-05)
 ===================
 

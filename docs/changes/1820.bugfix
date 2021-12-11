@@ -1,3 +1,0 @@
-Stop compiling manylinux wheels with ``-ffast-math.`` This was
-implicit in ``-Ofast``, but could alter the global state of the
-process. Analysis and fix thanks to Ilya Konstantinov.
