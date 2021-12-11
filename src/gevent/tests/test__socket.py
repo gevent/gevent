@@ -478,6 +478,7 @@ class TestCreateConnection(greentest.TestCase):
 
     def test_refuses(self, **conn_args):
         connect_port = support.find_unused_port()
+
         with self.assertRaisesRegex(
                 socket.error,
                 # We really expect "connection refused". It's unclear
@@ -488,7 +489,9 @@ class TestCreateConnection(greentest.TestCase):
                 # use', which makes even less sense. The manylinux
                 # 2010 environment produces 'errno 99 Cannot assign
                 # requested address', which, I guess?
-                'refused|not known|already in use|assign'
+                # Meanwhile, the musllinux_1 environment produces
+                # '[Errno 99] Address not available'
+                'refused|not known|already in use|assign|not available'
         ):
             socket.create_connection(
                 (greentest.DEFAULT_BIND_ADDR, connect_port),

@@ -78,18 +78,24 @@ if [ -d /gevent -a -d /opt/python ]; then
     fi
     ls -ld /cache
     ls -ld /cache/pip
-    yum -y install libffi-devel
-    # Some images/archs (specificaly 2014_aarch64) don't have ccache;
-    # This also seems to have vanished for manylinux_2010 x64/64 after November 30
-    # 2020 when the OS went EOL and the package repos switched to the "vault"
-    if [ -n "$SLOW_ARM" ]; then
-        # This provides access to ccache for the 2014 image
-        echo Installing epel
-        rpm -Uvh https://dl.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-7-14.noarch.rpm
+    if [ -e /usr/bin/yum ]; then
+        yum -y install libffi-devel
+        # Some images/archs (specificaly 2014_aarch64) don't have ccache;
+        # This also seems to have vanished for manylinux_2010 x64/64 after November 30
+        # 2020 when the OS went EOL and the package repos switched to the "vault"
+        if [ -n "$SLOW_ARM" ]; then
+            # This provides access to ccache for the 2014 image
+            echo Installing epel
+            rpm -Uvh https://dl.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-7-14.noarch.rpm
+        fi
+        yum -y install ccache || export CC=gcc LDSHARED="gcc -shared" LDCXXSHARED="gcc -shared"
+        # On Fedora Rawhide (F33)
+        # yum install python39 python3-devel gcc kernel-devel kernel-headers make diffutils file
     fi
-    yum -y install ccache || export CC=gcc LDSHARED="gcc -shared" LDCXXSHARED="gcc -shared"
-    # On Fedora Rawhide (F33)
-    # yum install python39 python3-devel gcc kernel-devel kernel-headers make diffutils file
+    if [ -e /sbin/apk ]; then
+        # the muslinux image
+        apk add --no-cache build-base libffi-dev ccache
+    fi
 
     echo Current environment
     env | sort
@@ -166,5 +172,5 @@ fi
 # Travis CI and locally we want `-ti`, but github actions doesn't have a TTY, so one
 # or the other of the arguments causes this to fail with 'input device is not a TTY'
 # Pas through whether we're running on github or not to help with caching.
-docker run --rm -e GEVENTSETUP_DISABLE_ARES -e GITHUB_ACTIONS -e GEVENTTEST_SKIP_ALL -e DOCKER_IMAGE -v "$(pwd):/gevent" -v "$LCACHE:/cache" -v "$HOME/.ccache:/ccache" ${DOCKER_IMAGE:-quay.io/pypa/manylinux2010_x86_64} /gevent/scripts/releases/$(basename $0)
+docker run --rm -e GEVENT_MANYLINUX_NAME -e GEVENTSETUP_DISABLE_ARES -e GITHUB_ACTIONS -e GEVENTTEST_SKIP_ALL -e DOCKER_IMAGE -v "$(pwd):/gevent" -v "$LCACHE:/cache" -v "$HOME/.ccache:/ccache" ${DOCKER_IMAGE:-quay.io/pypa/manylinux2010_x86_64} /gevent/scripts/releases/$(basename $0)
 ls -l wheelhouse

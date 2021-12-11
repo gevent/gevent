@@ -121,6 +121,9 @@ RUNNING_ON_TRAVIS = os.environ.get('TRAVIS') or RUNNING_ON_GITHUB_ACTIONS
 RUNNING_ON_APPVEYOR = os.environ.get('APPVEYOR')
 RUNNING_ON_CI = RUNNING_ON_TRAVIS or RUNNING_ON_APPVEYOR
 RUNNING_ON_MANYLINUX = os.environ.get('GEVENT_MANYLINUX')
+# I'm not sure how to reliably auto-detect this, without
+# importing platform, something we don't want to do.
+RUNNING_ON_MUSLLINUX = os.environ.get('GEVENT_MANYLINUX_NAME') == 'musllinux'
 
 if RUNNING_ON_APPVEYOR:
     # We can't exec corecext on appveyor if we haven't run setup.py in
