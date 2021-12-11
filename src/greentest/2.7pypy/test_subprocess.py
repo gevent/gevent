@@ -2,6 +2,7 @@ import unittest
 from test import test_support
 import subprocess
 import sys
+import platform
 import signal
 import os
 import errno
@@ -9,6 +10,14 @@ import tempfile
 import time
 import re
 import sysconfig
+import textwrap
+
+try:
+    import ctypes
+except ImportError:
+    ctypes = None
+else:
+    import ctypes.util
 
 try:
     import resource
@@ -18,6 +27,11 @@ try:
     import threading
 except ImportError:
     threading = None
+
+try:
+    import _testcapi
+except ImportError:
+    _testcapi = None
 
 mswindows = (sys.platform == "win32")
 
@@ -43,6 +57,8 @@ class BaseTestCase(unittest.TestCase):
             inst.wait()
         subprocess._cleanup()
         self.assertFalse(subprocess._active, "subprocess._active not empty")
+        self.doCleanups()
+        test_support.reap_children()
 
     def assertStderrEqual(self, stderr, expected, msg=None):
         # In a debug build, stuff like "[6580 refs]" is printed to stderr at
@@ -379,6 +395,46 @@ class ProcessTestCase(BaseTestCase):
         self.addCleanup(p.stdout.close)
         self.assertEqual(p.stdout.read(), "orange")
 
+    def test_invalid_cmd(self):
+        # null character in the command name
+        cmd = sys.executable + '\0'
+        with self.assertRaises(TypeError):
+            subprocess.Popen([cmd, "-c", "pass"])
+
+        # null character in the command argument
+        with self.assertRaises(TypeError):
+            subprocess.Popen([sys.executable, "-c", "pass#\0"])
+
+    def test_invalid_env(self):
+        # null character in the enviroment variable name
+        newenv = os.environ.copy()
+        newenv["FRUIT\0VEGETABLE"] = "cabbage"
+        with self.assertRaises(TypeError):
+            subprocess.Popen([sys.executable, "-c", "pass"], env=newenv)
+
+        # null character in the enviroment variable value
+        newenv = os.environ.copy()
+        newenv["FRUIT"] = "orange\0VEGETABLE=cabbage"
+        with self.assertRaises(TypeError):
+            subprocess.Popen([sys.executable, "-c", "pass"], env=newenv)
+
+        # equal character in the enviroment variable name
+        newenv = os.environ.copy()
+        newenv["FRUIT=ORANGE"] = "lemon"
+        with self.assertRaises(ValueError):
+            subprocess.Popen([sys.executable, "-c", "pass"], env=newenv)
+
+        # equal character in the enviroment variable value
+        newenv = os.environ.copy()
+        newenv["FRUIT"] = "orange=lemon"
+        p = subprocess.Popen([sys.executable, "-c",
+                              'import sys, os;'
+                              'sys.stdout.write(os.getenv("FRUIT"))'],
+                             stdout=subprocess.PIPE,
+                             env=newenv)
+        stdout, stderr = p.communicate()
+        self.assertEqual(stdout, "orange=lemon")
+
     def test_communicate_stdin(self):
         p = subprocess.Popen([sys.executable, "-c",
                               'import sys;'
@@ -643,7 +699,7 @@ class ProcessTestCase(BaseTestCase):
                                  stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE)
             # ignore errors that indicate the command was not found
-            if c.exception.errno not in (errno.ENOENT, errno.EACCES):
+            if c.exception.errno not in (errno.ENOENT, errno.ENOTDIR, errno.EACCES):
                 raise c.exception
 
     @unittest.skipIf(threading is None, "threading required")
@@ -789,8 +845,11 @@ class _SuppressCoreFiles(object):
             kw = {stream: subprocess.PIPE}
             with subprocess.Popen(args, **kw) as process:
                 signal.alarm(1)
-                # communicate() will be interrupted by SIGALRM
-                process.communicate()
+                try:
+                    # communicate() will be interrupted by SIGALRM
+                    process.communicate()
+                finally:
+                    signal.alarm(0)
 
 
 @unittest.skipIf(mswindows, "POSIX specific tests")
@@ -1219,6 +1278,29 @@ class POSIXProcessTestCase(BaseTestCase):
         _, stderr = p2.communicate()
 
         self.assertEqual(p2.returncode, 0, "Unexpected error: " + repr(stderr))
+
+    @unittest.skipUnless(_testcapi is not None
+                         and hasattr(_testcapi, 'W_STOPCODE'),
+                         'need _testcapi.W_STOPCODE')
+    def test_stopped(self):
+        """Test wait() behavior when waitpid returns WIFSTOPPED; issue29335."""
+        args = [sys.executable, '-c', 'pass']
+        proc = subprocess.Popen(args)
+
+        # Wait until the real process completes to avoid zombie process
+        pid = proc.pid
+        pid, status = os.waitpid(pid, 0)
+        self.assertEqual(status, 0)
+
+        status = _testcapi.W_STOPCODE(3)
+
+        def mock_waitpid(pid, flags):
+            return (pid, status)
+
+        with test_support.swap_attr(os, 'waitpid', mock_waitpid):
+            returncode = proc.wait()
+
+        self.assertEqual(returncode, -3)
 
 
 @unittest.skipUnless(mswindows, "Windows specific tests")

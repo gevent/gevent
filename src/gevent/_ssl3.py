@@ -638,7 +638,6 @@ class SSLSocket(socket):
                     break
                 raise
 
-
         self._sslobj = None
 
         # The return value of shutting down the SSLObject is the

@@ -9,15 +9,13 @@ import select
 import signal
 import socket
 import tempfile
+import threading
 import unittest
 import socketserver
 
 import test.support
 from test.support import reap_children, reap_threads, verbose
-try:
-    import threading
-except ImportError:
-    threading = None
+
 
 test.support.requires("network")
 
@@ -48,11 +46,11 @@ def receive(sock, n, timeout=20):
 if HAVE_UNIX_SOCKETS and HAVE_FORKING:
     class ForkingUnixStreamServer(socketserver.ForkingMixIn,
                                   socketserver.UnixStreamServer):
-        _block_on_close = True
+        pass
 
     class ForkingUnixDatagramServer(socketserver.ForkingMixIn,
                                     socketserver.UnixDatagramServer):
-        _block_on_close = True
+        pass
 
 
 @contextlib.contextmanager
@@ -72,7 +70,6 @@ def simple_subprocess(testcase):
         testcase.assertEqual(72 << 8, status)
 
 
-@unittest.skipUnless(threading, 'Threading required for this test.')
 class SocketServerTest(unittest.TestCase):
     """Test all socket servers."""
 
@@ -105,8 +102,6 @@ class SocketServerTest(unittest.TestCase):
 
     def make_server(self, addr, svrcls, hdlrbase):
         class MyServer(svrcls):
-            _block_on_close = True
-
             def handle_error(self, request, client_address):
                 self.close_request(request)
                 raise
@@ -117,7 +112,12 @@ class SocketServerTest(unittest.TestCase):
                 self.wfile.write(line)
 
         if verbose: print("creating server")
-        server = MyServer(addr, MyHandler)
+        try:
+            server = MyServer(addr, MyHandler)
+        except PermissionError as e:
+            # Issue 29184: cannot bind() a Unix socket on Android.
+            self.skipTest('Cannot create server (%s, %s): %s' %
+                          (svrcls, addr, e))
         self.assertEqual(server.server_address, server.socket.getsockname())
         return server
 
@@ -302,7 +302,6 @@ class ErrorHandlerTest(unittest.TestCase):
 
     def tearDown(self):
         test.support.unlink(test.support.TESTFN)
-        reap_children()
 
     def test_sync_handled(self):
         BaseErrorTestServer(ValueError)
@@ -313,12 +312,10 @@ class ErrorHandlerTest(unittest.TestCase):
             BaseErrorTestServer(SystemExit)
         self.check_result(handled=False)
 
-    @unittest.skipUnless(threading, 'Threading required for this test.')
     def test_threading_handled(self):
         ThreadingErrorTestServer(ValueError)
         self.check_result(handled=True)
 
-    @unittest.skipUnless(threading, 'Threading required for this test.')
     def test_threading_not_handled(self):
         ThreadingErrorTestServer(SystemExit)
         self.check_result(handled=False)
@@ -340,8 +337,6 @@ class ErrorHandlerTest(unittest.TestCase):
 
 
 class BaseErrorTestServer(socketserver.TCPServer):
-    _block_on_close = True
-
     def __init__(self, exception):
         self.exception = exception
         super().__init__((HOST, 0), BadHandler)
@@ -384,7 +379,7 @@ class ThreadingErrorTestServer(socketserver.ThreadingMixIn,
 
 if HAVE_FORKING:
     class ForkingErrorTestServer(socketserver.ForkingMixIn, BaseErrorTestServer):
-        _block_on_close = True
+        pass
 
 
 class SocketWriterTest(unittest.TestCase):
@@ -405,7 +400,6 @@ class SocketWriterTest(unittest.TestCase):
         self.assertIsInstance(server.wfile, io.BufferedIOBase)
         self.assertEqual(server.wfile_fileno, server.request_fileno)
 
-    @unittest.skipUnless(threading, 'Threading required for this test.')
     def test_write(self):
         # Test that wfile.write() sends data immediately, and that it does
         # not truncate sends when interrupted by a Unix signal
