@@ -486,25 +486,27 @@ jobs:
           python -c 'import gevent.libuv.loop as CF; assert not CF.libuv.LIBUV_EMBED'
           python -mgevent.tests --second-chance
 
-  manylinux_x86_64:
+  linux_wheels:
     runs-on: ubuntu-latest
-    # We use a regular Python matrix entry to share as much code as possible.
     strategy:
       matrix:
-        python-version: [3.9]
-
+        config:
+          # Python version, docker image, short name
+          - ["3.9", "quay.io/pypa/manylinux2010_x86_64", "manylinux"]
+          - ["3.9", "quay.io/pypa/musllinux_1_1_x86_64", "musllinux"]
+    name: ${{ matrix.config[2] }}
     steps:
       - name: checkout
         uses: actions/checkout@v2
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python ${{ matrix.config[0] }}
         uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.config[0] }}
       - name: Cache ~/.ccache
         uses: actions/cache@v2
         with:
           path: ~/.ccache/
-          key: ${{ runner.os }}-ccache_manylinux2-${{ matrix.python-version }}
+          key: ${{ runner.os }}-ccache_${{ matrix.config[2] }}-${{ matrix.config[0] }}
       - name: Get pip cache dir
         id: pip-cache
         run: |
@@ -512,11 +514,13 @@ jobs:
 
       - name: pip cache
         uses: actions/cache@v2
+        # Be careful not to accidentally share caches. The wheel names
+        # may be the same (e.g.,
+        # psutil-5.8.0-cp310-cp310-linux_x86_64.whl) but they aren't
+        # compatible across glibc/musl.
         with:
           path: ${{ steps.pip-cache.outputs.dir }}
-          key: ${{ runner.os }}-pip_manylinux_x8664-${{ matrix.python-version }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+          key: ${{ runner.os }}-pip_${{ matrix.config[2] }}_x8664-${{ matrix.config[0] }}
 
       - name: Update pip
         run: pip install -U pip
@@ -529,13 +533,15 @@ jobs:
         # Unfortunately, this does not include Python 3.10, and the
         # images that include Python 3.10 don't have 2.7. Sigh.
         env:
-          DOCKER_IMAGE: quay.io/pypa/manylinux2010_x86_64
+          DOCKER_IMAGE: ${{ matrix.config[1] }}
+          GEVENT_MANYLINUX_NAME: ${{ matrix.config[2] }}
+
         run: scripts/releases/make-manylinux
       - name: Upload gevent wheels
         uses: actions/upload-artifact@v2
         with:
           path: wheelhouse/*whl
-          name: manylinux_x86_64_wheels.zip
+          name: ${{ matrix.config[2] }}_x86_64_wheels.zip
       - name: Restore pip cache permissions
         run: sudo chown -R $(whoami) ${{ steps.pip-cache.outputs.dir }}
       - name: Publish package to PyPI
@@ -546,7 +552,6 @@ jobs:
           password: ${{ secrets.TWINE_PASSWORD }}
           skip_existing: true
           packages_dir: wheelhouse/
-
 
 # TODO:
 # * Use YAML syntax to share snippets, like the old .travis.yml did

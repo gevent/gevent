@@ -19,6 +19,7 @@ from .sysinfo import RESOLVER_NOT_SYSTEM as ARES
 from .sysinfo import RESOLVER_ARES
 from .sysinfo import RESOLVER_DNSPYTHON
 from .sysinfo import RUNNING_ON_CI
+from .sysinfo import RUNNING_ON_MUSLLINUX
 from .sysinfo import RUN_COVERAGE
 
 
@@ -1408,6 +1409,9 @@ if PY310:
         # This wants two true threads to work, but a CPU bound loop
         # in a greenlet can't be interrupted.
         'test_threading.InterruptMainTests.test_can_interrupt_tight_loops',
+        # We don't currently implement pipesize.
+        'test_subprocess.ProcessTestCase.test_pipesize_default',
+        'test_subprocess.ProcessTestCase.test_pipesizes',
     ]
 
     if TRAVIS:
@@ -1430,6 +1434,13 @@ if TRAVIS:
         'test_ssl.ThreadedTests.test_default_ecdh_curve',
         'test_ssl.ThreadedTests.test_shared_ciphers',
 
+    ]
+
+if RUNNING_ON_MUSLLINUX:
+    disabled_tests += [
+        # This is supposed to *not* crash, but on the muslilnux image, it
+        # does crash.
+        'test_threading.ThreadingExceptionTests.test_recursion_limit',
     ]
 
 

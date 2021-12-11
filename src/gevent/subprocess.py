@@ -626,6 +626,9 @@ class Popen(object):
        it may make many system calls and/or trips around the event loop to accomplish this).
        See :issue:`1711`.
 
+    .. versionchanged:: NEXT
+       Added the ``pipesize`` argument for compatibility with Python 3.10.
+       This is ignored on all platforms.
     """
 
     if GenericAlias is not None:
@@ -652,6 +655,8 @@ class Popen(object):
                  # Added in 3.9
                  group=None, extra_groups=None, user=None,
                  umask=-1,
+                 # Added in 3.10, but ignored.
+                 pipesize=-1,
                  # gevent additions
                  threadpool=None):
 
