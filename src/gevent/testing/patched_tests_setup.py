@@ -281,6 +281,13 @@ if PYPY and PY2 and WIN:
         'test_subprocess.ProcesstestCase.test_invalid_env',
     ]
 
+if PYPY and PY37:
+    disabled_tests += [
+        # The exact error message the code code checks for is different
+        # (possibly just on macOS?). Plain PyPy3 fails as well.
+        'test_signal.WakeupSignalTests.test_wakeup_write_error',
+    ]
+
 if 'thread' in os.getenv('GEVENT_FILE', ''):
     disabled_tests += [
         'test_subprocess.ProcessTestCase.test_double_close_on_error'

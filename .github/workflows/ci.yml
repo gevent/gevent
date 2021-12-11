@@ -145,7 +145,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: [2.7, pypy-2.7, pypy-3.6, 3.6, 3.7, 3.8, 3.9, '3.10.0']
+        python-version: [2.7, pypy-2.7, pypy-3.7, 3.6, 3.7, 3.8, 3.9, '3.10.0']
         # ubuntu-latest is at least 20.04. But this breaks the SSL
         # tests because Ubuntu increased the default OpenSSL
         # strictness.
@@ -156,7 +156,7 @@ jobs:
           - os: macos-latest
             python-version: pypy-2.7
           - os: macos-latest
-            python-version: pypy-3.6
+            python-version: pypy-3.7
           - os: macos-latest
             python-version: 3.6
           - os: ubuntu-latest
@@ -164,7 +164,7 @@ jobs:
           - os: ubuntu-latest
             python-version: pypy-2.7
           - os: ubuntu-latest
-            python-version: pypy-3.6
+            python-version: pypy-3.7
           - os: ubuntu-latest
             python-version: 3.6
           - os: ubuntu-latest

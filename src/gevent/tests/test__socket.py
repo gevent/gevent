@@ -198,7 +198,9 @@ class TestTCP(greentest.TestCase):
                     # from generating ``ConnectionResetError`` on AppVeyor.
                     try:
                         client = client.unwrap()
-                    except ValueError:
+                    except (ValueError, OSError):
+                        # PyPy 3.7 started raising _cffi_ssl._stdssl.error.SSLSyscallError,
+                        # which is an OSError
                         pass
 
                 try:
