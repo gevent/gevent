@@ -92,6 +92,9 @@ def default_get_open_files(pipes=False, **_kwargs):
             # Skip header and blank lines
             continue
         split = re.split(r'\s+', line)
+        # Note that this needs the real lsof; it won't work with
+        # the lsof that comes from BusyBox. You'll get parsing errors
+        # here.
         _command, _pid, _user, fd = split[:4]
         # Pipes (on OS X, at least) get an fd like "3" while normal files get an fd like "1u"
         if fd[:-1].isdigit() or fd.isdigit():
