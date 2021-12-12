@@ -180,9 +180,15 @@ disabled_tests = [
     # (unless signal handler raises an error) maybe it should?
     'test_signal.WakeupSignalTests.test_wakeup_fd_during',
 
+    # these rely on os.read raising EINTR which never happens with gevent.os.read
     'test_signal.SiginterruptTest.test_without_siginterrupt',
     'test_signal.SiginterruptTest.test_siginterrupt_on',
-    # these rely on os.read raising EINTR which never happens with gevent.os.read
+    'test_signal.SiginterruptTest.test_siginterrupt_off',
+    # This one takes forever and relies on threading details
+    'test_signal.StressTest.test_stress_modifying_handlers',
+    # This uses an external file, and launches it. This means that it's not
+    # actually testing gevent because there's no monkey-patch.
+    'test_signal.PosixTests.test_interprocess_signal',
 
     'test_subprocess.ProcessTestCase.test_leak_fast_process_del_killed',
     'test_subprocess.ProcessTestCase.test_zombie_fast_process_del',
@@ -678,6 +684,34 @@ if PYPY3 and TRAVIS:
         # ``SOCK_NONBLOCK`` on Linux, but otherwise it's just a pass-through.
         # This started failing with PyPy 7.3.1 and it's not clear why.
         'test_socket.InheritanceTest.test_SOCK_CLOEXEC',
+    ]
+
+if PYPY3 and WIN:
+    disabled_tests += [
+        # test_httpservers.CGIHTTPServerTestCase all seem to hang.
+        # There seem to be some general subprocess issues. This is
+        # ignored entirely from known_failures.py
+
+        # This produces:
+        #
+        #  OSError: [Errno 10014] The system detected an invalid
+        #  pointer address in attempting to use a pointer argument in
+        #  a call
+        #
+        # When calling socket.socket(fileno=fd) when we actually
+        # call ``self._socket =self._gevent_sock_class()``.
+        'test_socket.GeneralModuleTests.test_socket_fileno',
+
+        # This doesn't respect the scope properly
+        #
+        #  self.assertEqual(sockaddr, ('ff02::1de:c0:face:8d', 1234, 0, ifindex))
+        #   AssertionError: Tuples differ: ('ff02::1de:c0:face:8d%42', 1234, 0, 42) != ('ff02::1de:c0:face:8d', 1234, 0, 42
+        #
+        'test_socket.GeneralModuleTests.test_getaddrinfo_ipv6_scopeid_numeric',
+
+        # self.assertEqual(newsock.get_inheritable(), False)
+        #  AssertionError: True != False
+        'test_socket.InheritanceTest.test_dup',
     ]
 
 def _make_run_with_original(mod_name, func_name):
@@ -1412,6 +1446,8 @@ if PY310:
         # We don't currently implement pipesize.
         'test_subprocess.ProcessTestCase.test_pipesize_default',
         'test_subprocess.ProcessTestCase.test_pipesizes',
+        # Unknown
+        'test_signal.SiginterruptTest.test_siginterrupt_off',
     ]
 
     if TRAVIS:

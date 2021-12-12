@@ -158,6 +158,11 @@ class TestCase(greentest.TestCase):
     if greentest.OSX:
         # A kernel bug in OS X sometimes results in this
         LOCAL_CONN_REFUSED_ERRORS = (errno.EPROTOTYPE,)
+    elif greentest.WIN and greentest.PYPY3:
+        # We see WinError 10049: The requested address is not valid
+        # which is not one of the errors we get anywhere else.
+        # Not sure which errno constant this is?
+        LOCAL_CONN_REFUSED_ERRORS = (10049,)
 
     def assertConnectionRefused(self, in_proc_server=True):
         try:

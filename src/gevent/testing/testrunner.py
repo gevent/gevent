@@ -808,15 +808,39 @@ def main():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--ignore')
-    parser.add_argument('--discover', action='store_true')
-    parser.add_argument('--full', action='store_true')
-    parser.add_argument('--config', default='known_failures.py')
-    parser.add_argument("--coverage", action="store_true")
-    parser.add_argument("--quiet", action="store_true", default=True)
+    parser.add_argument(
+        '--discover', action='store_true',
+        help="Only print the tests found."
+    )
+    parser.add_argument(
+        '--config', default='known_failures.py',
+        help="The path to the config file containing "
+        "FAILING_TESTS, IGNORED_TESTS and RUN_ALONE. "
+        "Defaults to %(default)s."
+    )
+    parser.add_argument(
+        "--coverage", action="store_true",
+        help="Enable coverage recording with coverage.py."
+    )
+    # TODO: Quiet and verbose should be mutually exclusive
+    parser.add_argument(
+        "--quiet", action="store_true", default=True,
+        help="Be quiet. Defaults to %(default)s. Also the "
+        "GEVENTTEST_QUIET environment variable."
+    )
     parser.add_argument("--verbose", action="store_false", dest='quiet')
-    parser.add_argument("--debug", action="store_true", default=False)
 
-    parser.add_argument("--package", default="gevent.tests")
+    parser.add_argument(
+        "--debug", action="store_true", default=False,
+        help="Enable debug settings. If the GEVENT_DEBUG environment variable is not set, "
+        "this sets it to 'debug'. This can also enable PYTHONTRACEMALLOC and the debug PYTHONMALLOC "
+        "allocators, if not already set. Defaults to %(default)s."
+     )
+
+    parser.add_argument(
+        "--package", default="gevent.tests",
+        help="Load tests from the given package. Defaults to %(default)s."
+    )
     parser.add_argument(
         "--processes", "-j", default=DEFAULT_NWORKERS, type=int,
         help="Use up to the given number of parallel processes to execute tests. "
