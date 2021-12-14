@@ -80,6 +80,7 @@ class _AttrCondition(ConstantCondition):
         ConstantCondition.__init__(self, getattr(sysinfo, name), name)
 
 PYPY = _AttrCondition('PYPY')
+PYPY3 = _AttrCondition('PYPY3')
 PY3 = _AttrCondition('PY3')
 PY2 = _AttrCondition('PY2')
 OSX = _AttrCondition('OSX')
@@ -160,12 +161,18 @@ class Multi(object):
     def __init__(self):
         self._conds = []
 
-    def flaky(self, reason='', when=True):
-        self._conds.append(Flaky(reason, when))
+    def flaky(self, reason='', when=True, ignore_coverage=NEVER, run_alone=NEVER):
+        self._conds.append(
+            Flaky(
+                reason, when=when,
+                ignore_coverage=ignore_coverage,
+                run_alone=run_alone,
+            )
+        )
         return self
 
     def ignored(self, reason='', when=True):
-        self._conds.append(Ignored(reason, when))
+        self._conds.append(Ignored(reason, when=when))
         return self
 
     def __set_name__(self, owner, name):
@@ -279,13 +286,19 @@ class Definitions(DefinitionsBase):
 
     test__backdoor = Flaky(when=LEAKTEST | PYPY)
     test__socket_errors = Flaky(when=LEAKTEST)
-    test_signal = Flaky(
+    test_signal = Multi().flaky(
         "On Travis, this very frequently fails due to timing",
         when=TRAVIS & LEAKTEST,
         # Partial workaround for the _testcapi issue on PyPy,
         # but also because signal delivery can sometimes be slow, and this
         # spawn processes of its own
         run_alone=APPVEYOR,
+    ).ignored(
+        """
+        This fails to run a single test. It looks like just importing the module
+        can hang. All I see is the output from patch_all()
+        """,
+        when=APPVEYOR & PYPY3
     )
 
     test__monkey_sigchld_2 = Ignored(
@@ -303,9 +316,21 @@ class Definitions(DefinitionsBase):
         allocate SSL Context objects, either in Python 2.7 or 3.6.
         There must be some library incompatibility. No point even
         running them. XXX: Remember to turn this back on.
+
+        On Windows, with PyPy3.7 7.3.7, there seem to be all kind of certificate
+        errors.
         """,
-        when=PYPY & TRAVIS
+        when=(PYPY & TRAVIS) | (PYPY3 & WIN)
     )
+
+    test_httpservers = Ignored(
+        """
+        All the CGI tests hang. There appear to be subprocess problems.
+        """,
+        when=PYPY3 & WIN
+    )
+
+
 
     test__pywsgi = Ignored(
         """
@@ -319,16 +344,23 @@ class Definitions(DefinitionsBase):
         On Appveyor 3.8.0, for some reason this takes *way* too long, about 100s, which
         often goes just over the default timeout of 100s. This makes no sense.
         But it also takes nearly that long in 3.7. 3.6 and earlier are much faster.
+
+        It also takes just over 100s on PyPy 3.7.
         """,
         when=(PYPY & TRAVIS & LIBUV) | PY380_EXACTLY,
         # https://bitbucket.org/pypy/pypy/issues/2769/systemerror-unexpected-internal-exception
         run_alone=(CI & LEAKTEST & PY3) | (PYPY & LIBUV),
+        # This often takes much longer on PyPy on CI.
+        options={'timeout': (CI & PYPY, 180)},
     )
 
-    test_subprocess = Flaky(
+    test_subprocess = Multi().flaky(
         "Unknown, can't reproduce locally; times out one test",
         when=PYPY & PY3 & TRAVIS,
         ignore_coverage=ALWAYS,
+    ).ignored(
+        "Tests don't even start before the process times out.",
+        when=PYPY3 & WIN
     )
 
     test__threadpool = Ignored(
@@ -388,7 +420,7 @@ class Definitions(DefinitionsBase):
         off.
         """,
         when=COVERAGE,
-        ignore_coverage=ALWAYS
+        ignore_coverage=ALWAYS,
     )
 
     test__hub_join_timeout = Ignored(
@@ -417,7 +449,7 @@ class Definitions(DefinitionsBase):
         """
         On a heavily loaded box, these can all take upwards of 200s.
         """,
-        when=CI & LEAKTEST
+        when=(CI & LEAKTEST) | (PYPY3 & APPVEYOR)
     )
 
     test_socket = RunAlone(

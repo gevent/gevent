@@ -26,8 +26,8 @@ library and will install the `cffi`_ library by default on Windows.
 The cffi library will become the default on all platforms in a future
 release of gevent.
 
-This version of gevent also runs on PyPy 7.0 or above. On PyPy, there
-are no external dependencies.
+This version of gevent also runs on PyPy 7.3.7 (7.3.6 for PyPy2) or
+above. On PyPy, there are no external dependencies.
 
 gevent is tested on Windows, macOS, and Linux, and should run on most
 other Unix-like operating systems (e.g., FreeBSD, Solaris, etc.)
@@ -35,7 +35,9 @@ other Unix-like operating systems (e.g., FreeBSD, Solaris, etc.)
 .. note::
 
    Windows is supported as a tier 2, "best effort," platform. It is
-   suitable for development, but not recommended for production.
+   suitable for development, but not recommended for production. In
+   particular, PyPy3 on Windows may have issues, especially with
+   subprocesses.
 
    On Windows using the deprecated libev backend, gevent is
    limited to a maximum of 1024 open sockets due to

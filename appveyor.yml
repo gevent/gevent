@@ -41,6 +41,13 @@ environment:
     # a later point release.
 
     # 64-bit
+    - PYTHON: "C:\\pypy3.7-v7.3.7-win64"
+      PYTHON_ID: "pypy3"
+      PYTHON_EXE: pypy3w
+      PYTHON_VERSION: "3.7.x"
+      PYTHON_ARCH: "64"
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+
     - PYTHON: "C:\\pypy2.7-v7.3.6-win64"
       PYTHON_ID: "pypy"
       PYTHON_EXE: pypy
@@ -168,6 +175,12 @@ install:
         }
         7z x -y "${env:PYTMP}\pypy2-v7.3.6-win64.zip" -oC:\ | Out-Null;
       }
+      elseif ("${env:PYTHON_ID}" -eq "pypy3") {
+        if (!(Test-Path "${env:PYTMP}\pypy3.7-v7.3.7-win64.zip")) {
+          (New-Object Net.WebClient).DownloadFile("https://downloads.python.org/pypy/pypy3.7-v7.3.7-win64.zip", "${env:PYTMP}\pypy3.7-v7.3.7-win64.zip");
+        }
+        7z x -y "${env:PYTMP}\pypy3.7-v7.3.7-win64.zip" -oC:\ | Out-Null;
+      }
       elseif (-not(Test-Path($env:PYTHON))) {
         & appveyor\install.ps1;
       }
@@ -198,9 +211,8 @@ cache:
 
 build_script:
   # Build the compiled extension
-  # Try to get some things that don't wind up in the pip cache as
-  # built wheels if they're built during an isolated build.
-  - "%CMD_IN_ENV% %PYEXE% -m pip install -U wheel cython setuptools cffi"
+  - "%CMD_IN_ENV% %PYEXE% -m pip install -U wheel"
+  - "%CMD_IN_ENV% %PYEXE% -m pip install -U setuptools"
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -m pip install -U -e .[test]
 
 test_script:
@@ -209,6 +221,7 @@ test_script:
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -c "import gevent.core; print(gevent.core.loop)"
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -c "import gevent; print(gevent.config.settings['resolver'].get_options())"
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -c "from gevent._compat import get_clock_info; print(get_clock_info('perf_counter'))"
+  - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -mgevent.tests.known_failures
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -mgevent.tests --second-chance --config known_failures.py
 
 after_test:

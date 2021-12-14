@@ -33,13 +33,16 @@ else:
     from gevent.testing.sysinfo import CFFI_BACKEND
     from gevent.testing.sysinfo import RUN_COVERAGE
     from gevent.testing.sysinfo import WIN
+    from gevent.testing.sysinfo import PYPY3
 
     class Test(unittest.TestCase):
 
-        @unittest.skipIf(CFFI_BACKEND and RUN_COVERAGE,
-                         "Interferes with the timing")
+        @unittest.skipIf(
+            (CFFI_BACKEND and RUN_COVERAGE) or (PYPY3 and WIN),
+            "Interferes with the timing; times out waiting for the child")
         def test_hang(self):
-
+            # XXX: Why does PyPy3 on Win fail to kill the child? (This was before we switched
+            # to pypy3w; perhaps that makes a difference?)
             if WIN:
                 from subprocess import CREATE_NEW_PROCESS_GROUP
                 kwargs = {'creationflags': CREATE_NEW_PROCESS_GROUP}
@@ -63,7 +66,7 @@ else:
             p.send_signal(signal_to_send)
             # Wait a few seconds for child process to die. Sometimes signal delivery is delayed
             # or even swallowed by Python, so send the signal a few more times if necessary
-            wait_seconds = 15.0
+            wait_seconds = 25.0
             now = time.time()
             midtime = now + (wait_seconds / 2.0)
             endtime = time.time() + wait_seconds
