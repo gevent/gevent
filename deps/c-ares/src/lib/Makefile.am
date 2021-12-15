@@ -8,7 +8,8 @@ ACLOCAL_AMFLAGS = -I m4 --install
 
 AM_CPPFLAGS = -I$(top_builddir)/include \
               -I$(top_builddir)/src/lib \
-              -I$(top_srcdir)/include
+              -I$(top_srcdir)/include \
+              -I$(top_srcdir)/src/lib
 
 lib_LTLIBRARIES = libcares.la
 
@@ -58,9 +59,10 @@ libcares_la_CFLAGS_EXTRA += $(CFLAG_CARES_SYMBOL_HIDING)
 libcares_la_CPPFLAGS_EXTRA += -DCARES_SYMBOL_HIDING
 endif
 
-@CODE_COVERAGE_RULES@
-libcares_la_LDFLAGS += $(CODE_COVERAGE_LDFLAGS)
+include $(top_srcdir)/aminclude_static.am
+libcares_la_LIBS = $(CODE_COVERAGE_LIBS)
 libcares_la_CFLAGS_EXTRA += $(CODE_COVERAGE_CFLAGS)
+libcares_la_CPPFLAGS_EXTRA += $(CODE_COVERAGE_CPPFLAGS)
 
 libcares_la_CFLAGS = $(AM_CFLAGS) $(libcares_la_CFLAGS_EXTRA)
 

@@ -85,6 +85,11 @@ W32_FUNC const char *_w32_GetHostsFile (void);
 
 #define PATH_HOSTS             "InetDBase:Hosts"
 
+#elif defined(__HAIKU__)
+
+#define PATH_RESOLV_CONF "/system/settings/network/resolv.conf"
+#define PATH_HOSTS              "/system/settings/network/hosts"
+
 #else
 
 #define PATH_RESOLV_CONF        "/etc/resolv.conf"
@@ -356,9 +361,13 @@ int ares__read_line(FILE *fp, char **buf, size_t *bufsize);
 void ares__free_query(struct query *query);
 unsigned short ares__generate_new_id(rc4_key* key);
 struct timeval ares__tvnow(void);
+int ares__expand_name_validated(const unsigned char *encoded,
+                                const unsigned char *abuf,
+                                int alen, char **s, long *enclen,
+                                int is_hostname);
 int ares__expand_name_for_response(const unsigned char *encoded,
                                    const unsigned char *abuf, int alen,
-                                   char **s, long *enclen);
+                                   char **s, long *enclen, int is_hostname);
 void ares__init_servers_state(ares_channel channel);
 void ares__destroy_servers_state(ares_channel channel);
 int ares__parse_qtype_reply(const unsigned char* abuf, int alen, int* qtype);
@@ -383,17 +392,26 @@ void ares__freeaddrinfo_cnames(struct ares_addrinfo_cname *ai_cname);
 
 struct ares_addrinfo_cname *ares__append_addrinfo_cname(struct ares_addrinfo_cname **ai_cname);
 
+int ares_append_ai_node(int aftype, unsigned short port, int ttl,
+                        const void *adata,
+                        struct ares_addrinfo_node **nodes);
+
 void ares__addrinfo_cat_cnames(struct ares_addrinfo_cname **head,
                                struct ares_addrinfo_cname *tail);
 
 int ares__parse_into_addrinfo(const unsigned char *abuf,
-                              int alen,
+                              int alen, int cname_only_is_enodata,
+                              unsigned short port,
                               struct ares_addrinfo *ai);
 
-int ares__parse_into_addrinfo2(const unsigned char *abuf,
-                               int alen,
-                               char **question_hostname,
-                               struct ares_addrinfo *ai);
+int ares__addrinfo2hostent(const struct ares_addrinfo *ai, int family,
+                           struct hostent **host);
+int ares__addrinfo2addrttl(const struct ares_addrinfo *ai, int family,
+                           int req_naddrttls, struct ares_addrttl *addrttls,
+                           struct ares_addr6ttl *addr6ttls, int *naddrttls);
+int ares__addrinfo_localhost(const char *name, unsigned short port,
+                             const struct ares_addrinfo_hints *hints,
+                             struct ares_addrinfo *ai);
 
 #if 0 /* Not used */
 long ares__tvdiff(struct timeval t1, struct timeval t2);

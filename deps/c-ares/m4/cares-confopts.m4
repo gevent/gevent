@@ -30,8 +30,8 @@ AC_DEFUN([CARES_CHECK_OPTION_DEBUG], [
   AC_MSG_CHECKING([whether to enable debug build options])
   OPT_DEBUG_BUILD="default"
   AC_ARG_ENABLE(debug,
-AC_HELP_STRING([--enable-debug],[Enable debug build options])
-AC_HELP_STRING([--disable-debug],[Disable debug build options]),
+AS_HELP_STRING([--enable-debug],[Enable debug build options])
+AS_HELP_STRING([--disable-debug],[Disable debug build options]),
   OPT_DEBUG_BUILD=$enableval)
   case "$OPT_DEBUG_BUILD" in
     no)
@@ -62,8 +62,8 @@ AC_DEFUN([CARES_CHECK_OPTION_NONBLOCKING], [
   AC_MSG_CHECKING([whether to enable non-blocking communications])
   OPT_NONBLOCKING="default"
   AC_ARG_ENABLE(nonblocking,
-AC_HELP_STRING([--enable-nonblocking],[Enable non-blocking communications])
-AC_HELP_STRING([--disable-nonblocking],[Disable non-blocking communications]),
+AS_HELP_STRING([--enable-nonblocking],[Enable non-blocking communications])
+AS_HELP_STRING([--disable-nonblocking],[Disable non-blocking communications]),
   OPT_NONBLOCKING=$enableval)
   case "$OPT_NONBLOCKING" in
     no)
@@ -95,8 +95,8 @@ AC_DEFUN([CARES_CHECK_OPTION_OPTIMIZE], [
   AC_MSG_CHECKING([whether to enable compiler optimizer])
   OPT_COMPILER_OPTIMIZE="default"
   AC_ARG_ENABLE(optimize,
-AC_HELP_STRING([--enable-optimize(=OPT)],[Enable compiler optimizations (default=-O2)])
-AC_HELP_STRING([--disable-optimize],[Disable compiler optimizations]),
+AS_HELP_STRING([--enable-optimize(=OPT)],[Enable compiler optimizations (default=-O2)])
+AS_HELP_STRING([--disable-optimize],[Disable compiler optimizations]),
   OPT_COMPILER_OPTIMIZE=$enableval)
   case "$OPT_COMPILER_OPTIMIZE" in
     no)
@@ -150,8 +150,8 @@ AC_DEFUN([CARES_CHECK_OPTION_SYMBOL_HIDING], [
   AC_MSG_CHECKING([whether to enable hiding of library internal symbols])
   OPT_SYMBOL_HIDING="default"
   AC_ARG_ENABLE(symbol-hiding,
-AC_HELP_STRING([--enable-symbol-hiding],[Enable hiding of library internal symbols])
-AC_HELP_STRING([--disable-symbol-hiding],[Disable hiding of library internal symbols]),
+AS_HELP_STRING([--enable-symbol-hiding],[Enable hiding of library internal symbols])
+AS_HELP_STRING([--disable-symbol-hiding],[Disable hiding of library internal symbols]),
   OPT_SYMBOL_HIDING=$enableval)
   case "$OPT_SYMBOL_HIDING" in
     no)
@@ -189,8 +189,8 @@ AC_DEFUN([CARES_CHECK_OPTION_EXPOSE_STATICS], [
   AC_MSG_CHECKING([whether to expose internal static functions for testing])
   OPT_EXPOSE_STATICS="default"
   AC_ARG_ENABLE(expose-statics,
-AC_HELP_STRING([--enable-expose-statics],[Enable exposure of internal static functions for testing])
-AC_HELP_STRING([--disable-expose-statics],[Disable exposure of internal static functions for testing]),
+AS_HELP_STRING([--enable-expose-statics],[Enable exposure of internal static functions for testing])
+AS_HELP_STRING([--disable-expose-statics],[Disable exposure of internal static functions for testing]),
   OPT_EXPOSE_STATICS=$enableval)
   case "$OPT_EXPOSE_STATICS" in
     no)
@@ -230,8 +230,8 @@ AC_DEFUN([CARES_CHECK_OPTION_WARNINGS], [
   AC_MSG_CHECKING([whether to enable strict compiler warnings])
   OPT_COMPILER_WARNINGS="default"
   AC_ARG_ENABLE(warnings,
-AC_HELP_STRING([--enable-warnings],[Enable strict compiler warnings])
-AC_HELP_STRING([--disable-warnings],[Disable strict compiler warnings]),
+AS_HELP_STRING([--enable-warnings],[Enable strict compiler warnings])
+AS_HELP_STRING([--disable-warnings],[Disable strict compiler warnings]),
   OPT_COMPILER_WARNINGS=$enableval)
   case "$OPT_COMPILER_WARNINGS" in
     no)
@@ -262,8 +262,8 @@ AC_DEFUN([CARES_CHECK_OPTION_WERROR], [
   AC_MSG_CHECKING([whether to enable compiler warnings as errors])
   OPT_COMPILER_WERROR="default"
   AC_ARG_ENABLE(werror,
-AC_HELP_STRING([--enable-werror],[Enable compiler warnings as errors])
-AC_HELP_STRING([--disable-werror],[Disable compiler warnings as errors]),
+AS_HELP_STRING([--enable-werror],[Enable compiler warnings as errors])
+AS_HELP_STRING([--disable-werror],[Disable compiler warnings as errors]),
   OPT_COMPILER_WERROR=$enableval)
   case "$OPT_COMPILER_WERROR" in
     no)

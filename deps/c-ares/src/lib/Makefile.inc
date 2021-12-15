@@ -1,5 +1,7 @@
 
-CSOURCES = ares__close_sockets.c	\
+CSOURCES = ares__addrinfo2hostent.c	\
+  ares__addrinfo_localhost.c	\
+  ares__close_sockets.c	\
   ares__get_hostent.c			\
   ares__parse_into_addrinfo.c		\
   ares__readaddrinfo.c			\
@@ -39,6 +41,7 @@ CSOURCES = ares__close_sockets.c	\
   ares_parse_soa_reply.c		\
   ares_parse_srv_reply.c		\
   ares_parse_txt_reply.c		\
+  ares_parse_uri_reply.c		\
   ares_platform.c			\
   ares_process.c			\
   ares_query.c				\
@@ -72,7 +75,6 @@ HHEADERS = ares_android.h                        \
   ares_strsplit.h			\
   ares_writev.h				\
   bitncmp.h				\
-  nameser.h				\
   ares_setup.h				\
   setup_once.h
 

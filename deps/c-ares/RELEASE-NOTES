@@ -1,69 +1,85 @@
-c-ares version 1.17.1
+c-ares version 1.18.1
 
-Due to a packaging issue with 1.17.0, we have released 1.17.1 to address that
-issue.  See 1.17.0 release notes below..
-
-
-c-ares version 1.17.0
-
-Security:
- o avoid read-heap-buffer-overflow in ares_parse_soa_reply found during
-   fuzzing [2] [3]
- o Avoid theoretical buffer overflow in RC4 loop comparison [5]
- o Empty hquery->name could lead to invalid memory access [15]
- o ares_parse_{a,aaaa}_reply() could return a larger *naddrttls than was
-   passed in [17]
-
-Changes:
- o Update help information for adig, acountry, and ahost [4]
- o Test Suite now uses dynamic system-assigned ports rather than hardcoded
-   ports to prevent failures in containers [10]
- o Detect remote DNS server does not support EDNS using rules from RFC 6891 [12]
- o Source tree has been reorganized to use a more modern layout [13]
- o Allow parsing of CAA Resource Record [14]
+This is an urgent bugfix release for a regression made in 1.18.0.
 
 Bug fixes:
- o readaddrinfo bad sizeof() [1]
- o Test cases should honor HAVE_WRITEV flag, not depend on WIN32 [6]
- o FQDN with trailing period should be queried first [7]
- o ares_getaddrinfo() was returning members of the struct as garbage values if
-   unset, and was not honoring ai_socktype and ai_protocol hints. [8] [9]
- o ares_gethostbyname() with AF_UNSPEC and an ip address would fail [11]
- o Properly document ares_set_local_ip4() uses host byte order [16]
+ o ares_getaddrinfo() would return ai_addrlen of 16 for ipv6
+   adddresses rather than the sizeof(struct sockaddr_in6)
+
+
+
+c-ares version 1.18.0
+
+This is a feature and bugfix release.  It addresses a couple of new feature
+requests as well as a couple of bug fixes.
+
+Changes:
+ o Add support for URI(Uniform Resource Identifier) records via
+   ares_parse_uri_reply() [1]
+ o Provide ares_nameser.h as a public interface as needed by NodeJS [5]
+ o Update URLs from c-ares.haxx.se to c-ares.org [9]
+ o During a domain search, treat ARES_ENODATA as ARES_NXDOMAIN so that the
+   search process will continue to the next domain in the search.  [11]
+ o Turn ares_gethostbyname() into a wrapper for ares_getaddrinfo() as they
+   followed very similar code paths and ares_gethostbyaddr() has some more
+   desirable features such as priority sorting and parallel queries for
+   AF_UNSPEC. [12]
+ o ares_getaddrinfo() now contains a name element in the address info
+   structure as the last element.  This is not an API or ABI break due to
+   the structure always being internally allocated and it being the last
+   element. [12]
+ o ares_parse_a_reply() and ares_parse_aaaa_reply() were nearly identical, those
+   now use the same helper functions for parsing rather than having their own
+   code. [12]
+ o RFC6761 Section 6.3 says "localhost" lookups need to be special cased to
+   return loopback addresses, and not forward queries to recursive dns servers.
+   On Windows this now returns all loopback addresses, on other systems it
+   returns 127.0.0.1 or ::1 always, and will never forward a request for
+   "localhost" to outside DNS servers. [13]
+ o Haiki: port [14]
+
+Bug fixes:
+ o add build to .gitignore [2]
+ o z/OS minor update, add missing semicolon in ares_init.c [3]
+ o Fix building when latest ax_code_coverage.m4 is imported [4]
+ o Work around autotools 'error: too many loops' and other newer autotools
+   import related bugs.
+ o MinGW cross builds need advapi32 link as lower case [6]
+ o Cygwin build fix due to containing both socket.h and winsock2.h [7]
+ o ares_expand_name should allow underscores (_) as SRV records legitimately use
+   them [8]
+ o Allow '/' as a valid character for a returned name for CNAME in-addr.arpa
+   delegation [10]
+ o ares_getaddrinfo() was not honoring HOSTALIASES [12]
+ o ares_getaddrinfo() had some test cases disabled due to a bug in the test
+   framework itself which has now been resolved [12]
+ o Due to Travis-CI becoming unfriendly to open-source, Cirrus-CI has now been
+   brought online for automated unit testing.
 
 Thanks go to these friendly people for their efforts and contributions:
-  @anonymoushelpishere
-  Anthony Penniston (@apenn-msft)
+  Biswapriyo Nath (@Biswa96)
   Brad House (@bradh352)
-  Bulat Gaifullin (@bgaifullin)
-  Daniela Sonnenschein (@lxdicted)
+  Daniel Bevenius (@danbev)
   Daniel Stenberg (@bagder)
-  David Hotham (@dimbleby)
-  Fionn Fitzmaurice (@fionn)
-  Gisle Vanem (@gavenm)
-  Ivan Baidakou (@basiliscos)
-  Jonathan Maye-Hobbs (@wheelpharoah)
-  Łukasz Marszał (@lmarszal)
-  lutianxiong (@ltx2018)
-  Seraphime Kirkovski (@Seraphime)
-(14 contributors)
+  Dhrumil Rana (@dhrumilrana)
+  Felix Yan (@felixonmars)
+  Jérôme Duval (@korli)
+  Martin Holeš (@martin-256)
+  Sinan Kaya
+(9 contributors)
 
 References to bug reports and discussions on issues:
- [1] = https://github.com/c-ares/c-ares/pull/331
- [2] = https://github.com/c-ares/c-ares/pull/332
- [3] = https://github.com/c-ares/c-ares/issues/333
- [4] = https://github.com/c-ares/c-ares/pull/334
- [5] = https://github.com/c-ares/c-ares/pull/336
- [6] = https://github.com/c-ares/c-ares/pull/344
- [7] = https://github.com/c-ares/c-ares/pull/345
- [8] = https://github.com/c-ares/c-ares/issues/343
- [9] = https://github.com/c-ares/c-ares/issues/317
- [10] = https://github.com/c-ares/c-ares/pull/346
- [11] = https://github.com/c-ares/c-ares/pull/204
- [12] = https://github.com/c-ares/c-ares/pull/244
- [13] = https://github.com/c-ares/c-ares/pull/349
- [14] = https://github.com/c-ares/c-ares/pull/360
- [15] = https://github.com/c-ares/c-ares/pull/367
- [16] = https://github.com/c-ares/c-ares/pull/368
- [17] = https://github.com/c-ares/c-ares/issues/371
-
+ [1] = https://github.com/c-ares/c-ares/pull/411
+ [2] = https://github.com/c-ares/c-ares/pull/410
+ [3] = https://github.com/c-ares/c-ares/pull/414
+ [4] = https://github.com/c-ares/c-ares/pull/418
+ [5] = https://github.com/c-ares/c-ares/pull/417
+ [6] = https://github.com/c-ares/c-ares/pull/420
+ [7] = https://github.com/c-ares/c-ares/pull/422
+ [8] = https://github.com/c-ares/c-ares/issues/424
+ [9] = https://github.com/c-ares/c-ares/issues/423
+ [10] = https://github.com/c-ares/c-ares/issues/427
+ [11] = https://github.com/c-ares/c-ares/issues/426
+ [12] = https://github.com/c-ares/c-ares/pull/428
+ [13] = https://github.com/c-ares/c-ares/pull/430
+ [14] = https://github.com/c-ares/c-ares/pull/431

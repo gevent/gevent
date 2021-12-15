@@ -1,4 +1,4 @@
-/* Generated from ares_config.h.cmake*/
+/* Generated from ares_config.h.cmake */
 
 /* Define if building universal (internal helper macro) */
 #undef AC_APPLE_UNIVERSAL_BUILD
@@ -347,7 +347,7 @@
 #cmakedefine NEED_MEMORY_H
 
 /* a suitable file/device to read random data from */
-#cmakedefine RANDOM_FILE
+#cmakedefine CARES_RANDOM_FILE "@CARES_RANDOM_FILE@"
 
 /* Define to the type qualifier pointed by arg 5 for recvfrom. */
 #define RECVFROM_QUAL_ARG5 @RECVFROM_QUAL_ARG5@
