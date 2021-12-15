@@ -9,6 +9,9 @@
 /* Defined for build that exposes internal static functions for testing. */
 #undef CARES_EXPOSE_STATICS
 
+/* a suitable file/device to read random data from */
+#undef CARES_RANDOM_FILE
+
 /* Defined for build with symbol hiding. */
 #undef CARES_SYMBOL_HIDING
 
@@ -241,6 +244,9 @@
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
 
+/* Define to 1 if you have the <stdio.h> header file. */
+#undef HAVE_STDIO_H
+
 /* Define to 1 if you have the <stdlib.h> header file. */
 #undef HAVE_STDLIB_H
 
@@ -376,9 +382,6 @@
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
-/* a suitable file/device to read random data from */
-#undef RANDOM_FILE
-
 /* Define to the type qualifier pointed by arg 5 for recvfrom. */
 #undef RECVFROM_QUAL_ARG5
 
@@ -448,10 +451,13 @@
 /* Define to the function return type for send. */
 #undef SEND_TYPE_RETV
 
-/* Define to 1 if you have the ANSI C header files. */
+/* Define to 1 if all of the C90 standard headers exist (not just the ones
+   required in a freestanding environment). This macro is provided for
+   backward compatibility; new code need not use it. */
 #undef STDC_HEADERS
 
-/* Define to 1 if you can safely include both <sys/time.h> and <time.h>. */
+/* Define to 1 if you can safely include both <sys/time.h> and <time.h>. This
+   macro is obsolete. */
 #undef TIME_WITH_SYS_TIME
 
 /* Define to disable non-blocking sockets. */
@@ -478,11 +484,6 @@
 /* Define to 1 if OS is AIX. */
 #ifndef _ALL_SOURCE
 #  undef _ALL_SOURCE
-#endif
-
-/* Enable large inode numbers on Mac OS X 10.5.  */
-#ifndef _DARWIN_USE_64_BIT_INODE
-# define _DARWIN_USE_64_BIT_INODE 1
 #endif
 
 /* Number of bits in a file offset, on hosts where this is settable. */

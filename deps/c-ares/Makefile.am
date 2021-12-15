@@ -16,7 +16,7 @@ CLEANFILES = $(PDFPAGES) $(HTMLPAGES)
 
 DISTCLEANFILES = include/ares_build.h
 
-DIST_SUBDIRS = include src
+DIST_SUBDIRS = include src test docs
 
 SUBDIRS = @BUILD_SUBDIRS@
 

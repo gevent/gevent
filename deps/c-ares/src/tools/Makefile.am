@@ -15,6 +15,10 @@ AM_CPPFLAGS = -I$(top_builddir)/include \
               -I$(top_srcdir)/include \
               -I$(top_srcdir)/src/lib
 
+if USE_CPPFLAG_CARES_STATICLIB
+AM_CPPFLAGS += $(CPPFLAG_CARES_STATICLIB)
+endif
+
 include Makefile.inc
 
 LDADD = $(top_builddir)/src/lib/libcares.la

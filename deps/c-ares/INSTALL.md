@@ -39,7 +39,6 @@ unpacked the source archive):
 
     ./configure
     make
-    make ahost adig acountry (optional)
     make install
 
 You probably need to be root when doing the last command.
@@ -404,7 +403,7 @@ runs on, that isn't listed, please let us know!
 Useful URLs
 ===========
 
- - c-ares: https://c-ares.haxx.se/
+ - c-ares: https://c-ares.org/
  - MingW: http://www.mingw.org/
  - MinGW-w64: http://mingw-w64.sourceforge.net/
  - OpenWatcom: http://www.openwatcom.org/

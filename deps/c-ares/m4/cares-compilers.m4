@@ -1,6 +1,6 @@
 #***************************************************************************
 #
-# Copyright (C) 2009-2013 by Daniel Stenberg et al
+# Copyright (C) 2009 - 2021 by Daniel Stenberg et al
 #
 # Permission to use, copy, modify, and distribute this software and its
 # documentation for any purpose and without fee is hereby granted, provided
@@ -60,7 +60,7 @@ AC_DEFUN([CARES_CHECK_COMPILER], [
 ***
 *** If you wish to help the c-ares project to better support your compiler
 *** you can report this and the required info on the c-ares development
-*** mailing list: http://cool.haxx.se/mailman/listinfo/c-ares/
+*** mailing list: http://lists.haxx.se/listinfo/c-ares/
 ***
 _EOF
   fi

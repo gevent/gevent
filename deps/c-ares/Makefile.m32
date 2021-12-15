@@ -20,7 +20,7 @@ CP	= cp -afv
 CFLAGS	= $(CARES_CFLAG_EXTRAS) -O2 -Wall -I./include -I./src/lib -D_WIN32_WINNT=0x0600
 CFLAGS	+= -DCARES_STATICLIB
 LDFLAGS	= $(CARES_LDFLAG_EXTRAS) -s
-LIBS	= -lwsock32
+LIBS	= -lws2_32 -liphlpapi
 
 # Makefile.inc provides the CSOURCES and HHEADERS defines
 include src/lib/Makefile.inc
