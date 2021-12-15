@@ -1662,7 +1662,13 @@ int uv_os_unsetenv(const char* name) {
   return 0;
 }
 
-
+/**
+ * gevent: disable this function for Python 2.7 on Windows.
+ *
+ * It fails to link on anything older than Windows 8/Windows Server 2012
+ * because of GetHostNameW.
+ */
+#if 0
 int uv_os_gethostname(char* buffer, size_t* size) {
   WCHAR buf[UV_MAXHOSTNAMESIZE];
   size_t len;
@@ -1694,6 +1700,7 @@ int uv_os_gethostname(char* buffer, size_t* size) {
   *size = len;
   return 0;
 }
+#endif
 
 
 static int uv__get_handle(uv_pid_t pid, int access, HANDLE* handle) {

@@ -151,7 +151,6 @@ else:
         _libuv_source('unix/thread.c'),
         _libuv_source('unix/tty.c'),
         _libuv_source('unix/udp.c'),
-        _libuv_source('unix/epoll.c'),
     ]
 
 
@@ -163,6 +162,7 @@ if sys.platform.startswith('linux'):
         _libuv_source('unix/procfs-exepath.c'),
         _libuv_source('unix/proctitle.c'),
         _libuv_source('unix/random-sysctl-linux.c'),
+        _libuv_source('unix/epoll.c'),
     ]
 elif sys.platform == 'darwin':
     LIBUV_SOURCES += [
