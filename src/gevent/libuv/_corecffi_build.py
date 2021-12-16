@@ -162,6 +162,7 @@ if sys.platform.startswith('linux'):
         _libuv_source('unix/procfs-exepath.c'),
         _libuv_source('unix/proctitle.c'),
         _libuv_source('unix/random-sysctl-linux.c'),
+        _libuv_source('unix/epoll.c'),
     ]
 elif sys.platform == 'darwin':
     LIBUV_SOURCES += [
@@ -263,6 +264,7 @@ elif sys.platform.startswith('netbsd'): # pragma: no cover
 elif sys.platform.startswith('sunos'): # pragma: no cover
     _define_macro('__EXTENSIONS__', 1)
     _define_macro('_XOPEN_SOURCE', 500)
+    _define_macro('_REENTRANT', 1)
     _add_library('kstat')
     _add_library('nsl')
     _add_library('sendfile')
@@ -290,7 +292,7 @@ elif WIN:
     _define_macro('_CRT_SECURE_NO_DEPRECATE', 1)
     _define_macro('_CRT_NONSTDC_NO_DEPRECATE', 1)
     _define_macro('_CRT_SECURE_NO_WARNINGS', 1)
-    _define_macro('_WIN32_WINNT', '0x0600')
+    _define_macro('_WIN32_WINNT', '0x0602')
     _define_macro('WIN32_LEAN_AND_MEAN', 1)
     _add_library('advapi32')
     _add_library('iphlpapi')

@@ -71,6 +71,8 @@ Updating libuv
     rm -rf libuv
     mv libuv-$LIBUV_VER libuv
     rm -rf libuv/.github
+    rm -rf libuv/.readthedocs.yaml
+    rm -rf libuv/LINKS.md
     rm -rf libuv/docs
     rm -rf libuv/samples
     rm -rf libuv/test/*.[ch] libuv/test/test.gyp # must leave the fixtures/ dir
