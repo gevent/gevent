@@ -948,6 +948,9 @@ class Greenlet(greenlet):
         The *callback* will be called with this instance as an
         argument.
 
+        The *callback* will be called even if linked after the greenlet
+        is already ready().
+
         .. caution::
             The *callback* will be called in the hub and
             **MUST NOT** raise an exception.
@@ -967,6 +970,9 @@ class Greenlet(greenlet):
         argument once this greenlet is dead. A callable is called in
         its own :class:`greenlet.greenlet` (*not* a
         :class:`Greenlet`).
+
+        The *callback* will be called even if linked after the greenlet
+        is already ready().
         """
         # XXX: Is the redefinition of SpawnedLink supposed to just be an
         # optimization, or do people use it? It's not documented
