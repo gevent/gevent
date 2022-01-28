@@ -39,10 +39,13 @@ class Test(unittest.TestCase):
         hub.threadpool.apply(lambda: None)
         self.assertEqual(hub.threadpool.size, 1)
 
+        # Force "fork" context in case the system default was different.
+        mp = multiprocessing.get_context("fork")
+
         # If the Queue is global, q.get() hangs on Windows; must pass as
         # an argument.
-        q = multiprocessing.Queue()
-        p = multiprocessing.Process(target=in_child, args=(q,))
+        q = mp.Queue()
+        p = mp.Process(target=in_child, args=(q,))
         p.start()
         p.join()
         p_val = q.get()
