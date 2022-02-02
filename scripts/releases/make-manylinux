@@ -33,13 +33,13 @@ export BUILD_LIBS=$HOME/.libs
 export CCACHE_DIR="/ccache"
 # Disable some warnings produced by libev especially and also some Cython generated code.
 # Note that changing the value of these variables invalidates configure caches
-GEVENT_WARNFLAGS="-pipe -Wno-strict-aliasing -Wno-comment -Wno-unused-value -Wno-unused-but-set-variable -Wno-sign-compare -Wno-parentheses -Wno-unused-function -Wno-tautological-compare -Wno-strict-prototypes -Wno-return-type -Wno-misleading-indentation"
-export CFLAGS="$GEVENT_WARNFLAGS"
+GEVENT_WARNFLAGS="-Wno-strict-aliasing -Wno-comment -Wno-unused-value -Wno-unused-but-set-variable -Wno-sign-compare -Wno-parentheses -Wno-unused-function -Wno-tautological-compare -Wno-strict-prototypes -Wno-return-type -Wno-misleading-indentation"
+OPTIMIZATION_FLAGS="-pipe"
 if [ "$DOCKER_IMAGE" == "quay.io/pypa/manylinux2014_aarch64" -a -n "$GITHUB_ACTIONS" ]; then
     # Compiling with -Ofast on the arm emulator takes hours. The default settings have -O3,
     # and adding -Os doesn't help much. So maybe -O1 will.
     echo "Compiling with -O1"
-    export CFLAGS="-O1 $GEVENT_WARNFLAGS"
+    OPTIMIZATION_FLAGS="-pipe -O1"
     SLOW_ARM=1
 else
     echo "Compiling with -O3"
@@ -51,8 +51,9 @@ else
     #
     # We *could* turn on other flags that are included in -Ofast individually, but for gevent's usecase, it's not
     # a priority to enable aggressive optimizations at the expense of possibly violating language standards.
-    export CFLAGS="-O3 $GEVENT_WARNFLAGS"
+    OPTIMIZATION_FLAGS="-pipe -O3"
 fi
+export CFLAGS="$OPTIMIZATION_FLAGS $GEVENT_WARNFLAGS"
 # -lrt: Needed for clock_gettime libc support on this version.
 # -pthread: Needed for pthread_atfork (cffi).
 
