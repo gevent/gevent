@@ -226,10 +226,9 @@ install_requires = greenlet_requires + CFFI_REQUIRES + [
     # ultimately be published, but at this writing only the event
     # interfaces are.
     'zope.interface',
-    # setuptools is also used (via pkg_resources) for event
-    # notifications. It's a hard dependency of zope.interface
-    # anyway.
-    'setuptools',
+    # Backport of importlib.metadata.entry_points for older version of Python,
+    # lets us avoid deprecated pkg_resources
+    "backports.entry-points-selectable; python_version<'3.10'"
 ]
 
 # We use headers from greenlet, so it needs to be installed before we
@@ -434,6 +433,9 @@ def run_setup(ext_modules):
                 # The backport for contextvars to test patching. It sadly uses the same
                 # import name as the stdlib module.
                 'contextvars == 2.4 ; python_version > "3.0" and python_version < "3.7"',
+
+                # For pkg_resources until we fully switch to importlib
+                'setuptools',
             ],
         },
         # It's always safe to pass the CFFI keyword, even if

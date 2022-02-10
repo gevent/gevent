@@ -63,6 +63,7 @@ __all__ = [
 
 # pylint:disable=no-self-argument,inherit-non-class
 import platform
+import sys
 
 from zope.interface import Interface
 from zope.interface import Attribute
@@ -71,7 +72,10 @@ from zope.interface import implementer
 from zope.event import subscribers
 from zope.event import notify
 
-from pkg_resources import iter_entry_points
+if sys.version_info < (3,10):
+    from backports.entry_points_selectable import entry_points
+else:
+    from importlib.metadata import entry_points
 
 #: Applications may register for notification of events by appending a
 #: callable to the ``subscribers`` list.
@@ -100,7 +104,7 @@ finally:
 
 def notify_and_call_entry_points(event):
     notify(event)
-    for plugin in iter_entry_points(event.ENTRY_POINT_NAME):
+    for plugin in entry_points(group=event.ENTRY_POINT_NAME):
         subscriber = plugin.load()
         subscriber(event)
 
