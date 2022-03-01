@@ -57,29 +57,60 @@ cdef extern from "Python.h":
     ctypedef class types.CodeType [object PyCodeObject]:
         pass
 
+IF PY311A6:
+    cdef extern from "internal/pycore_frame.h":
+        ctypedef class types._PyInterpreterFrame [object _PyInterpreterFrame]:
+            cdef CodeType f_code
+
+        ctypedef class types.FrameType [object PyFrameObject]:
+            cdef _PyInterpreterFrame f_frame
+            # Accessing the f_lineno directly doesn't work. There is an accessor
+            # function, PyFrame_GetLineNumber that is needed to turn the raw line number
+            # into the executing line number.
+            # cdef int f_lineno
+            # We can't declare this in the object as an object, because it's
+            # allowed to be NULL, and Cython can't handle that.
+            # We have to go through the python machinery to get a
+            # proper None instead, or use an inline function.
+            cdef void* f_back
+ELSE:
+    cdef extern from "frameobject.h":
+        ctypedef class types.FrameType [object PyFrameObject]:
+            cdef CodeType f_code
+            cdef void* f_back
+
 cdef extern from "frameobject.h":
-
-    ctypedef class types.FrameType [object PyFrameObject]:
-        cdef CodeType f_code
-        # Accessing the f_lineno directly doesn't work. There is an accessor
-        # function, PyFrame_GetLineNumber that is needed to turn the raw line number
-        # into the executing line number.
-        # cdef int f_lineno
-        # We can't declare this in the object as an object, because it's
-        # allowed to be NULL, and Cython can't handle that.
-        # We have to go through the python machinery to get a
-        # proper None instead, or use an inline function.
-        cdef void* f_back
-
     int PyFrame_GetLineNumber(FrameType frame)
+    IF PY39B1:
+        CodeType PyFrame_GetCode(FrameType frame)
+        void* PyFrame_GetBack(FrameType frame)
 
 @cython.nonecheck(False)
 cdef inline FrameType get_f_back(FrameType frame):
+    IF PY39B1:
+        f_back = PyFrame_GetBack(frame)
+    ELSE:
+        f_back = frame.f_back
     if frame.f_back != NULL:
-        return <FrameType>frame.f_back
+        return <FrameType>f_back
 
 cdef inline int get_f_lineno(FrameType frame):
     return PyFrame_GetLineNumber(frame)
+
+cdef inline void set_f_lineno(FrameType frame, int lineno):
+    frame.f_lineno = lineno
+
+cdef inline CodeType get_f_code(FrameType frame):
+    IF PY39B1:
+        return PyFrame_GetCode(frame)
+    ELSE:
+        return frame.f_code
+
+cdef inline void set_f_code(FrameType frame, CodeType code):
+    IF PY311A6:
+        frame.f_frame.f_code = code
+    ELSE:
+        frame.f_code = code
 
 cdef void _init()
 

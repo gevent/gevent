@@ -58,6 +58,9 @@ locals()['get_generic_parent'] = lambda s: s.parent
 # Frame access
 locals()['get_f_back'] = lambda frame: frame.f_back
 locals()['get_f_lineno'] = lambda frame: frame.f_lineno
+locals()['set_f_lineno'] = lambda frame, lineno: setattr(frame, 'f_lineno', lineno)
+locals()['get_f_code'] = lambda frame: frame.f_code
+locals()['set_f_code'] = lambda frame, code: setattr(frame, 'f_code', code)
 
 if _PYPY:
     import _continuation # pylint:disable=import-error
@@ -157,8 +160,8 @@ def _extract_stack(limit):
         # Arguments are always passed to the constructor as Python objects,
         # meaning we wind up boxing the f_lineno just to unbox it if we pass it.
         # It's faster to simply assign once the object is created.
-        older_Frame.f_code = frame.f_code
-        older_Frame.f_lineno = get_f_lineno(frame) # pylint:disable=undefined-variable
+        set_f_code(older_Frame.f_code, get_f_code(frame))
+        set_f_lineno(older_Frame.f_lineno, get_f_lineno(frame)) # pylint:disable=undefined-variable
         if newer_Frame is not None:
             newer_Frame.f_back = older_Frame
         newer_Frame = older_Frame

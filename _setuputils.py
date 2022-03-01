@@ -244,6 +244,10 @@ def cythonize1(ext):
                 'infer_types': True,
                 'nonecheck': False,
             },
+            compile_time_env={
+                'PY39B1': sys.hexversion >= 0x030900B1,
+                'PY311A6': sys.hexversion >= 0x030B00A6,
+            },
             # The common_utility_include_dir (not well documented)
             # causes Cython to emit separate files for much of the
             # static support code. Each of the modules then includes

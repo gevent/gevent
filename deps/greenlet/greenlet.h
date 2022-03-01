@@ -14,6 +14,10 @@ extern "C" {
 /* This is deprecated and undocumented. It does not change. */
 #define GREENLET_VERSION "1.0.0"
 
+#if PY_VERSION_HEX < 0x30B00A6
+#  define _PyCFrame CFrame
+#endif
+
 typedef struct _greenlet {
     PyObject_HEAD
     char* stack_start;
@@ -39,7 +43,7 @@ typedef struct _greenlet {
     PyObject* context;
 #endif
 #if PY_VERSION_HEX >= 0x30A00B1
-    CFrame* cframe;
+    _PyCFrame* cframe;
 #endif
 } PyGreenlet;
 
