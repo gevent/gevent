@@ -52,34 +52,47 @@ cdef inline void greenlet_init():
         PyGreenlet_Import()
         _greenlet_imported = True
 
-cdef extern from "Python.h":
+ctypedef object CodeType
 
-    ctypedef class types.CodeType [object PyCodeObject]:
-        pass
+IF PY39B1:
+    ctypedef object FrameType
+
+    cdef extern from "Python.h":
+        CodeType PyFrame_GetCode(FrameType frame)
+        void* PyFrame_GetBack(FrameType frame)
+
+ELSE:
+    cdef extern from "frameobject.h":
+        ctypedef class types.FrameType [object PyFrameObject]:
+            # We don't have PyFrame_GetCode, need to use the pointer directly
+            cdef CodeType f_code
+
+            # We can't declare this in the object as an object, because it's
+            # allowed to be NULL, and Cython can't handle that.
+            # We have to go through the python machinery to get a
+            # proper None instead, or use a function.
+            cdef void* f_back
 
 cdef extern from "frameobject.h":
-
-    ctypedef class types.FrameType [object PyFrameObject]:
-        cdef CodeType f_code
-        # Accessing the f_lineno directly doesn't work. There is an accessor
-        # function, PyFrame_GetLineNumber that is needed to turn the raw line number
-        # into the executing line number.
-        # cdef int f_lineno
-        # We can't declare this in the object as an object, because it's
-        # allowed to be NULL, and Cython can't handle that.
-        # We have to go through the python machinery to get a
-        # proper None instead, or use an inline function.
-        cdef void* f_back
-
     int PyFrame_GetLineNumber(FrameType frame)
 
 @cython.nonecheck(False)
 cdef inline FrameType get_f_back(FrameType frame):
-    if frame.f_back != NULL:
-        return <FrameType>frame.f_back
+    IF PY39B1:
+        f_back = PyFrame_GetBack(frame)
+    ELSE:
+        f_back = frame.f_back
+    if f_back != NULL:
+        return <FrameType>f_back
 
 cdef inline int get_f_lineno(FrameType frame):
     return PyFrame_GetLineNumber(frame)
+
+cdef inline CodeType get_f_code(FrameType frame):
+    IF PY39B1:
+        return PyFrame_GetCode(frame)
+    ELSE:
+        return frame.f_code
 
 cdef void _init()
 
