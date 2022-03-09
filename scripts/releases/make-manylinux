@@ -33,20 +33,27 @@ export BUILD_LIBS=$HOME/.libs
 export CCACHE_DIR="/ccache"
 # Disable some warnings produced by libev especially and also some Cython generated code.
 # Note that changing the value of these variables invalidates configure caches
-GEVENT_WARNFLAGS="-pipe -Wno-strict-aliasing -Wno-comment -Wno-unused-value -Wno-unused-but-set-variable -Wno-sign-compare -Wno-parentheses -Wno-unused-function -Wno-tautological-compare -Wno-strict-prototypes -Wno-return-type -Wno-misleading-indentation"
-export CFLAGS="$GEVENT_WARNFLAGS"
+GEVENT_WARNFLAGS="-Wno-strict-aliasing -Wno-comment -Wno-unused-value -Wno-unused-but-set-variable -Wno-sign-compare -Wno-parentheses -Wno-unused-function -Wno-tautological-compare -Wno-strict-prototypes -Wno-return-type -Wno-misleading-indentation"
+OPTIMIZATION_FLAGS="-pipe"
 if [ "$DOCKER_IMAGE" == "quay.io/pypa/manylinux2014_aarch64" -a -n "$GITHUB_ACTIONS" ]; then
     # Compiling with -Ofast on the arm emulator takes hours. The default settings have -O3,
     # and adding -Os doesn't help much. So maybe -O1 will.
     echo "Compiling with -O1"
-    export CFLAGS="-O1 $GEVENT_WARNFLAGS"
+    OPTIMIZATION_FLAGS="-pipe -O1"
     SLOW_ARM=1
 else
-    echo "Compiling with -Ofast"
-    # Note: -Ofast includes -ffast-math which affects process-wide floating-point flags (e.g. can affect numpy).
-    #       We opt out of -ffast-math explicitly. Other libraries can still trigger it.
-    export CFLAGS="-Ofast -fno-fast-math $GEVENT_WARNFLAGS"
+    echo "Compiling with -O3"
+    # Caution against using -Ofast:
+    # -Ofast includes -ffast-math which affects process-wide floating-point flags (e.g. can affect numpy).
+    # -fno-fast-math disables *some* features of -ffast-math, but as long as -Ofast is specified,
+    # it still affects floating-point flags:
+    # https://github.com/gcc-mirror/gcc/blob/releases/gcc-11.2.0/gcc/config/i386/gnu-user-common.h#L50
+    #
+    # We *could* turn on other flags that are included in -Ofast individually, but for gevent's usecase, it's not
+    # a priority to enable aggressive optimizations at the expense of possibly violating language standards.
+    OPTIMIZATION_FLAGS="-pipe -O3"
 fi
+export CFLAGS="$OPTIMIZATION_FLAGS $GEVENT_WARNFLAGS"
 # -lrt: Needed for clock_gettime libc support on this version.
 # -pthread: Needed for pthread_atfork (cffi).
 
