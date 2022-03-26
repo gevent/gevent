@@ -57,7 +57,7 @@ TODO: document EV_TSTAMP_T
 	- io_cancel can return EINTR, deal with it. also, assume
           io_submit also returns EINTR.
         - fix some other minor bugs in linuxaio backend.
-        - ev_tstamp type can now be overriden by defining EV_TSTAMP_T.
+        - ev_tstamp type can now be overridden by defining EV_TSTAMP_T.
         - cleanup: replace expect_true/false and noinline by their
           libecb counterparts.
         - move syscall infrastructure from ev_linuxaio.c to ev.c.

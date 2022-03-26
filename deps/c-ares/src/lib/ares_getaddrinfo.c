@@ -21,7 +21,7 @@
 #ifdef HAVE_GETSERVBYNAME_R
 #  if !defined(GETSERVBYNAME_R_ARGS) || \
      (GETSERVBYNAME_R_ARGS < 4) || (GETSERVBYNAME_R_ARGS > 6)
-#    error "you MUST specifiy a valid number of arguments for getservbyname_r"
+#    error "you MUST specify a valid number of arguments for getservbyname_r"
 #  endif
 #endif
 

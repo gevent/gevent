@@ -230,7 +230,7 @@ jobs:
           path: deps/*/config.cache
           # XXX: This should probably include a hash of each configure
           # script We don't have a restore-keys that doesn't include
-          # the CFLAGS becouse the scripts fail to run if they get
+          # the CFLAGS because the scripts fail to run if they get
           # different CFLAGS, CC, CPPFLAGS, etc, and GHA offers no way
           # to manually clear the cache. At one time, we had a
           # restore-key configured, and it still seems to be used even
@@ -432,7 +432,7 @@ jobs:
           path: deps/*/config.cache
           # XXX: This should probably include a hash of each configure
           # script We don't have a restore-keys that doesn't include
-          # the CFLAGS becouse the scripts fail to run if they get
+          # the CFLAGS because the scripts fail to run if they get
           # different CFLAGS, CC, CPPFLAGS, etc, and GHA offers no way
           # to manually clear the cache. At one time, we had a
           # restore-key configured, and it still seems to be used even

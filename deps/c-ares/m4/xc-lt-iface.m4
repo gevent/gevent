@@ -112,7 +112,7 @@ esac
 # of non-PIC compiled objects will fail with following linker error
 # "relocation R_X86_64_32 can not be used when making a shared object"
 # is to build PIC objects even for static libraries. This behavior may
-# be overriden using 'configure --disable-shared --without-pic'.
+# be overridden using 'configure --disable-shared --without-pic'.
 #
 
 if test "x$xc_lt_want_with_pic" = 'xdefault'; then
