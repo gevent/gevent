@@ -33,7 +33,7 @@ _STACK_LIMIT = 20 if PYPY else None
 def _noop():
     return None
 
-def _ready():
+def _return_false():
     return False
 
 class wrap_errors(object):
@@ -86,7 +86,7 @@ class wrap_errors(object):
         return getattr(self.__func, name)
 
 
-def print_run_info(thread_stacks=True, greenlet_stacks=True, limit=_NONE, file=None):
+def print_run_info(thread_stacks=True, greenlet_stacks=True, limit=_NONE, file=None, include_ready=False):
     """
     Call `format_run_info` and print the results to *file*.
 
@@ -96,7 +96,8 @@ def print_run_info(thread_stacks=True, greenlet_stacks=True, limit=_NONE, file=N
     """
     lines = format_run_info(thread_stacks=thread_stacks,
                             greenlet_stacks=greenlet_stacks,
-                            limit=limit)
+                            limit=limit,
+									 include_ready=include_ready)
     file = sys.stderr if file is None else file
     for l in lines:
         print(l, file=file)
@@ -105,7 +106,8 @@ def print_run_info(thread_stacks=True, greenlet_stacks=True, limit=_NONE, file=N
 def format_run_info(thread_stacks=True,
                     greenlet_stacks=True,
                     limit=_NONE,
-                    current_thread_ident=None):
+                    current_thread_ident=None,
+						  include_ready=True):
     """
     format_run_info(thread_stacks=True, greenlet_stacks=True, limit=None) -> [str]
 
@@ -150,7 +152,7 @@ def format_run_info(thread_stacks=True,
 
     limit = _STACK_LIMIT if limit is _NONE else limit
     _format_thread_info(lines, thread_stacks, limit, current_thread_ident)
-    _format_greenlet_info(lines, greenlet_stacks, limit)
+    _format_greenlet_info(lines, greenlet_stacks, limit, include_ready)
     return lines
 
 
@@ -197,7 +199,7 @@ def _format_thread_info(lines, thread_stacks, limit, current_thread_ident):
     del lines
     del threads
 
-def _format_greenlet_info(lines, greenlet_stacks, limit):
+def _format_greenlet_info(lines, greenlet_stacks, limit, include_ready):
     # Use the gc module to inspect all objects to find the greenlets
     # since there isn't a global registry
     lines.append('*' * 80)
@@ -212,7 +214,7 @@ def _format_greenlet_info(lines, greenlet_stacks, limit):
             # so don't render their stack.
             'running_stacks': greenlet_stacks if tree.is_current_tree else False,
             'running_stack_limit': limit,
-        }))
+        }, include_ready=include_ready))
 
     del lines
 
@@ -340,7 +342,7 @@ class GreenletTree(object):
         'locals': True,
     }
 
-    def format_lines(self, details=True):
+    def format_lines(self, details=True, include_ready=False):
         """
         Return a sequence of lines for the greenlet tree.
 
@@ -358,14 +360,14 @@ class GreenletTree(object):
             details.update(params)
         tree = _TreeFormatter(details, depth=0)
         lines = [l[0] if isinstance(l, tuple) else l
-                 for l in self._render(tree)]
+                 for l in self._render(tree, include_ready=include_ready)]
         return lines
 
-    def format(self, details=True):
+    def format(self, details=True, include_ready=False):
         """
         Like `format_lines` but returns a string.
         """
-        lines = self.format_lines(details)
+        lines = self.format_lines(details, include_ready=include_ready)
         return '\n'.join(lines)
 
     def __str__(self):
@@ -394,12 +396,14 @@ class GreenletTree(object):
                 tree.child_data("  Local %s at %s" % (kind, hex(idl)))
                 tree.child_multidata("    " + pprint.pformat(vals))
 
-    def _render(self, tree):
+    def _render(self, tree, include_ready=False):
         label = repr(self.greenlet)
         if not self.greenlet: # Not running or dead
             # raw greenlets do not have ready
-            if getattr(self.greenlet, 'ready', _ready)():
-                label += '; finished'
+            if getattr(self.greenlet, 'ready', _return_false)():
+                if not include_ready:
+                    return tree.lines
+                label += '; ready (finished)'
                 if self.greenlet.value is not None:
                     label += ' with value ' + repr(self.greenlet.value)[:30]
                 elif getattr(self.greenlet, 'exception', None) is not None:
@@ -431,7 +435,7 @@ class GreenletTree(object):
 
         self.__render_locals(tree)
         try:
-            self.__render_children(tree)
+            self.__render_children(tree, include_ready=include_ready)
         except RuntimeError: # pragma: no cover
             # If the tree is exceptionally deep, we can hit the recursion error.
             # Usually it's several levels down so we can make a print call.
@@ -440,7 +444,7 @@ class GreenletTree(object):
             print("When rendering children", *sys.exc_info())
         return tree.lines
 
-    def __render_children(self, tree):
+    def __render_children(self, tree, include_ready=False):
         children = sorted(self.child_trees,
                           key=lambda c: (
                               # raw greenlets first. Note that we could be accessing
@@ -448,10 +452,12 @@ class GreenletTree(object):
                               # technically thread safe.
                               getattr(c, 'minimal_ident', -1),
                               # running greenlets next
-                              getattr(c, 'ready', _ready)(),
+                              getattr(c, 'ready', _return_false)(),
                               id(c.parent)))
         for n, child in enumerate(children):
-            child_tree = child._render(tree.deeper())
+            child_tree = child._render(tree.deeper(), include_ready=include_ready)
+            if not child_tree:
+                continue
 
             head = tree.child_head
             tail = tree.child_tail
