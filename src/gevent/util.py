@@ -97,7 +97,7 @@ def print_run_info(thread_stacks=True, greenlet_stacks=True, limit=_NONE, file=N
     lines = format_run_info(thread_stacks=thread_stacks,
                             greenlet_stacks=greenlet_stacks,
                             limit=limit,
-									 include_ready=include_ready)
+                            include_ready=include_ready)
     file = sys.stderr if file is None else file
     for l in lines:
         print(l, file=file)
@@ -107,7 +107,7 @@ def format_run_info(thread_stacks=True,
                     greenlet_stacks=True,
                     limit=_NONE,
                     current_thread_ident=None,
-						  include_ready=True):
+                    include_ready=True):
     """
     format_run_info(thread_stacks=True, greenlet_stacks=True, limit=None) -> [str]
 
