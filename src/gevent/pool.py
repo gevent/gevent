@@ -77,6 +77,11 @@ class GroupMappingMixin(object):
         """
         raise NotImplementedError()
 
+    def __greenlet_class(self):
+        if hasattr(self, 'greenlet_class'):
+            return self.greenlet_class
+        return Greenlet
+
     def apply_cb(self, func, args=None, kwds=None, callback=None):
         """
         :meth:`apply` the given *func(\\*args, \\*\\*kwds)*, and, if a *callback* is given, run it with the
@@ -130,7 +135,8 @@ class GroupMappingMixin(object):
             # implementation? That would simplify that logic, but could increase
             # the total number of greenlets in the system and add a layer of
             # overhead for the simple cases when the pool isn't full.
-            return Greenlet.spawn(self.apply_cb, func, args, kwds, callback)
+
+            return self.__greenlet_class().spawn(self.apply_cb, func, args, kwds, callback)
 
         greenlet = self.spawn(func, *args, **kwds)
         if callback is not None:
@@ -197,8 +203,7 @@ class GroupMappingMixin(object):
         # The one remaining difference is that imap runs in its own
         # greenlet, potentially changing the way the event loop runs.
         # That's easy enough to do.
-
-        g = Greenlet.spawn(self.__map, func, iterable)
+        g = self.__greenlet_class().spawn(self.__map, func, iterable)
         return g.get()
 
     def map_cb(self, func, iterable, callback=None):
@@ -215,7 +220,7 @@ class GroupMappingMixin(object):
         If callback is specified then it should be a callable which accepts a
         single argument.
         """
-        return Greenlet.spawn(self.map_cb, func, iterable, callback)
+        return self.__greenlet_class().spawn(self.map_cb, func, iterable, callback)
 
     def __imap(self, cls, func, *iterables, **kwargs):
         # Python 2 doesn't support the syntax that lets us mix varargs and
@@ -500,7 +505,7 @@ class Group(GroupMappingMixin):
         return getcurrent() in self
 
     def _apply_async_cb_spawn(self, callback, result):
-        Greenlet.spawn(callback, result)
+        self.__greenlet_class().spawn(callback, result)
 
     def _apply_async_use_greenlet(self):
         # cannot call self.spawn() because it will block, so
