@@ -141,6 +141,72 @@ jobs:
           skip_existing: true
           packages_dir: wheelhouse/
 
+  manylinux_ppc64le:
+    runs-on: ubuntu-latest
+    # We use a regular Python matrix entry to share as much code as possible.
+    strategy:
+      matrix:
+        python-version: [3.9]
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Cache ~/.ccache
+        uses: actions/cache@v2
+        with:
+          path: ~/.ccache/
+          key: ${{ runner.os }}-ccache_manylinux-${{ matrix.python-version }}
+      - name: Get pip cache dir
+        id: pip-cache
+        run: |
+          echo "::set-output name=dir::$(pip cache dir)"
+
+      - name: pip cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.pip-cache.outputs.dir }}
+          key: ${{ runner.os }}-pip_manylinux_ppc64le-${{ matrix.python-version }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Update pip
+        run: pip install -U pip
+      - name: Enable emulation
+        run: |
+          docker run --rm --privileged hypriot/qemu-register
+        # This one was seen in pyca/bcrypt. What's the difference?
+        # (Other than this one not working.)
+        #run: |
+        #  docker run --rm --privileged multiarch/qemu-user-static:register --reset
+      - name: Build and test gevent
+        # Skip the bulk of the tests, running them emulated on arm takes
+        # forever. Likewise, don't build or even configure c-ares; in the emulated platform
+        # it takes at least 15 minutes and often much longer.
+        env:
+          DOCKER_IMAGE: quay.io/pypa/manylinux2014_ppc64le
+          GEVENTTEST_SKIP_ALL: 1
+          GEVENTSETUP_DISABLE_ARES: 1
+        run: scripts/releases/make-manylinux
+      - name: Upload gevent wheels
+        uses: actions/upload-artifact@v2
+        with:
+          path: wheelhouse/*whl
+          name: manylinux_ppc64le_wheels.zip
+      - name: Restore pip cache permissions
+        run: sudo chown -R $(whoami) ${{ steps.pip-cache.outputs.dir }}
+      - name: Publish package to PyPI
+        uses: pypa/gh-action-pypi-publish@v1.4.1
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+        with:
+          user: __token__
+          password: ${{ secrets.TWINE_PASSWORD }}
+          skip_existing: true
+          packages_dir: wheelhouse/
+
   test:
     runs-on: ${{ matrix.os }}
     strategy:

@@ -35,12 +35,12 @@ export CCACHE_DIR="/ccache"
 # Note that changing the value of these variables invalidates configure caches
 GEVENT_WARNFLAGS="-pipe -Wno-strict-aliasing -Wno-comment -Wno-unused-value -Wno-unused-but-set-variable -Wno-sign-compare -Wno-parentheses -Wno-unused-function -Wno-tautological-compare -Wno-strict-prototypes -Wno-return-type -Wno-misleading-indentation"
 export CFLAGS="$GEVENT_WARNFLAGS"
-if [ "$DOCKER_IMAGE" == "quay.io/pypa/manylinux2014_aarch64" -a -n "$GITHUB_ACTIONS" ]; then
+if [ "$DOCKER_IMAGE" == "quay.io/pypa/manylinux2014_aarch64" -a -n "$GITHUB_ACTIONS" ] || [ "$DOCKER_IMAGE" == "quay.io/pypa/manylinux2014_ppc64le" -a -n "$GITHUB_ACTIONS" ] ; then
     # Compiling with -Ofast on the arm emulator takes hours. The default settings have -O3,
     # and adding -Os doesn't help much. So maybe -O1 will.
     echo "Compiling with -O1"
     export CFLAGS="-O1 $GEVENT_WARNFLAGS"
-    SLOW_ARM=1
+    SLOW_BUILD=1
 else
     echo "Compiling with -Ofast"
     # Note: -Ofast includes -ffast-math which affects process-wide floating-point flags (e.g. can affect numpy).
@@ -83,7 +83,7 @@ if [ -d /gevent -a -d /opt/python ]; then
         # Some images/archs (specificaly 2014_aarch64) don't have ccache;
         # This also seems to have vanished for manylinux_2010 x64/64 after November 30
         # 2020 when the OS went EOL and the package repos switched to the "vault"
-        if [ -n "$SLOW_ARM" ]; then
+        if [ -n "$SLOW_BUILD" ] ; then
             # This provides access to ccache for the 2014 image
             echo Installing epel
             rpm -Uvh https://dl.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-7-14.noarch.rpm
