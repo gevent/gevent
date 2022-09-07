@@ -1,4 +1,4 @@
-Stop bulding with -Ofast to prevent altering the global state of the process with regard
+Stop building with -Ofast to prevent altering the global state of the process with regard
 to floating point precision (see https://simonbyrne.github.io/notes/fastmath/).
 
 (Previous attempt to keep -Ofast while adding -fno-fast-math proved futile, as both
