@@ -63,7 +63,6 @@ install () {
         mkdir -p $SNAKEPIT
         mkdir -p $BASE/versions
         update_pyenv $VERSION
-        # -Ofast makes the build take too long and times out Travis.
         CFLAGS="-O1 -pipe -march=native" $BASE/pyenv/plugins/python-build/bin/python-build $VERSION $DESTINATION
     fi
 
