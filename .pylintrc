@@ -26,7 +26,6 @@ limit-inference-results=1
 
 # invalid-name, ; We get lots of these, especially in scripts. should fix many of them
 # protected-access, ; We have many cases of this; legit ones need to be examinid and commented, then this removed
-# no-self-use, ; common in superclasses with extension points
 # too-few-public-methods, ; Exception and marker classes get tagged with this
 # exec-used, ; should tag individual instances with this, there are some but not too many
 # global-statement,     ; should tag individual instances
@@ -62,7 +61,6 @@ disable=wrong-import-position,
     ungrouped-imports,
     invalid-name,
     protected-access,
-    no-self-use,
     too-few-public-methods,
     exec-used,
     global-statement,
