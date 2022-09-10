@@ -36,8 +36,8 @@ export CCACHE_DIR="/ccache"
 GEVENT_WARNFLAGS="-Wno-strict-aliasing -Wno-comment -Wno-unused-value -Wno-unused-but-set-variable -Wno-sign-compare -Wno-parentheses -Wno-unused-function -Wno-tautological-compare -Wno-strict-prototypes -Wno-return-type -Wno-misleading-indentation"
 OPTIMIZATION_FLAGS="-pipe"
 if [ "$DOCKER_IMAGE" == "quay.io/pypa/manylinux2014_aarch64" -a -n "$GITHUB_ACTIONS" ]; then
-    # Compiling with -Ofast on the arm emulator takes hours. The default settings have -O3,
-    # and adding -Os doesn't help much. So maybe -O1 will.
+    # Compiling with -Ofast is a no-go because of the regression it causes (#1864).
+    # The default settings have -O3, and adding -Os doesn't help much. So maybe -O1 will.
     echo "Compiling with -O1"
     OPTIMIZATION_FLAGS="-pipe -O1"
     SLOW_ARM=1
