@@ -15,6 +15,7 @@ test__examples.py
 test__getaddrinfo_import.py
 test__hub_join.py
 test__hub_join_timeout.py
+test__issue1864.py
 test__issue330.py
 test__iwait.py
 test__monkey_scope.py

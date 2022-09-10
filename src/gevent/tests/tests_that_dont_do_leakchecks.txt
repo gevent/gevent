@@ -7,3 +7,4 @@ test__close_backend_fd.py
 test__hub_join.py
 test__hub_join_timeout.py
 test__issue112.py
+test__issue1864.py
