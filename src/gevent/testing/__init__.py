@@ -66,6 +66,9 @@ from .sysinfo import PY2
 from .sysinfo import PY3
 from .sysinfo import PY36
 from .sysinfo import PY37
+from .sysinfo import PY38
+from .sysinfo import PY39
+from .sysinfo import PY310
 
 from .sysinfo import PYPY
 from .sysinfo import PYPY3
