@@ -22,7 +22,7 @@ class TestSelect(greentest.TestCase):
             'kevent',
             'devpoll',
     ):
-        _make_test(name, locals())
+        _make_test(name, locals()) # pylint:disable=too-many-function-args
 
     del name
     del _make_test

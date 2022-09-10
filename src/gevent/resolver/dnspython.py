@@ -270,7 +270,7 @@ class _HostsResolver(object):
         # gethostbyname_ex so it's probably fine.
         aliases = self.hosts_file.aliases
         result = []
-        if hostname in aliases:
+        if hostname in aliases: # pylint:disable=consider-using-get
             cannon = aliases[hostname]
         else:
             cannon = hostname

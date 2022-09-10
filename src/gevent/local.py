@@ -574,7 +574,7 @@ def _local_find_descriptors(self):
 # (e.g., on PyPy). So we set it at runtime. Cython
 # will raise an error if we're compiled.
 def __new__(cls, *args, **kw):
-    self = super(local, cls).__new__(cls)
+    self = super(local, cls).__new__(cls) # pylint:disable=no-value-for-parameter
     # We get the cls in *args for some reason
     # too when we do it this way....except on PyPy3, which does
     # not *unless* it's wrapped in a classmethod (which it is)
