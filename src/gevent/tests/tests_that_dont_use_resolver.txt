@@ -34,6 +34,7 @@ test__hub_join.py
 test__hub_join_timeout.py
 # uses socket test__hub.py
 test__issue112.py
+test__issue1864.py
 test__joinall.py
 test__local.py
 test__loop_callback.py

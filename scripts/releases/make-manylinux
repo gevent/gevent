@@ -43,14 +43,6 @@ if [ "$DOCKER_IMAGE" == "quay.io/pypa/manylinux2014_aarch64" -a -n "$GITHUB_ACTI
     SLOW_ARM=1
 else
     echo "Compiling with -O3"
-    # Caution against using -Ofast:
-    # -Ofast includes -ffast-math which affects process-wide floating-point flags (e.g. can affect numpy).
-    # -fno-fast-math disables *some* features of -ffast-math, but as long as -Ofast is specified,
-    # it still affects floating-point flags:
-    # https://github.com/gcc-mirror/gcc/blob/releases/gcc-11.2.0/gcc/config/i386/gnu-user-common.h#L50
-    #
-    # We *could* turn on other flags that are included in -Ofast individually, but for gevent's usecase, it's not
-    # a priority to enable aggressive optimizations at the expense of possibly violating language standards.
     OPTIMIZATION_FLAGS="-pipe -O3"
 fi
 export CFLAGS="$OPTIMIZATION_FLAGS $GEVENT_WARNFLAGS"
