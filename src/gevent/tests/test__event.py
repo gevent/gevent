@@ -269,12 +269,14 @@ class TestAsyncResultCrossThread(greentest.TestCase):
                 gevent.get_hub().destroy(destroy_loop=True)
 
         thread = Thread()
+        glet = None
         try:
             glet = gevent.spawn(thread.start)
             result = thread.async_result.wait(self.BG_WAIT_DELAY)
         finally:
             thread.join(DELAY * 15)
-            glet.join(DELAY)
+            if glet is not None:
+                glet.join(DELAY)
         self._check_result(result)
 
     @greentest.ignores_leakcheck
