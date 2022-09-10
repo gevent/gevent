@@ -56,7 +56,7 @@ env:
   # These are shared between GCC and clang so it must be a minimal set.
   # TODO: Figure out how to set env vars per platform without resorting to inline scripting.
   # Note that changing the value of these variables invalidates configure caches
-  CFLAGS: -Ofast -pipe -Wno-strict-aliasing -Wno-comment
+  CFLAGS: -O3 -pipe -Wno-strict-aliasing -Wno-comment
   CPPFLAGS: -DEV_VERIFY=1
   # Uploading built wheels for releases.
   # TWINE_PASSWORD is encrypted and stored directly in the
