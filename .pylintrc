@@ -55,6 +55,8 @@ limit-inference-results=1
 # Pylint 2.4 adds self-assigning-variable. But we do *that* to avoid unused-import when we
 # "export" the variable and don't have a __all__.
 # Pylint 2.6+ adds some python-3-only things that don't apply: raise-missing-from, super-with-arguments, consider-using-f-string, redundant-u-string-prefix
+# unnecessary-lambda-assignment: New check introduced in v2.14.0
+# unnecessary-dunder-call: New check introduced in v2.14.0
 disable=wrong-import-position,
     wrong-import-order,
     missing-docstring,
@@ -80,7 +82,9 @@ disable=wrong-import-position,
     raise-missing-from,
     super-with-arguments,
     consider-using-f-string,
-    redundant-u-string-prefix
+    redundant-u-string-prefix,
+    unnecessary-lambda-assignment,
+    unnecessary-dunder-call
 
 [FORMAT]
 # duplicated from setup.cfg
