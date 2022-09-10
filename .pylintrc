@@ -1,3 +1,6 @@
+[MAIN]
+load-plugins=pylint.extensions.bad_builtin
+
 [MASTER]
 extension-pkg-whitelist=gevent.greenlet,gevent.libuv._corecffi,gevent.libev._corecffi,gevent.libev._corecffi.lib,gevent.local,gevent._ident
 
