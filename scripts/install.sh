@@ -64,7 +64,7 @@ install () {
         mkdir -p $BASE/versions
         update_pyenv $VERSION
         # -Ofast makes the build take too long and times out Travis. It also affects
-        # process-wide floating-point flags - see: scripts/releases/make-manylinux
+        # process-wide floating-point flags - see: https://github.com/gevent/gevent/pull/1864
         CFLAGS="-O1 -pipe -march=native" $BASE/pyenv/plugins/python-build/bin/python-build $VERSION $DESTINATION
     fi
 
