@@ -305,8 +305,12 @@ jobs:
         # pylint has stopped updating for Python 2.
         # We do this here rather than a separate job to avoid the compilation overhead.
         # TODO: Revisit this when we have caching of that part.
+        # astroid 2.12.10 and pylint 2.15.3 encounter infinite
+        # recursion in gevent/_ssl3.py on CI; I can't reproduce
+        # locally on my Mac. Trying some different version pins to see
+        # what we get
         run: |
-          pip install -U pylint
+          pip install -U 'pylint!=2.15.3' 'astroid!=2.12.10'
           python -m pylint --rcfile=.pylintrc gevent
       - name: "Tests: Basic"
         run: |
