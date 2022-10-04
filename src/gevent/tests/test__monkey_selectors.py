@@ -69,7 +69,7 @@ class TestSelectors(SelectorTestMixin, greentest.TestCase):
         else:
             SelKind = SelKindName
             SelKindName = SelKind.__name__
-        m = _make_test(SelKindName, SelKind)
+        m = _make_test(SelKindName, SelKind) # pylint:disable=too-many-function-args
         locals()[m.__name__] = m
 
     del SelKind

@@ -184,7 +184,7 @@ def libev_supports_linux_aio():
     # libev requires kernel 4.19 or above to be able to support
     # linux AIO. It can still be compiled in, but will fail to create
     # the loop at runtime.
-    from distutils.version import LooseVersion
+    from distutils.version import LooseVersion # pylint:disable=deprecated-module
     from platform import system
     from platform import release
 
@@ -195,7 +195,7 @@ def libev_supports_linux_iouring():
     # It fails with the kernel in fedora rawhide (4.19.76) but
     # works (doesn't fail catastrophically when asked to create one)
     # with kernel 5.3.0 (Ubuntu Bionic)
-    from distutils.version import LooseVersion
+    from distutils.version import LooseVersion # pylint:disable=deprecated-module
     from platform import system
     from platform import release
 
