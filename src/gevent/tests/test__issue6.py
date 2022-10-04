@@ -29,7 +29,7 @@ elif sys.argv[1:] == ['subprocess']: # pragma: no cover
         try:
             line = raw_input()
         except NameError:
-            line = input()
+            line = input() # pylint:disable=bad-builtin
         print('%s chars.' % len(line))
         sys.stdout.flush()
 

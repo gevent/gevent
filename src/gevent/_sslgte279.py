@@ -47,7 +47,7 @@ __imports__ = copy_globals(__ssl__, globals(),
                            dunder_names_to_keep=())
 
 try:
-    _delegate_methods
+    _delegate_methods # pylint:disable=used-before-assignment
 except NameError: # PyPy doesn't expose this detail
     _delegate_methods = ('recv', 'recvfrom', 'recv_into', 'recvfrom_into', 'send', 'sendto')
 

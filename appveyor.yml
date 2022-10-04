@@ -25,6 +25,11 @@ environment:
     # know.
     PIP_NO_PYTHON_VERSION_WARNING: 1
     PIP_UPGRADE_STRATEGY: eager
+    # Stay on the legacy implementation of editable installs.
+    # Recent versions of setuptools has changed how editable installs work,
+    # which broke Appveyor builds.
+    # For a relevant upstream issue, see https://github.com/pypa/setuptools/issues/3557
+    SETUPTOOLS_ENABLE_FEATURES: "legacy-editable"
     # Enable this if debugging a resource leak. Otherwise
     # it slows things down.
     # PYTHONTRACEMALLOC: 10

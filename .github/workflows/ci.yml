@@ -258,7 +258,7 @@ jobs:
           pip install -q -U 'faulthandler; python_version == "2.7" and platform_python_implementation == "CPython"'
           pip install -q -U 'cffi;platform_python_implementation=="CPython"'
           pip install -q -U 'cython>=3.0a9'
-          pip install 'greenlet>=1.0a1;platform_python_implementation=="CPython"'
+          pip install 'greenlet>=1.0a1,<2;platform_python_implementation=="CPython"'
 
       - name: Build gevent
         run: |
@@ -447,7 +447,7 @@ jobs:
           pip install -q -U 'faulthandler; python_version == "2.7" and platform_python_implementation == "CPython"'
           pip install -q -U 'cffi;platform_python_implementation=="CPython"'
           pip install -q -U 'cython>=3.0a5'
-          pip install 'greenlet>=1.0a1;platform_python_implementation=="CPython"'
+          pip install 'greenlet>=1.0a1,<2;platform_python_implementation=="CPython"'
 
       - name: build libs and gevent
         env:

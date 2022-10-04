@@ -280,7 +280,7 @@ else:
     from gevent.os import fork_and_watch
 
 try:
-    BrokenPipeError
+    BrokenPipeError # pylint:disable=used-before-assignment
 except NameError: # Python 2
     class BrokenPipeError(Exception):
         "Never raised, never caught."

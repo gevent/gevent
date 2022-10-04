@@ -66,7 +66,7 @@ __all__ = [
 ]
 
 try:
-    ResourceWarning
+    ResourceWarning # pylint:disable=used-before-assignment
 except NameError:
     class ResourceWarning(Warning):
         "Python 2 fallback"

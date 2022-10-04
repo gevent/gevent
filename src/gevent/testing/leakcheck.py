@@ -127,7 +127,7 @@ class _RefCountChecker(object):
         if 'urlparse' in sys.modules:
             sys.modules['urlparse'].clear_cache()
         if 'urllib.parse' in sys.modules:
-            sys.modules['urllib.parse'].clear_cache()
+            sys.modules['urllib.parse'].clear_cache() # pylint:disable=no-member
 
         return self._growth()
 
