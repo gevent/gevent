@@ -310,7 +310,7 @@ jobs:
         # locally on my Mac. Trying some different version pins to see
         # what we get
         run: |
-          pip install -U 'pylint!=2.15.3' 'astroid!=2.12.10'
+          pip install -U 'pylint<2.15'
           python -m pylint --rcfile=.pylintrc gevent
       - name: "Tests: Basic"
         run: |
