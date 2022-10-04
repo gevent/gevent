@@ -145,6 +145,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        # 3.10 needs more work: dnspython for example doesn't work
+        # with it. That means for the bulk of our testing we need to
+        # stick to 3.9.
         python-version: [2.7, pypy-2.7, pypy-3.7, 3.6, 3.7, 3.8, 3.9, '3.10']
         # ubuntu-latest is at least 20.04. But this breaks the SSL
         # tests because Ubuntu increased the default OpenSSL
@@ -332,14 +335,14 @@ jobs:
           python -m gevent.tests --second-chance $G_USE_COV `(cd src/gevent/tests >/dev/null && ls test__*subprocess*.py)`
       - name: "Tests: c-ares resolver"
         # This sometimes fails on mac. Also, save mac minutes.
-        if: (matrix.python-version == 2.7 || matrix.python-version == '3.10') && startsWith(runner.os, 'Linux')
+        if: (matrix.python-version == 2.7 || matrix.python-version == '3.9') && startsWith(runner.os, 'Linux')
         env:
           GEVENT_RESOLVER: ares
         run: |
           python -mgevent.tests --second-chance $G_USE_COV --ignore tests_that_dont_use_resolver.txt
       - name: "Tests: dnspython resolver"
         # This has known issues on Pypy-3.6. Also, save mac minutes.
-        if: (matrix.python-version == 2.7 || matrix.python-version == '3.10') && startsWith(runner.os, 'Linux')
+        if: (matrix.python-version == 2.7 || matrix.python-version == '3.9') && startsWith(runner.os, 'Linux')
         env:
           GEVENT_RESOLVER: dnspython
         run: |
@@ -355,19 +358,19 @@ jobs:
       - name: "Tests: PURE_PYTHON"
         # No compiled cython modules on CPython, using the default backend. Get coverage here.
         # We should only need to run this for a single Python 2 and a Python 3
-        if: (matrix.python-version == 2.7 || matrix.python-version == '3.10') && startsWith(runner.os, 'Linux')
+        if: (matrix.python-version == 2.7 || matrix.python-version == '3.9') && startsWith(runner.os, 'Linux')
         env:
           PURE_PYTHON: 1
         run: |
           python -mgevent.tests --second-chance --coverage
       - name: "Tests: libuv"
-        if: (matrix.python-version == 2.7 || matrix.python-version == '3.10')
+        if: (matrix.python-version == 2.7 || matrix.python-version == '3.9')
         env:
           GEVENT_LOOP: libuv
         run: |
           python -m gevent.tests --second-chance $G_USE_COV
       - name: "Tests: libev-cffi"
-        if: (matrix.python-version == 2.7 || matrix.python-version == '3.10') && startsWith(runner.os, 'Linux')
+        if: (matrix.python-version == 2.7 || matrix.python-version == '3.9') && startsWith(runner.os, 'Linux')
         env:
           GEVENT_LOOP: libev-cffi
         run: |
@@ -397,7 +400,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: [2.7, '3.10']
+        python-version: [2.7, '3.9']
         os: [ubuntu-18.04]
     steps:
       - name: checkout
