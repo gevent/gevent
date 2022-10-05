@@ -234,6 +234,7 @@ def cythonize1(ext):
         '.',
     ]
     try:
+        print("XXX: Drop compile_time_env")
         new_ext = cythonize(
             [ext],
             include_path=standard_include_paths,
@@ -244,6 +245,10 @@ def cythonize1(ext):
                 'infer_types': True,
                 'nonecheck': False,
             },
+            # XXX: Cython developers say: "Please use C macros instead
+            # of Pyrex defines. Taking this kind of decision based on
+            # the runtime environment of the build is wrong, it needs
+            # to be taken at C compile time."
             compile_time_env={
                 'PY39B1': sys.hexversion >= 0x030900B1,
             },

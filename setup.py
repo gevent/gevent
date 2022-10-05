@@ -201,7 +201,8 @@ greenlet_requires = [
     # the release of 1.0a1 it began promising ABI stability with SemVer
     # so we can add an upper bound).
     # 1.1.0 is required for 3.10; it has a new ABI, but only on 1.1.0.
-    'greenlet >= 1.1.0, < 2.0; platform_python_implementation=="CPython"',
+    # 1.1.3 is needed for 3.11, and supports everything 1.1.0 did.
+    'greenlet >= 1.1.3, < 2.0; platform_python_implementation=="CPython"',
 ]
 
 # Note that we don't add cffi to install_requires, it's

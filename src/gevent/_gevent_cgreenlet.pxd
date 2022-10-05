@@ -54,7 +54,7 @@ cdef inline void greenlet_init():
 
 ctypedef object CodeType
 
-IF PY39B1:
+IF PY39B1: # XXX: Move all of this to C includes. Pyrex defines are not appropriate, according to the Cython devs.
     ctypedef object FrameType
 
     cdef extern from "Python.h":

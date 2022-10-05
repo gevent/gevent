@@ -425,8 +425,9 @@ class TestCase(TestCaseMetaClass("NewBase",
                 # Python 3 can check a lot more than Python 2 can.
                 continue
             self.assertEqual(sig.args, gevent_sig.args, func_name)
-            # The next two might not actually matter?
+            # The next three might not actually matter?
             self.assertEqual(sig.varargs, gevent_sig.varargs, func_name)
+            self.assertEqual(sig.keywords, gevent_sig.keywords, func_name)
             self.assertEqual(sig.defaults, gevent_sig.defaults, func_name)
             # Should deal with others: https://docs.python.org/3/library/inspect.html#inspect.getfullargspec
 
