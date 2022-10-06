@@ -35,6 +35,7 @@ else:
     string_types = __builtins__.basestring,
     text_type = __builtins__.unicode
 
+# XXX: DEF is deprecated. See _setuputils.py for info.
 DEF TIMEOUT = 1
 
 DEF EV_READ = 1

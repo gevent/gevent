@@ -427,8 +427,13 @@ class TestCase(TestCaseMetaClass("NewBase",
             self.assertEqual(sig.args, gevent_sig.args, func_name)
             # The next three might not actually matter?
             self.assertEqual(sig.varargs, gevent_sig.varargs, func_name)
-            self.assertEqual(sig.keywords, gevent_sig.keywords, func_name)
             self.assertEqual(sig.defaults, gevent_sig.defaults, func_name)
+            if hasattr(sig, 'keywords'): # the old version
+                self.assertEqual(sig.keywords, gevent_sig.keywords, func_name)
+            else:
+                # The new hotness
+                self.assertEqual(sig.kwonlyargs, gevent_sig.kwonlyargs)
+                self.assertEqual(sig.kwonlydefaults, gevent_sig.kwonlydefaults)
             # Should deal with others: https://docs.python.org/3/library/inspect.html#inspect.getfullargspec
 
     def assertEqualFlakyRaceCondition(self, a, b):

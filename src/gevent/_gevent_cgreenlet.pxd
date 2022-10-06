@@ -54,45 +54,19 @@ cdef inline void greenlet_init():
 
 ctypedef object CodeType
 
-IF PY39B1: # XXX: Move all of this to C includes. Pyrex defines are not appropriate, according to the Cython devs.
-    ctypedef object FrameType
-
-    cdef extern from "Python.h":
-        CodeType PyFrame_GetCode(FrameType frame)
-        void* PyFrame_GetBack(FrameType frame)
-
-ELSE:
-    cdef extern from "frameobject.h":
-        ctypedef class types.FrameType [object PyFrameObject]:
-            # We don't have PyFrame_GetCode, need to use the pointer directly
-            cdef CodeType f_code
-
-            # We can't declare this in the object as an object, because it's
-            # allowed to be NULL, and Cython can't handle that.
-            # We have to go through the python machinery to get a
-            # proper None instead, or use a function.
-            cdef void* f_back
-
-cdef extern from "frameobject.h":
+cdef extern from "_compat.h":
     int PyFrame_GetLineNumber(FrameType frame)
+    CodeType PyFrame_GetCode(FrameType frame)
+    void* PyFrame_GetBack(FrameType frame)
+    ctypedef class types.FrameType [object PyFrameObject]:
+        pass
 
 @cython.nonecheck(False)
 cdef inline FrameType get_f_back(FrameType frame):
-    IF PY39B1:
-        f_back = PyFrame_GetBack(frame)
-    ELSE:
-        f_back = frame.f_back
+    f_back = PyFrame_GetBack(frame)
     if f_back != NULL:
         return <FrameType>f_back
 
-cdef inline int get_f_lineno(FrameType frame):
-    return PyFrame_GetLineNumber(frame)
-
-cdef inline CodeType get_f_code(FrameType frame):
-    IF PY39B1:
-        return PyFrame_GetCode(frame)
-    ELSE:
-        return frame.f_code
 
 cdef void _init()
 
@@ -122,7 +96,7 @@ cdef class _Frame:
                newest_Frame=_Frame,
                newer_Frame=_Frame,
                older_Frame=_Frame)
-cdef inline _Frame _extract_stack(int limit)
+cdef _Frame _extract_stack(int limit)
 
 cdef class Greenlet(greenlet):
     cdef readonly object value
