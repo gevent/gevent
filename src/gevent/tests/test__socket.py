@@ -581,6 +581,10 @@ class TestFunctions(greentest.TestCase):
             exclude.append('gethostbyname')
             exclude.append('gethostbyname_ex')
             exclude.append('gethostbyaddr')
+        if sys.version_info[:2] == (3, 11):
+            # Be careful not to exclude this on 3.12, etc, in case of
+            # more changes.
+            exclude.append('create_connection')
         self.assertMonkeyPatchedFuncSignatures('socket', exclude=exclude)
 
     def test_resolve_ipv6_scope_id(self):

@@ -375,7 +375,7 @@ class Greenlet(greenlet):
     @property
     def loop(self):
         # needed by killall
-        hub = get_my_hub(self) # type:SwitchOutGreenletWithLoop pylint:disable=undefined-variable
+        hub = get_my_hub(self) # pylint:disable=undefined-variable
         return hub.loop
 
     def __nonzero__(self):
@@ -619,7 +619,7 @@ class Greenlet(greenlet):
         """Schedule the greenlet to run in this loop iteration"""
         if self._start_event is None:
             _call_spawn_callbacks(self)
-            hub = get_my_hub(self) # type:SwitchOutGreenletWithLoop pylint:disable=undefined-variable
+            hub = get_my_hub(self) # pylint:disable=undefined-variable
             self._start_event = hub.loop.run_callback(self.switch)
 
     def start_later(self, seconds):
@@ -1151,7 +1151,7 @@ def killall(greenlets, exception=GreenletExit, block=True, timeout=None):
         Now accepts raw greenlets created by :func:`gevent.spawn_raw`.
     """
 
-    need_killed = [] # type: list
+    need_killed = []
     for glet in greenlets:
         # Quick pass through to prevent any greenlet from
         # actually being switched to if it hasn't already.

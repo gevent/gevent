@@ -431,9 +431,12 @@ class TestCase(TestCaseMetaClass("NewBase",
             if hasattr(sig, 'keywords'): # the old version
                 self.assertEqual(sig.keywords, gevent_sig.keywords, func_name)
             else:
-                # The new hotness
-                self.assertEqual(sig.kwonlyargs, gevent_sig.kwonlyargs)
-                self.assertEqual(sig.kwonlydefaults, gevent_sig.kwonlydefaults)
+                # The new hotness. Unfortunately, we can't actually check these things
+                # until we drop Python 2 support from the shared code. The only known place
+                # this is a problem is python 3.11 socket.create_connection(), which we manually
+                # ignore. So the checks all pass as is.
+                self.assertEqual(sig.kwonlyargs, gevent_sig.kwonlyargs, func_name)
+                self.assertEqual(sig.kwonlydefaults, gevent_sig.kwonlydefaults, func_name)
             # Should deal with others: https://docs.python.org/3/library/inspect.html#inspect.getfullargspec
 
     def assertEqualFlakyRaceCondition(self, a, b):
