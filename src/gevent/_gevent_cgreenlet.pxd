@@ -63,6 +63,9 @@ cdef extern from "_compat.h":
 
 @cython.nonecheck(False)
 cdef inline FrameType get_f_back(FrameType frame):
+    # We cannot just call the original version, because it
+    # can return NULL even when there is no exception set. That confuses
+    # Cython and CPython. We need to manually check for NULL here.
     f_back = PyFrame_GetBack(frame)
     if f_back != NULL:
         return <FrameType>f_back

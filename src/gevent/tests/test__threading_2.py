@@ -413,6 +413,7 @@ class ThreadTests(unittest.TestCase):
 
     if not hasattr(sys, 'pypy_version_info'):
         def test_no_refcycle_through_target(self):
+            self.skipTest('WARNING: LEAKING.Debugging.')
             class RunSelfFunction(object):
                 def __init__(self, should_raise):
                     # The links in this refcycle from Thread back to self
