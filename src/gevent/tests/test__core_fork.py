@@ -39,10 +39,20 @@ class Test(unittest.TestCase):
         hub.threadpool.apply(lambda: None)
         self.assertEqual(hub.threadpool.size, 1)
 
+        # Not all platforms use fork by default, so we want to force it,
+        # where possible. The test is still useful even if we can't
+        # fork though.
+        try:
+            fork_ctx = multiprocessing.get_context('fork')
+        except (AttributeError, ValueError):
+            # ValueError if fork isn't supported.
+            # AttributeError on Python 2, which doesn't have get_context
+            fork_ctx = multiprocessing
+
         # If the Queue is global, q.get() hangs on Windows; must pass as
         # an argument.
-        q = multiprocessing.Queue()
-        p = multiprocessing.Process(target=in_child, args=(q,))
+        q = fork_ctx.Queue()
+        p = fork_ctx.Process(target=in_child, args=(q,))
         p.start()
         p.join()
         p_val = q.get()
