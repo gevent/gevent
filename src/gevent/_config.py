@@ -6,6 +6,11 @@ This should be used as ``from gevent import config``. That variable
 is an object of :class:`Config`.
 
 .. versionadded:: 1.3a2
+
+.. versionchanged:: NEXT
+   Invoking this module like ``python -m gevent._config`` will
+   print a help message about available configuration properties.
+   This is handy to quickly look for environment variables.
 """
 
 from __future__ import print_function, absolute_import, division
@@ -205,6 +210,12 @@ class Config(object):
 
     def __dir__(self):
         return list(self.settings)
+
+    def print_help(self):
+        for k, v in self.settings.items():
+            print(k)
+            print(textwrap.indent(v.__doc__.lstrip(), ' ' * 4))
+            print()
 
 
 class ImportableSetting(object):
@@ -473,7 +484,9 @@ class TrackGreenletTree(BoolSettingMixin, Setting):
     Setting this to a false value will make spawning `Greenlet`
     objects and using `spawn_raw` faster, but the
     ``spawning_greenlet``, ``spawn_tree_locals`` and ``spawning_stack``
-    will not be captured.
+    will not be captured. Setting this to a false value can also
+    reduce memory usage because capturing the stack captures
+    some information about Python frames.
 
     .. versionadded:: 1.3b1
     """
@@ -717,3 +730,7 @@ try:
     Loop().get()
 except ImportError: # pragma: no cover
     pass
+
+
+if __name__ == '__main__':
+    config.print_help()

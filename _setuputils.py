@@ -234,7 +234,6 @@ def cythonize1(ext):
         '.',
     ]
     try:
-        print("XXX: Drop compile_time_env")
         new_ext = cythonize(
             [ext],
             include_path=standard_include_paths,

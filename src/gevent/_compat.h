@@ -8,6 +8,11 @@
 
 #include <Python.h>
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -31,7 +36,7 @@ extern "C" {
    need to increment the refcount before returning, not just to match the
    official functions, but to match what Cython expects an API like this to
    return. Otherwise we get crashes. */
-static void* PyFrame_GetBack(PyFrameObject* frame)
+static PyObject* PyFrame_GetBack(PyFrameObject* frame)
 {
     PyObject* result = (PyObject*)((PyFrameObject*)frame)->f_back;
     Py_XINCREF(result);
@@ -41,13 +46,38 @@ static void* PyFrame_GetBack(PyFrameObject* frame)
 static PyObject* PyFrame_GetCode(PyFrameObject* frame)
 {
     PyObject* result = (PyObject*)((PyFrameObject*)frame)->f_code;
-    Py_XINCREF(result);
+    /* There is always code!  */
+    Py_INCREF(result);
     return result;
 }
 #endif /* support 3.8 and below. */
 #endif
 
+/**
+   Unlike PyFrame_GetBack, which can return NULL,
+   this method is guaranteed to return a new reference to an object.
+
+   The object is either a frame object or None.
+
+   This is necessary to help Cython deal correctly with reference counting.
+   (There are other ways of dealing with this having to do with exactly how
+   variables/return types are declared IIRC, but this is the most
+   straightforward. Still, it is critical that the cython declaration of
+   this function use ``object`` as its return type.)
+ */
+static PyObject* Gevent_PyFrame_GetBack(PyFrameObject* frame)
+{
+    PyObject* back = (PyObject*)PyFrame_GetBack(frame);
+    if (back) {
+        return back;
+    }
+    Py_RETURN_NONE;
+}
+
 #ifdef __cplusplus
 }
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 #endif
 #endif /* _COMPAT_H */

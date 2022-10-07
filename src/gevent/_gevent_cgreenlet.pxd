@@ -57,19 +57,13 @@ ctypedef object CodeType
 cdef extern from "_compat.h":
     int PyFrame_GetLineNumber(FrameType frame)
     CodeType PyFrame_GetCode(FrameType frame)
-    void* PyFrame_GetBack(FrameType frame)
+    object Gevent_PyFrame_GetBack(FrameType frame)
     ctypedef class types.FrameType [object PyFrameObject]:
         pass
 
 @cython.nonecheck(False)
-cdef inline FrameType get_f_back(FrameType frame):
-    # We cannot just call the original version, because it
-    # can return NULL even when there is no exception set. That confuses
-    # Cython and CPython. We need to manually check for NULL here.
-    f_back = PyFrame_GetBack(frame)
-    if f_back != NULL:
-        return <FrameType>f_back
-
+cdef inline object get_f_back(FrameType frame):
+    return Gevent_PyFrame_GetBack(frame)
 
 cdef void _init()
 
