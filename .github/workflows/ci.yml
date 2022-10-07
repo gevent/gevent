@@ -179,7 +179,7 @@ jobs:
           - os: ubuntu-18.04
             python-version: '3.10'
           - os: ubuntu-18.04
-            python-version: '3.11-rc.2'
+            python-version: '3.11.0-rc.2'
     steps:
       - name: checkout
         uses: actions/checkout@v2
@@ -343,8 +343,8 @@ jobs:
         run: |
           python -mgevent.tests --second-chance $G_USE_COV --ignore tests_that_dont_use_resolver.txt
       - name: "Tests: dnspython resolver"
-        # This has known issues on Pypy-3.6. Also, save mac minutes.
-        if: (matrix.python-version == 2.7 || matrix.python-version == '3.9') && startsWith(runner.os, 'Linux')
+        # This has known issues on Pypy-3.6.
+        if: (matrix.python-version == '3.9') && startsWith(runner.os, 'Linux')
         env:
           GEVENT_RESOLVER: dnspython
         run: |
@@ -352,6 +352,8 @@ jobs:
       - name: "Tests: leakchecks"
         # Run the leaktests; this seems to be extremely slow on Python 3.7
         # XXX: Figure out why. Can we reproduce locally?
+        # This is incredibly important and we MUST have an environment that successfully passes
+        # these tests.
         if: matrix.python-version == 2.7 && startsWith(runner.os, 'Linux')
         env:
           GEVENTTEST_LEAKCHECK: 1
@@ -360,7 +362,7 @@ jobs:
       - name: "Tests: PURE_PYTHON"
         # No compiled cython modules on CPython, using the default backend. Get coverage here.
         # We should only need to run this for a single Python 2 and a Python 3
-        if: (matrix.python-version == 2.7 || matrix.python-version == '3.9') && startsWith(runner.os, 'Linux')
+        if: (matrix.python-version == '3.9') && startsWith(runner.os, 'Linux')
         env:
           PURE_PYTHON: 1
         run: |
@@ -402,8 +404,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: [2.7, '3.9']
-        os: [ubuntu-18.04]
+        python-version: ['3.9']
+        os: [ubuntu-latest]
     steps:
       - name: checkout
         uses: actions/checkout@v2

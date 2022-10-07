@@ -425,11 +425,19 @@ class TestCase(TestCaseMetaClass("NewBase",
                 # Python 3 can check a lot more than Python 2 can.
                 continue
             self.assertEqual(sig.args, gevent_sig.args, func_name)
-            # The next three might not actually matter?
+            # The next two might not actually matter?
             self.assertEqual(sig.varargs, gevent_sig.varargs, func_name)
             self.assertEqual(sig.defaults, gevent_sig.defaults, func_name)
             if hasattr(sig, 'keywords'): # the old version
-                self.assertEqual(sig.keywords, gevent_sig.keywords, func_name)
+                msg = (func_name, sig.keywords, gevent_sig.keywords)
+                try:
+                    self.assertEqual(sig.keywords, gevent_sig.keywords, msg)
+                except AssertionError:
+                    # Ok, if we take `kwargs` and the original function doesn't,
+                    # that's OK. We have to do that as a compatibility hack sometimes to
+                    # work across multiple python versions.
+                    self.assertIsNone(sig.keywords, msg)
+                    self.assertEqual('kwargs', gevent_sig.keywords)
             else:
                 # The new hotness. Unfortunately, we can't actually check these things
                 # until we drop Python 2 support from the shared code. The only known place
