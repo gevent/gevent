@@ -56,9 +56,9 @@ locals()['get_my_hub'] = lambda s: s.parent
 locals()['get_generic_parent'] = lambda s: s.parent
 
 # Frame access
-locals()['PyFrame_GetCode'] = lambda frame: frame.f_code
-locals()['PyFrame_GetLineNumber'] = lambda frame: frame.f_lineno
-locals()['get_f_back'] = lambda frame: frame.f_back
+locals()['Gevent_PyFrame_GetCode'] = lambda frame: frame.f_code
+locals()['Gevent_PyFrame_GetLineNumber'] = lambda frame: frame.f_lineno
+locals()['Gevent_PyFrame_GetBack'] = lambda frame: frame.f_back
 
 
 if _PYPY:
@@ -159,15 +159,15 @@ def _extract_stack(limit):
         # Arguments are always passed to the constructor as Python objects,
         # meaning we wind up boxing the f_lineno just to unbox it if we pass it.
         # It's faster to simply assign once the object is created.
-        older_Frame.f_code = PyFrame_GetCode(frame)  # pylint:disable=undefined-variable
-        older_Frame.f_lineno = PyFrame_GetLineNumber(frame) # pylint:disable=undefined-variable
+        older_Frame.f_code = Gevent_PyFrame_GetCode(frame)  # pylint:disable=undefined-variable
+        older_Frame.f_lineno = Gevent_PyFrame_GetLineNumber(frame) # pylint:disable=undefined-variable
         if newer_Frame is not None:
             newer_Frame.f_back = older_Frame
         newer_Frame = older_Frame
         if newest_Frame is None:
             newest_Frame = newer_Frame
 
-        frame = get_f_back(frame) # pylint:disable=undefined-variable
+        frame = Gevent_PyFrame_GetBack(frame) # pylint:disable=undefined-variable
 
     return newest_Frame
 

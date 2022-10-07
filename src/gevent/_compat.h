@@ -65,13 +65,25 @@ static PyObject* PyFrame_GetCode(PyFrameObject* frame)
    straightforward. Still, it is critical that the cython declaration of
    this function use ``object`` as its return type.)
  */
-static PyObject* Gevent_PyFrame_GetBack(PyFrameObject* frame)
+static PyObject* Gevent_PyFrame_GetBack(PyObject* frame)
 {
-    PyObject* back = (PyObject*)PyFrame_GetBack(frame);
+    PyObject* back = (PyObject*)PyFrame_GetBack((PyFrameObject*)frame);
     if (back) {
         return back;
     }
     Py_RETURN_NONE;
+}
+
+/* These are just for typing purposes to appease the compiler. */
+
+static int Gevent_PyFrame_GetLineNumber(PyObject* o)
+{
+    return PyFrame_GetLineNumber((PyFrameObject*)o);
+}
+
+static PyObject* Gevent_PyFrame_GetCode(PyObject* o)
+{
+    return (PyObject*)PyFrame_GetCode((PyFrameObject*)o);
 }
 
 #ifdef __cplusplus

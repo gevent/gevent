@@ -53,17 +53,30 @@ cdef inline void greenlet_init():
         _greenlet_imported = True
 
 ctypedef object CodeType
+ctypedef object FrameType
 
 cdef extern from "_compat.h":
-    int PyFrame_GetLineNumber(FrameType frame)
-    CodeType PyFrame_GetCode(FrameType frame)
+    int Gevent_PyFrame_GetLineNumber(FrameType frame)
+    CodeType Gevent_PyFrame_GetCode(FrameType frame)
     object Gevent_PyFrame_GetBack(FrameType frame)
-    ctypedef class types.FrameType [object PyFrameObject]:
-        pass
+    # We don't do this:
+    #
+    # ctypedef class types.FrameType [object PyFrameObject]:
+    #     pass
+    #
+    # to avoid "RuntimeWarning: types.FrameType size changed, may
+    # indicate binary incompatibility. Expected 56 from C header, got
+    # 120 from PyObject" on Python 3.11. That makes the functions that
+    # really require that kind of object not safe and capable of crashing the
+    # interpreter.
+    #
+    # However, as of cython 3.0a11, that results in a failure to compile if
+    # we have a local variable typed as FrameType, so we can't do that.
+    #
+    # Also, it removes a layer of type checking and makes it possible to crash
+    # the interpreter if you call these functions with something that's not a PyFrameObject.
+    # Don't do that.
 
-@cython.nonecheck(False)
-cdef inline object get_f_back(FrameType frame):
-    return Gevent_PyFrame_GetBack(frame)
 
 cdef void _init()
 
@@ -89,7 +102,7 @@ cdef class _Frame:
 
 
 @cython.final
-@cython.locals(frame=FrameType,
+@cython.locals(# frame=FrameType, # See above about why we cannot do this
                newest_Frame=_Frame,
                newer_Frame=_Frame,
                older_Frame=_Frame)
