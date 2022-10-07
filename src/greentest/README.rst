@@ -14,3 +14,7 @@ runner will print a warning.
              tries very hard not to modify the tests if at all
              possible. Prefer to use the ``patched_tests_setup.py`` or
              ``known_failures.py`` file if necessary.
+
+             One exception to this is ``test_threading.py``, where we
+             find it necessary to change 'from test import lock_tests'
+             to our own 'from gevent.tests import lock_tests'.

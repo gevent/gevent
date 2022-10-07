@@ -862,7 +862,11 @@ class Hub(WaitOperationsGreenlet):
     def _get_threadpool(self):
         if self._threadpool is None:
             # pylint:disable=not-callable
-            self._threadpool = self.threadpool_class(self.threadpool_size, hub=self)
+            self._threadpool = self.threadpool_class(
+                self.threadpool_size,
+                hub=self,
+                idle_task_timeout=GEVENT_CONFIG.threadpool_idle_task_timeout
+            )
         return self._threadpool
 
     def _set_threadpool(self, value):

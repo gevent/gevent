@@ -340,6 +340,24 @@ class Threadpool(ImportableSetting, Setting):
 
     default = 'gevent.threadpool.ThreadPool'
 
+class ThreadpoolIdleTaskTimeout(FloatSettingMixin, Setting):
+    document = True
+    name = 'threadpool_idle_task_timeout'
+    environment_key = 'GEVENT_THREADPOOL_IDLE_TASK_TIMEOUT'
+
+    desc = """\
+    How long threads in the default threadpool (used for
+    DNS by default) are allowed to be idle before exiting.
+
+    Use -1 for no timeout.
+
+    .. versionadded:: NEXT
+    """
+
+    # This value is picked pretty much arbitrarily.
+    # We want to balance performance (keeping threads around)
+    # with memory/cpu usage (letting threads go).
+    default = 5.0
 
 class Loop(ImportableSetting, Setting):
 

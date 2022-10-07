@@ -85,11 +85,17 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
         Add the *all_errors* argument. This only has meaning on Python 3.11;
         it is a programming error to pass it on earlier versions.
     """
+    # Sigh. This function is a near-copy of the CPython implementation.
+    # Even though we simplified some things, it's still a little complex to
+    # cope with error handling, which got even more complicated in 3.11.
+    # pylint:disable=too-many-locals,too-many-branches
+
     all_errors = False
     if PY311:
         all_errors = kwargs.pop('all_errors', False)
     if kwargs:
         raise TypeError("Too many keyword arguments to create_connection", kwargs)
+
 
     host, port = address
     exceptions = []

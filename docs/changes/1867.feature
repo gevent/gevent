@@ -11,3 +11,8 @@ Some platforms may or may not have binary wheels at this time.
                with a final release of greenlet 2.0 that still
                supports those legacy versions, but that may not be
                possible; this may be the final release to support them.
+
+:class:`gevent.threadpool.ThreadPool` can now optionally expire idle
+threads. This is used by default in the implicit thread pool used for
+DNS requests and other user-submitted tasks; other uses of a
+thread-pool need to opt-in to this.

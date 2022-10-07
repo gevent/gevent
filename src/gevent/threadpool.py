@@ -24,6 +24,7 @@ from gevent.pool import GroupMappingMixin
 from gevent.util import clear_stack_frames
 
 from gevent._threading import Queue
+from gevent._threading import EmptyTimeout
 from gevent._threading import start_new_thread
 from gevent._threading import get_thread_ident
 
@@ -72,6 +73,10 @@ class _WorkerGreenlet(RawGreenlet):
     # A cookie passed to task_queue.get()
     _task_queue_cookie = None
 
+    # If not -1, how long to block waiting for a task before we
+    # exit.
+    _idle_task_timeout = -1
+
     def __init__(self, threadpool):
         # Construct in the main thread (owner of the threadpool)
         # The parent greenlet and thread identifier will be set once the
@@ -94,6 +99,7 @@ class _WorkerGreenlet(RawGreenlet):
         self._task_queue = threadpool.task_queue # type:gevent._threading.Queue
         self._task_queue_cookie = self._task_queue.allocate_cookie()
         self._unregister_worker = threadpool._unregister_worker
+        self._idle_task_timeout = threadpool._idle_task_timeout
 
         threadpool._register_worker(self)
         try:
@@ -180,11 +186,19 @@ class _WorkerGreenlet(RawGreenlet):
         task_queue_cookie = self._task_queue_cookie
         run_task = self.__run_task
         task_queue_done = self._task_queue.task_done
+        idle_task_timeout = self._idle_task_timeout
         try: # pylint:disable=too-many-nested-blocks
             while 1: # tiny bit faster than True on Py2
                 fixup_hub_before_block()
 
-                task = task_queue_get(task_queue_cookie)
+                try:
+                    task = task_queue_get(task_queue_cookie, idle_task_timeout)
+                except EmptyTimeout:
+                    # Nothing to do, exit the thread. Do not
+                    # go into the next block where we would call
+                    # queue.task_done(), because we didn't actually
+                    # take a task.
+                    return
                 try:
                     if task is None:
                         return
@@ -279,6 +293,10 @@ class ThreadPool(GroupMappingMixin):
     .. versionchanged:: 20.12.0
        Install the profile and trace functions in the worker thread while
        the worker thread is running the supplied task.
+    .. versionchanged:: NEXT
+       Add the option to let idle threads expire and be removed
+       from the pool after *idle_task_timeout* seconds (-1 for no
+       timeout)
     """
 
     __slots__ = (
@@ -303,11 +321,12 @@ class ThreadPool(GroupMappingMixin):
         # The task queue is itself safe to use from multiple
         # native threads.
         'task_queue',
+        '_idle_task_timeout',
     )
 
     _WorkerGreenlet = _WorkerGreenlet
 
-    def __init__(self, maxsize, hub=None):
+    def __init__(self, maxsize, hub=None, idle_task_timeout=-1):
         if hub is None:
             hub = get_hub()
         self.hub = hub
@@ -315,6 +334,7 @@ class ThreadPool(GroupMappingMixin):
         self.manager = None
         self.task_queue = Queue()
         self.fork_watcher = None
+        self._idle_task_timeout = idle_task_timeout
 
         self._worker_greenlets = set()
         self._maxsize = 0

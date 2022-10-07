@@ -629,6 +629,10 @@ class Popen(object):
     .. versionchanged:: 21.12.0
        Added the ``pipesize`` argument for compatibility with Python 3.10.
        This is ignored on all platforms.
+
+    .. versionchanged:: NEXT
+       Added the ``process_group`` and ``check`` arguments for compatibility with
+       Python 3.11.
     """
 
     if GenericAlias is not None:
@@ -657,6 +661,11 @@ class Popen(object):
                  umask=-1,
                  # Added in 3.10, but ignored.
                  pipesize=-1,
+                 # Added in 3.11
+                 process_group=None,
+                 # 3.11: check added, but not documented as new (at least as-of
+                 # 3.11rc2)
+                 check=None,
                  # gevent additions
                  threadpool=None):
 

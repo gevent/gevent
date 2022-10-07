@@ -9,11 +9,13 @@ from collections import deque
 
 from gevent import monkey
 from gevent._compat import thread_mod_name
+from gevent._compat import PY3
 
 
 __all__ = [
     'Lock',
     'Queue',
+    'EmptyTimeout',
 ]
 
 
@@ -22,7 +24,35 @@ start_new_thread, Lock, get_thread_ident, = monkey.get_original(thread_mod_name,
 ])
 
 
+# We want to support timeouts on locks. In this way, we can allow idle threads to
+# expire from a thread pool. On Python 3, this is native behaviour; on Python 2,
+# we have to emulate it. For Python 3, we want this to have the lowest possible overhead,
+# so we'd prefer to use a direct call, rather than go through a wrapper. But we also
+# don't want to allocate locks at import time because..., so we swizzle out the method
+# at runtime.
+#
+#
+# In all cases, a timeout value of -1 means "infinite". Sigh.
+if PY3:
+    def acquire_with_timeout(lock, timeout=-1):
+        globals()['acquire_with_timeout'] = type(lock).acquire
+        return lock.acquire(timeout=timeout)
+else:
+    def acquire_with_timeout(lock, timeout=-1,
+                             _time=monkey.get_original('time', 'time'),
+                             _sleep=monkey.get_original('time', 'sleep')):
+        deadline = _time() + timeout if timeout != -1 else None
+        while 1:
+            if lock.acquire(False): # Can we acquire non-blocking?
+                return True
+            if deadline is not None and _time() >= deadline:
+                return False
+            _sleep(0.005)
+
 class _Condition(object):
+    # We could use libuv's ``uv_cond_wait`` to implement this whole
+    # class and get native timeouts and native performance everywhere.
+
     # pylint:disable=method-hidden
 
     __slots__ = (
@@ -31,6 +61,9 @@ class _Condition(object):
     )
 
     def __init__(self, lock):
+        # This lock is used to protect our own data structures;
+        # calls to ``wait`` and ``notify_one`` *must* be holding this
+        # lock.
         self._lock = lock
         self._waiters = []
 
@@ -47,29 +80,44 @@ class _Condition(object):
     def __repr__(self):
         return "<Condition(%s, %d)>" % (self._lock, len(self._waiters))
 
-    def wait(self, wait_lock):
-        # TODO: It would be good to support timeouts here so that we can
-        # let idle threadpool threads die. Under Python 3, ``Lock.acquire``
-        # has that ability, but Python 2 doesn't expose that. We could use
-        # libuv's ``uv_cond_wait`` to implement this whole class and get timeouts
-        # everywhere.
-
+    def wait(self, wait_lock, timeout=-1, _wait_for_notify=acquire_with_timeout):
         # This variable is for the monitoring utils to know that
         # this is an idle frame and shouldn't be counted.
         gevent_threadpool_worker_idle = True # pylint:disable=unused-variable
 
-        # Our ``_lock`` MUST be owned, but we don't check that.
-        # The ``wait_lock`` must be *un*owned.
+        # The _lock must be held.
+        # The ``wait_lock`` must be *un*owned, so the timeout doesn't apply there.
+        # Take that lock now.
         wait_lock.acquire()
         self._waiters.append(wait_lock)
-        self._lock.release()
 
+        self._lock.release()
         try:
-            wait_lock.acquire() # Block on the native lock
+            # We're already holding this native lock, so when we try to acquire it again,
+            # that won't work and we'll block until someone calls notify_one() (which might
+            # have already happened).
+            notified = _wait_for_notify(wait_lock, timeout)
         finally:
             self._lock.acquire()
 
-        wait_lock.release()
+        # Now that we've acquired _lock again, no one can call notify_one(), or this
+        # method.
+        if not notified:
+            # We need to come out of the waiters list. IF we're still there; it's
+            # possible that between the call to _acquire() returning False,
+            # and the time that we acquired _lock, someone did a ``notify_one``
+            # and released the lock. For that reason, do a non-blocking acquire()
+            notified = wait_lock.acquire(False)
+        if not notified:
+            # Well narf. No go. We must stil be in the waiters list, so take us out
+            self._waiters.remove(wait_lock)
+            # We didn't get notified, but we're still holding a lock that we
+            # need to release.
+            wait_lock.release()
+        else:
+            # We got notified, so we need to reset.
+            wait_lock.release()
+        return notified
 
     def notify_one(self):
         # The lock SHOULD be owned, but we don't check that.
@@ -84,9 +132,13 @@ class _Condition(object):
             # is free to be scheduled and resume.
             waiter.release()
 
+class EmptyTimeout(Exception):
+    """Raised from :meth:`Queue.get` if no item is available in the timeout."""
+
 
 class Queue(object):
-    """Create a queue object.
+    """
+    Create a queue object.
 
     The queue is always infinite size.
     """
@@ -124,7 +176,11 @@ class Queue(object):
             unfinished = self.unfinished_tasks - 1
             if unfinished <= 0:
                 if unfinished < 0:
-                    raise ValueError('task_done() called too many times')
+                    raise ValueError(
+                        'task_done() called too many times; %s remaining tasks' % (
+                            self.unfinished_tasks
+                        )
+                    )
             self.unfinished_tasks = unfinished
 
     def qsize(self, len=len):
@@ -147,15 +203,26 @@ class Queue(object):
             self.unfinished_tasks += 1
             self._not_empty.notify_one()
 
-    def get(self, cookie):
-        """Remove and return an item from the queue.
+    def get(self, cookie, timeout=-1):
+        """
+        Remove and return an item from the queue.
+
+        If *timeout* is given, and is not -1, then we will
+        attempt to wait for only that many seconds to get an item.
+        If those seconds elapse and no item has become available,
+        raises :class:`EmptyTimeout`.
         """
         with self._mutex:
             while not self._queue:
                 # Temporarily release our mutex and wait for someone
                 # to wake us up. There *should* be an item in the queue
                 # after that.
-                self._not_empty.wait(cookie)
+                notified = self._not_empty.wait(cookie, timeout)
+                # Ok, we're holding the mutex again, so our state is guaranteed stable.
+                # It's possible that in the brief window where we didn't hold the lock,
+                # someone put something in the queue, and if so, we can take it.
+                if not notified and not self._queue:
+                    raise EmptyTimeout
             item = self._queue.popleft()
             return item
 
