@@ -14,6 +14,7 @@ as well as the constants from the :mod:`socket` module are imported into this mo
 # pylint: disable=undefined-variable
 
 from gevent._compat import PY3
+from gevent._compat import PY311
 from gevent._compat import exc_clear
 from gevent._util import copy_globals
 
@@ -59,9 +60,9 @@ except AttributeError:
     _GLOBAL_DEFAULT_TIMEOUT = object()
 
 
-def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=None):
+def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=None, **kwargs):
     """
-    create_connection(address, timeout=None, source_address=None) -> socket
+    create_connection(address, timeout=None, source_address=None, *, all_errors=False) -> socket
 
     Connect to *address* and return the :class:`gevent.socket.socket`
     object.
@@ -80,9 +81,24 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
         If the host part of the address includes an IPv6 scope ID,
         it will be used instead of ignored, if the platform supplies
         :func:`socket.inet_pton`.
+    .. versionchanged:: NEXT
+        Add the *all_errors* argument. This only has meaning on Python 3.11;
+        it is a programming error to pass it on earlier versions.
     """
+    # Sigh. This function is a near-copy of the CPython implementation.
+    # Even though we simplified some things, it's still a little complex to
+    # cope with error handling, which got even more complicated in 3.11.
+    # pylint:disable=too-many-locals,too-many-branches
+
+    all_errors = False
+    if PY311:
+        all_errors = kwargs.pop('all_errors', False)
+    if kwargs:
+        raise TypeError("Too many keyword arguments to create_connection", kwargs)
+
 
     host, port = address
+    exceptions = []
     # getaddrinfo is documented as returning a list, but our interface
     # is pluggable, so be sure it does.
     addrs = list(getaddrinfo(host, port, 0, SOCK_STREAM))
@@ -99,12 +115,25 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
             if source_address:
                 sock.bind(source_address)
             sock.connect(sa)
-        except error:
+
+        except error as exc:
+            if not all_errors:
+                exceptions = [exc] # raise only the last error
+            else:
+                exceptions.append(exc)
+            del exc # cycle
             if sock is not None:
                 sock.close()
             sock = None
             if res is addrs[-1]:
-                raise
+                if not all_errors:
+                    del exceptions[:]
+                    raise
+                try:
+                    raise ExceptionGroup("create_connection failed", exceptions)
+                finally:
+                    # Break explicitly a reference cycle
+                    del exceptions[:]
             # without exc_clear(), if connect() fails once, the socket
             # is referenced by the frame in exc_info and the next
             # bind() fails (see test__socket.TestCreateConnection)
@@ -122,6 +151,8 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
             sock = None
             raise
         else:
+            # break reference cycles
+            del exceptions[:]
             try:
                 return sock
             finally:

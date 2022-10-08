@@ -56,8 +56,10 @@ locals()['get_my_hub'] = lambda s: s.parent
 locals()['get_generic_parent'] = lambda s: s.parent
 
 # Frame access
-locals()['get_f_back'] = lambda frame: frame.f_back
-locals()['get_f_lineno'] = lambda frame: frame.f_lineno
+locals()['Gevent_PyFrame_GetCode'] = lambda frame: frame.f_code
+locals()['Gevent_PyFrame_GetLineNumber'] = lambda frame: frame.f_lineno
+locals()['Gevent_PyFrame_GetBack'] = lambda frame: frame.f_back
+
 
 if _PYPY:
     import _continuation # pylint:disable=import-error
@@ -157,15 +159,15 @@ def _extract_stack(limit):
         # Arguments are always passed to the constructor as Python objects,
         # meaning we wind up boxing the f_lineno just to unbox it if we pass it.
         # It's faster to simply assign once the object is created.
-        older_Frame.f_code = frame.f_code
-        older_Frame.f_lineno = get_f_lineno(frame) # pylint:disable=undefined-variable
+        older_Frame.f_code = Gevent_PyFrame_GetCode(frame)  # pylint:disable=undefined-variable
+        older_Frame.f_lineno = Gevent_PyFrame_GetLineNumber(frame) # pylint:disable=undefined-variable
         if newer_Frame is not None:
             newer_Frame.f_back = older_Frame
         newer_Frame = older_Frame
         if newest_Frame is None:
             newest_Frame = newer_Frame
 
-        frame = get_f_back(frame) # pylint:disable=undefined-variable
+        frame = Gevent_PyFrame_GetBack(frame) # pylint:disable=undefined-variable
 
     return newest_Frame
 
@@ -373,7 +375,7 @@ class Greenlet(greenlet):
     @property
     def loop(self):
         # needed by killall
-        hub = get_my_hub(self) # type:SwitchOutGreenletWithLoop pylint:disable=undefined-variable
+        hub = get_my_hub(self) # pylint:disable=undefined-variable
         return hub.loop
 
     def __nonzero__(self):
@@ -617,7 +619,7 @@ class Greenlet(greenlet):
         """Schedule the greenlet to run in this loop iteration"""
         if self._start_event is None:
             _call_spawn_callbacks(self)
-            hub = get_my_hub(self) # type:SwitchOutGreenletWithLoop pylint:disable=undefined-variable
+            hub = get_my_hub(self) # pylint:disable=undefined-variable
             self._start_event = hub.loop.run_callback(self.switch)
 
     def start_later(self, seconds):
@@ -1149,7 +1151,7 @@ def killall(greenlets, exception=GreenletExit, block=True, timeout=None):
         Now accepts raw greenlets created by :func:`gevent.spawn_raw`.
     """
 
-    need_killed = [] # type: list
+    need_killed = []
     for glet in greenlets:
         # Quick pass through to prevent any greenlet from
         # actually being switched to if it hasn't already.

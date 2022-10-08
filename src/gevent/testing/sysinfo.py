@@ -67,9 +67,10 @@ PY37 = None
 PY38 = None
 PY39 = None
 PY310 = None
+PY311 = None
 
 NON_APPLICABLE_SUFFIXES = ()
-if sys.version_info[0] >= 3:
+if sys.version_info[0] == 3:
     # Python 3
     NON_APPLICABLE_SUFFIXES += ('2', '279')
     PY2 = False
@@ -86,6 +87,8 @@ if sys.version_info[0] >= 3:
         PY39 = True
     if sys.version_info[1] >= 10:
         PY310 = True
+    if sys.version_info[1] >= 11:
+        PY311 = True
 
 elif sys.version_info[0] == 2:
     # Any python 2
@@ -96,6 +99,9 @@ elif sys.version_info[0] == 2:
             or (sys.version_info[1] == 7 and sys.version_info[2] < 9)):
         # Python 2, < 2.7.9
         NON_APPLICABLE_SUFFIXES += ('279',)
+else: # pragma: no cover
+    # Python 4?
+    raise ImportError('Unsupported major python version')
 
 PYPY3 = PYPY and PY3
 

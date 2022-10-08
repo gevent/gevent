@@ -33,6 +33,7 @@ from .sysinfo import PY37
 from .sysinfo import PY38
 from .sysinfo import PY39
 from .sysinfo import PY310
+from .sysinfo import PY311
 
 from .sysinfo import WIN
 from .sysinfo import OSX
@@ -118,6 +119,9 @@ def get_switch_expected(fullname):
 
 
 disabled_tests = [
+    # XXX: While we debug latest updates. This is leaking
+    'test_threading.ThreadTests.test_no_refcycle_through_target',
+
     # The server side takes awhile to shut down
     'test_httplib.HTTPSTest.test_local_bad_hostname',
     # These were previously 3.5+ issues (same as above)
@@ -1458,6 +1462,16 @@ if PY310:
             'test_threading.SubinterpThreadingTests.test_threads_join',
             'test_threading.SubinterpThreadingTests.test_threads_join_2',
         ]
+
+if PY311:
+    disabled_tests += [
+        # CPython issue #27718: This wants to require all objects to
+        # have a __module__ of 'signal' because pydoc. Obviously our patches don't.
+        'test_signal.GenericTests.test_functions_module_attr',
+        # 3.11 added subprocess._USE_VFORK and subprocess._USE_POSIX_SPAWN.
+        # We don't support either of those (although USE_VFORK might be possible?)
+        'test_subprocess.ProcessTestCase.test__use_vfork',
+    ]
 
 if TRAVIS:
     disabled_tests += [

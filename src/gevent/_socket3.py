@@ -147,6 +147,11 @@ class socket(_socketcommon.SocketMixin):
     def __getattr__(self, name):
         return getattr(self._sock, name)
 
+    def _accept(self):
+        # Python 3.11 started checking for this method on the class object,
+        # so we need to explicitly delegate.
+        return self._sock._accept()
+
     if hasattr(_socket, 'SOCK_NONBLOCK'):
         # Only defined under Linux
         @property

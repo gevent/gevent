@@ -383,6 +383,7 @@ class TestCase(TestCaseMetaClass("NewBase",
         return error
 
     def assertMonkeyPatchedFuncSignatures(self, mod_name, func_names=(), exclude=()):
+        # If inspect.getfullargspec is not available,
         # We use inspect.getargspec because it's the only thing available
         # in Python 2.7, but it is deprecated
         # pylint:disable=deprecated-method,too-many-locals
@@ -409,9 +410,13 @@ class TestCase(TestCaseMetaClass("NewBase",
 
             try:
                 with warnings.catch_warnings():
-                    warnings.simplefilter("ignore")
-                    gevent_sig = inspect.getargspec(gevent_func)
-                    sig = inspect.getargspec(func)
+                    try:
+                        getfullargspec = inspect.getfullargspec
+                    except AttributeError:
+                        warnings.simplefilter("ignore")
+                        getfullargspec = inspect.getargspec
+                    gevent_sig = getfullargspec(gevent_func)
+                    sig = getfullargspec(func)
             except TypeError:
                 if funcs_given:
                     raise
@@ -420,10 +425,27 @@ class TestCase(TestCaseMetaClass("NewBase",
                 # Python 3 can check a lot more than Python 2 can.
                 continue
             self.assertEqual(sig.args, gevent_sig.args, func_name)
-            # The next three might not actually matter?
+            # The next two might not actually matter?
             self.assertEqual(sig.varargs, gevent_sig.varargs, func_name)
-            self.assertEqual(sig.keywords, gevent_sig.keywords, func_name)
             self.assertEqual(sig.defaults, gevent_sig.defaults, func_name)
+            if hasattr(sig, 'keywords'): # the old version
+                msg = (func_name, sig.keywords, gevent_sig.keywords)
+                try:
+                    self.assertEqual(sig.keywords, gevent_sig.keywords, msg)
+                except AssertionError:
+                    # Ok, if we take `kwargs` and the original function doesn't,
+                    # that's OK. We have to do that as a compatibility hack sometimes to
+                    # work across multiple python versions.
+                    self.assertIsNone(sig.keywords, msg)
+                    self.assertEqual('kwargs', gevent_sig.keywords)
+            else:
+                # The new hotness. Unfortunately, we can't actually check these things
+                # until we drop Python 2 support from the shared code. The only known place
+                # this is a problem is python 3.11 socket.create_connection(), which we manually
+                # ignore. So the checks all pass as is.
+                self.assertEqual(sig.kwonlyargs, gevent_sig.kwonlyargs, func_name)
+                self.assertEqual(sig.kwonlydefaults, gevent_sig.kwonlydefaults, func_name)
+            # Should deal with others: https://docs.python.org/3/library/inspect.html#inspect.getfullargspec
 
     def assertEqualFlakyRaceCondition(self, a, b):
         try:

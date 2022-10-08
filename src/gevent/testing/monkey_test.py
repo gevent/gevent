@@ -15,7 +15,6 @@ from gevent import monkey
 monkey.patch_all()
 
 from .sysinfo import PY3
-from .sysinfo import PY36
 from .patched_tests_setup import disable_tests_in_source
 from . import support
 from . import resources
@@ -24,7 +23,7 @@ from . import util
 
 
 # This uses the internal built-in function ``_thread._count()``,
-# which we don't monkey-patch, so it returns inaccurate information.
+# which we don't/can't monkey-patch, so it returns inaccurate information.
 def threading_setup():
     if PY3:
         return (1, ())
@@ -36,19 +35,57 @@ def threading_cleanup(*_args):
 support.threading_setup = threading_setup
 support.threading_cleanup = threading_cleanup
 
-if PY36:
-    # On all versions of Python 3.6+, this also uses ``_thread._count()``,
-    # meaning it suffers from inaccuracies,
-    # and test_socket.py constantly fails with an extra thread
-    # on some random test. We disable it entirely.
-    # XXX: Figure out how to make a *definition* in ./support.py actually
-    # override the original in test.support, without having to
-    # manually set it
-    import contextlib
-    @contextlib.contextmanager
-    def wait_threads_exit(timeout=None): # pylint:disable=unused-argument
-        yield
-    support.wait_threads_exit = wait_threads_exit
+
+# On all versions of Python 3.6+, this also uses ``_thread._count()``,
+# meaning it suffers from inaccuracies,
+# and test_socket.py constantly fails with an extra thread
+# on some random test. We disable it entirely.
+# XXX: Figure out how to make a *definition* in ./support.py actually
+# override the original in test.support, without having to
+# manually set it
+#
+import contextlib
+@contextlib.contextmanager
+def wait_threads_exit(timeout=None): # pylint:disable=unused-argument
+    yield
+support.wait_threads_exit = wait_threads_exit
+
+# On Python 3.11, they changed the way that they deal with this,
+# meaning that this method no longer works. (Actually, it's not
+# clear that any of our patches to `support` are doing anything on
+# Python 3 at all? They certainly aren't on 3.11). This was a good
+# thing As it led to adding the timeout value for the threadpool
+# idle threads. But...the default of 5s meant that many tests in
+# test_socket were each taking at least 5s to run, leading to the
+# whole thing exceeding the allowed test timeout. We could set the
+# GEVENT_THREADPOOL_IDLE_TASK_TIMEOUT env variable to a smaller
+# value, and although that might stress the system nicely, it's
+# not indicative of what end users see. And it's still hard to get
+# a correct value.
+#
+# So try harder to make sure our patches apply.
+#
+# If this fails, symptoms are very long running tests that can be resolved
+# by setting that TASK_TIMEOUT value small, and/or setting GEVENT_RESOLVER=block.
+# Also, some number of warnings about dangling threads, or failures
+# from wait_threads_exit
+try:
+    from test import support as ts
+except ImportError:
+    pass
+else:
+    ts.threading_setup = threading_setup
+    ts.threading_cleanup = threading_cleanup
+    ts.wait_threads_exit = wait_threads_exit
+
+try:
+    from test.support import threading_helper
+except ImportError:
+    pass
+else:
+    threading_helper.wait_threads_exit = wait_threads_exit
+    threading_helper.threading_setup = threading_setup
+    threading_helper.threading_cleanup = threading_cleanup
 
 # Configure allowed resources
 resources.setup_resources()

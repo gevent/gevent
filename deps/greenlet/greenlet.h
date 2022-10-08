@@ -14,6 +14,15 @@ extern "C" {
 /* This is deprecated and undocumented. It does not change. */
 #define GREENLET_VERSION "1.0.0"
 
+#if PY_VERSION_HEX >= 0x30B00A6
+#  define GREENLET_PY311 1
+   /* _PyInterpreterFrame moved to the internal C API in Python 3.11 */
+#  include <internal/pycore_frame.h>
+#else
+#  define GREENLET_PY311 0
+#  define _PyCFrame CFrame
+#endif
+
 typedef struct _greenlet {
     PyObject_HEAD
     char* stack_start;
@@ -25,6 +34,12 @@ typedef struct _greenlet {
     PyObject* run_info;
     struct _frame* top_frame;
     int recursion_depth;
+#if GREENLET_PY311
+    _PyInterpreterFrame *current_frame;
+    _PyStackChunk *datastack_chunk;
+    PyObject **datastack_top;
+    PyObject **datastack_limit;
+#endif
     PyObject* weakreflist;
 #if PY_VERSION_HEX >= 0x030700A3
     _PyErr_StackItem* exc_info;
@@ -39,7 +54,7 @@ typedef struct _greenlet {
     PyObject* context;
 #endif
 #if PY_VERSION_HEX >= 0x30A00B1
-    CFrame* cframe;
+    _PyCFrame* cframe;
 #endif
 } PyGreenlet;
 

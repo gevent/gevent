@@ -64,6 +64,7 @@ from gevent._compat import PY35
 from gevent._compat import PY36
 from gevent._compat import PY37
 from gevent._compat import PY38
+from gevent._compat import PY311
 from gevent._compat import PYPY
 from gevent._compat import reraise
 from gevent._compat import fsdecode
@@ -210,6 +211,21 @@ if PY38:
             '_USE_POSIX_SPAWN',
         ])
 
+if PY311:
+    # Python 3.11 added some module-level attributes to control the
+    # use of vfork. The docs specifically say that you should not try to read
+    # them, only set them, so we don't provide them.
+    #
+    # Python 3.11 also added a test,  test_surrogates_error_message, that behaves
+    # differently based on whether or not the pure python implementation of forking
+    # is in use, or the one written in C from _posixsubprocess. Obviously we don't call
+    # that, so we need to make us look like a pure python version; it checks that this attribute
+    # is none for that.
+    _fork_exec = None
+    __implements__.extend([
+        '_fork_exec',
+    ])
+
 actually_imported = copy_globals(__subprocess__, globals(),
                                  only_names=__imports__,
                                  ignore_missing_names=True)
@@ -247,6 +263,7 @@ __all__ = __implements__ + __imports__
 for _x in ('run', 'CompletedProcess', 'TimeoutExpired'):
     if _x not in __all__:
         __all__.append(_x)
+
 
 
 mswindows = sys.platform == 'win32'
@@ -376,10 +393,14 @@ def check_output(*popenargs, **kwargs):
     .. versionchanged:: 1.2a1
        The ``input`` keyword argument is now accepted on all supported
        versions of Python, not just Python 3
+    .. versionchanged:: NEXT
+       Passing the ``check`` keyword argument is forbidden, just as in Python 3.11.
     """
     timeout = kwargs.pop('timeout', None)
     if 'stdout' in kwargs:
         raise ValueError('stdout argument not allowed, it will be overridden.')
+    if 'check' in kwargs:
+        raise ValueError('check argument not allowed, it will be overridden.')
     if 'input' in kwargs:
         if 'stdin' in kwargs:
             raise ValueError('stdin and input arguments may not both be used.')
@@ -629,6 +650,10 @@ class Popen(object):
     .. versionchanged:: 21.12.0
        Added the ``pipesize`` argument for compatibility with Python 3.10.
        This is ignored on all platforms.
+
+    .. versionchanged:: NEXT
+       Added the ``process_group`` and ``check`` arguments for compatibility with
+       Python 3.11.
     """
 
     if GenericAlias is not None:
@@ -657,6 +682,8 @@ class Popen(object):
                  umask=-1,
                  # Added in 3.10, but ignored.
                  pipesize=-1,
+                 # Added in 3.11
+                 process_group=None,
                  # gevent additions
                  threadpool=None):
 
@@ -819,7 +846,7 @@ class Popen(object):
                                 errread, errwrite,
                                 restore_signals,
                                 gid, gids, uid, umask,
-                                start_new_session)
+                                start_new_session, process_group)
         except:
             # Cleanup if the child failed starting.
             # (gevent: New in python3, but reported as gevent bug in #347.
@@ -1188,7 +1215,7 @@ class Popen(object):
                            errread, errwrite,
                            unused_restore_signals,
                            unused_gid, unused_gids, unused_uid, unused_umask,
-                           unused_start_new_session):
+                           unused_start_new_session, unused_process_group):
             """Execute program (MS Windows version)"""
             # pylint:disable=undefined-variable
             assert not pass_fds, "pass_fds not supported on Windows."
@@ -1597,7 +1624,7 @@ class Popen(object):
                            errread, errwrite,
                            restore_signals,
                            gid, gids, uid, umask,
-                           start_new_session):
+                           start_new_session, process_group):
             """Execute program (POSIX version)"""
 
             if PY3 and isinstance(args, (str, bytes)):
@@ -1731,7 +1758,8 @@ class Popen(object):
                                 os.setregid(gid, gid)
                             if uid:
                                 os.setreuid(uid, uid)
-
+                            if process_group is not None:
+                                os.setpgid(0, process_group)
                             if preexec_fn:
                                 preexec_fn()
 
@@ -2015,13 +2043,14 @@ def run(*popenargs, **kwargs):
 
     return CompletedProcess(process.args, retcode, stdout, stderr)
 
-def _gevent_did_monkey_patch(*_args):
+def _gevent_did_monkey_patch(target_module, *_args, **_kwargs):
     # Beginning on 3.8 on Mac, the 'spawn' method became the default
     # start method. That doesn't fire fork watchers and we can't
     # easily patch to make it do so: multiprocessing uses the private
     # c accelerated _subprocess module to implement this. Instead we revert
     # back to using fork.
     from gevent._compat import MAC
+
     if MAC:
         import multiprocessing
         if hasattr(multiprocessing, 'set_start_method'):

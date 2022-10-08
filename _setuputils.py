@@ -244,6 +244,23 @@ def cythonize1(ext):
                 'infer_types': True,
                 'nonecheck': False,
             },
+            # XXX: Cython developers say: "Please use C macros instead
+            # of Pyrex defines. Taking this kind of decision based on
+            # the runtime environment of the build is wrong, it needs
+            # to be taken at C compile time."
+            #
+            # They also say, "The 'IF' statement is deprecated and
+            # will be removed in a future Cython version. Consider
+            # using runtime conditions or C macros instead. See
+            # https://github.com/cython/cython/issues/4310"
+            #
+            # And: " The 'DEF' statement is deprecated and will be
+            # removed in a future Cython version. Consider using
+            # global variables, constants, and in-place literals
+            # instead."
+            #compile_time_env={
+            #
+            #},
             # The common_utility_include_dir (not well documented)
             # causes Cython to emit separate files for much of the
             # static support code. Each of the modules then includes

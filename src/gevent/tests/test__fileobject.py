@@ -200,6 +200,8 @@ class TestFileObjectBlock(CleanupMixin,
 
     @skipUnlessWorksWithRegularFiles
     def test_rbU_produces_bytes_readline(self):
+        if sys.version_info > (3, 11):
+            self.skipTest("U file mode was removed in 3.11")
         # Including U in rb still produces bytes.
         # Note that the universal newline behaviour is
         # essentially ignored in explicit bytes mode.
@@ -213,6 +215,8 @@ class TestFileObjectBlock(CleanupMixin,
 
     @skipUnlessWorksWithRegularFiles
     def test_rU_produces_native(self):
+        if sys.version_info > (3, 11):
+            self.skipTest("U file mode was removed in 3.11")
         gevent_data = self.__check_native_matches(
             b'line1\nline2\r\nline3\rlastline\n\n',
             'rU',
@@ -362,9 +366,15 @@ class ConcurrentFileObjectMixin(object):
 
         try:
             with warnings.catch_warnings():
-                warnings.simplefilter('ignore', DeprecationWarning)
-                # U is deprecated in Python 3, shows up on FileObjectThread
-                fobj = self._makeOne(r, 'rU')
+                if sys.version_info > (3, 11):
+                    # U is removed in Python 3.11
+                    mode = 'r'
+                    self.skipTest("U file mode was removed in 3.11")
+                else:
+                    # U is deprecated in Python 3, shows up on FileObjectThread
+                    warnings.simplefilter('ignore', DeprecationWarning)
+                    mode = 'rU'
+                fobj = self._makeOne(r, mode)
             result = fobj.read()
             fobj.close()
             self.assertEqual('line1\nline2\nline3\nline4\nline5\nline6', result)

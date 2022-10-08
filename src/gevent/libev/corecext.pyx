@@ -803,6 +803,7 @@ from gevent._interfaces import ICallback
 classImplements(loop, ILoop)
 classImplements(callback, ICallback)
 
+# XXX: DEF is deprecated. See _setuputils.py for info.
 # about readonly _flags attribute:
 # bit #1 set if object owns Python reference to itself (Py_INCREF was
 # called and we must call Py_DECREF later)
