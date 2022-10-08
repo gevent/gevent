@@ -393,7 +393,7 @@ def check_output(*popenargs, **kwargs):
     .. versionchanged:: 1.2a1
        The ``input`` keyword argument is now accepted on all supported
        versions of Python, not just Python 3
-    .. versionchanged:: NEXT
+    .. versionchanged:: 22.08.0
        Passing the ``check`` keyword argument is forbidden, just as in Python 3.11.
     """
     timeout = kwargs.pop('timeout', None)
@@ -651,7 +651,7 @@ class Popen(object):
        Added the ``pipesize`` argument for compatibility with Python 3.10.
        This is ignored on all platforms.
 
-    .. versionchanged:: NEXT
+    .. versionchanged:: 22.08.0
        Added the ``process_group`` and ``check`` arguments for compatibility with
        Python 3.11.
     """

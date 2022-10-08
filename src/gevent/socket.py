@@ -81,7 +81,7 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
         If the host part of the address includes an IPv6 scope ID,
         it will be used instead of ignored, if the platform supplies
         :func:`socket.inet_pton`.
-    .. versionchanged:: NEXT
+    .. versionchanged:: 22.08.0
         Add the *all_errors* argument. This only has meaning on Python 3.11;
         it is a programming error to pass it on earlier versions.
     """

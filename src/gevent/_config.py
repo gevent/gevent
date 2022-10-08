@@ -7,7 +7,7 @@ is an object of :class:`Config`.
 
 .. versionadded:: 1.3a2
 
-.. versionchanged:: NEXT
+.. versionchanged:: 22.08.0
    Invoking this module like ``python -m gevent._config`` will
    print a help message about available configuration properties.
    This is handy to quickly look for environment variables.
@@ -362,7 +362,7 @@ class ThreadpoolIdleTaskTimeout(FloatSettingMixin, Setting):
 
     Use -1 for no timeout.
 
-    .. versionadded:: NEXT
+    .. versionadded:: 22.08.0
     """
 
     # This value is picked pretty much arbitrarily.

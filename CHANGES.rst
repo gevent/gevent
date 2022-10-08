@@ -6,6 +6,53 @@
 
 .. towncrier release notes start
 
+22.08.0 (2022-10-08)
+====================
+
+
+Features
+--------
+
+- Windows: Test and provide binary wheels for PyPy3.7.
+
+  Note that there may be issues with subprocesses, signals, and it may
+  be slow.
+  See :issue:`1798`.
+- Upgrade embedded c-ares to 1.18.1.
+  See :issue:`1847`.
+- Upgrade bundled libuv to 1.42.0 from 1.40.0.
+  See :issue:`1851`.
+- Added preliminary support for Python 3.11 (rc2 and later).
+
+  Some platforms may or may not have binary wheels at this time.
+
+  .. important:: Support for legacy versions of Python, including 2.7
+                 and 3.6, will be ending soon. The
+                 maintenance burden has become too great and the
+                 maintainer's time is too limited.
+
+                 Ideally, there will be a release of gevent compatible
+                 with a final release of greenlet 2.0 that still
+                 supports those legacy versions, but that may not be
+                 possible; this may be the final release to support them.
+
+  :class:`gevent.threadpool.ThreadPool` can now optionally expire idle
+  threads. This is used by default in the implicit thread pool used for
+  DNS requests and other user-submitted tasks; other uses of a
+  thread-pool need to opt-in to this.
+  See :issue:`1867`.
+
+
+Bugfixes
+--------
+
+- Truly disable the effects of compiling with ``-ffast-math``.
+  See :issue:`1864`.
+
+
+----
+
+
 21.12.0 (2021-12-11)
 ====================
 

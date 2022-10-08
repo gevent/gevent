@@ -293,7 +293,7 @@ class ThreadPool(GroupMappingMixin):
     .. versionchanged:: 20.12.0
        Install the profile and trace functions in the worker thread while
        the worker thread is running the supplied task.
-    .. versionchanged:: NEXT
+    .. versionchanged:: 22.08.0
        Add the option to let idle threads expire and be removed
        from the pool after *idle_task_timeout* seconds (-1 for no
        timeout)
