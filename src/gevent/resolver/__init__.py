@@ -135,6 +135,15 @@ class AbstractResolver(object):
         and k not in ('SOCK_CLOEXEC', 'SOCK_MAX_SIZE')
     }
 
+    def close(self):
+        """
+        Release resources held by this object.
+
+        Subclasses that define resources should override.
+
+        .. versionadded:: NEXT
+        """
+
     @staticmethod
     def fixup_gaierror(func):
         import functools

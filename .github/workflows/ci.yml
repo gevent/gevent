@@ -350,11 +350,10 @@ jobs:
         run: |
           python -mgevent.tests --second-chance $G_USE_COV --ignore tests_that_dont_use_resolver.txt
       - name: "Tests: leakchecks"
-        # Run the leaktests; this seems to be extremely slow on Python 3.7
-        # XXX: Figure out why. Can we reproduce locally?
+        # Run the leaktests;
         # This is incredibly important and we MUST have an environment that successfully passes
         # these tests.
-        if: matrix.python-version == 2.7 && startsWith(runner.os, 'Linux')
+        if: (matrix.python-version == 2.7 || startsWith(matrix.python-version, '3.11')) && startsWith(runner.os, 'Linux')
         env:
           GEVENTTEST_LEAKCHECK: 1
         run: |

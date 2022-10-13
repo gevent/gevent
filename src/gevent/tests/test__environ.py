@@ -4,7 +4,7 @@ import gevent
 import gevent.core
 import subprocess
 
-if sys.argv[1:] == []:
+if not sys.argv[1:]:
     os.environ['GEVENT_BACKEND'] = 'select'
     # (not in Py2) pylint:disable=consider-using-with
     popen = subprocess.Popen([sys.executable, __file__, '1'])

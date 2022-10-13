@@ -21,7 +21,6 @@ from __future__ import print_function
 
 import sys
 import gc
-import types
 from functools import wraps
 import unittest
 
@@ -52,8 +51,10 @@ def ignores_leakcheck(func):
 
 class _RefCountChecker(object):
 
-    # Some builtin things that we ignore
-    IGNORED_TYPES = (tuple, dict, types.FrameType, types.TracebackType)
+    # Some builtin things that we ignore.
+    # For awhile, we also ignored types.FrameType and types.TracebackType,
+    # but those are important and often involved in leaks.
+    IGNORED_TYPES = (tuple, dict,)
     try:
         CALLBACK_KIND = gevent.core.callback
     except AttributeError:
