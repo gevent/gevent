@@ -34,6 +34,7 @@ class TestTimeout(greentest.TestCase):
 
         r = Resolver(servers=[address[0]], timeout=0.001, tries=1,
                      udp_port=address[-1])
+        self._close_on_teardown(r)
 
         with self.assertRaisesRegex(socket.herror, "ARES_ETIMEOUT"):
             r.gethostbyname('www.google.com')

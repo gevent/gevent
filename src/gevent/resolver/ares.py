@@ -4,6 +4,7 @@ c-ares based hostname resolver.
 """
 from __future__ import absolute_import, print_function, division
 import os
+import warnings
 
 from _socket import gaierror
 from _socket import herror
@@ -116,12 +117,17 @@ class Resolver(AbstractResolver):
 
        Handling of localhost and broadcast names is now more consistent.
 
+    .. versionchanged:: NEXT
+       Now has a ``__del__`` method that warns if the object is destroyed
+       without being properly closed.
+
     .. _c-ares: http://c-ares.haxx.se
     """
 
     cares_class = channel
 
     def __init__(self, hub=None, use_environ=True, **kwargs):
+        AbstractResolver.__init__(self)
         if hub is None:
             hub = get_hub()
         self.hub = hub
@@ -134,7 +140,7 @@ class Resolver(AbstractResolver):
         self.cares = self.cares_class(hub.loop, **kwargs)
         self.pid = os.getpid()
         self.params = kwargs
-        self.fork_watcher = hub.loop.fork(ref=False)
+        self.fork_watcher = hub.loop.fork(ref=False) # We shouldn't keep the loop alive
         self.fork_watcher.start(self._on_fork)
 
     def __repr__(self):
@@ -149,10 +155,17 @@ class Resolver(AbstractResolver):
             self.pid = pid
 
     def close(self):
+        AbstractResolver.close(self)
         if self.cares is not None:
             self.hub.loop.run_callback(self.cares.destroy)
             self.cares = None
         self.fork_watcher.stop()
+
+    def __del__(self):
+        if self.cares is not None:
+            warnings.warn("cares Resolver destroyed while not closed",
+                          ResourceWarning)
+            self.close()
 
     def _gethostbyname_ex(self, hostname_bytes, family):
         while True:

@@ -412,6 +412,9 @@ cdef class channel:
         return '<%s at 0x%x _timer=%r _watchers[%s]>' % args
 
     def destroy(self):
+        self.__destroy()
+
+    cdef __destroy(self):
         if self.channel:
             # XXX ares_library_cleanup?
             cares.ares_destroy(self.channel)
@@ -421,10 +424,7 @@ cdef class channel:
             self.loop = None
 
     def __dealloc__(self):
-        if self.channel:
-            # XXX ares_library_cleanup?
-            cares.ares_destroy(self.channel)
-            self.channel = NULL
+        self.__destroy()
 
     cpdef set_servers(self, servers=None):
         if not self.channel:
