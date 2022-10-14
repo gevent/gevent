@@ -13,6 +13,8 @@ from setuptools import Extension, setup
 from setuptools import find_packages
 
 
+sys.path.insert(0, os.path.dirname(__file__))
+
 from _setuputils import read
 from _setuputils import read_version
 from _setuputils import PYPY, WIN
