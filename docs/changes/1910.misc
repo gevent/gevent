@@ -1,7 +1,1 @@
-Use a more modern setuptools build backend. There have also been some
-other build related changes:
-
-- Enable memory leak checking for Python 3.11.
-..
-  TODO: Uncomment this once done
-  - Stop using the deprecated 'DEF' construct in Cython files. See https://github.com/cython/cython/issues/4310
+Use a more modern setuptools build backend.

@@ -1,0 +1,4 @@
+ Stop using the deprecated 'DEF' construct in Cython files. See
+ https://github.com/cython/cython/issues/4310
+
+Enable memory leak checking for Python 3.11.
