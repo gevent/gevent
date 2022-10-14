@@ -340,6 +340,22 @@ int uv_fs_poll_init(void*, void*);
 int uv_fs_poll_start(void*, uv_fs_poll_cb, const char* path, unsigned int);
 int uv_fs_poll_stop(void*);
 
+// CPU Info
+unsigned int uv_available_parallelism(void);
+/* We don't have uv_cpu_info medeled
+int uv_cpu_info(uv_cpu_info_t** cpu_infos, int* count);
+void uv_free_cpu_info(uv_cpu_info_t* cpu_infos, int count);
+*/
+
+// DNS
+/* We don't have sockaddr modeled.
+int uv_ip4_name(const struct sockaddr_in* src, char* dst, size_t size);
+int uv_ip6_name(const struct sockaddr_in6* src, char* dst, size_t size);
+int uv_ip_name(const struct sockaddr* src, char* dst, size_t size);
+
+int uv_inet_ntop(int af, const void* src, char* dst, size_t size);
+int uv_inet_pton(int af, const char* src, void* dst);
+*/
 
 /* Standard library */
 void* memset(void *b, int c, size_t len);

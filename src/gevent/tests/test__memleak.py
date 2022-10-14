@@ -9,47 +9,28 @@ from gevent.timeout import Timeout
     hasattr(sys, 'gettotalrefcount'),
     "Needs debug build"
 )
+# XXX: This name makes no sense. What was this for originally?
 class TestQueue(TestCase): # pragma: no cover
     # pylint:disable=bare-except,no-member
 
     def test(self):
-        result = ''
-        try:
-            Timeout.start_new(0.01)
-            gevent.sleep(1)
-            raise AssertionError('must raise Timeout')
-        except KeyboardInterrupt:
-            raise
-        except:
-            pass
 
-        result += '%s ' % sys.gettotalrefcount()
+        refcounts = []
+        for _ in range(15):
+            try:
+                Timeout.start_new(0.01)
+                gevent.sleep(0.1)
+                self.fail('must raise Timeout')
+            except Timeout:
+                pass
+            refcounts.append(sys.gettotalrefcount())
 
-        try:
-            Timeout.start_new(0.01)
-            gevent.sleep(1)
-            raise AssertionError('must raise Timeout')
-        except KeyboardInterrupt:
-            raise
-        except:
-            pass
-
-        result += '%s ' % sys.gettotalrefcount()
-
-        try:
-            Timeout.start_new(0.01)
-            gevent.sleep(1)
-            raise AssertionError('must raise Timeout')
-        except KeyboardInterrupt:
-            raise
-        except:
-            pass
-
-        result += '%s' % sys.gettotalrefcount()
-
-        _, b, c = result.split()
-        assert b == c, 'total refcount mismatch: %s' % result
-
+        # Refcounts may go down, but not up
+        final = refcounts[-1]
+        previous = refcounts[-2]
+        self.assertLessEqual(
+            final, previous,
+            "total refcount mismatch: %s" % refcounts)
 
 
 if __name__ == '__main__':
