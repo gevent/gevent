@@ -91,7 +91,10 @@ LIBUV_SOURCES = [
     _libuv_source('uv-data-getter-setters.c'),
     _libuv_source('timer.c'),
     _libuv_source('idna.c'),
-    _libuv_source('strscpy.c')
+    _libuv_source('strscpy.c'),
+    # Added between 1.42.0 and 1.44.2; only used
+    # on unix in that release, but generic
+    _libuv_source('strtok.c'),
 ]
 
 if WIN:
