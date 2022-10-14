@@ -27,6 +27,7 @@ __all__ = []
 
 WIN = sys.platform.startswith('win32')
 LIBUV_EMBED = _setuputils.should_embed('libuv')
+PY2 = sys.version_info[0] == 2
 
 
 ffi = FFI()
@@ -297,6 +298,17 @@ elif WIN:
     _define_macro('_CRT_SECURE_NO_WARNINGS', 1)
     _define_macro('_WIN32_WINNT', '0x0602')
     _define_macro('WIN32_LEAN_AND_MEAN', 1)
+    # This value isn't available on the platform that we build and
+    # test Python 2.7 on. It's used for getting power management
+    # suspend/resume notifications, maybe for keeping timers accurate?
+    #
+    # TODO: This should be a more targeted check based on the platform
+    # version, but that's complicated because it depends on having a
+    # particular patch installed to the OS, and I don't know how to
+    # check for that...but we're dropping Python 2 support soon, so
+    # I suspect it really doesn't matter.
+    if PY2:
+        _define_macro('LOAD_LIBRARY_SEARCH_SYSTEM32', 0)
     _add_library('advapi32')
     _add_library('iphlpapi')
     _add_library('psapi')

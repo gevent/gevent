@@ -343,7 +343,8 @@ jobs:
         run: |
           python -mgevent.tests --second-chance $G_USE_COV --ignore tests_that_dont_use_resolver.txt
       - name: "Tests: dnspython resolver"
-        # This has known issues on Pypy-3.6.
+        # This has known issues on Pypy-3.6. dnspython resolver not
+        # supported under anything newer than 3.10, so far.
         if: (matrix.python-version == '3.9') && startsWith(runner.os, 'Linux')
         env:
           GEVENT_RESOLVER: dnspython
@@ -367,7 +368,7 @@ jobs:
         run: |
           python -mgevent.tests --second-chance --coverage
       - name: "Tests: libuv"
-        if: (matrix.python-version == 2.7 || matrix.python-version == '3.9')
+        if: (matrix.python-version == 2.7 || startsWith(matrix.python-version, '3.11'))
         env:
           GEVENT_LOOP: libuv
         run: |
