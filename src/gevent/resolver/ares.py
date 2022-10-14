@@ -117,7 +117,7 @@ class Resolver(AbstractResolver):
 
        Handling of localhost and broadcast names is now more consistent.
 
-    .. versionchanged:: NEXT
+    .. versionchanged:: 22.10.1
        Now has a ``__del__`` method that warns if the object is destroyed
        without being properly closed.
 

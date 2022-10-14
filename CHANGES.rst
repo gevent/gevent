@@ -6,6 +6,26 @@
 
 .. towncrier release notes start
 
+22.10.1 (2022-10-14)
+====================
+
+
+Features
+--------
+
+- Update bundled libuv to 1.44.2.
+  See :issue:`1913`.
+
+
+Misc
+----
+
+- See :issue:`1898`., See :issue:`1910`., See :issue:`1915`.
+
+
+----
+
+
 22.08.0 (2022-10-08)
 ====================
 

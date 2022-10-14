@@ -1,5 +1,0 @@
-gevent now provides ppc64le binary wheels. These are considered
-experimental, are barely tested, are compiled with low optimizations,
-and do not include the c-ares resolver. They are meant for development
-only. Serious production users should continue compiling their own
-binary wheels.

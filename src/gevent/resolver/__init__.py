@@ -141,7 +141,7 @@ class AbstractResolver(object):
 
         Subclasses that define resources should override.
 
-        .. versionadded:: NEXT
+        .. versionadded:: 22.10.1
         """
 
     @staticmethod
