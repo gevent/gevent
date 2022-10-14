@@ -13,6 +13,15 @@ from setuptools import Extension, setup
 from setuptools import find_packages
 
 
+# -*- coding: utf-8 -*-
+#
+# We import other files that are siblings of this file as modules. In
+# the past, setuptools guaranteed that this directory was on the path
+# (typically, the working directory) but in a PEP517 world, that's no
+# longer guaranteed to be the case. setuptools provides a PEP517
+# backend (``setuptools.build_meta:__legacy__``) that *does* guarantee
+# that, and we used it for a long time. But downstream packagers have begun
+# complaining about using it. So we futz with the path ourself.
 sys.path.insert(0, os.path.dirname(__file__))
 
 from _setuputils import read
