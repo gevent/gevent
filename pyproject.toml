@@ -8,7 +8,6 @@ build-backend = "setuptools.build_meta:__legacy__"
 # if you add/remove/change them.
 requires = [
      "setuptools >= 40.8.0",
-     "wheel",
 
      # Python 3.7 requires at least Cython 0.27.3.
      # 0.28 is faster, and (important!) lets us specify the target module
