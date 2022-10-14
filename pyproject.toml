@@ -1,9 +1,5 @@
 [build-system]
-# Our setup.py imports other things from this directory, meaning
-# in needs to be on sys.path. That's not guaranteed in a PEP517 world;
-# the __legacy__ build module makes that true. Ultimately we need to do that
-# ourself (and/or continue to simplify our build system).
-build-backend = "setuptools.build_meta:__legacy__"
+build-backend = "setuptools.build_meta"
 # Build dependencies. Remember to change these in make-manylinux and appveyor.yml
 # if you add/remove/change them.
 requires = [
