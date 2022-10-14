@@ -42,6 +42,8 @@ if [ "$DOCKER_IMAGE" == "quay.io/pypa/manylinux2014_aarch64" -a -n "$GITHUB_ACTI
     echo "Compiling with -O1"
     OPTIMIZATION_FLAGS="-pipe -O1"
     SLOW_BUILD=1
+    GEVENTTEST_SKIP_ALL=1
+    GEVENTSETUP_DISABLE_ARES=1
 else
     echo "Compiling with -O3"
     OPTIMIZATION_FLAGS="-pipe -O3"
@@ -114,7 +116,7 @@ if [ -d /gevent -a -d /opt/python ]; then
     mkdir /gevent/wheelhouse
     OPATH="$PATH"
     which auditwheel
-    for variant in `ls -d /opt/python/cp{310,27,36,37,38,39}*`; do
+    for variant in `ls -d /opt/python/cp{310,27,36,37,38,39,311}*`; do
         export PATH="$variant/bin:$OPATH"
         echo "Building $variant $(python --version)"
 

@@ -121,6 +121,11 @@ distributed as binary `wheels`_.
    gevent on 64-bit ARM systems are encouraged to build their own
    binary wheels.
 
+   Beginning with gevent 22.10.0, ppc64le binaries are distributed on
+   PyPI. The same caveats apply as for 64-bit ARM binaries. Using them
+   for anything other than local development is discouraged.
+
+
 Installing From Source
 ----------------------
 
