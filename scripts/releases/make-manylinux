@@ -43,7 +43,7 @@ if [ "$DOCKER_IMAGE" == "quay.io/pypa/manylinux2014_aarch64" -a -n "$GITHUB_ACTI
     OPTIMIZATION_FLAGS="-pipe -O1"
     SLOW_BUILD=1
     GEVENTTEST_SKIP_ALL=1
-    GEVENTSETUP_DISABLE_ARES=1
+    export GEVENTSETUP_DISABLE_ARES=1
 else
     echo "Compiling with -O3"
     OPTIMIZATION_FLAGS="-pipe -O3"
