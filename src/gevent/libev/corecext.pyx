@@ -323,7 +323,13 @@ cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback
     def _format(self):
         return ''
 
-DEF CALLBACK_CHECK_COUNT = 50
+# See comments in cares.pyx about DEF constants and when to use
+# what kind.
+cdef extern from *:
+    """
+    #define CALLBACK_CHECK_COUNT 50
+    """
+    int CALLBACK_CHECK_COUNT
 
 @cython.final
 @cython.internal
@@ -803,19 +809,26 @@ from gevent._interfaces import ICallback
 classImplements(loop, ILoop)
 classImplements(callback, ICallback)
 
-# XXX: DEF is deprecated. See _setuputils.py for info.
-# about readonly _flags attribute:
-# bit #1 set if object owns Python reference to itself (Py_INCREF was
-# called and we must call Py_DECREF later)
-DEF FLAG_WATCHER_OWNS_PYREF = 1 << 0 # 0x1
-# bit #2 set if ev_unref() was called and we must call ev_ref() later
-DEF FLAG_WATCHER_NEEDS_EVREF = 1 << 1 # 0x2
-# bit #3 set if user wants to call ev_unref() before start()
-DEF FLAG_WATCHER_UNREF_BEFORE_START = 1 << 2 # 0x4
-# bits 2 and 3 are *both* set when we are active, but the user
-# request us not to be ref'd anymore. We unref us (because going active will
-# ref us) and then make a note of this in the future
-DEF FLAG_WATCHER_MASK_UNREF_NEEDS_REF = 0x6
+
+cdef extern from *:
+    """
+    #define FLAG_WATCHER_OWNS_PYREF  (1 << 0) /* 0x1 */
+    #define FLAG_WATCHER_NEEDS_EVREF (1 << 1) /* 0x2 */
+    #define FLAG_WATCHER_UNREF_BEFORE_START (1 << 2) /* 0x4 */
+    #define FLAG_WATCHER_MASK_UNREF_NEEDS_REF 0x6
+    """
+    # about readonly _flags attribute:
+    # bit #1 set if object owns Python reference to itself (Py_INCREF was
+    # called and we must call Py_DECREF later)
+    unsigned int FLAG_WATCHER_OWNS_PYREF
+    # bit #2 set if ev_unref() was called and we must call ev_ref() later
+    unsigned int FLAG_WATCHER_NEEDS_EVREF
+    # bit #3 set if user wants to call ev_unref() before start()
+    unsigned int FLAG_WATCHER_UNREF_BEFORE_START
+    # bits 2 and 3 are *both* set when we are active, but the user
+    # request us not to be ref'd anymore. We unref us (because going active will
+    # ref us) and then make a note of this in the future
+    unsigned int FLAG_WATCHER_MASK_UNREF_NEEDS_REF
 
 
 cdef void _python_incref(watcher self):

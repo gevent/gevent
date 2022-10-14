@@ -35,11 +35,24 @@ else:
     string_types = __builtins__.basestring,
     text_type = __builtins__.unicode
 
-# XXX: DEF is deprecated. See _setuputils.py for info.
-DEF TIMEOUT = 1
+# These three constants used to be DEF, but the DEF construct
+# is deprecated in Cython. Using a cdef extern, the generated
+# C code refers to the symbol (DEF would have inlined the value).
+# That's great when we're strictly in a C context, but for passing to
+# Python, it means we do a runtime translation from the C int to the
+# Python int. That is avoided if we use a cdef constant. TIMEOUT
+# is the only one that interacts with Python, but not in a performance-sensitive
+# way, so runtime translation is fine to keep it consistent.
+cdef extern from *:
+    """
+    #define TIMEOUT 1
+    #define EV_READ 1
+    #define EV_WRITE 2
+    """
+    int TIMEOUT
+    int EV_READ
+    int EV_WRITE
 
-DEF EV_READ = 1
-DEF EV_WRITE = 2
 
 cdef extern from *:
     """
