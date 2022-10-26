@@ -102,11 +102,11 @@ distributed as binary `wheels`_.
    You need Pip 8.0 or later, or buildout 2.10.0 to install the binary
    wheels on Windows or macOS. On Linux, you'll need `pip 19
    <https://github.com/pypa/pip/pull/5008>`_ to install the
-   manylinux2010 wheels.
+   manylinux2014 wheels.
 
 .. tip::
 
-   Binary wheels cannot be installed on non-manylinux2010 compatible
+   Binary wheels cannot be installed on non-manylinux2014 compatible
    Linux systems, such as those that use `musl
    <https://musl.libc.org>`_, including `Alpine Linux
    <https://alpinelinux.org>`_. Those systems must install from source.

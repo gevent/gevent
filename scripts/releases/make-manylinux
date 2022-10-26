@@ -1,7 +1,7 @@
 #!/bin/bash
 # Initially based on a snippet from the greenlet project.
 # This needs to be run from the root of the project.
-# To update: docker pull quay.io/pypa/manylinux2010_x86_64
+# To update: docker pull quay.io/pypa/manylinux2014_x86_64
 set -e
 export PYTHONUNBUFFERED=1
 export PYTHONDONTWRITEBYTECODE=1
@@ -174,5 +174,5 @@ fi
 # Travis CI and locally we want `-ti`, but github actions doesn't have a TTY, so one
 # or the other of the arguments causes this to fail with 'input device is not a TTY'
 # Pas through whether we're running on github or not to help with caching.
-docker run --rm -e GEVENT_MANYLINUX_NAME -e GEVENTSETUP_DISABLE_ARES -e GITHUB_ACTIONS -e GEVENTTEST_SKIP_ALL -e DOCKER_IMAGE -v "$(pwd):/gevent" -v "$LCACHE:/cache" -v "$HOME/.ccache:/ccache" ${DOCKER_IMAGE:-quay.io/pypa/manylinux2010_x86_64} /gevent/scripts/releases/$(basename $0)
+docker run --rm -e GEVENT_MANYLINUX_NAME -e GEVENTSETUP_DISABLE_ARES -e GITHUB_ACTIONS -e GEVENTTEST_SKIP_ALL -e DOCKER_IMAGE -v "$(pwd):/gevent" -v "$LCACHE:/cache" -v "$HOME/.ccache:/ccache" ${DOCKER_IMAGE:-quay.io/pypa/manylinux2014_x86_64} /gevent/scripts/releases/$(basename $0)
 ls -l wheelhouse
