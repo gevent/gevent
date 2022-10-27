@@ -46,6 +46,12 @@ environment:
     # a later point release.
 
     # 64-bit
+    - PYTHON: "C:\\Python311-x64"
+      PYTHON_VERSION: "3.11.0"
+      PYTHON_ARCH: "64"
+      PYTHON_EXE: python
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+
     - PYTHON: "C:\\pypy3.7-v7.3.7-win64"
       PYTHON_ID: "pypy3"
       PYTHON_EXE: pypy3w
