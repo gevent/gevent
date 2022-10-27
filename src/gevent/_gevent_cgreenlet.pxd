@@ -1,6 +1,8 @@
 # cython: auto_pickle=False
 
 cimport cython
+from cpython.ref cimport Py_DECREF
+
 from gevent._gevent_c_ident cimport IdentRegistry
 from gevent._gevent_c_hub_local cimport get_hub_noargs as get_hub
 from gevent._gevent_c_waiter cimport Waiter
@@ -21,12 +23,14 @@ cdef extern from "greenlet/greenlet.h":
         # properly handle the case that it can be NULL. So instead we inline a getparent
         # function that does the same thing as the green_getparent accessor but without
         # going through the overhead of generic attribute lookup.
-        cdef void* parent
+        #cdef void* parent
+        pass
 
     # These are actually macros and so must be included
     # (defined) in each .pxd, as are the two functions
     # that call them.
     greenlet PyGreenlet_GetCurrent()
+    void* PyGreenlet_GetParent(greenlet)
     void PyGreenlet_Import()
 
 @cython.final
@@ -36,13 +40,26 @@ cdef inline greenlet getcurrent():
 cdef inline object get_generic_parent(greenlet s):
     # We don't use any typed functions on the return of this,
     # so save the type check by making it just an object.
-    if s.parent != NULL:
-        return <object>s.parent
+    cdef object result
+    cdef void* parent = PyGreenlet_GetParent(s)
+    if parent != NULL:
+        # The cast will perform an incref; but the GetParent
+        # function already did an incref if we got it (and not NULL).
+        # Therefore, we must DECREF immediately.
+        result = <object>parent
+        Py_DECREF(result)
+        return result
 
 cdef inline SwitchOutGreenletWithLoop get_my_hub(greenlet s):
+    # This one we do want type checked on the return value.
     # Must not be called with s = None
-    if s.parent != NULL:
-        return <object>s.parent
+    cdef object result
+    cdef void* parent = PyGreenlet_GetParent(s)
+    if parent != NULL:
+        result = <object>parent
+        # See above
+        Py_DECREF(result)
+        return result
 
 cdef bint _greenlet_imported
 

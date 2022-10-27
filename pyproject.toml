@@ -23,8 +23,10 @@ requires = [
      # Python 3.7 requires at least 0.4.14, which is ABI incompatible with earlier
      # releases. Python 3.9 and 3.10 require 0.4.16;
      # 0.4.17 is ABI incompatible with earlier releases, but compatible with 1.0
-     # 1.1.3 is needed for CPython 3.11
-     "greenlet >= 1.1.3, < 2.0 ; platform_python_implementation == 'CPython'",
+     # 1.1.3 is needed for CPython 3.11.
+     # 2.0 is not ABI compatible with earlier releases, but with luck it won't
+     # have to break the ABI again.
+     "greenlet >= 2.0.0rc1 ; platform_python_implementation == 'CPython'",
 ]
 
 [tool.towncrier]
