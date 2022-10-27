@@ -34,6 +34,7 @@ from gevent.testing.sysinfo import RESOLVER_DNSPYTHON
 from gevent.testing.sysinfo import RESOLVER_ARES
 from gevent.testing.sysinfo import PY2
 from gevent.testing.sysinfo import PYPY
+from gevent.testing.sysinfo import RUNNING_ON_GITHUB_ACTIONS
 import gevent.testing.timing
 
 
@@ -772,7 +773,16 @@ class TestInternational(TestCase):
 add(TestInternational, u'президент.рф', 'russian',
     skip=(PY2 and RESOLVER_DNSPYTHON),
     skip_reason="dnspython can actually resolve these")
-add(TestInternational, u'президент.рф'.encode('idna'), 'idna')
+add(TestInternational, u'президент.рф'.encode('idna'), 'idna',
+    skip=RUNNING_ON_GITHUB_ACTIONS,
+    skip_reason=(
+        "Starting 20221027, on GitHub Actions and *some* versions of Python,"
+        "we started getting a different error result from our own resolver "
+        "compared to the system. This is very weird because our own resolver "
+        "calls the system. I can't reproduce locally."
+        # ('gethostbyaddr', 'system:', "herror(2, 'Host name lookup failure')",
+        #                   'gevent:', "herror(1, 'Unknown host')")
+    ))
 
 @skipWithoutExternalNetwork("Tries to resolve and compare hostnames/addrinfo")
 class TestInterrupted_gethostbyname(gevent.testing.timing.AbstractGenericWaitTestCase):
