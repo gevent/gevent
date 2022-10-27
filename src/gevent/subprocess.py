@@ -224,6 +224,7 @@ if PY311:
     _fork_exec = None
     __implements__.extend([
         '_fork_exec',
+    ] if sys.platform != 'win32' else [
     ])
 
 actually_imported = copy_globals(__subprocess__, globals(),
