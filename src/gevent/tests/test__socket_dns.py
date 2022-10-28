@@ -66,7 +66,8 @@ def add(klass, hostname, name=None,
 
     def test_getaddrinfo_http(self):
         x = hostname() if call else hostname
-        self._test('getaddrinfo', x, 'http')
+        self._test('getaddrinfo', x, 'http',
+                   require_equal_errors=require_equal_errors)
     test_getaddrinfo_http.__name__ = 'test_%s_getaddrinfo_http' % name
     _setattr(klass, test_getaddrinfo_http.__name__, test_getaddrinfo_http)
 
@@ -79,21 +80,24 @@ def add(klass, hostname, name=None,
     test_gethostbyname.__name__ = 'test_%s_gethostbyname' % name
     _setattr(klass, test_gethostbyname.__name__, test_gethostbyname)
 
-    def test3(self):
+    def test_gethostbyname_ex(self):
         x = hostname() if call else hostname
-        self._test('gethostbyname_ex', x)
-    test3.__name__ = 'test_%s_gethostbyname_ex' % name
-    _setattr(klass, test3.__name__, test3)
+        self._test('gethostbyname_ex', x,
+                   require_equal_errors=require_equal_errors)
+    test_gethostbyname_ex.__name__ = 'test_%s_gethostbyname_ex' % name
+    _setattr(klass, test_gethostbyname_ex.__name__, test_gethostbyname_ex)
 
     def test4(self):
         x = hostname() if call else hostname
-        self._test('gethostbyaddr', x)
+        self._test('gethostbyaddr', x,
+                   require_equal_errors=require_equal_errors)
     test4.__name__ = 'test_%s_gethostbyaddr' % name
     _setattr(klass, test4.__name__, test4)
 
     def test5(self):
         x = hostname() if call else hostname
-        self._test('getnameinfo', (x, 80), 0)
+        self._test('getnameinfo', (x, 80), 0,
+                   require_equal_errors=require_equal_errors)
     test5.__name__ = 'test_%s_getnameinfo' % name
     _setattr(klass, test5.__name__, test5)
 
