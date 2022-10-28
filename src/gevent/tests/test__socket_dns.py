@@ -34,7 +34,7 @@ from gevent.testing.sysinfo import RESOLVER_DNSPYTHON
 from gevent.testing.sysinfo import RESOLVER_ARES
 from gevent.testing.sysinfo import PY2
 from gevent.testing.sysinfo import PYPY
-from gevent.testing.sysinfo import RUNNING_ON_GITHUB_ACTIONS
+
 import gevent.testing.timing
 
 
@@ -46,7 +46,8 @@ RUN_ALL_HOST_TESTS = os.getenv('GEVENTTEST_RUN_ALL_ETC_HOST_TESTS', '')
 
 
 def add(klass, hostname, name=None,
-        skip=None, skip_reason=None):
+        skip=None, skip_reason=None,
+        require_equal_errors=True):
 
     call = callable(hostname)
 
@@ -71,7 +72,8 @@ def add(klass, hostname, name=None,
 
     def test_gethostbyname(self):
         x = hostname() if call else hostname
-        ipaddr = self._test('gethostbyname', x)
+        ipaddr = self._test('gethostbyname', x,
+                            require_equal_errors=require_equal_errors)
         if not isinstance(ipaddr, Exception):
             self._test('gethostbyaddr', ipaddr)
     test_gethostbyname.__name__ = 'test_%s_gethostbyname' % name
@@ -188,9 +190,12 @@ class TestCase(greentest.TestCase):
             return type(result1) is not type(result2)
         return repr(result1) != repr(result2)
 
-    def _test(self, func_name, *args):
+    def _test(self, func_name, *args, **kwargs):
         """
         Runs the function *func_name* with *args* and compares gevent and the system.
+
+        Keyword arguments are passed to the function itself; variable args are
+        used for the socket function.
 
         Returns the gevent result.
         """
@@ -198,7 +203,7 @@ class TestCase(greentest.TestCase):
         real_func = monkey.get_original('socket', func_name)
 
         tester = getattr(self, '_run_test_' + func_name, self._run_test_generic)
-        result = tester(func_name, real_func, gevent_func, args)
+        result = tester(func_name, real_func, gevent_func, args, **kwargs)
         _real_result, time_real, gevent_result, time_gevent = result
 
         if self.verbose_dns and time_gevent > time_real + 0.02 and time_gevent > 0.03:
@@ -214,14 +219,17 @@ class TestCase(greentest.TestCase):
 
         return gevent_result
 
-    def _run_test_generic(self, func_name, real_func, gevent_func, func_args):
+    def _run_test_generic(self, func_name, real_func, gevent_func, func_args,
+                          require_equal_errors=True):
         real_result, time_real = self.run_resolver(real_func, func_args)
         gevent_result, time_gevent = self.run_resolver(gevent_func, func_args)
         if util.QUIET and self.should_log_results(real_result, gevent_result):
             util.log('')
             self.__trace_call(real_result, time_real, real_func, func_args)
             self.__trace_call(gevent_result, time_gevent, gevent_func, func_args)
-        self.assertEqualResults(real_result, gevent_result, func_name)
+
+        self.assertEqualResults(real_result, gevent_result, func_name,
+                                require_equal_errors=require_equal_errors)
         return real_result, time_real, gevent_result, time_gevent
 
     def _normalize_result(self, result, func_name):
@@ -412,7 +420,8 @@ class TestCase(greentest.TestCase):
         # As for getaddrinfo, we'll just check the ipaddrlist has something in common.
         return not set(real_result[2]).isdisjoint(set(gevent_result[2]))
 
-    def assertEqualResults(self, real_result, gevent_result, func_name):
+    def assertEqualResults(self, real_result, gevent_result, func_name,
+                           require_equal_errors=True):
         errors = (
             OverflowError,
             TypeError,
@@ -422,7 +431,8 @@ class TestCase(greentest.TestCase):
             socket.herror,
         )
         if isinstance(real_result, errors) and isinstance(gevent_result, errors):
-            self._compare_exceptions(real_result, gevent_result, func_name)
+            if require_equal_errors:
+                self._compare_exceptions(real_result, gevent_result, func_name)
             return
 
         real_result = self._normalize_result(real_result, func_name)
@@ -770,19 +780,22 @@ class TestInternational(TestCase):
 # the 2008 version of idna encoding, whereas on Python 2,
 # with the default resolver, it tries to encode to ascii and
 # raises a UnicodeEncodeError. So we get different results.
+
+# Starting 20221027, on GitHub Actions and *some* versions of Python,
+# we started getting a different error result from our own resolver
+# compared to the system. This is very weird because our own resolver
+# calls the system. I can't reproduce locally. Perhaps the two
+# different answers are because of caching? One from the real DNS
+# server, one from the local resolver library? Hence
+# require_equal_errors=False
+# ('system:', "herror(2, 'Host name lookup failure')",
+#  'gevent:', "herror(1, 'Unknown host')")
 add(TestInternational, u'президент.рф', 'russian',
     skip=(PY2 and RESOLVER_DNSPYTHON),
-    skip_reason="dnspython can actually resolve these")
+    skip_reason="dnspython can actually resolve these",
+    require_equal_errors=False)
 add(TestInternational, u'президент.рф'.encode('idna'), 'idna',
-    skip=RUNNING_ON_GITHUB_ACTIONS,
-    skip_reason=(
-        "Starting 20221027, on GitHub Actions and *some* versions of Python,"
-        "we started getting a different error result from our own resolver "
-        "compared to the system. This is very weird because our own resolver "
-        "calls the system. I can't reproduce locally."
-        # ('gethostbyaddr', 'system:', "herror(2, 'Host name lookup failure')",
-        #                   'gevent:', "herror(1, 'Unknown host')")
-    ))
+    require_equal_errors=False)
 
 @skipWithoutExternalNetwork("Tries to resolve and compare hostnames/addrinfo")
 class TestInterrupted_gethostbyname(gevent.testing.timing.AbstractGenericWaitTestCase):
