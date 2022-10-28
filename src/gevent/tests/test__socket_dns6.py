@@ -64,7 +64,7 @@ class Test6(TestCase):
         def _run_test_getnameinfo(self, *_args):
             return (), 0, (), 0
 
-    def _run_test_gethostbyname(self, *_args):
+    def _run_test_gethostbyname(self, *_args, **_kwargs):
         raise unittest.SkipTest("gethostbyname[_ex] does not support IPV6")
 
     _run_test_gethostbyname_ex = _run_test_gethostbyname
