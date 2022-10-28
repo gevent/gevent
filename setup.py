@@ -215,7 +215,7 @@ greenlet_requires = [
     # 1.1.3 is needed for 3.11, and supports everything 1.1.0 did.
     # 2.0.0 supports everything 1.1.3 did, but breaks the ABI in a way that hopefully
     # won't break again.
-    'greenlet >= 2.0.0rc1 ; platform_python_implementation=="CPython"',
+    'greenlet >= 2.0.0rc2 ; platform_python_implementation=="CPython"',
 ]
 
 # Note that we don't add cffi to install_requires, it's
