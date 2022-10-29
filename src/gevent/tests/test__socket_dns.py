@@ -76,7 +76,8 @@ def add(klass, hostname, name=None,
         ipaddr = self._test('gethostbyname', x,
                             require_equal_errors=require_equal_errors)
         if not isinstance(ipaddr, Exception):
-            self._test('gethostbyaddr', ipaddr)
+            self._test('gethostbyaddr', ipaddr,
+                       require_equal_errors=require_equal_errors)
     test_gethostbyname.__name__ = 'test_%s_gethostbyname' % name
     _setattr(klass, test_gethostbyname.__name__, test_gethostbyname)
 
