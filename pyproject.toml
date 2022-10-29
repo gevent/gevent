@@ -26,7 +26,7 @@ requires = [
      # 1.1.3 is needed for CPython 3.11.
      # 2.0 is not ABI compatible with earlier releases, but with luck it won't
      # have to break the ABI again.
-     "greenlet >= 2.0.0rc2 ; platform_python_implementation == 'CPython'",
+     "greenlet >= 2.0.0rc3 ; platform_python_implementation == 'CPython'",
 ]
 
 [tool.towncrier]
