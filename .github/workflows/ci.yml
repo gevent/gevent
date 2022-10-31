@@ -83,7 +83,7 @@ jobs:
         # 3.10 needs more work: dnspython for example doesn't work
         # with it. That means for the bulk of our testing we need to
         # stick to 3.9.
-        python-version: [2.7, pypy-2.7, pypy-3.7, 3.6, 3.7, 3.8, 3.9, '3.10', '3.11.0-rc.2']
+        python-version: [2.7, pypy-2.7, pypy-3.7, 3.6, 3.7, 3.8, 3.9, '3.10', '3.11']
         # ubuntu-latest is at least 20.04. But this breaks the SSL
         # tests because Ubuntu increased the default OpenSSL
         # strictness.
@@ -97,6 +97,13 @@ jobs:
             python-version: pypy-3.7
           - os: macos-latest
             python-version: 3.6
+          - os: macos-latest
+            python-version: 3.7
+          - os: macos-latest
+            python-version: 3.8
+          - os: macos-latest
+            python-version: 3.9
+
           - os: ubuntu-latest
             python-version: 2.7
           - os: ubuntu-latest
@@ -107,6 +114,7 @@ jobs:
             python-version: 3.6
           - os: ubuntu-latest
             python-version: 3.7
+
           - os: ubuntu-18.04
             python-version: 3.8
           - os: ubuntu-18.04
@@ -114,7 +122,7 @@ jobs:
           - os: ubuntu-18.04
             python-version: '3.10'
           - os: ubuntu-18.04
-            python-version: '3.11.0-rc.2'
+            python-version: '3.11'
     steps:
       - name: checkout
         uses: actions/checkout@v2
@@ -434,11 +442,13 @@ jobs:
 
   linux_wheels:
     runs-on: ubuntu-latest
+    needs: test
     strategy:
       matrix:
         config:
           # Python version, docker image, short name
-          - ["3.9", "quay.io/pypa/manylinux2010_x86_64", "manylinux"]
+          - ["3.9", "quay.io/pypa/manylinux2010_x86_64:2021-02-06-3d322a5", "manylinux"]
+          - ["3.9", "quay.io/pypa/manylinux2014_x86_64", "manylinux2014"]
           - ["3.9", "quay.io/pypa/musllinux_1_1_x86_64", "musllinux"]
           - ["3.9", "quay.io/pypa/manylinux2014_aarch64", "manylinux_aarch64"]
           - ["3.9", "quay.io/pypa/manylinux2014_ppc64le", "manylinux_ppc64le"]
@@ -486,7 +496,8 @@ jobs:
         # The 2010 image is the last one that comes with Python 2.7,
         # and only up through the tag 2021-02-06-3d322a5.
         # Unfortunately, this does not include Python 3.10, and the
-        # images that include Python 3.10 don't have 2.7. Sigh.
+        # images that include Python 3.10 don't have 2.7. Sigh. So
+        # we get 2.7 from 2010, and 3.10 from 2014.
         env:
           DOCKER_IMAGE: ${{ matrix.config[1] }}
           GEVENT_MANYLINUX_NAME: ${{ matrix.config[2] }}
