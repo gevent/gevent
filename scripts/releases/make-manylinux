@@ -125,7 +125,7 @@ if [ -d /gevent -a -d /opt/python ]; then
         # The downside is that we must install dependencies manually.
         # NOTE: We can't upgrade ``wheel`` because ``auditwheel`` depends on
         # it, and auditwheel is installed in one of these environments.
-        python -mpip install -U "cython >= 3.0a6" cffi 'greenlet >= 2.0rc4' setuptools
+        python -mpip install -U "cython >= 3.0a6" cffi 'greenlet >= 2.0rc5' setuptools
         time (python setup.py bdist_wheel)
         PATH="$OPATH" auditwheel repair dist/gevent*.whl
         cp wheelhouse/gevent*.whl /gevent/wheelhouse
