@@ -6,6 +6,28 @@
 
 .. towncrier release notes start
 
+22.10.2 (2022-10-31)
+====================
+
+
+Bugfixes
+--------
+
+- Update to greenlet 2.0. This fixes a deallocation issue that required
+  a change in greenlet's ABI. The design of greenlet 2.0 is intended to
+  prevent future fixes and enhancements from requiring an ABI change,
+  making it easier to update gevent and greenlet independently.
+
+  .. caution::
+
+     greenlet 2.0 requires a modern-ish C++ compiler. This may mean
+     certain older platforms are no longer supported.
+     See :issue:`1909`.
+
+
+----
+
+
 22.10.1 (2022-10-14)
 ====================
 
