@@ -46,6 +46,12 @@ environment:
     # a later point release.
 
     # 64-bit
+    - PYTHON: "C:\\Python311-x64"
+      PYTHON_VERSION: "3.11.0"
+      PYTHON_ARCH: "64"
+      PYTHON_EXE: python
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+
     - PYTHON: "C:\\pypy3.7-v7.3.7-win64"
       PYTHON_ID: "pypy3"
       PYTHON_EXE: pypy3w
@@ -81,10 +87,6 @@ environment:
       PYTHON_EXE: python
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
 
-    - PYTHON: "C:\\Python27-x64"
-      PYTHON_VERSION: "2.7.x" # currently 2.7.13
-      PYTHON_ARCH: "64"
-      PYTHON_EXE: python
 
     - PYTHON: "C:\\Python38-x64"
       PYTHON_VERSION: "3.8.x"
@@ -136,6 +138,20 @@ environment:
       PYTHON_VERSION: "2.7.x" # currently 2.7.13
       PYTHON_ARCH: "32"
       PYTHON_EXE: python
+      GWHEEL_ONLY: true
+
+    - PYTHON: "C:\\Python27-x64"
+      PYTHON_VERSION: "2.7.x" # currently 2.7.13
+      PYTHON_ARCH: "64"
+      PYTHON_EXE: python
+      # greenlet 2.0 is evincing a warning (probably?)
+      # on shutdown, leading to the dreaded error:
+      #   Fatal Python error: PyImport_GetModuleDict: no module
+      #   dictionary!
+      # in some tests. This is hard to debug remotely, and as support
+      # for 2.7 is winding down quickly (hey, we're only two years
+      # late to the party) I'm not specifically going to try to debug
+      # it. We'll just provide a binary wheel still.
       GWHEEL_ONLY: true
 
     # Also test a Python version not pre-installed

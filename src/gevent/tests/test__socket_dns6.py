@@ -61,10 +61,10 @@ class Test6(TestCase):
     if not OSX and RESOLVER_DNSPYTHON:
         # It raises gaierror instead of socket.error,
         # which is not great and leads to failures.
-        def _run_test_getnameinfo(self, *_args):
+        def _run_test_getnameinfo(self, *_args, **_kwargs):
             return (), 0, (), 0
 
-    def _run_test_gethostbyname(self, *_args):
+    def _run_test_gethostbyname(self, *_args, **_kwargs):
         raise unittest.SkipTest("gethostbyname[_ex] does not support IPV6")
 
     _run_test_gethostbyname_ex = _run_test_gethostbyname
