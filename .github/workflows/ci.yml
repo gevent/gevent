@@ -206,7 +206,7 @@ jobs:
           pip install -q -U 'faulthandler; python_version == "2.7" and platform_python_implementation == "CPython"'
           pip install -q -U 'cffi;platform_python_implementation=="CPython"'
           pip install -q -U 'cython>=3.0a9'
-          pip install 'greenlet>=2.0rc5 ;platform_python_implementation=="CPython"'
+          pip install 'greenlet>=2.0.0 ;platform_python_implementation=="CPython"'
 
       - name: Build gevent
         run: |
@@ -401,7 +401,7 @@ jobs:
           pip install -q -U 'faulthandler; python_version == "2.7" and platform_python_implementation == "CPython"'
           pip install -q -U 'cffi;platform_python_implementation=="CPython"'
           pip install -q -U 'cython>=3.0a5'
-          pip install 'greenlet>=2.0rc5; platform_python_implementation=="CPython"'
+          pip install 'greenlet>=2.0.0; platform_python_implementation=="CPython"'
 
       - name: build libs and gevent
         env:
@@ -442,7 +442,14 @@ jobs:
 
   linux_wheels:
     runs-on: ubuntu-latest
-    needs: test
+    # If we have 'needs: test', then these wait to start running until
+    # all the test matrix passes. That's good, because these take a
+    # long time, and they take a long time to kill if something goes
+    # wrong. OTOH, if one of the tests fail, and this is a release tag,
+    # we have to notice that and try restarting things so that the
+    # wheels get built and uploaded. For that reason, it's simplest to
+    # remove this for release branches.
+    #needs: test
     strategy:
       matrix:
         config:
