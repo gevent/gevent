@@ -588,15 +588,7 @@ class SocketMixin(object):
         """
         return self.timeout != 0.0
 
-    def connect(self, address):
-        """
-        Connect to *address*.
-
-        .. versionchanged:: 20.6.0
-            If the host part of the address includes an IPv6 scope ID,
-            it will be used instead of ignored, if the platform supplies
-            :func:`socket.inet_pton`.
-        """
+    def __connect(self, address):
         if self.timeout == 0.0:
             return self._sock.connect(address)
         address = _resolve_addr(self._sock, address)
@@ -627,9 +619,20 @@ class SocketMixin(object):
                         result = ECONNREFUSED
                     raise _SocketError(result, strerror(result))
 
+    def connect(self, address):
+        """
+        Connect to *address*.
+
+        .. versionchanged:: 20.6.0
+            If the host part of the address includes an IPv6 scope ID,
+            it will be used instead of ignored, if the platform supplies
+            :func:`socket.inet_pton`.
+        """
+        return self.__connect(address)
+
     def connect_ex(self, address):
         try:
-            return self.connect(address) or 0
+            return self.__connect(address) or 0
         except __socket__.timeout:
             return EAGAIN
         except __socket__.gaierror: # pylint:disable=try-except-raise
