@@ -476,6 +476,7 @@ class FileObjectBase(object):
         'readline',
         'readlines',
         'read1',
+        'readinto',
 
         # Write.
         # Note that we do not extend WriteallMixin,
