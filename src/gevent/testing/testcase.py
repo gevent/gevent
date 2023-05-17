@@ -453,8 +453,7 @@ class TestCase(TestCaseMetaClass("NewBase",
         except AssertionError:
             flaky.reraiseFlakyTestRaceCondition()
 
-    assertRaisesRegex = getattr(BaseTestCase, 'assertRaisesRegex',
-                                getattr(BaseTestCase, 'assertRaisesRegexp'))
+    assertRaisesRegex = BaseTestCase.assertRaisesRegex
 
     def assertStartsWith(self, it, has_prefix):
         self.assertTrue(it.startswith(has_prefix), (it, has_prefix))

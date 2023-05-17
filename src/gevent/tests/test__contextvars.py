@@ -36,9 +36,6 @@ def isolated_context(func):
 
 class ContextTest(unittest.TestCase):
 
-    if not hasattr(unittest.TestCase, 'assertRaisesRegex'):
-        assertRaisesRegex = unittest.TestCase.assertRaisesRegexp
-
     def test_context_var_new_1(self):
         with self.assertRaises(TypeError):
             contextvars.ContextVar()
