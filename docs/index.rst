@@ -6,7 +6,6 @@
 
 :ref:`Continue reading <installation>` »
 
-If you like gevent, :doc:`donate <sfc>` to support the development.
 
 .. _coroutine: https://en.wikipedia.org/wiki/Coroutine
 .. _Python: http://python.org
