@@ -25,11 +25,7 @@ from .sysinfo import RUN_COVERAGE
 
 from .sysinfo import PYPY
 from .sysinfo import PYPY3
-from .sysinfo import PY3
-from .sysinfo import PY2
-from .sysinfo import PY35
-from .sysinfo import PY36
-from .sysinfo import PY37
+
 from .sysinfo import PY38
 from .sysinfo import PY39
 from .sysinfo import PY310
@@ -228,6 +224,9 @@ disabled_tests = [
     # Relies on the repr of objects (Py3)
     'test_ssl.BasicSocketTests.test_dealloc_warn',
 
+    # Takes forever
+    'test_ssl.BasicSocketTests.test_connect_ex_error',
+
     'test_urllib2.HandlerTests.test_cookie_redirect',
     # this uses cookielib which we don't care about
 
@@ -273,26 +272,8 @@ if OSX:
         'test_ssl.SimpleBackgroundTests.test_connect_capath',
         'test_ssl.SimpleBackgroundTests.test_connect_with_context',
     ]
-    if PYPY and PY2:
-        disabled_tests += [
-            # This is broken in a standard download of PyPy.
-            'test_subprocess.ProcessTestCase.test_executable_with_cwd',
-        ]
 
-if PYPY and PY2 and WIN:
-    disabled_tests += [
-        # XXX: New in PyPy 7.3.7. This times out. This is testing for
-        # whether \0 in environment keys or values are excluded; they
-        # are, before any waiting is done. The same goes for an '=' in
-        # the key. It looks like we "hang" on the last clause that
-        # tests when there is an '=' in the *value*. It's utterly
-        # unclear to me why that causes an issue; we use the same
-        # underlying CreateProcess call that PyPy itself does, and
-        # no-where before that is the environment manipulated
-        'test_subprocess.ProcesstestCase.test_invalid_env',
-    ]
-
-if PYPY and PY37:
+if PYPY:
     disabled_tests += [
         # The exact error message the code code checks for is different
         # (possibly just on macOS?). Plain PyPy3 fails as well.
@@ -305,41 +286,6 @@ if 'thread' in os.getenv('GEVENT_FILE', ''):
         # Fails with "OSError: 9 invalid file descriptor"; expect GC/lifetime issues
     ]
 
-if PY2 and PYPY:
-    disabled_tests += [
-        # These appear to hang or take a long time for some reason?
-        # Likely a hostname/binding issue or failure to properly close/gc sockets.
-        'test_httpservers.BaseHTTPServerTestCase.test_head_via_send_error',
-        'test_httpservers.BaseHTTPServerTestCase.test_head_keep_alive',
-        'test_httpservers.BaseHTTPServerTestCase.test_send_blank',
-        'test_httpservers.BaseHTTPServerTestCase.test_send_error',
-        'test_httpservers.BaseHTTPServerTestCase.test_command',
-        'test_httpservers.BaseHTTPServerTestCase.test_handler',
-        'test_httpservers.CGIHTTPServerTestcase.test_post',
-        'test_httpservers.CGIHTTPServerTestCase.test_query_with_continuous_slashes',
-        'test_httpservers.CGIHTTPServerTestCase.test_query_with_multiple_question_mark',
-        'test_httpservers.CGIHTTPServerTestCase.test_os_environ_is_not_altered',
-
-        # This one sometimes results on connection refused
-        'test_urllib2_localnet.TestUrlopen.test_info',
-        # Sometimes hangs
-        'test_ssl.ThreadedTests.test_socketserver',
-        # We had to update 'CERTFILE' to continue working, but
-        # this test hasn't been updated yet (the CPython tests
-        # are also too new to run on PyPy).
-        'test_ssl.BasicSocketTests.test_parse_cert',
-
-    ]
-
-if PY2 and WIN:
-    disabled_tests += [
-        # This test randomly produces a 'LoopExit: Would block forever'
-        # on 'self.serv.accept()', but only on Windows with Python 2. Possibly
-        # due to the weird refcounting involving socket.makefile (just a guess)?
-        # Seen in both PyPy 7.3 and CPython 2.7.x
-        # https://ci.appveyor.com/project/denik/gevent/builds/36874106/job/guyq6h9k56n81uf6#L563
-        'test_socket.BasicTCPTest2.testDup',
-    ]
 
 if LIBUV:
     # epoll appears to work with these just fine in some cases;
@@ -356,77 +302,40 @@ if LIBUV:
         'test_signal.SiginterruptTest.test_siginterrupt_off',
     ]
 
-    if PY2:
+    disabled_tests += [
+        # This test wants to pass an arbitrary fileno
+        # to a socket and do things with it. libuv doesn't like this,
+        # it raises EPERM. It is disabled on windows already.
+        # It depends on whether we had a fd already open and multiplexed with
+        'test_socket.GeneralModuleTests.test_unknown_socket_family_repr',
+        # And yes, there's a typo in some versions.
+        'test_socket.GeneralModuleTests.test_uknown_socket_family_repr',
+        # This test sometimes fails at line 358. It's apparently
+        # extremely sensitive to timing.
+        'test_selectors.PollSelectorTestCase.test_timeout',
+    ]
 
-        if TRAVIS:
-
-            if CPYTHON:
-
-                disabled_tests += [
-                    # This appears to crash the process, for some reason,
-                    # but only on CPython 2.7.14 on Travis. Cannot reproduce in
-                    # 2.7.14 on macOS or 2.7.12 in local Ubuntu 16.04
-                    'test_subprocess.POSIXProcessTestCase.test_close_fd_0',
-                    'test_subprocess.POSIXProcessTestCase.test_close_fds_0_1',
-                    'test_subprocess.POSIXProcessTestCase.test_close_fds_0_2',
-                ]
-
-            if PYPY:
-                disabled_tests += [
-                    # This seems to crash the interpreter. I cannot reproduce
-                    # on macOS or local Linux VM.
-                    # See https://travis-ci.org/gevent/gevent/jobs/348661604#L709
-                    'test_smtplib.TooLongLineTests.testLineTooLong',
-                ]
-                if ARES:
-
-                    disabled_tests += [
-                        # This can timeout with a socket timeout in ssl.wrap_socket(c)
-                        # on Travis. I can't reproduce locally.
-                        'test_ssl.ThreadedTests.test_handshake_timeout',
-                    ]
-
-    if PY3:
-
+    if OSX:
         disabled_tests += [
-            # This test wants to pass an arbitrary fileno
-            # to a socket and do things with it. libuv doesn't like this,
-            # it raises EPERM. It is disabled on windows already.
-            # It depends on whether we had a fd already open and multiplexed with
-            'test_socket.GeneralModuleTests.test_unknown_socket_family_repr',
-            # And yes, there's a typo in some versions.
-            'test_socket.GeneralModuleTests.test_uknown_socket_family_repr',
+            # XXX: Starting when we upgraded from libuv 1.18.0
+            # to 1.19.2, this sometimes (usually) started having
+            # a series of calls ('select.poll(0)', 'select.poll(-1)')
+            # take longer than the allowed 0.5 seconds. Debugging showed that
+            # it was the second call that took longer, for no apparent reason.
+            # There doesn't seem to be a change in the source code to libuv that
+            # would affect this.
+            # XXX-XXX: This actually disables too many tests :(
+            'test_selectors.PollSelectorTestCase.test_timeout',
         ]
 
-        if PY37:
+    if RUN_COVERAGE:
 
-            disabled_tests += [
-                # This test sometimes fails at line 358. It's apparently
-                # extremely sensitive to timing.
-                'test_selectors.PollSelectorTestCase.test_timeout',
-            ]
-
-        if OSX:
-            disabled_tests += [
-                # XXX: Starting when we upgraded from libuv 1.18.0
-                # to 1.19.2, this sometimes (usually) started having
-                # a series of calls ('select.poll(0)', 'select.poll(-1)')
-                # take longer than the allowed 0.5 seconds. Debugging showed that
-                # it was the second call that took longer, for no apparent reason.
-                # There doesn't seem to be a change in the source code to libuv that
-                # would affect this.
-                # XXX-XXX: This actually disables too many tests :(
-                'test_selectors.PollSelectorTestCase.test_timeout',
-            ]
-
-        if RUN_COVERAGE:
-
-            disabled_tests += [
-                # Starting with #1145 this test (actually
-                # TestTLS_FTPClassMixin) becomes sensitive to timings
-                # under coverage.
-                'test_ftplib.TestFTPClass.test_storlines',
-            ]
+        disabled_tests += [
+            # Starting with #1145 this test (actually
+            # TestTLS_FTPClassMixin) becomes sensitive to timings
+            # under coverage.
+            'test_ftplib.TestFTPClass.test_storlines',
+        ]
 
 
     if sys.platform.startswith('linux'):
@@ -436,103 +345,6 @@ if LIBUV:
             'test_asyncore.FileWrapperTest.test_dispatcher',
         ]
 
-
-
-    if WIN and PY2:
-        # From PyPy2-v5.9.0 and CPython 2.7.14, using its version of tests,
-        # which do work on darwin (and possibly linux?)
-        # I can't produce them in a local VM running Windows 10
-        # and the same pypy version.
-        disabled_tests += [
-            # These, which use asyncore, fail with
-            # 'NoneType is not iterable' on 'conn, addr = self.accept()'
-            # That returns None when the underlying socket raises
-            # EWOULDBLOCK, which it will do because it's set to non-blocking
-            # both by gevent and by libuv (at the level below python's knowledge)
-            # I can *usually* reproduce these locally; it seems to be some sort
-            # of race condition.
-            'test_ftplib.TestFTPClass.test_acct',
-            'test_ftplib.TestFTPClass.test_all_errors',
-            'test_ftplib.TestFTPClass.test_cwd',
-            'test_ftplib.TestFTPClass.test_delete',
-            'test_ftplib.TestFTPClass.test_dir',
-            'test_ftplib.TestFTPClass.test_exceptions',
-            'test_ftplib.TestFTPClass.test_getwelcome',
-            'test_ftplib.TestFTPClass.test_line_too_long',
-            'test_ftplib.TestFTPClass.test_login',
-            'test_ftplib.TestFTPClass.test_makepasv',
-            'test_ftplib.TestFTPClass.test_mkd',
-            'test_ftplib.TestFTPClass.test_nlst',
-            'test_ftplib.TestFTPClass.test_pwd',
-            'test_ftplib.TestFTPClass.test_quit',
-            'test_ftplib.TestFTPClass.test_makepasv',
-            'test_ftplib.TestFTPClass.test_rename',
-            'test_ftplib.TestFTPClass.test_retrbinary',
-            'test_ftplib.TestFTPClass.test_retrbinary_rest',
-            'test_ftplib.TestFTPClass.test_retrlines',
-            'test_ftplib.TestFTPClass.test_retrlines_too_long',
-            'test_ftplib.TestFTPClass.test_rmd',
-            'test_ftplib.TestFTPClass.test_sanitize',
-            'test_ftplib.TestFTPClass.test_set_pasv',
-            'test_ftplib.TestFTPClass.test_size',
-            'test_ftplib.TestFTPClass.test_storbinary',
-            'test_ftplib.TestFTPClass.test_storbinary_rest',
-            'test_ftplib.TestFTPClass.test_storlines',
-            'test_ftplib.TestFTPClass.test_storlines_too_long',
-            'test_ftplib.TestFTPClass.test_voidcmd',
-            'test_ftplib.TestTLS_FTPClass.test_data_connection',
-            'test_ftplib.TestTLS_FTPClass.test_control_connection',
-            'test_ftplib.TestTLS_FTPClass.test_context',
-            'test_ftplib.TestTLS_FTPClass.test_check_hostname',
-            'test_ftplib.TestTLS_FTPClass.test_auth_ssl',
-            'test_ftplib.TestTLS_FTPClass.test_auth_issued_twice',
-
-            # This one times out, but it's still a non-blocking socket
-            'test_ftplib.TestFTPClass.test_makeport',
-
-            # A timeout, possibly because of the way we handle interrupts?
-            'test_socketserver.SocketServerTest.test_InterruptedServerSelectCall',
-            'test_socketserver.SocketServerTest.test_InterruptServerSelectCall',
-
-            # times out with something about threading?
-            # The apparent hang is just after the print of "waiting for server"
-            'test_socketserver.SocketServerTest.test_ThreadingTCPServer',
-            'test_socketserver.SocketServerTest.test_ThreadingUDPServer',
-            'test_socketserver.SocketServerTest.test_TCPServer',
-            'test_socketserver.SocketServerTest.test_UDPServer',
-
-            # This one might be like  'test_urllib2_localnet.TestUrlopen.test_https_with_cafile'?
-            # XXX: Look at newer pypy and verify our usage of drop/reuse matches
-            # theirs.
-            'test_httpservers.BaseHTTPServerTestCase.test_command',
-            'test_httpservers.BaseHTTPServerTestCase.test_handler',
-            'test_httpservers.BaseHTTPServerTestCase.test_head_keep_alive',
-            'test_httpservers.BaseHTTPServerTestCase.test_head_via_send_error',
-            'test_httpservers.BaseHTTPServerTestCase.test_header_close',
-            'test_httpservers.BaseHTTPServerTestCase.test_internal_key_error',
-            'test_httpservers.BaseHTTPServerTestCase.test_request_line_trimming',
-            'test_httpservers.BaseHTTPServerTestCase.test_return_custom_status',
-            'test_httpservers.BaseHTTPServerTestCase.test_send_blank',
-            'test_httpservers.BaseHTTPServerTestCase.test_send_error',
-            'test_httpservers.BaseHTTPServerTestCase.test_version_bogus',
-            'test_httpservers.BaseHTTPServerTestCase.test_version_digits',
-            'test_httpservers.BaseHTTPServerTestCase.test_version_invalid',
-            'test_httpservers.BaseHTTPServerTestCase.test_version_none',
-            'test_httpservers.SimpleHTTPServerTestCase.test_get',
-            'test_httpservers.SimpleHTTPServerTestCase.test_head',
-            'test_httpservers.SimpleHTTPServerTestCase.test_invalid_requests',
-            'test_httpservers.SimpleHTTPServerTestCase.test_path_without_leading_slash',
-            'test_httpservers.CGIHTTPServerTestCase.test_invaliduri',
-            'test_httpservers.CGIHTTPServerTestCase.test_issue19435',
-
-            # Unexpected timeouts sometimes
-            'test_smtplib.TooLongLineTests.testLineTooLong',
-            'test_smtplib.GeneralTests.testTimeoutValue',
-
-            # This sometimes crashes, which can't be our fault?
-            'test_ssl.BasicSocketTests.test_parse_cert_CVE_2019_5010',
-
-        ]
 
         if PYPY:
             disabled_tests += [
@@ -597,16 +409,6 @@ if LIBUV:
             'test_socket.BufferIOTest.testRecvIntoBytearray',
         ]
 
-        if PY3:
-
-            disabled_tests += [
-            ]
-
-            if APPVEYOR:
-
-                disabled_tests += [
-                ]
-
     if PYPY:
 
         if TRAVIS:
@@ -633,40 +435,6 @@ if RUN_COVERAGE and CFFI_BACKEND:
         'test_signal.InterProcessSignalTests.test_main',
     ]
 
-if PY2:
-    if TRAVIS:
-        disabled_tests += [
-            # When we moved to group:travis_latest and dist:xenial,
-            # this started returning a value (33554432L) != 0; presumably
-            # because of updated SSL library? Only on CPython.
-            'test_ssl.ContextTests.test_options',
-            # When we moved to group:travis_latest and dist:xenial,
-            # one of the values used started *working* when it was expected to fail.
-            # The list of values and systems is long and complex, so
-            # presumably something needs to be updated. Only on PyPy.
-            'test_ssl.ThreadedTests.test_alpn_protocols',
-        ]
-
-    disabled_tests += [
-        # At least on OSX, this results in connection refused
-        'test_urllib2_localnet.TestUrlopen.test_https_sni',
-    ]
-
-    if sys.version_info[:3] < (2, 7, 16):
-        # We have 2.7.16 tests; older versions can fail
-        # to validate some SSL things or are missing important support functions
-        disabled_tests += [
-            # Support functions
-            'test_thread.ThreadRunningTests.test_nt_and_posix_stack_size',
-            'test_thread.ThreadRunningTests.test_save_exception_state_on_error',
-            'test_thread.ThreadRunningTests.test_starting_threads',
-            'test_thread.BarrierTest.test_barrier',
-            # Broken SSL
-            'test_urllib2_localnet.TestUrlopen.test_https',
-            'test_ssl.ContextTests.test__create_stdlib_context',
-            'test_ssl.ContextTests.test_create_default_context',
-            'test_ssl.ContextTests.test_options',
-        ]
 
 if PYPY and sys.pypy_version_info[:2] == (7, 3): # pylint:disable=no-member
 
@@ -830,40 +598,40 @@ if PYPY:
             'test_socket.GeneralModuleTests.test_sock_ioctl',
         ]
 
-    if PY36:
-        disabled_tests += [
-            # These are flaky, beginning in 3.6-alpha 7.0, not finding some flag
-            # set, apparently a race condition
-            'test_asyncore.TestAPI_UveIPv6Poll.test_handle_accept',
-            'test_asyncore.TestAPI_UveIPv6Poll.test_handle_accepted',
-            'test_asyncore.TestAPI_UveIPv6Poll.test_handle_close',
-            'test_asyncore.TestAPI_UveIPv6Poll.test_handle_write',
 
-            'test_asyncore.TestAPI_UseIPV6Select.test_handle_read',
+    disabled_tests += [
+        # These are flaky, beginning in 3.6-alpha 7.0, not finding some flag
+        # set, apparently a race condition
+        'test_asyncore.TestAPI_UveIPv6Poll.test_handle_accept',
+        'test_asyncore.TestAPI_UveIPv6Poll.test_handle_accepted',
+        'test_asyncore.TestAPI_UveIPv6Poll.test_handle_close',
+        'test_asyncore.TestAPI_UveIPv6Poll.test_handle_write',
 
-            # These are reporting 'ssl has no attribute ...'
-            # This could just be an OSX thing
-            'test_ssl.ContextTests.test__create_stdlib_context',
-            'test_ssl.ContextTests.test_create_default_context',
-            'test_ssl.ContextTests.test_get_ciphers',
-            'test_ssl.ContextTests.test_options',
-            'test_ssl.ContextTests.test_constants',
+        'test_asyncore.TestAPI_UseIPV6Select.test_handle_read',
 
-            # These tend to hang for some reason, probably not properly
-            # closed sockets.
-            'test_socketserver.SocketServerTest.test_write',
+        # These are reporting 'ssl has no attribute ...'
+        # This could just be an OSX thing
+        'test_ssl.ContextTests.test__create_stdlib_context',
+        'test_ssl.ContextTests.test_create_default_context',
+        'test_ssl.ContextTests.test_get_ciphers',
+        'test_ssl.ContextTests.test_options',
+        'test_ssl.ContextTests.test_constants',
 
-            # This uses ctypes to do funky things including using ptrace,
-            # it hangs
-            'test_subprocess.ProcessTestcase.test_child_terminated_in_stopped_state',
+        # These tend to hang for some reason, probably not properly
+        # closed sockets.
+        'test_socketserver.SocketServerTest.test_write',
 
-            # Certificate errors; need updated test
-            'test_urllib2_localnet.TestUrlopen.test_https',
-        ]
+        # This uses ctypes to do funky things including using ptrace,
+        # it hangs
+        'test_subprocess.ProcessTestcase.test_child_terminated_in_stopped_state',
+
+        # Certificate errors; need updated test
+        'test_urllib2_localnet.TestUrlopen.test_https',
+    ]
 
 # Generic Python 3
 
-if PY3:
+
 
     disabled_tests += [
         # Triggers the crash reporter
@@ -972,8 +740,6 @@ if PYPY3:
         'test_signal.SiginterruptTest.test_siginterrupt_off',
     ]
 
-
-if PYPY and PY3:
     disabled_tests += [
         # This fails to close all the FDs, at least on CI. On OS X, many of the
         # POSIXProcessTestCase fd tests have issues.
@@ -1107,263 +873,239 @@ if PYPY:
     })
 
 
-if PY35:
+
+disabled_tests += [
+    'test_subprocess.ProcessTestCase.test_threadsafe_wait',
+    # XXX: It seems that threading.Timer is not being greened properly, possibly
+    # due to a similar issue to what gevent.threading documents for normal threads.
+    # In any event, this test hangs forever
+
+
+    'test_subprocess.POSIXProcessTestCase.test_preexec_errpipe_does_not_double_close_pipes',
+    # Subclasses Popen, and overrides _execute_child. Expects things to be done
+    # in a particular order in an exception case, but we don't follow that
+    # exact order
+
+
+    'test_selectors.PollSelectorTestCase.test_above_fd_setsize',
+    # This test attempts to open many many file descriptors and
+    # poll on them, expecting them all to be ready at once. But
+    # libev limits the number of events it will return at once. Specifically,
+    # on linux with epoll, it returns a max of 64 (ev_epoll.c).
+
+    # XXX: Hangs (Linux only)
+    'test_socket.NonBlockingTCPTests.testInitNonBlocking',
+    # We don't handle the Linux-only SOCK_NONBLOCK option
+    'test_socket.NonblockConstantTest.test_SOCK_NONBLOCK',
+
+    # Tries to use multiprocessing which doesn't quite work in
+    # monkey_test module (Windows only)
+    'test_socket.TestSocketSharing.testShare',
+
+    # Windows-only: Sockets have a 'ioctl' method in Python 3
+    # implemented in the C code. This test tries to check
+    # for the presence of the method in the class, which we don't
+    # have because we don't inherit the C implementation. But
+    # it should be found at runtime.
+    'test_socket.GeneralModuleTests.test_sock_ioctl',
+
+    # XXX This fails for an unknown reason
+    'test_httplib.HeaderTests.test_parse_all_octets',
+]
+
+if OSX:
     disabled_tests += [
-        'test_subprocess.ProcessTestCase.test_threadsafe_wait',
-        # XXX: It seems that threading.Timer is not being greened properly, possibly
-        # due to a similar issue to what gevent.threading documents for normal threads.
-        # In any event, this test hangs forever
-
-
-        'test_subprocess.POSIXProcessTestCase.test_preexec_errpipe_does_not_double_close_pipes',
-        # Subclasses Popen, and overrides _execute_child. Expects things to be done
-        # in a particular order in an exception case, but we don't follow that
-        # exact order
-
-
-        'test_selectors.PollSelectorTestCase.test_above_fd_setsize',
-        # This test attempts to open many many file descriptors and
-        # poll on them, expecting them all to be ready at once. But
-        # libev limits the number of events it will return at once. Specifically,
-        # on linux with epoll, it returns a max of 64 (ev_epoll.c).
-
-        # XXX: Hangs (Linux only)
-        'test_socket.NonBlockingTCPTests.testInitNonBlocking',
-        # We don't handle the Linux-only SOCK_NONBLOCK option
-        'test_socket.NonblockConstantTest.test_SOCK_NONBLOCK',
-
-        # Tries to use multiprocessing which doesn't quite work in
-        # monkey_test module (Windows only)
-        'test_socket.TestSocketSharing.testShare',
-
-        # Windows-only: Sockets have a 'ioctl' method in Python 3
-        # implemented in the C code. This test tries to check
-        # for the presence of the method in the class, which we don't
-        # have because we don't inherit the C implementation. But
-        # it should be found at runtime.
-        'test_socket.GeneralModuleTests.test_sock_ioctl',
-
-        # XXX This fails for an unknown reason
-        'test_httplib.HeaderTests.test_parse_all_octets',
+        # These raise "OSError: 12 Cannot allocate memory" on both
+        # patched and unpatched runs
+        'test_socket.RecvmsgSCMRightsStreamTest.testFDPassEmpty',
     ]
-
-    if OSX:
-        disabled_tests += [
-            # These raise "OSError: 12 Cannot allocate memory" on both
-            # patched and unpatched runs
-            'test_socket.RecvmsgSCMRightsStreamTest.testFDPassEmpty',
-        ]
-
-        if TRAVIS:
-            # This has been seen to produce "Inconsistency detected by
-            # ld.so: dl-open.c: 231: dl_open_worker: Assertion
-            # `_dl_debug_initialize (0, args->nsid)->r_state ==
-            # RT_CONSISTENT' failed!" and fail.
-            disabled_tests += [
-                'test_threading.ThreadTests.test_is_alive_after_fork',
-                # This has timing constraints that are strict and do not always
-                # hold.
-                'test_selectors.PollSelectorTestCase.test_timeout',
-            ]
 
     if TRAVIS:
+        # This has been seen to produce "Inconsistency detected by
+        # ld.so: dl-open.c: 231: dl_open_worker: Assertion
+        # `_dl_debug_initialize (0, args->nsid)->r_state ==
+        # RT_CONSISTENT' failed!" and fail.
         disabled_tests += [
-            'test_subprocess.ProcessTestCase.test_double_close_on_error',
-            # This test is racy or OS-dependent. It passes locally (sufficiently fast machine)
-            # but fails under Travis
+            'test_threading.ThreadTests.test_is_alive_after_fork',
+            # This has timing constraints that are strict and do not always
+            # hold.
+            'test_selectors.PollSelectorTestCase.test_timeout',
         ]
 
-if PY35:
+if TRAVIS:
     disabled_tests += [
-        # XXX: Hangs
-        'test_ssl.ThreadedTests.test_nonblocking_send',
-        'test_ssl.ThreadedTests.test_socketserver',
-        # Uses direct sendfile, doesn't properly check for it being enabled
-        'test_socket.GeneralModuleTests.test__sendfile_use_sendfile',
-
-
-        # Relies on the regex of the repr having the locked state (TODO: it'd be nice if
-        # we did that).
-        # XXX: These are commented out in the source code of test_threading because
-        # this doesn't work.
-        # 'lock_tests.LockTests.lest_locked_repr',
-        # 'lock_tests.LockTests.lest_repr',
-
-
-        # This test opens a socket, creates a new socket with the same fileno,
-        # closes the original socket (and hence fileno) and then
-        # expects that the calling setblocking() on the duplicate socket
-        # will raise an error. Our implementation doesn't work that way because
-        # setblocking() doesn't actually touch the file descriptor.
-        # That's probably OK because this was a GIL state error in CPython
-        # see https://github.com/python/cpython/commit/fa22b29960b4e683f4e5d7e308f674df2620473c
-        'test_socket.TestExceptions.test_setblocking_invalidfd',
+        'test_subprocess.ProcessTestCase.test_double_close_on_error',
+        # This test is racy or OS-dependent. It passes locally (sufficiently fast machine)
+        # but fails under Travis
     ]
 
-    if sys.version_info[:2] == (3, 5):
-        # These tests are broken now that certificates are
-        # expired and Python 3.5 is out of maintenance.
+
+disabled_tests += [
+    # XXX: Hangs
+    'test_ssl.ThreadedTests.test_nonblocking_send',
+    'test_ssl.ThreadedTests.test_socketserver',
+    # Uses direct sendfile, doesn't properly check for it being enabled
+    'test_socket.GeneralModuleTests.test__sendfile_use_sendfile',
+
+
+    # Relies on the regex of the repr having the locked state (TODO: it'd be nice if
+    # we did that).
+    # XXX: These are commented out in the source code of test_threading because
+    # this doesn't work.
+    # 'lock_tests.LockTests.lest_locked_repr',
+    # 'lock_tests.LockTests.lest_repr',
+
+
+    # This test opens a socket, creates a new socket with the same fileno,
+    # closes the original socket (and hence fileno) and then
+    # expects that the calling setblocking() on the duplicate socket
+    # will raise an error. Our implementation doesn't work that way because
+    # setblocking() doesn't actually touch the file descriptor.
+    # That's probably OK because this was a GIL state error in CPython
+    # see https://github.com/python/cpython/commit/fa22b29960b4e683f4e5d7e308f674df2620473c
+    'test_socket.TestExceptions.test_setblocking_invalidfd',
+]
+
+
+if ARES:
+    disabled_tests += [
+        # These raise different errors or can't resolve
+        # the IP address correctly
+        'test_socket.GeneralModuleTests.test_host_resolution',
+        'test_socket.GeneralModuleTests.test_getnameinfo',
+    ]
+
+    if sys.version_info[1] == 5:
         disabled_tests += [
-            'test_ssl.ThreadedTests.test_crl_check',
-            'test_ssl.BasicSocketTests.test_parse_cert',
+            # This test tends to time out, but only under 3.5, not under
+            # 3.6 or 3.7. Seen with both libev and libuv
+            'test_socket.SendfileUsingSendTest.testWithTimeoutTriggeredSend',
         ]
 
-    if ARES:
-        disabled_tests += [
-            # These raise different errors or can't resolve
-            # the IP address correctly
-            'test_socket.GeneralModuleTests.test_host_resolution',
-            'test_socket.GeneralModuleTests.test_getnameinfo',
-        ]
+disabled_tests += [
+    'test_threading.MiscTestCase.test__all__',
+]
 
-        if sys.version_info[1] == 5:
-            disabled_tests += [
-                # This test tends to time out, but only under 3.5, not under
-                # 3.6 or 3.7. Seen with both libev and libuv
-                'test_socket.SendfileUsingSendTest.testWithTimeoutTriggeredSend',
-            ]
+# We don't actually implement socket._sendfile_use_sendfile,
+# so these tests, which think they're using that and os.sendfile,
+# fail.
+disabled_tests += [
+    'test_socket.SendfileUsingSendfileTest.testCount',
+    'test_socket.SendfileUsingSendfileTest.testCountSmall',
+    'test_socket.SendfileUsingSendfileTest.testCountWithOffset',
+    'test_socket.SendfileUsingSendfileTest.testOffset',
+    'test_socket.SendfileUsingSendfileTest.testRegularFile',
+    'test_socket.SendfileUsingSendfileTest.testWithTimeout',
+    'test_socket.SendfileUsingSendfileTest.testEmptyFileSend',
+    'test_socket.SendfileUsingSendfileTest.testNonBlocking',
+    'test_socket.SendfileUsingSendfileTest.test_errors',
+]
 
-if sys.version_info[:3] <= (3, 5, 1):
-    # Python issue 26499 was fixed in 3.5.2 and these tests were added.
+# Ditto
+disabled_tests += [
+    'test_socket.GeneralModuleTests.test__sendfile_use_sendfile',
+]
+
+disabled_tests += [
+    # This test requires Linux >= 4.3. When we were running 'dist:
+    # trusty' on the 4.4 kernel, it passed (~July 2017). But when
+    # trusty became the default dist in September 2017 and updated
+    # the kernel to 4.11.6, it begain failing. It fails on `res =
+    # op.recv(assoclen + len(plain) + taglen)` (where 'op' is the
+    # client socket) with 'OSError: [Errno 22] Invalid argument'
+    # for unknown reasons. This is *after* having successfully
+    # called `op.sendmsg_afalg`. Post 3.6.0, what we test with,
+    # the test was changed to require Linux 4.9 and the data was changed,
+    # so this is not our fault. We should eventually update this when we
+    # update our 3.6 version.
+    # See https://bugs.python.org/issue29324
+    'test_socket.LinuxKernelCryptoAPI.test_aead_aes_gcm',
+]
+
+
+disabled_tests += [
+    # These want to use the private '_communicate' method, which
+    # our Popen doesn't have.
+    'test_subprocess.MiscTests.test_call_keyboardinterrupt_no_kill',
+    'test_subprocess.MiscTests.test_context_manager_keyboardinterrupt_no_kill',
+    'test_subprocess.MiscTests.test_run_keyboardinterrupt_no_kill',
+
+    # This wants to check that the underlying fileno is blocking,
+    # but it isn't.
+    'test_socket.NonBlockingTCPTests.testSetBlocking',
+
+    # 3.7b2 made it impossible to instantiate SSLSocket objects
+    # directly, and this tests for that, but we don't follow that change.
+    'test_ssl.BasicSocketTests.test_private_init',
+
+    # 3.7b2 made a change to this test that on the surface looks incorrect,
+    # but it passes when they run it and fails when we do. It's not
+    # clear why.
+    'test_ssl.ThreadedTests.test_check_hostname_idn',
+
+    # These appear to hang, haven't investigated why
+    'test_ssl.SimpleBackgroundTests.test_get_server_certificate',
+    # Probably the same as NetworkConnectionNoServer.test_create_connection_timeout
+    'test_socket.NetworkConnectionNoServer.test_create_connection',
+
+    # Internals of the threading module that change.
+    'test_threading.ThreadTests.test_finalization_shutdown',
+    'test_threading.ThreadTests.test_shutdown_locks',
+    # Expects a deprecation warning we don't raise
+    'test_threading.ThreadTests.test_old_threading_api',
+    # This tries to use threading.interrupt_main() from a new Thread;
+    # but of course that's actually the same thread and things don't
+    # work as expected.
+    'test_threading.InterruptMainTests.test_interrupt_main_subthread',
+    'test_threading.InterruptMainTests.test_interrupt_main_noerror',
+
+    # TLS1.3 seems flaky
+    'test_ssl.ThreadedTests.test_wrong_cert_tls13',
+]
+
+
+if APPVEYOR:
     disabled_tests += [
-        'test_httplib.BasicTest.test_mixed_reads',
-        'test_httplib.BasicTest.test_read1_bound_content_length',
-        'test_httplib.BasicTest.test_read1_content_length',
-        'test_httplib.BasicTest.test_readline_bound_content_length',
-        'test_httplib.BasicTest.test_readlines_content_length',
+        # This sometimes produces ``self.assertEqual(1, len(s.select(0))): 1 != 0``.
+        # Probably needs to spin the loop once.
+        'test_selectors.BaseSelectorTestCase.test_timeout',
     ]
 
-if PY36:
+
+disabled_tests += [
+    # This one seems very strict: doesn't want a pathlike
+    # first argument when shell is true.
+    'test_subprocess.RunFuncTestCase.test_run_with_pathlike_path',
+    # This tests for a warning we don't raise.
+    'test_subprocess.RunFuncTestCase.test_bufsize_equal_one_binary_mode',
+
+    # This compares the output of threading.excepthook with
+    # data constructed in Python. But excepthook is implemented in C
+    # and can't see the patched threading.get_ident() we use, so the
+    # output doesn't match.
+    'test_threading.ExceptHookTests.test_excepthook_thread_None',
+]
+
+if sys.version_info[:3] < (3, 8, 1):
     disabled_tests += [
-        'test_threading.MiscTestCase.test__all__',
+        # Earlier versions parse differently so the newer test breaks
+        'test_ssl.BasicSocketTests.test_parse_all_sans',
+        'test_ssl.BasicSocketTests.test_parse_cert_CVE_2013_4238',
     ]
 
-    # We don't actually implement socket._sendfile_use_sendfile,
-    # so these tests, which think they're using that and os.sendfile,
-    # fail.
+if sys.version_info[:3] < (3, 8, 10):
     disabled_tests += [
-        'test_socket.SendfileUsingSendfileTest.testCount',
-        'test_socket.SendfileUsingSendfileTest.testCountSmall',
-        'test_socket.SendfileUsingSendfileTest.testCountWithOffset',
-        'test_socket.SendfileUsingSendfileTest.testOffset',
-        'test_socket.SendfileUsingSendfileTest.testRegularFile',
-        'test_socket.SendfileUsingSendfileTest.testWithTimeout',
-        'test_socket.SendfileUsingSendfileTest.testEmptyFileSend',
-        'test_socket.SendfileUsingSendfileTest.testNonBlocking',
-        'test_socket.SendfileUsingSendfileTest.test_errors',
+        # These were added for fixes sometime between 3.8.1 and 3.8.10
+        'test_ftplib.TestFTPClass.test_makepasv_issue43285_security_disabled',
+        'test_ftplib.TestFTPClass.test_makepasv_issue43285_security_enabled_default',
+        'test_httplib.BasicTest.test_dir_with_added_behavior_on_status',
+        'test_httplib.TunnelTests.test_tunnel_connect_single_send_connection_setup',
+        'test_ssl.TestSSLDebug.test_msg_callback_deadlock_bpo43577',
+        # This one fails with the updated certs
+        'test_ssl.ContextTests.test_load_verify_cadata',
+        # This one times out on 3.7.1 on Appveyor
+        'test_ftplib.TestTLS_FTPClassMixin.test_retrbinary_rest',
     ]
-
-    # Ditto
-    disabled_tests += [
-        'test_socket.GeneralModuleTests.test__sendfile_use_sendfile',
-    ]
-
-    disabled_tests += [
-        # This test requires Linux >= 4.3. When we were running 'dist:
-        # trusty' on the 4.4 kernel, it passed (~July 2017). But when
-        # trusty became the default dist in September 2017 and updated
-        # the kernel to 4.11.6, it begain failing. It fails on `res =
-        # op.recv(assoclen + len(plain) + taglen)` (where 'op' is the
-        # client socket) with 'OSError: [Errno 22] Invalid argument'
-        # for unknown reasons. This is *after* having successfully
-        # called `op.sendmsg_afalg`. Post 3.6.0, what we test with,
-        # the test was changed to require Linux 4.9 and the data was changed,
-        # so this is not our fault. We should eventually update this when we
-        # update our 3.6 version.
-        # See https://bugs.python.org/issue29324
-        'test_socket.LinuxKernelCryptoAPI.test_aead_aes_gcm',
-    ]
-
-if PY37:
-    disabled_tests += [
-        # These want to use the private '_communicate' method, which
-        # our Popen doesn't have.
-        'test_subprocess.MiscTests.test_call_keyboardinterrupt_no_kill',
-        'test_subprocess.MiscTests.test_context_manager_keyboardinterrupt_no_kill',
-        'test_subprocess.MiscTests.test_run_keyboardinterrupt_no_kill',
-
-        # This wants to check that the underlying fileno is blocking,
-        # but it isn't.
-        'test_socket.NonBlockingTCPTests.testSetBlocking',
-
-        # 3.7b2 made it impossible to instantiate SSLSocket objects
-        # directly, and this tests for that, but we don't follow that change.
-        'test_ssl.BasicSocketTests.test_private_init',
-
-        # 3.7b2 made a change to this test that on the surface looks incorrect,
-        # but it passes when they run it and fails when we do. It's not
-        # clear why.
-        'test_ssl.ThreadedTests.test_check_hostname_idn',
-
-        # These appear to hang, haven't investigated why
-        'test_ssl.SimpleBackgroundTests.test_get_server_certificate',
-        # Probably the same as NetworkConnectionNoServer.test_create_connection_timeout
-        'test_socket.NetworkConnectionNoServer.test_create_connection',
-
-        # Internals of the threading module that change.
-        'test_threading.ThreadTests.test_finalization_shutdown',
-        'test_threading.ThreadTests.test_shutdown_locks',
-        # Expects a deprecation warning we don't raise
-        'test_threading.ThreadTests.test_old_threading_api',
-        # This tries to use threading.interrupt_main() from a new Thread;
-        # but of course that's actually the same thread and things don't
-        # work as expected.
-        'test_threading.InterruptMainTests.test_interrupt_main_subthread',
-        'test_threading.InterruptMainTests.test_interrupt_main_noerror',
-
-        # TLS1.3 seems flaky
-        'test_ssl.ThreadedTests.test_wrong_cert_tls13',
-    ]
-
-    if sys.version_info < (3, 7, 6):
-        disabled_tests += [
-            # Earlier versions parse differently so the newer test breaks
-            'test_ssl.BasicSocketTests.test_parse_all_sans',
-            'test_ssl.BasicSocketTests.test_parse_cert_CVE_2013_4238',
-        ]
-
-    if APPVEYOR:
-        disabled_tests += [
-            # This sometimes produces ``self.assertEqual(1, len(s.select(0))): 1 != 0``.
-            # Probably needs to spin the loop once.
-            'test_selectors.BaseSelectorTestCase.test_timeout',
-        ]
-
-if PY38:
-    disabled_tests += [
-        # This one seems very strict: doesn't want a pathlike
-        # first argument when shell is true.
-        'test_subprocess.RunFuncTestCase.test_run_with_pathlike_path',
-        # This tests for a warning we don't raise.
-        'test_subprocess.RunFuncTestCase.test_bufsize_equal_one_binary_mode',
-
-        # This compares the output of threading.excepthook with
-        # data constructed in Python. But excepthook is implemented in C
-        # and can't see the patched threading.get_ident() we use, so the
-        # output doesn't match.
-        'test_threading.ExceptHookTests.test_excepthook_thread_None',
-    ]
-
-    if sys.version_info[:3] < (3, 8, 1):
-        disabled_tests += [
-            # Earlier versions parse differently so the newer test breaks
-            'test_ssl.BasicSocketTests.test_parse_all_sans',
-            'test_ssl.BasicSocketTests.test_parse_cert_CVE_2013_4238',
-        ]
-
-    if sys.version_info[:3] < (3, 8, 10):
-        disabled_tests += [
-            # These were added for fixes sometime between 3.8.1 and 3.8.10
-            'test_ftplib.TestFTPClass.test_makepasv_issue43285_security_disabled',
-            'test_ftplib.TestFTPClass.test_makepasv_issue43285_security_enabled_default',
-            'test_httplib.BasicTest.test_dir_with_added_behavior_on_status',
-            'test_httplib.TunnelTests.test_tunnel_connect_single_send_connection_setup',
-            'test_ssl.TestSSLDebug.test_msg_callback_deadlock_bpo43577',
-            # This one fails with the updated certs
-            'test_ssl.ContextTests.test_load_verify_cadata',
-            # This one times out on 3.7.1 on Appveyor
-            'test_ftplib.TestTLS_FTPClassMixin.test_retrbinary_rest',
-        ]
 
 if RESOLVER_DNSPYTHON:
     disabled_tests += [

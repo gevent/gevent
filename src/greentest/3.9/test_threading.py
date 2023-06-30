@@ -3,7 +3,7 @@ Tests for the threading module.
 """
 
 import test.support
-from test.support import verbose, import_module, cpython_only
+from test.support import verbose, import_module, cpython_only, unlink
 from test.support.script_helper import assert_python_ok, assert_python_failure
 
 import random
@@ -17,6 +17,7 @@ import os
 import subprocess
 import signal
 import textwrap
+import traceback
 
 from gevent.tests import lock_tests # gevent: use our local copy
 #from test import lock_tests
@@ -806,6 +807,47 @@ class ThreadTests(BaseTestCase):
         """)
         self.assertEqual(out.rstrip(), b"thread_dict.atexit = 'value'")
 
+    def test_leak_without_join(self):
+        # bpo-37788: Test that a thread which is not joined explicitly
+        # does not leak. Test written for reference leak checks.
+        def noop(): pass
+        with support.wait_threads_exit():
+            threading.Thread(target=noop).start()
+            # Thread.join() is not called
+
+    def test_import_from_another_thread(self):
+        # bpo-1596321: If the threading module is first import from a thread
+        # different than the main thread, threading._shutdown() must handle
+        # this case without logging an error at Python exit.
+        code = textwrap.dedent('''
+            import _thread
+            import sys
+
+            event = _thread.allocate_lock()
+            event.acquire()
+
+            def import_threading():
+                import threading
+                event.release()
+
+            if 'threading' in sys.modules:
+                raise Exception('threading is already imported')
+
+            _thread.start_new_thread(import_threading, ())
+
+            # wait until the threading module is imported
+            event.acquire()
+            event.release()
+
+            if 'threading' not in sys.modules:
+                raise Exception('threading is not imported')
+
+            # don't wait until the thread completes
+        ''')
+        rc, out, err = assert_python_ok("-c", code)
+        self.assertEqual(out, b'')
+        self.assertEqual(err, b'')
+
 
 class ThreadJoinOnShutdown(BaseTestCase):
 
@@ -1235,6 +1277,22 @@ class ThreadingExceptionTests(BaseTestCase):
         self.assertIsInstance(thread.exc, RuntimeError)
         # explicitly break the reference cycle to not leak a dangling thread
         thread.exc = None
+
+    def test_multithread_modify_file_noerror(self):
+        # See issue25872
+        def modify_file():
+            with open(test.support.TESTFN, 'w', encoding='utf-8') as fp:
+                fp.write(' ')
+                traceback.format_stack()
+
+        self.addCleanup(unlink, test.support.TESTFN)
+        threads = [
+            threading.Thread(target=modify_file)
+            for i in range(100)
+        ]
+        for t in threads:
+            t.start()
+            t.join()
 
 
 class ThreadRunFail(threading.Thread):

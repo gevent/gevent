@@ -12,6 +12,7 @@ import errno
 import os
 import threading
 import time
+import unittest
 try:
     import ssl
 except ImportError:
@@ -48,6 +49,13 @@ MLSD_DATA = ("type=cdir;perm=el;unique==keVO1+ZF4; test\r\n"
              "type=file;perm=r;unique==SGP2; file \xAE non-ascii char\r\n")
 
 
+def default_error_handler():
+    # bpo-44359: Silently ignore socket errors. Such errors occur when a client
+    # socket is closed, in TestFTPClass.tearDown() and makepasv() tests, and
+    # the server gets an error on its side.
+    pass
+
+
 class DummyDTPHandler(asynchat.async_chat):
     dtp_conn_closed = False
 
@@ -79,7 +87,7 @@ class DummyDTPHandler(asynchat.async_chat):
         super(DummyDTPHandler, self).push(what.encode(self.encoding))
 
     def handle_error(self):
-        raise Exception
+        default_error_handler()
 
 
 class DummyFTPHandler(asynchat.async_chat):
@@ -129,7 +137,7 @@ class DummyFTPHandler(asynchat.async_chat):
             self.push('550 command "%s" not understood.' %cmd)
 
     def handle_error(self):
-        raise Exception
+        default_error_handler()
 
     def push(self, data):
         asynchat.async_chat.push(self, data.encode(self.encoding) + b'\r\n')
@@ -307,7 +315,7 @@ class DummyFTPServer(asyncore.dispatcher, threading.Thread):
         return 0
 
     def handle_error(self):
-        raise Exception
+        default_error_handler()
 
 
 if ssl is not None:
@@ -410,7 +418,7 @@ if ssl is not None:
                 raise
 
         def handle_error(self):
-            raise Exception
+            default_error_handler()
 
         def close(self):
             if (isinstance(self.socket, ssl.SSLSocket) and
@@ -1136,18 +1144,10 @@ class MiscTestCase(TestCase):
         support.check__all__(self, ftplib, blacklist=blacklist)
 
 
-def test_main():
-    tests = [TestFTPClass, TestTimeouts,
-             TestIPv6Environment,
-             TestTLS_FTPClassMixin, TestTLS_FTPClass,
-             MiscTestCase]
-
+def setUpModule():
     thread_info = support.threading_setup()
-    try:
-        support.run_unittest(*tests)
-    finally:
-        support.threading_cleanup(*thread_info)
+    unittest.addModuleCleanup(support.threading_cleanup, *thread_info)
 
 
 if __name__ == '__main__':
-    test_main()
+    unittest.main()

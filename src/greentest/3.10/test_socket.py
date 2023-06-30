@@ -199,7 +199,7 @@ class SocketUDPLITETest(SocketUDPTest):
         self.serv = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDPLITE)
         self.port = socket_helper.bind_port(self.serv)
 
-class ThreadSafeCleanupTestCase(unittest.TestCase):
+class ThreadSafeCleanupTestCase:
     """Subclass of unittest.TestCase with thread-safe cleanup methods.
 
     This subclass protects the addCleanup() and doCleanups() methods
@@ -326,9 +326,7 @@ class ThreadableTest:
     def __init__(self):
         # Swap the true setup function
         self.__setUp = self.setUp
-        self.__tearDown = self.tearDown
         self.setUp = self._setUp
-        self.tearDown = self._tearDown
 
     def serverExplicitReady(self):
         """This method allows the server to explicitly indicate that
@@ -340,12 +338,18 @@ class ThreadableTest:
     def _setUp(self):
         self.wait_threads = threading_helper.wait_threads_exit()
         self.wait_threads.__enter__()
+        self.addCleanup(self.wait_threads.__exit__, None, None, None)
 
         self.server_ready = threading.Event()
         self.client_ready = threading.Event()
         self.done = threading.Event()
         self.queue = queue.Queue(1)
         self.server_crashed = False
+
+        def raise_queued_exception():
+            if self.queue.qsize():
+                raise self.queue.get()
+        self.addCleanup(raise_queued_exception)
 
         # Do some munging to start the client test.
         methodname = self.id()
@@ -363,15 +367,7 @@ class ThreadableTest:
         finally:
             self.server_ready.set()
         self.client_ready.wait()
-
-    def _tearDown(self):
-        self.__tearDown()
-        self.done.wait()
-        self.wait_threads.__exit__(None, None, None)
-
-        if self.queue.qsize():
-            exc = self.queue.get()
-            raise exc
+        self.addCleanup(self.done.wait)
 
     def clientRun(self, test_func):
         self.server_ready.wait()
@@ -870,6 +866,7 @@ class GeneralModuleTests(unittest.TestCase):
             p = proxy(s)
             self.assertEqual(p.fileno(), s.fileno())
         s = None
+        support.gc_collect()  # For PyPy or other GCs.
         try:
             p.fileno()
         except ReferenceError:
@@ -1377,10 +1374,21 @@ class GeneralModuleTests(unittest.TestCase):
 
     def testSockName(self):
         # Testing getsockname()
-        port = socket_helper.find_unused_port()
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.addCleanup(sock.close)
-        sock.bind(("0.0.0.0", port))
+
+        # Since find_unused_port() is inherently subject to race conditions, we
+        # call it a couple times if necessary.
+        for i in itertools.count():
+            port = socket_helper.find_unused_port()
+            try:
+                sock.bind(("0.0.0.0", port))
+            except OSError as e:
+                if e.errno != errno.EADDRINUSE or i == 5:
+                    raise
+            else:
+                break
+
         name = sock.getsockname()
         # XXX(nnorwitz): http://tinyurl.com/os5jz seems to indicate
         # it reasonable to get the host's addr in addition to 0.0.0.0.
@@ -1734,6 +1742,10 @@ class GeneralModuleTests(unittest.TestCase):
             socket.IPPROTO_UDP
         )
         self.assertEqual(sockaddr, ('ff02::1de:c0:face:8d', 1234, 0, 0))
+
+    def test_getfqdn_filter_localhost(self):
+        self.assertEqual(socket.getfqdn(), socket.getfqdn("0.0.0.0"))
+        self.assertEqual(socket.getfqdn(), socket.getfqdn("::"))
 
     @unittest.skipUnless(socket_helper.IPV6_ENABLED, 'IPv6 required for this test.')
     @unittest.skipIf(sys.platform == 'win32', 'does not work on Windows')
@@ -4416,7 +4428,7 @@ class RecvmsgIntoSCMRightsStreamTest(RecvmsgIntoMixin, SCMRightsTest,
 # threads alive during the test so that the OS cannot deliver the
 # signal to the wrong one.
 
-class InterruptedTimeoutBase(unittest.TestCase):
+class InterruptedTimeoutBase:
     # Base class for interrupted send/receive tests.  Installs an
     # empty handler for SIGALRM and removes it on teardown, along with
     # any scheduled alarms.
@@ -5424,6 +5436,20 @@ class TestLinuxAbstractNamespace(unittest.TestCase):
             s.bind(bytearray(b"\x00python\x00test\x00"))
             self.assertEqual(s.getsockname(), b"\x00python\x00test\x00")
 
+    def testAutobind(self):
+        # Check that binding to an empty string binds to an available address
+        # in the abstract namespace as specified in unix(7) "Autobind feature".
+        abstract_address = b"^\0[0-9a-f]{5}"
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s1:
+            s1.bind("")
+            self.assertRegex(s1.getsockname(), abstract_address)
+            # Each socket is bound to a different abstract address.
+            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s2:
+                s2.bind("")
+                self.assertRegex(s2.getsockname(), abstract_address)
+                self.assertNotEqual(s1.getsockname(), s2.getsockname())
+
+
 @unittest.skipUnless(hasattr(socket, 'AF_UNIX'), 'test needs socket.AF_UNIX')
 class TestUnixDomain(unittest.TestCase):
 
@@ -5492,6 +5518,11 @@ class TestUnixDomain(unittest.TestCase):
         self.bind(self.sock, path)
         self.addCleanup(os_helper.unlink, path)
         self.assertEqual(self.sock.getsockname(), path)
+
+    @unittest.skipIf(sys.platform == 'linux', 'Linux specific test')
+    def testEmptyAddress(self):
+        # Test that binding empty address fails.
+        self.assertRaises(OSError, self.sock.bind, "")
 
 
 class BufferIOTest(SocketConnectedTest):
@@ -6175,6 +6206,7 @@ class SendfileUsingSendTest(ThreadedTCPSocketTest):
     def testWithTimeoutTriggeredSend(self):
         conn = self.accept_conn()
         conn.recv(88192)
+        time.sleep(1)
 
     # errors
 
@@ -6494,13 +6526,6 @@ class CreateServerTest(unittest.TestCase):
 class CreateServerFunctionalTest(unittest.TestCase):
     timeout = support.LOOPBACK_TIMEOUT
 
-    def setUp(self):
-        self.thread = None
-
-    def tearDown(self):
-        if self.thread is not None:
-            self.thread.join(self.timeout)
-
     def echo_server(self, sock):
         def run(sock):
             with sock:
@@ -6514,8 +6539,9 @@ class CreateServerFunctionalTest(unittest.TestCase):
 
         event = threading.Event()
         sock.settimeout(self.timeout)
-        self.thread = threading.Thread(target=run, args=(sock, ))
-        self.thread.start()
+        thread = threading.Thread(target=run, args=(sock, ))
+        thread.start()
+        self.addCleanup(thread.join, self.timeout)
         event.set()
 
     def echo_client(self, addr, family):
@@ -6603,84 +6629,10 @@ class SendRecvFdsTests(unittest.TestCase):
             self.assertEqual(data,  str(index).encode())
 
 
-def test_main():
-    tests = [GeneralModuleTests, BasicTCPTest, TCPCloserTest, TCPTimeoutTest,
-             TestExceptions, BufferIOTest, BasicTCPTest2, BasicUDPTest,
-             UDPTimeoutTest, CreateServerTest, CreateServerFunctionalTest,
-             SendRecvFdsTests]
-
-    tests.extend([
-        NonBlockingTCPTests,
-        FileObjectClassTestCase,
-        UnbufferedFileObjectClassTestCase,
-        LineBufferedFileObjectClassTestCase,
-        SmallBufferedFileObjectClassTestCase,
-        UnicodeReadFileObjectClassTestCase,
-        UnicodeWriteFileObjectClassTestCase,
-        UnicodeReadWriteFileObjectClassTestCase,
-        NetworkConnectionNoServer,
-        NetworkConnectionAttributesTest,
-        NetworkConnectionBehaviourTest,
-        ContextManagersTest,
-        InheritanceTest,
-        NonblockConstantTest
-    ])
-    tests.append(BasicSocketPairTest)
-    tests.append(TestUnixDomain)
-    tests.append(TestLinuxAbstractNamespace)
-    tests.extend([TIPCTest, TIPCThreadableTest])
-    tests.extend([BasicCANTest, CANTest])
-    tests.extend([BasicRDSTest, RDSTest])
-    tests.append(LinuxKernelCryptoAPI)
-    tests.append(BasicQIPCRTRTest)
-    tests.extend([
-        BasicVSOCKTest,
-        ThreadedVSOCKSocketStreamTest,
-    ])
-    tests.append(BasicBluetoothTest)
-    tests.extend([
-        CmsgMacroTests,
-        SendmsgUDPTest,
-        RecvmsgUDPTest,
-        RecvmsgIntoUDPTest,
-        SendmsgUDP6Test,
-        RecvmsgUDP6Test,
-        RecvmsgRFC3542AncillaryUDP6Test,
-        RecvmsgIntoRFC3542AncillaryUDP6Test,
-        RecvmsgIntoUDP6Test,
-        SendmsgUDPLITETest,
-        RecvmsgUDPLITETest,
-        RecvmsgIntoUDPLITETest,
-        SendmsgUDPLITE6Test,
-        RecvmsgUDPLITE6Test,
-        RecvmsgRFC3542AncillaryUDPLITE6Test,
-        RecvmsgIntoRFC3542AncillaryUDPLITE6Test,
-        RecvmsgIntoUDPLITE6Test,
-        SendmsgTCPTest,
-        RecvmsgTCPTest,
-        RecvmsgIntoTCPTest,
-        SendmsgSCTPStreamTest,
-        RecvmsgSCTPStreamTest,
-        RecvmsgIntoSCTPStreamTest,
-        SendmsgUnixStreamTest,
-        RecvmsgUnixStreamTest,
-        RecvmsgIntoUnixStreamTest,
-        RecvmsgSCMRightsStreamTest,
-        RecvmsgIntoSCMRightsStreamTest,
-        # These are slow when setitimer() is not available
-        InterruptedRecvTimeoutTest,
-        InterruptedSendTimeoutTest,
-        TestSocketSharing,
-        SendfileUsingSendTest,
-        SendfileUsingSendfileTest,
-    ])
-    tests.append(TestMSWindowsTCPFlags)
-    tests.append(TestMacOSTCPFlags)
-
+def setUpModule():
     thread_info = threading_helper.threading_setup()
-    support.run_unittest(*tests)
-    threading_helper.threading_cleanup(*thread_info)
+    unittest.addModuleCleanup(threading_helper.threading_cleanup, *thread_info)
 
 
 if __name__ == "__main__":
-    test_main()
+    unittest.main()

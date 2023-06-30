@@ -1,4 +1,5 @@
 import errno
+import inspect
 import os
 import random
 import signal
@@ -32,6 +33,14 @@ class GenericTests(unittest.TestCase):
             elif name.startswith('CTRL_'):
                 self.assertIsInstance(sig, signal.Signals)
                 self.assertEqual(sys.platform, "win32")
+
+    def test_functions_module_attr(self):
+        # Issue #27718: If __all__ is not defined all non-builtin functions
+        # should have correct __module__ to be displayed by pydoc.
+        for name in dir(signal):
+            value = getattr(signal, name)
+            if inspect.isroutine(value) and not inspect.isbuiltin(value):
+                self.assertEqual(value.__module__, 'signal')
 
 
 @unittest.skipIf(sys.platform == "win32", "Not valid on Windows")
@@ -1339,6 +1348,21 @@ class RaiseSignalTest(unittest.TestCase):
 
         signal.raise_signal(signal.SIGINT)
         self.assertTrue(is_ok)
+
+    def test__thread_interrupt_main(self):
+        # See https://github.com/python/cpython/issues/102397
+        code = """if 1:
+        import _thread
+        class Foo():
+            def __del__(self):
+                _thread.interrupt_main()
+
+        x = Foo()
+        """
+
+        rc, out, err = assert_python_ok('-c', code)
+        self.assertIn(b'OSError: Signal 2 ignored due to race condition', err)
+
 
 
 class PidfdSignalTest(unittest.TestCase):
