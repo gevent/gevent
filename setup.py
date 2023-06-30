@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """gevent build & installation script"""
 from __future__ import print_function
 import sys
@@ -12,8 +13,6 @@ import os.path
 from setuptools import Extension, setup
 from setuptools import find_packages
 
-
-# -*- coding: utf-8 -*-
 #
 # We import other files that are siblings of this file as modules. In
 # the past, setuptools guaranteed that this directory was on the path
@@ -22,6 +21,7 @@ from setuptools import find_packages
 # backend (``setuptools.build_meta:__legacy__``) that *does* guarantee
 # that, and we used it for a long time. But downstream packagers have begun
 # complaining about using it. So we futz with the path ourself.
+# (This is also an issue on Python3.11+ with $PYTHONSAFEPATH=1)
 sys.path.insert(0, os.path.dirname(__file__))
 
 from _setuputils import read
@@ -43,13 +43,6 @@ if WIN:
         os.environ['PYTHON_EXE'] = 'pypy' if PYPY else 'python'
     if not os.environ.get('PYEXE'):
         os.environ['PYEXE'] = os.environ['PYTHON_EXE']
-
-
-if PYPY and sys.pypy_version_info[:3] < (2, 6, 1): # pylint:disable=no-member
-    # We have to have CFFI >= 1.3.0, and this platform cannot upgrade
-    # it.
-    raise Exception("PyPy >= 2.6.1 is required")
-
 
 
 __version__ = read_version()
@@ -243,6 +236,7 @@ install_requires = greenlet_requires + CFFI_REQUIRES + [
     # setuptools is also used (via pkg_resources) for event
     # notifications. It's a hard dependency of zope.interface
     # anyway.
+    # XXX: Drop this, shift to importlib.
     'setuptools',
 ]
 
@@ -339,10 +333,6 @@ EXTRA_MONITOR = [
 EXTRA_RECOMMENDED = [
     # We need this at runtime to use the libev-CFFI and libuv backends
     CFFI_DEP,
-    # Backport of selectors module to Python 2
-    'selectors2 ; python_version == "2.7"',
-    # Backport of socket.socketpair to Python 2; only needed on Windows
-    'backports.socketpair ; python_version == "2.7" and sys_platform == "win32"',
 ] + EXTRA_DNSPYTHON + EXTRA_EVENTS + EXTRA_MONITOR
 
 
@@ -439,15 +429,9 @@ def run_setup(ext_modules):
                 'coverage >= 5.0 ; sys_platform != "win32"',
                 'coveralls>=1.7.0 ; sys_platform != "win32"',
 
-                'futures ; python_version == "2.7"',
-                'mock ; python_version == "2.7"',
-
                 # leak checks. previously we had a hand-rolled version.
                 'objgraph',
 
-                # The backport for contextvars to test patching. It sadly uses the same
-                # import name as the stdlib module.
-                'contextvars == 2.4 ; python_version > "3.0" and python_version < "3.7"',
             ],
         },
         # It's always safe to pass the CFFI keyword, even if
@@ -457,9 +441,7 @@ def run_setup(ext_modules):
         test_suite="greentest.testrunner",
         classifiers=[
             "License :: OSI Approved :: MIT License",
-            "Programming Language :: Python :: 2.7",
-            "Programming Language :: Python :: 3.6",
-            "Programming Language :: Python :: 3.7",
+            "Programming Language :: Python :: 3 :: Only",
             "Programming Language :: Python :: 3.8",
             "Programming Language :: Python :: 3.9",
             "Programming Language :: Python :: 3.10",
@@ -474,7 +456,7 @@ def run_setup(ext_modules):
             "Intended Audience :: Developers",
             "Development Status :: 4 - Beta"
         ],
-        python_requires=">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5",
+        python_requires=">=3.8",
         entry_points={
             'gevent.plugins.monkey.will_patch_all': [
                 "signal_os_incompat = gevent.monkey:_subscribe_signal_os",

@@ -1,0 +1,2 @@
+Remove support for obsolete Python versions. This is everything prior
+to 3.8.

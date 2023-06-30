@@ -50,36 +50,21 @@ environment:
       PYTHON_VERSION: "3.11.0"
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
 
-    - PYTHON: "C:\\pypy3.7-v7.3.7-win64"
-      PYTHON_ID: "pypy3"
-      PYTHON_EXE: pypy3w
-      PYTHON_VERSION: "3.7.x"
-      PYTHON_ARCH: "64"
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-
-    - PYTHON: "C:\\pypy2.7-v7.3.6-win64"
-      PYTHON_ID: "pypy"
-      PYTHON_EXE: pypy
-      PYTHON_VERSION: "2.7.x"
-      PYTHON_ARCH: "64"
-      # If we leave this at 2015, we hit a bug in distutils+PyPy:
-      # https://ci.appveyor.com/project/jamadden/gevent/builds/41819005/job/nvv7udya8ylwoqhh
-      #      File "C:\pypy2.7-v7.3.6-win64\lib-python\2.7\distutils\_msvccompiler.py", line 122, in _get_vc_env
-      #     vcvarsall, _ = _find_vcvarsall(plat_spec)
-      #   File "C:\pypy2.7-v7.3.6-win64\lib-python\2.7\distutils\_msvccompiler.py", line 102, in _find_vcvarsall
-      #     best_version, best_dir = _find_vc2015()
-      #   File "C:\pypy2.7-v7.3.6-win64\lib-python\2.7\distutils\_msvccompiler.py", line 35, in _find_vc2015
-      #     access=winreg.KEY_READ | winreg.KEY_WOW64_32KEY
-      # TypeError: OpenKey() got an unexpected keyword argument 'access'
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+    # TODO: What's the latest pypy?
+    # - PYTHON: "C:\\pypy3.7-v7.3.7-win64"
+    #   PYTHON_ID: "pypy3"
+    #   PYTHON_EXE: pypy3w
+    #   PYTHON_VERSION: "3.7.x"
+    #   PYTHON_ARCH: "64"
+    #   APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
 
     - PYTHON: "C:\\Python310-x64"
       PYTHON_VERSION: "3.10.0"
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
 
     - PYTHON: "C:\\Python39-x64"
       PYTHON_VERSION: "3.9.x"
@@ -93,17 +78,6 @@ environment:
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-
-    - PYTHON: "C:\\Python37-x64"
-      PYTHON_VERSION: "3.7.x"
-      PYTHON_ARCH: "64"
-      PYTHON_EXE: python
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-
-    - PYTHON: "C:\\Python36-x64"
-      PYTHON_VERSION: "3.6.x" # currently 3.6.8
-      PYTHON_ARCH: "64"
-      PYTHON_EXE: python
 
 
     # 32-bit, wheel only (no testing)
@@ -121,38 +95,6 @@ environment:
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       GWHEEL_ONLY: true
 
-    - PYTHON: "C:\\Python37"
-      PYTHON_VERSION: "3.7.x"
-      PYTHON_ARCH: "32"
-      PYTHON_EXE: python
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-      GWHEEL_ONLY: true
-
-    - PYTHON: "C:\\Python36"
-      PYTHON_VERSION: "3.6.x" # currently 3.6.3
-      PYTHON_ARCH: "32"
-      PYTHON_EXE: python
-      GWHEEL_ONLY: true
-
-    - PYTHON: "C:\\Python27"
-      PYTHON_VERSION: "2.7.x" # currently 2.7.13
-      PYTHON_ARCH: "32"
-      PYTHON_EXE: python
-      GWHEEL_ONLY: true
-
-    - PYTHON: "C:\\Python27-x64"
-      PYTHON_VERSION: "2.7.x" # currently 2.7.13
-      PYTHON_ARCH: "64"
-      PYTHON_EXE: python
-      # greenlet 2.0 is evincing a warning (probably?)
-      # on shutdown, leading to the dreaded error:
-      #   Fatal Python error: PyImport_GetModuleDict: no module
-      #   dictionary!
-      # in some tests. This is hard to debug remotely, and as support
-      # for 2.7 is winding down quickly (hey, we're only two years
-      # late to the party) I'm not specifically going to try to debug
-      # it. We'll just provide a binary wheel still.
-      GWHEEL_ONLY: true
 
     # Also test a Python version not pre-installed
     # See: https://github.com/ogrisel/python-appveyor-demo/issues/10
