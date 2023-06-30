@@ -211,10 +211,9 @@ jobs:
           twine upload --skip-existing dist/*
 
       - name: Install gevent
-        # I'd prefer to install the wheel in non-editable mode, but that seems to
-        # screw up coverage reporting.
         run: |
-          pip install -U -e .[test]
+          WHL=$(ls dist/*whl)
+          pip install -U "$WHL[test]"
       - name: Report environment details
         run: |
           python --version
