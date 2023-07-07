@@ -51,9 +51,6 @@ __imports__ = [
     'setdefaulttimeout',
     # Windows:
     'errorTab',
-]
-
-__py3_imports__ = [
     # Python 3
     'AddressFamily',
     'SocketKind',
@@ -64,15 +61,15 @@ __py3_imports__ = [
     'if_nameindex',
     'if_nametoindex',
     'sethostname',
+    'create_server',
+    'has_dualstack_ipv6',
 ]
 
-__imports__.extend(__py3_imports__)
 
 import time
 
 from gevent._hub_local import get_hub_noargs as get_hub
-from gevent._compat import string_types, integer_types, PY3
-from gevent._compat import PY38
+from gevent._compat import string_types, integer_types
 from gevent._compat import PY39
 from gevent._compat import WIN as is_windows
 from gevent._compat import OSX as is_macos
@@ -83,11 +80,6 @@ from gevent._hub_primitives import wait_on_socket as _wait_on_socket
 
 from gevent.timeout import Timeout
 
-if PY38:
-    __imports__.extend([
-        'create_server',
-        'has_dualstack_ipv6',
-    ])
 
 if PY39:
     __imports__.extend([
@@ -210,8 +202,7 @@ def gethostbyname_ex(hostname):
     """
     return get_hub().resolver.gethostbyname_ex(hostname)
 
-
-def getaddrinfo(host, port, family=0, socktype=0, proto=0, flags=0):
+def getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
     """
     Resolve host and port into list of address info entries.
 
@@ -228,40 +219,24 @@ def getaddrinfo(host, port, family=0, socktype=0, proto=0, flags=0):
 
     .. seealso:: :doc:`/dns`
     """
-    return get_hub().resolver.getaddrinfo(host, port, family, socktype, proto, flags)
+    # Also, on Python 3, we need to translate into the special enums.
+    # Our lower-level resolvers, including the thread and blocking, which use _socket,
+    # function simply with integers.
+    addrlist = get_hub().resolver.getaddrinfo(host, port, family, type, proto, flags)
+    result = [
+        (_intenum_converter(af, AddressFamily),
+         _intenum_converter(socktype, SocketKind),
+         proto, canonname, sa)
+        for af, socktype, proto, canonname, sa
+        in addrlist
+    ]
+    return result
 
-if PY3:
-    # The name of the socktype param changed to type in Python 3.
-    # See https://github.com/gevent/gevent/issues/960
-    # Using inspect here to directly detect the condition is painful because we have to
-    # wrap it with a try/except TypeError because not all Python 2
-    # versions can get the args of a builtin; we also have to use a with to suppress
-    # the deprecation warning.
-    d = getaddrinfo.__doc__
-
-    def getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
-        # pylint:disable=function-redefined, undefined-variable
-        # Also, on Python 3, we need to translate into the special enums.
-        # Our lower-level resolvers, including the thread and blocking, which use _socket,
-        # function simply with integers.
-        addrlist = get_hub().resolver.getaddrinfo(host, port, family, type, proto, flags)
-        result = [
-            (_intenum_converter(af, AddressFamily),
-             _intenum_converter(socktype, SocketKind),
-             proto, canonname, sa)
-            for af, socktype, proto, canonname, sa
-            in addrlist
-        ]
-        return result
-
-    getaddrinfo.__doc__ = d
-    del d
-
-    def _intenum_converter(value, enum_klass):
-        try:
-            return enum_klass(value)
-        except ValueError: # pragma: no cover
-            return value
+def _intenum_converter(value, enum_klass):
+    try:
+        return enum_klass(value)
+    except ValueError: # pragma: no cover
+        return value
 
 
 def gethostbyaddr(ip_address):
@@ -546,8 +521,8 @@ class SocketMixin(object):
             self.hub.cancel_wait(self._write_event, cancel_wait_ex)
         self._sock.shutdown(how)
 
-    family = property(lambda self: self._sock.family)
-    type = property(lambda self: self._sock.type)
+    family = property(lambda self: _intenum_converter(self._sock.family, AddressFamily))
+    type = property(lambda self: _intenum_converter(self._sock.type, SocketKind))
     proto = property(lambda self: self._sock.proto)
 
     def fileno(self):

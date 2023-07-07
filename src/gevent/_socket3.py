@@ -110,31 +110,21 @@ class socket(_socketcommon.SocketMixin):
     # don't subclass it. This lets code that needs the raw _sock (not tied to the hub)
     # get it. This shows up in tests like test__example_udp_server.
 
-    if sys.version_info[:2] < (3, 7):
-        def __init__(self, family=AF_INET, type=SOCK_STREAM, proto=0, fileno=None):
-            super().__init__()
-            self._closed = False
-            self._sock = self._gevent_sock_class(family, type, proto, fileno)
-            self.timeout = None
-            self.__init_common()
-    else:
-        # In 3.7, socket changed to auto-detecting family, type, and proto
-        # when given a fileno.
-        def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
-            super().__init__()
-            self._closed = False
-            if fileno is None:
-                if family == -1:
-                    family = AF_INET
-                if type == -1:
-                    type = SOCK_STREAM
-                if proto == -1:
-                    proto = 0
-            self._sock = self._gevent_sock_class(family, type, proto, fileno)
-            self.timeout = None
-            self.__init_common()
+    # In 3.7, socket changed to auto-detecting family, type, and proto
+    # when given a fileno.
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        super().__init__()
+        self._closed = False
+        if fileno is None:
+            if family == -1:
+                family = AddressFamily.AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+        self._sock = self._gevent_sock_class(family, type, proto, fileno)
+        self.timeout = None
 
-    def __init_common(self):
         self._io_refs = 0
         _socket.socket.setblocking(self._sock, False)
         fileno = _socket.socket.fileno(self._sock)

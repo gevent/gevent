@@ -123,7 +123,7 @@ def notify_and_call_entry_points(event):
         # Prior to 3.9, there is no ``.module`` attribute, so if we
         # needed that we'd have to look at the complete ``.value``
         # attribute.
-        ep_dict = entry_points()
+        ep_dict = metadata.entry_points()
         __traceback_info__ = ep_dict
         # On Python 3.8, we can get duplicate EntryPoint objects; it is unclear
         # why. Drop them into a set to make sure we only get one.

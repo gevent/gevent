@@ -115,17 +115,9 @@ def get_switch_expected(fullname):
 
 
 disabled_tests = [
-    # "test an implementation detail of thread objects" --- our implementation differs
-    "test_threading.ThreadTests.test_tstate_lock",
-    # This likes to check the number of native thread IDs using the ``native_id`` attribute,
-    # and the ``get_native_id()`` function. Because we're monkey-patched,
-    # those don't change in other threads, so it won't work.
-    'test_threading.ThreadTests.test_various_ops',
-    # Added to address CPython issue 27718; it wants functions in the signal
-    # module to have __module__ equal to 'signal', but obviously when we
-    # monkey patch they don't.
+    # Want's __module__ to be 'signal', which  of course it isn't once
+    # monkey-patched.
     'test_signal.GenericTests.test_functions_module_attr',
-
     # XXX: While we debug latest updates. This is leaking
     'test_threading.ThreadTests.test_no_refcycle_through_target',
 
@@ -267,13 +259,6 @@ disabled_tests = [
     'test_context.ContextTest.test_context_var_new_2',
 ]
 
-
-if sys.version_info[:3] < (2, 7, 18):
-    # The final release was 2.7.18. It added some new tests for new
-    # fixes. At this writing, AppVeyor is still on 2.7.17.
-    disabled_tests += [
-        'test_urllib2.MiscTests.test_url_host_with_control_char_rejected',
-    ]
 
 if OSX:
     disabled_tests += [
@@ -548,15 +533,6 @@ class _PatchedTest(object):
         return test
 
 
-
-if sys.version_info[:3] <= (2, 7, 11):
-
-    disabled_tests += [
-        # These were added/fixed in 2.7.12+
-        'test_ssl.ThreadedTests.test__https_verify_certificates',
-        'test_ssl.ThreadedTests.test__https_verify_envvar',
-    ]
-
 if OSX:
     disabled_tests += [
         'test_subprocess.POSIXProcessTestCase.test_run_abort',
@@ -644,100 +620,100 @@ if PYPY:
 
 
 
+disabled_tests += [
+    # Triggers the crash reporter
+    'test_threading.SubinterpThreadingTests.test_daemon_threads_fatal_error',
+
+    # Relies on an implementation detail, Thread._tstate_lock
+    'test_threading.ThreadTests.test_tstate_lock',
+    # Relies on an implementation detail (reprs); we have our own version
+    'test_threading.ThreadTests.test_various_ops',
+    'test_threading.ThreadTests.test_various_ops_large_stack',
+    'test_threading.ThreadTests.test_various_ops_small_stack',
+
+    # Relies on Event having a _cond and an _reset_internal_locks()
+    # XXX: These are commented out in the source code of test_threading because
+    # this doesn't work.
+    # 'lock_tests.EventTests.test_reset_internal_locks',
+
+    # Python bug 13502. We may or may not suffer from this as its
+    # basically a timing race condition.
+    # XXX Same as above
+    # 'lock_tests.EventTests.test_set_and_clear',
+
+    # These tests want to assert on the type of the class that implements
+    # `Popen.stdin`; we use a FileObject, but they expect different subclasses
+    # from the `io` module
+    'test_subprocess.ProcessTestCase.test_io_buffered_by_default',
+    'test_subprocess.ProcessTestCase.test_io_unbuffered_works',
+
+    # 3.3 exposed the `endtime` argument to wait accidentally.
+    # It is documented as deprecated and not to be used since 3.4
+    # This test in 3.6.3 wants to use it though, and we don't have it.
+    'test_subprocess.ProcessTestCase.test_wait_endtime',
+
+    # These all want to inspect the string value of an exception raised
+    # by the exec() call in the child. The _posixsubprocess module arranges
+    # for better exception handling and printing than we do.
+    'test_subprocess.POSIXProcessTestCase.test_exception_bad_args_0',
+    'test_subprocess.POSIXProcessTestCase.test_exception_bad_executable',
+    'test_subprocess.POSIXProcessTestCase.test_exception_cwd',
+    # Relies on a 'fork_exec' attribute that we don't provide
+    'test_subprocess.POSIXProcessTestCase.test_exception_errpipe_bad_data',
+    'test_subprocess.POSIXProcessTestCase.test_exception_errpipe_normal',
+
+    # Python 3 fixed a bug if the stdio file descriptors were closed;
+    # we still have that bug
+    'test_subprocess.POSIXProcessTestCase.test_small_errpipe_write_fd',
+
+    # Relies on implementation details (some of these tests were added in 3.4,
+    # but PyPy3 is also shipping them.)
+    'test_socket.GeneralModuleTests.test_SocketType_is_socketobject',
+    'test_socket.GeneralModuleTests.test_dealloc_warn',
+    'test_socket.GeneralModuleTests.test_repr',
+    'test_socket.GeneralModuleTests.test_str_for_enums',
+    'test_socket.GeneralModuleTests.testGetaddrinfo',
+
+]
+if TRAVIS:
     disabled_tests += [
-        # Triggers the crash reporter
-        'test_threading.SubinterpThreadingTests.test_daemon_threads_fatal_error',
+        # test_cwd_with_relative_executable tends to fail
+        # on Travis...it looks like the test processes are stepping
+        # on each other and messing up their temp directories. We tend to get things like
+        #    saved_dir = os.getcwd()
+        #   FileNotFoundError: [Errno 2] No such file or directory
+        'test_subprocess.ProcessTestCase.test_cwd_with_relative_arg',
+        'test_subprocess.ProcessTestCaseNoPoll.test_cwd_with_relative_arg',
+        'test_subprocess.ProcessTestCase.test_cwd_with_relative_executable',
 
-        # Relies on an implementation detail, Thread._tstate_lock
-        'test_threading.ThreadTests.test_tstate_lock',
-        # Relies on an implementation detail (reprs); we have our own version
-        'test_threading.ThreadTests.test_various_ops',
-        'test_threading.ThreadTests.test_various_ops_large_stack',
-        'test_threading.ThreadTests.test_various_ops_small_stack',
-
-        # Relies on Event having a _cond and an _reset_internal_locks()
-        # XXX: These are commented out in the source code of test_threading because
-        # this doesn't work.
-        # 'lock_tests.EventTests.test_reset_internal_locks',
-
-        # Python bug 13502. We may or may not suffer from this as its
-        # basically a timing race condition.
-        # XXX Same as above
-        # 'lock_tests.EventTests.test_set_and_clear',
-
-        # These tests want to assert on the type of the class that implements
-        # `Popen.stdin`; we use a FileObject, but they expect different subclasses
-        # from the `io` module
-        'test_subprocess.ProcessTestCase.test_io_buffered_by_default',
-        'test_subprocess.ProcessTestCase.test_io_unbuffered_works',
-
-        # 3.3 exposed the `endtime` argument to wait accidentally.
-        # It is documented as deprecated and not to be used since 3.4
-        # This test in 3.6.3 wants to use it though, and we don't have it.
-        'test_subprocess.ProcessTestCase.test_wait_endtime',
-
-        # These all want to inspect the string value of an exception raised
-        # by the exec() call in the child. The _posixsubprocess module arranges
-        # for better exception handling and printing than we do.
-        'test_subprocess.POSIXProcessTestCase.test_exception_bad_args_0',
-        'test_subprocess.POSIXProcessTestCase.test_exception_bad_executable',
-        'test_subprocess.POSIXProcessTestCase.test_exception_cwd',
-        # Relies on a 'fork_exec' attribute that we don't provide
-        'test_subprocess.POSIXProcessTestCase.test_exception_errpipe_bad_data',
-        'test_subprocess.POSIXProcessTestCase.test_exception_errpipe_normal',
-
-        # Python 3 fixed a bug if the stdio file descriptors were closed;
-        # we still have that bug
-        'test_subprocess.POSIXProcessTestCase.test_small_errpipe_write_fd',
-
-        # Relies on implementation details (some of these tests were added in 3.4,
-        # but PyPy3 is also shipping them.)
-        'test_socket.GeneralModuleTests.test_SocketType_is_socketobject',
-        'test_socket.GeneralModuleTests.test_dealloc_warn',
-        'test_socket.GeneralModuleTests.test_repr',
-        'test_socket.GeneralModuleTests.test_str_for_enums',
-        'test_socket.GeneralModuleTests.testGetaddrinfo',
-
+        # In 3.7 and 3.8 on Travis CI, this appears to take the full 3 seconds.
+        # Can't reproduce it locally. We have our own copy of this that takes
+        # timing on CI into account.
+        'test_subprocess.RunFuncTestCase.test_run_with_shell_timeout_and_capture_output',
     ]
-    if TRAVIS:
-        disabled_tests += [
-            # test_cwd_with_relative_executable tends to fail
-            # on Travis...it looks like the test processes are stepping
-            # on each other and messing up their temp directories. We tend to get things like
-            #    saved_dir = os.getcwd()
-            #   FileNotFoundError: [Errno 2] No such file or directory
-            'test_subprocess.ProcessTestCase.test_cwd_with_relative_arg',
-            'test_subprocess.ProcessTestCaseNoPoll.test_cwd_with_relative_arg',
-            'test_subprocess.ProcessTestCase.test_cwd_with_relative_executable',
 
-            # In 3.7 and 3.8 on Travis CI, this appears to take the full 3 seconds.
-            # Can't reproduce it locally. We have our own copy of this that takes
-            # timing on CI into account.
-            'test_subprocess.RunFuncTestCase.test_run_with_shell_timeout_and_capture_output',
-        ]
+disabled_tests += [
+    # XXX: BUG: We simply don't handle this correctly. On CPython,
+    # we wind up raising a BlockingIOError and then
+    # BrokenPipeError and then some random TypeErrors, all on the
+    # server. CPython 3.5 goes directly to socket.send() (via
+    # socket.makefile), whereas CPython 3.6 uses socket.sendall().
+    # On PyPy, the behaviour is much worse: we hang indefinitely, perhaps exposing a problem
+    # with our signal handling.
 
-    disabled_tests += [
-        # XXX: BUG: We simply don't handle this correctly. On CPython,
-        # we wind up raising a BlockingIOError and then
-        # BrokenPipeError and then some random TypeErrors, all on the
-        # server. CPython 3.5 goes directly to socket.send() (via
-        # socket.makefile), whereas CPython 3.6 uses socket.sendall().
-        # On PyPy, the behaviour is much worse: we hang indefinitely, perhaps exposing a problem
-        # with our signal handling.
-
-        # In actuality, though, this test doesn't fully test the EINTR it expects
-        # to under gevent (because if its EWOULDBLOCK retry behaviour.)
-        # Instead, the failures were all due to `pthread_kill` trying to send a signal
-        # to a greenlet instead of a real thread. The solution is to deliver the signal
-        # to the real thread by letting it get the correct ID, and we previously
-        # used make_run_with_original to make it do that.
-        #
-        # But now that we have disabled our wrappers around Thread.join() in favor
-        # of the original implementation, that causes problems:
-        # background.join() thinks that it is the current thread, and won't let it
-        # be joined.
-        'test_wsgiref.IntegrationTests.test_interrupted_write',
-    ]
+    # In actuality, though, this test doesn't fully test the EINTR it expects
+    # to under gevent (because if its EWOULDBLOCK retry behaviour.)
+    # Instead, the failures were all due to `pthread_kill` trying to send a signal
+    # to a greenlet instead of a real thread. The solution is to deliver the signal
+    # to the real thread by letting it get the correct ID, and we previously
+    # used make_run_with_original to make it do that.
+    #
+    # But now that we have disabled our wrappers around Thread.join() in favor
+    # of the original implementation, that causes problems:
+    # background.join() thinks that it is the current thread, and won't let it
+    # be joined.
+    'test_wsgiref.IntegrationTests.test_interrupted_write',
+]
 
 # PyPy3 3.5.5 v5.8-beta
 
