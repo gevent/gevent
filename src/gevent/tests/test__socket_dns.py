@@ -397,6 +397,12 @@ class TestCase(greentest.TestCase):
         # one resolver than we do with the other resolver.
         # So as long as they have some subset in common,
         # we'll take it.
+        errors = isinstance(real_result, Exception) + isinstance(gevent_result, Exception)
+        if errors == 2:
+            return True
+        if errors == 1:
+            return False
+
         if not set(real_result).isdisjoint(set(gevent_result)):
             return True
         return self._generic_compare_results(real_result, gevent_result, func_name)
