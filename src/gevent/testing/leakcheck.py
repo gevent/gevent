@@ -73,12 +73,25 @@ class _RefCountChecker(object):
         self.needs_setUp = False
 
     def _ignore_object_p(self, obj):
-        if (
-                obj is self
-                or obj in self.__dict__.values()
-                or obj == self._ignore_object_p # pylint:disable=comparison-with-callable
-        ):
+        if obj is self:
             return False
+        try:
+            # Certain badly written __eq__ and __contains__ methods
+            # (I'm looking at you, Python 3.10 importlib.metadata._text!
+            # ``__eq__(self, other): return self.lower() == other.lower()``)
+            # raise AttributeError which propagates here, and must be caught.
+            # Similarly, we can get a TypeError
+            if (
+                obj in self.__dict__.values()
+                or obj == self._ignore_object_p # pylint:disable=comparison-with-callable
+            ):
+                return False
+        except (AttributeError, TypeError):
+            # `obj` is things like that _text class. Also have seen
+            # - psycopg2._psycopg.type
+            # - relstorage.adapters.drivers._ClassDriverFactory
+            return True
+
         kind = type(obj)
         if kind in self.IGNORED_TYPES:
             return False

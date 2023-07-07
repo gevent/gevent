@@ -257,6 +257,7 @@ disabled_tests = [
     # The same patch that fixed that removed this test,
     # because it would now fail.
     'test_context.ContextTest.test_context_var_new_2',
+
 ]
 
 
@@ -550,7 +551,14 @@ if WIN:
         # 'No connection could be made because the target machine
         # actively refused it'
         'test_socket.NonBlockingTCPTests.testAccept',
+
+        # On appveyor, this test has been seen to fail on 3.9 and 3.8
     ]
+
+    if sys.version_info[2] <= (3, 9):
+        disabled_tests += [
+            'test_context.HamtTest.test_hamt_collision_3',
+        ]
 
     # These are a problem on 3.5; on 3.6+ they wind up getting (accidentally) disabled.
     wrapped_tests.update({
@@ -962,12 +970,6 @@ if ARES:
         'test_socket.GeneralModuleTests.test_getnameinfo',
     ]
 
-    if sys.version_info[1] == 5:
-        disabled_tests += [
-            # This test tends to time out, but only under 3.5, not under
-            # 3.6 or 3.7. Seen with both libev and libuv
-            'test_socket.SendfileUsingSendTest.testWithTimeoutTriggeredSend',
-        ]
 
 disabled_tests += [
     'test_threading.MiscTestCase.test__all__',

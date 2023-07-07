@@ -1085,5 +1085,4 @@ class ContextTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    if not monkey.PY37:
-        unittest.main()
+    unittest.main()
