@@ -597,21 +597,7 @@ if local.__module__ == 'gevent.local':
     # module has a different name than the pure-Python version and we can check for that.
     # It's not as direct, but it works.
     # So here we're not compiled
-    from gevent._compat import PYPY
-    from gevent._compat import PY2
-    if PYPY and PY2:
-        # The behaviour changed with no warning between PyPy2 7.3.2 and 7.3.3.
-        local.__new__ = __new__
-        try:
-            local() # <= 7.3.2
-        except TypeError:
-            # >= 7.3.3
-            local.__new__ = classmethod(__new__)
-    else:
-        local.__new__ = classmethod(__new__)
-
-    del PYPY
-    del PY2
+    local.__new__ = classmethod(__new__)
 else: # pragma: no cover
     # Make sure we revisit in case of changes to the (accelerator) module names.
     if local.__module__ != 'gevent._gevent_clocal':

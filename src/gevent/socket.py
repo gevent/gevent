@@ -13,16 +13,15 @@ as well as the constants from the :mod:`socket` module are imported into this mo
 # Our import magic sadly makes this warning useless
 # pylint: disable=undefined-variable
 
-from gevent._compat import PY3
+
 from gevent._compat import PY311
 from gevent._compat import exc_clear
 from gevent._util import copy_globals
 
 
-if PY3:
-    from gevent import _socket3 as _source # python 2: pylint:disable=no-name-in-module
-else:
-    from gevent import _socket2 as _source
+
+from gevent import _socket3 as _source
+
 
 # define some things we're expecting to overwrite; each module
 # needs to define these

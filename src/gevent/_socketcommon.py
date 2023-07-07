@@ -270,10 +270,16 @@ def getfqdn(name=''):
     First the hostname returned by gethostbyaddr() is checked, then
     possibly existing aliases. In case no FQDN is available, hostname
     from gethostname() is returned.
+
+    .. versionchanged:: NEXT
+       The IPv6 generic address '::' now returns the result of
+       ``gethostname``, like the IPv4 address '0.0.0.0'.
     """
     # pylint: disable=undefined-variable
     name = name.strip()
-    if not name or name == '0.0.0.0':
+    # IPv6 added in a late Python 3.10/3.11 patch release.
+    # https://github.com/python/cpython/issues/100374
+    if not name or name in ('0.0.0.0', '::'):
         name = gethostname()
     try:
         hostname, aliases, _ = gethostbyaddr(name)

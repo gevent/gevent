@@ -130,7 +130,7 @@ def notify_and_call_entry_points(event):
         entry_points = set(
             ep
             for ep
-            in ep_dict.get(event.ENTRY_POINT_NAME)
+            in ep_dict.get(event.ENTRY_POINT_NAME, ())
         )
 
     for plugin in entry_points:

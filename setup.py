@@ -427,6 +427,8 @@ def run_setup(ext_modules):
                 # leak checks. previously we had a hand-rolled version.
                 'objgraph',
 
+                # We still have some places we like to test with pkg_resources
+                'setuptools',
             ],
         },
         # It's always safe to pass the CFFI keyword, even if

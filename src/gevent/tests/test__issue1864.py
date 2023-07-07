@@ -1,11 +1,9 @@
 import sys
 import unittest
 
-from gevent.testing import skipOnPy2
 
 class TestSubnormalFloatsAreNotDisabled(unittest.TestCase):
 
-    @skipOnPy2('This test always fails on Python 2')
     def test_subnormal_is_not_zero(self):
         # Enabling the -Ofast compiler flag resulted in subnormal floats getting
         # disabled the moment when gevent was imported. This impacted libraries
@@ -21,7 +19,7 @@ class TestSubnormalFloatsAreNotDisabled(unittest.TestCase):
         # `sys.float_info.min` is the minimum representable positive normalized
         # float, so dividing it by two gives us a positive subnormal float,
         # as long as subnormals floats are not disabled.
-        self.assertGreater(sys.float_info.min / 2, 0)
+        self.assertGreater(sys.float_info.min / 2, 0.0)
 
 
 if __name__ == "__main__":

@@ -13,13 +13,13 @@ import ssl as __ssl__
 _ssl = __ssl__._ssl
 
 import errno
-import sys
+
 
 from gevent.socket import socket, timeout_default
 from gevent.socket import error as socket_error
 from gevent.socket import timeout as _socket_timeout
 from gevent._util import copy_globals
-from gevent._compat import PY36
+
 
 from weakref import ref as _wref
 
@@ -49,8 +49,8 @@ from ssl import SSL_ERROR_EOF
 from ssl import SSL_ERROR_WANT_READ
 from ssl import SSL_ERROR_WANT_WRITE
 from ssl import PROTOCOL_SSLv23
-from ssl import SSLObject
-from ssl import match_hostname
+#from ssl import SSLObject
+
 from ssl import CHANNEL_BINDING_TYPES
 from ssl import CERT_REQUIRED
 from ssl import DER_cert_to_PEM_cert
@@ -674,32 +674,14 @@ class SSLSocket(socket):
                     raise
                 self._wait(self._write_event, timeout_exc=_SSLErrorHandshakeTimeout)
 
-        if sys.version_info[:2] < (3, 7) and self._context.check_hostname:
-            # In Python 3.7, the underlying OpenSSL name matching is used.
-            # The version implemented in Python doesn't understand IDNA encoding.
-            if not self.server_hostname:
-                raise ValueError("check_hostname needs server_hostname "
-                                 "argument")
-            match_hostname(self.getpeercert(), self.server_hostname) # pylint:disable=deprecated-method
-
-    if hasattr(SSLObject, '_create'):
-        # 3.7+, making it difficult to create these objects.
-        # There's a new type, _ssl.SSLSocket, that takes the
-        # place of SSLObject for self._sslobj. This one does it all.
-        def __create_sslobj(self, server_side=False, session=None):
-            return self.context._wrap_socket(
-                self._sock, server_side, self.server_hostname,
-                owner=self._sock, session=session
-            )
-    elif PY36: # 3.6
-        def __create_sslobj(self, server_side=False, session=None):
-            sslobj = self._context._wrap_socket(self._sock, server_side, self.server_hostname)
-            return SSLObject(sslobj, owner=self._sock, session=session)
-    else: # 3.5
-        def __create_sslobj(self, server_side=False, session=None): # pylint:disable=unused-argument
-            sslobj = self._context._wrap_socket(self._sock, server_side, self.server_hostname)
-            return SSLObject(sslobj, owner=self._sock)
-
+    # 3.7+, making it difficult to create these objects.
+    # There's a new type, _ssl.SSLSocket, that takes the
+    # place of SSLObject for self._sslobj. This one does it all.
+    def __create_sslobj(self, server_side=False, session=None):
+        return self.context._wrap_socket(
+            self._sock, server_side, self.server_hostname,
+            owner=self._sock, session=session
+        )
 
     def _real_connect(self, addr, connect_ex):
         if self.server_side:

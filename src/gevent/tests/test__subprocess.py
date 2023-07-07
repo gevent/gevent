@@ -111,7 +111,6 @@ class TestPopen(greentest.TestCase):
                          'pineapple\n\xff\xff\xf2\xf9\n')
 
     @greentest.skipOnWindows("Windows IO is weird; this doesn't raise")
-    @greentest.skipOnPy2("Only Python 2 decodes")
     def test_communicate_undecodable(self):
         # If the subprocess writes non-decodable data, `communicate` raises the
         # same UnicodeDecodeError that the stdlib does, instead of

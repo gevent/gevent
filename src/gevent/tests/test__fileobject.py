@@ -17,18 +17,10 @@ try:
 except ImportError:
     GreenOpenDescriptor = None
 
-from gevent._compat import PY2
-from gevent._compat import PY3
-from gevent._compat import text_type
 
 import gevent.testing as greentest
 from gevent.testing import sysinfo
 
-try:
-    ResourceWarning # pylint:disable=used-before-assignment
-except NameError:
-    class ResourceWarning(Warning):
-        "Python 2 fallback"
 
 # pylint:disable=unspecified-encoding
 
@@ -136,11 +128,9 @@ class TestFileObjectBlock(CleanupMixin,
 
         with open(path, 'rb') as f_raw:
             f = self._makeOne(f_raw, 'rb', close=False)
-
-            if PY3 or hasattr(f, 'seekable'):
-                # On Python 3, all objects should have seekable.
-                # On Python 2, only our custom objects do.
-                self.assertTrue(f.seekable())
+            # On Python 3, all objects should have seekable.
+            # On Python 2, only our custom objects do.
+            self.assertTrue(f.seekable())
             f.seek(15)
             self.assertEqual(15, f.tell())
 
@@ -169,7 +159,7 @@ class TestFileObjectBlock(CleanupMixin,
         else:
             # Note that we don't use ``io.open()`` for the raw file,
             # on Python 2. We want 'r' to mean what the usual call to open() means.
-            opener = io.open if PY3 else open
+            opener = io.open
             with opener(path, open_mode, **open_kwargs) as raw:
                 with self._makeOne(raw) as f:
                     gevent_data = getattr(f, meth)()
@@ -190,7 +180,7 @@ class TestFileObjectBlock(CleanupMixin,
             'r+',
             buffering=5, encoding='utf-8'
         )
-        self.assertIsInstance(gevent_data, text_type)
+        self.assertIsInstance(gevent_data, str)
 
     @skipUnlessWorksWithRegularFiles
     def test_does_not_leak_on_exception(self):
@@ -341,7 +331,7 @@ class ConcurrentFileObjectMixin(object):
         self.addCleanup(os.close, w)
         reader = self._makeOne(r)
         self._close_on_teardown(reader)
-        self.assertEqual(PY2, hasattr(reader, 'read1'))
+        self.assertFalse(hasattr(reader, 'read1'))
 
     def test_bufsize_0(self):
         # Issue #840

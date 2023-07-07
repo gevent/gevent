@@ -104,21 +104,19 @@ class TestRun(greentest.TestCase):
     # Also, occasionally, they get '3' instead of '2' for the number of threads.
     # That could have something to do with...? Most commonly that's PyPy, but
     # sometimes CPython. Again, haven't reproduced.
-    @greentest.skipOnPy2("lost sys.stderr sometimes")
+    # Not relevant since Py2 has been dropped.
     def test_threadpool_in_patched_after_patch(self):
         # Issue 1484
         # If we don't have this correct, then we get exceptions
         out = self._run(os.path.join('monkey_package', 'threadpool_monkey_patches.py'))
         self.assertEqual(out, ['False', '2'])
 
-    @greentest.skipOnPy2("lost sys.stderr sometimes")
     def test_threadpool_in_patched_after_patch_module(self):
         # Issue 1484
         # If we don't have this correct, then we get exceptions
         out = self._run('monkey_package.threadpool_monkey_patches', module=True)
         self.assertEqual(out, ['False', '2'])
 
-    @greentest.skipOnPy2("lost sys.stderr sometimes")
     def test_threadpool_not_patched_after_patch_module(self):
         # Issue 1484
         # If we don't have this correct, then we get exceptions

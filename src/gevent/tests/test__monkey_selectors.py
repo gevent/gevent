@@ -17,9 +17,6 @@ from gevent.tests.test__selectors import SelectorTestMixin
 
 class TestSelectors(SelectorTestMixin, greentest.TestCase):
 
-    @greentest.skipOnPy2(
-        'selectors2 backport does not use _select'
-    )
     @greentest.skipOnWindows(
         "SelectSelector._select is a normal function on Windows"
     )

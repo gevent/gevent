@@ -12,7 +12,7 @@ from __future__ import print_function
 
 from gevent.hub import getcurrent
 from gevent._compat import PURE_PYTHON
-from gevent._compat import PY2
+
 # This is the one exception to the rule of where to
 # import Semaphore, obviously
 from gevent import monkey
@@ -180,8 +180,6 @@ def _fixup_docstrings():
         assert c.__doc__ == b.__doc__
         for m in 'acquire', 'release', 'wait':
             c_meth = getattr(c, m)
-            if PY2:
-                c_meth = c_meth.__func__
             b_meth = getattr(b, m)
             c_meth.__doc__ = b_meth.__doc__
 
