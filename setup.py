@@ -233,11 +233,6 @@ install_requires = greenlet_requires + CFFI_REQUIRES + [
     # ultimately be published, but at this writing only the event
     # interfaces are.
     'zope.interface',
-    # setuptools is also used (via pkg_resources) for event
-    # notifications. It's a hard dependency of zope.interface
-    # anyway.
-    # XXX: Drop this, shift to importlib.
-    'setuptools',
 ]
 
 # We use headers from greenlet, so it needs to be installed before we

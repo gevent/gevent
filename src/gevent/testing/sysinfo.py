@@ -209,9 +209,9 @@ def libev_supports_linux_iouring():
 
 def resolver_dnspython_available():
     # Try hard not to leave around junk we don't have to.
-    import pkg_resources
+    from importlib import metadata
     try:
-        pkg_resources.get_distribution('dnspython')
-    except pkg_resources.DistributionNotFound:
+        metadata.distribution('dnspython')
+    except metadata.PackageNotFoundError:
         return False
     return True

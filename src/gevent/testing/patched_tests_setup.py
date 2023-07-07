@@ -115,6 +115,17 @@ def get_switch_expected(fullname):
 
 
 disabled_tests = [
+    # "test an implementation detail of thread objects" --- our implementation differs
+    "test_threading.ThreadTests.test_tstate_lock",
+    # This likes to check the number of native thread IDs using the ``native_id`` attribute,
+    # and the ``get_native_id()`` function. Because we're monkey-patched,
+    # those don't change in other threads, so it won't work.
+    'test_threading.ThreadTests.test_various_ops',
+    # Added to address CPython issue 27718; it wants functions in the signal
+    # module to have __module__ equal to 'signal', but obviously when we
+    # monkey patch they don't.
+    'test_signal.GenericTests.test_functions_module_attr',
+
     # XXX: While we debug latest updates. This is leaking
     'test_threading.ThreadTests.test_no_refcycle_through_target',
 

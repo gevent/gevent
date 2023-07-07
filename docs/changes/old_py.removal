@@ -1,2 +1,10 @@
 Remove support for obsolete Python versions. This is everything prior
 to 3.8.
+
+Related changes include:
+
+- Stop using ``pkg_resources`` to find entry points (plugins).
+  Instead, use ``importlib.metadata``.
+- Honor ``sys.unraisablehook`` when a callback function produces an
+  exception, and handling the exception in the hub *also* produces an
+  exception. In older versions, these would be simply printed.

@@ -62,25 +62,11 @@ if sys.platform == 'win32':
     import socket  # pylint:disable=unused-import,useless-suppression
     del socket
 
-try:
-    # Floating point number, in number of seconds,
-    # like time.time
-    getswitchinterval = sys.getswitchinterval
-    setswitchinterval = sys.setswitchinterval
-except AttributeError:
-    # Running on Python 2
-    _switchinterval = 0.005
 
-    def getswitchinterval():
-        return _switchinterval
-
-    def setswitchinterval(interval):
-        # Weed out None and non-numbers. This is not
-        # exactly exception compatible with the Python 3
-        # versions.
-        if interval > 0:
-            global _switchinterval
-            _switchinterval = interval
+# Floating point number, in number of seconds,
+# like time.time
+getswitchinterval = sys.getswitchinterval
+setswitchinterval = sys.setswitchinterval
 
 from gevent._config import config
 from gevent._hub_local import get_hub
