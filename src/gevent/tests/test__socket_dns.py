@@ -657,21 +657,22 @@ class TestGeventOrg(TestCase):
     # trying www.gevent.org which is a CNAME to readthedocs.org then worked, but it became
     # an alias for python-gevent.readthedocs.org, which is an alias for readthedocs.io,
     # and which also has multiple addresses. So we run the resolver twice to try to get
-    # the different answers, if needed.
+    # the different answers, if needed. Even then it's not enough, so
+    # we normalize the two addresses we get to a single one.
     HOSTNAME = 'www.gevent.org'
 
 
-    if RESOLVER_NOT_SYSTEM:
-        def _normalize_result_gethostbyname(self, result):
-            if result == '104.17.33.82':
-                result = '104.17.32.82'
-            return result
 
-        def _normalize_result_gethostbyname_ex(self, result):
-            result = super(TestGeventOrg, self)._normalize_result_gethostbyname_ex(result)
-            if result[0] == 'python-gevent.readthedocs.org':
-                result = ('readthedocs.io', ) + result[1:]
-            return result
+    def _normalize_result_gethostbyname(self, result):
+        if result == '104.17.33.82':
+            result = '104.17.32.82'
+        return result
+
+    def _normalize_result_gethostbyname_ex(self, result):
+        result = super(TestGeventOrg, self)._normalize_result_gethostbyname_ex(result)
+        if result[0] == 'python-gevent.readthedocs.org':
+            result = ('readthedocs.io', ) + result[1:]
+        return result
 
     def test_AI_CANONNAME(self):
         # Not all systems support AI_CANONNAME; notably tha manylinux
