@@ -555,7 +555,7 @@ if WIN:
         # On appveyor, this test has been seen to fail on 3.9 and 3.8
     ]
 
-    if sys.version_info[2] <= (3, 9):
+    if sys.version_info[:2] <= (3, 9):
         disabled_tests += [
             'test_context.HamtTest.test_hamt_collision_3',
         ]
