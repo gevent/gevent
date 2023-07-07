@@ -1,9 +1,11 @@
 import sys
 import unittest
+from gevent import testing as greentest
 
 
 class TestSubnormalFloatsAreNotDisabled(unittest.TestCase):
 
+    @greentest.skipOnCI('Some of our tests we compile with -Ofast, which breaks this.')
     def test_subnormal_is_not_zero(self):
         # Enabling the -Ofast compiler flag resulted in subnormal floats getting
         # disabled the moment when gevent was imported. This impacted libraries
