@@ -17,9 +17,6 @@ class Condition(object):
     def __or__(self, other):
         return OrCondition(self, other)
 
-    def __nonzero__(self):
-        return self.__bool__()
-
     def __bool__(self):
         raise NotImplementedError
 
@@ -184,7 +181,7 @@ class DefinitionsMeta(type):
     # a metaclass on Python 3 that makes sure we only set attributes once. pylint doesn't
     # warn about that.
     @classmethod
-    def __prepare__(cls, name, bases): # pylint:disable=unused-argument
+    def __prepare__(mcs, name, bases): # pylint:disable=unused-argument,bad-dunder-name
         return SetOnceMapping()
 
 

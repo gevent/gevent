@@ -159,7 +159,7 @@ class Test(greentest.TestCase):
         start = time.time()
         with Timeout(XDELAY, False):
             sleep(XDELAY * 2)
-        delta = (time.time() - start)
+        delta = time.time() - start
         self.assertTimeWithinRange(delta, 0, XDELAY * 2)
 
         # passing None as seconds disables the timer

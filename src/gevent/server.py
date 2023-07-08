@@ -15,7 +15,6 @@ from _socket import SOCK_DGRAM
 from gevent.baseserver import BaseServer
 from gevent.socket import EWOULDBLOCK
 from gevent.socket import socket as GeventSocket
-from gevent._compat import PYPY
 
 __all__ = ['StreamServer', 'DatagramServer']
 

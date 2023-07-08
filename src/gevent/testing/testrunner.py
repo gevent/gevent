@@ -34,7 +34,7 @@ from . import travis
 # See https://bitbucket.org/pypy/pypy/issues/2769/systemerror-unexpected-internal-exception
 try:
     __import__('_testcapi')
-except (ImportError, OSError, IOError):
+except (ImportError, OSError):
     # This can raise a wide variety of errors
     pass
 
@@ -521,7 +521,7 @@ class Discovery(object):
                     not os.path.exists(abs_filename)
                     and not filename.endswith('.py')
                     and os.path.exists(abs_filename + '.py') ):
-                abs_filename = abs_filename + '.py'
+                abs_filename += '.py'
 
             with open(abs_filename, 'rb') as f:
                 # Some of the test files (e.g., test__socket_dns) are

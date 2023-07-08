@@ -224,6 +224,7 @@ def getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
     # function simply with integers.
     addrlist = get_hub().resolver.getaddrinfo(host, port, family, type, proto, flags)
     result = [
+        # pylint:disable=undefined-variable
         (_intenum_converter(af, AddressFamily),
          _intenum_converter(socktype, SocketKind),
          proto, canonname, sa)
@@ -527,7 +528,9 @@ class SocketMixin(object):
             self.hub.cancel_wait(self._write_event, cancel_wait_ex)
         self._sock.shutdown(how)
 
+    # pylint:disable-next=undefined-variable
     family = property(lambda self: _intenum_converter(self._sock.family, AddressFamily))
+    # pylint:disable-next=undefined-variable
     type = property(lambda self: _intenum_converter(self._sock.type, SocketKind))
     proto = property(lambda self: self._sock.proto)
 

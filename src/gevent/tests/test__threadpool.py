@@ -510,7 +510,7 @@ class SomeClass(object):
 
     def func(self, arg1, kwarg1=None):
         result = Object()
-        self.refs.extend([weakref.ref(x) for x in [arg1, kwarg1, result]])
+        self.refs.extend([weakref.ref(x) for x in (arg1, kwarg1, result)])
         return result
 
 

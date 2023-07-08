@@ -40,7 +40,7 @@ class TestFormat(greentest.TestCase):
 
     def test_with_Greenlet(self):
         rl = local.local()
-        rl.foo = 1
+        rl.some_attr = 1
         def root():
             l = MyLocal(42)
             assert l

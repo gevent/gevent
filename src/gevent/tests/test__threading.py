@@ -66,10 +66,8 @@ class TestLockThread(greentest.TestCase):
 
         def background():
             spawned.append(True)
-            while 1:
-                # blocking= in Py3, wait (no default, no name) in Py2
-                if lock.acquire(False):
-                    break
+            while not lock.acquire(False):
+                pass
 
         thread = threading.Thread(target=background)
         # If lock.acquire(False) doesn't yield when it fails,

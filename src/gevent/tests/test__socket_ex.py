@@ -14,7 +14,7 @@ class TestClosedSocket(greentest.TestCase):
         try:
             sock.send(b'a', timeout=1)
             self.fail("Should raise socket error")
-        except (socket.error, OSError) as ex:
+        except OSError as ex:
             if ex.args[0] != errno.EBADF:
                 if sys.platform.startswith('win'):
                     # Windows/Py3 raises "OSError: [WinError 10038] "

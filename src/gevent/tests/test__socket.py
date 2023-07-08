@@ -198,7 +198,7 @@ class TestTCP(greentest.TestCase):
                     # from generating ``ConnectionResetError`` on AppVeyor.
                     try:
                         client = client.unwrap()
-                    except (ValueError, IOError, OSError):
+                    except (ValueError, OSError):
                         # PyPy raises _cffi_ssl._stdssl.error.SSLSyscallError,
                         # which is an IOError in 2.7 and OSError in 3.7
                         pass
@@ -214,7 +214,7 @@ class TestTCP(greentest.TestCase):
                     # lets do a shutdown everywhere, but only after removing any
                     # SSL wrapping.
                     client.shutdown(socket.SHUT_RDWR)
-                except (OSError, socket.error):
+                except OSError:
                     pass
 
                 log("Client will close")

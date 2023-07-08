@@ -9,7 +9,7 @@ Python 3 socket module.
 from __future__ import absolute_import
 import io
 import os
-import sys
+
 
 from gevent import _socketcommon
 from gevent._util import copy_globals
@@ -51,7 +51,7 @@ class _closedsocket(object):
 
     detach = fileno
 
-    def _dummy(*args, **kwargs): # pylint:disable=no-method-argument,unused-argument
+    def _dummy(*args, **kwargs): # pylint:disable=no-method-argument,unused-argument,no-self-argument
         raise OSError(EBADF, 'Bad file descriptor')
     # All _delegate_methods must also be initialized here.
     send = recv = recv_into = sendto = recvfrom = recvfrom_into = _dummy
@@ -311,6 +311,7 @@ class socket(_socketcommon.SocketMixin):
         # Break any reference to the loop.io objects. Our fileno,
         # which they were tied to, is about to be free to be reused, so these
         # objects are no longer functional.
+        # pylint:disable-next=superfluous-parens
         self._drop_events_and_close(closefd=(reason == 'closed'))
 
         self._sock = _closedsocket(family, type, proto, fileno, reason)

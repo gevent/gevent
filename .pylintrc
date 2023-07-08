@@ -1,7 +1,77 @@
-[MAIN]
-load-plugins=pylint.extensions.bad_builtin
-
 [MASTER]
+load-plugins=pylint.extensions.bad_builtin,
+   pylint.extensions.code_style,
+   pylint.extensions.dict_init_mutate,
+   pylint.extensions.dunder,
+   pylint.extensions.emptystring,
+   pylint.extensions.comparison_placement,
+   pylint.extensions.confusing_elif,
+   pylint.extensions.for_any_all,
+   pylint.extensions.consider_refactoring_into_while_condition,
+   pylint.extensions.check_elif,
+   pylint.extensions.eq_without_hash,
+   pylint.extensions.overlapping_exceptions,
+
+#    pylint.extensions.comparetozero,
+# Takes out ``if x == 0:`` and wants you to write ``if not x:``
+# but in many cases, the == 0 is actually much more clear.
+
+#    pylint.extensions.mccabe,
+# We have too many too-complex methods. We should enable this and fix them
+# one by one.
+
+#    pylint.extensions.redefined_variable_type,
+# We use that pattern during initialization.
+
+# magic_value wants you to not use arbitrary strings and numbers
+# inline in the code. But it's overzealous and has way too many false
+# positives. Trust people to do the most readable thing.
+#   pylint.extensions.magic_value
+
+# Empty comment would be good, except it detects blank lines within
+# a single comment block.
+#
+# Those are often used to separate paragraphs, like here.
+#   pylint.extensions.empty_comment,
+
+# consider_ternary_expression is a nice check, but is also overzealous.
+# Trust the human to do the readable thing.
+#    pylint.extensions.consider_ternary_expression,
+
+# redefined_loop_name tends to catch us with things like
+# for name in (a, b, c): name = name + '_column' ...
+#    pylint.extensions.redefined_loop_name,
+
+# This wants you to turn ``x in (1, 2)`` into ``x in {1, 2}``.
+# They both result in the LOAD_CONST bytecode, one a tuple one a
+# frozenset. In theory a set lookup using hashing is faster than
+# a linear scan of a tuple; but if the tuple is small, it can often
+# actually be faster to scan the tuple.
+#   pylint.extensions.set_membership,
+
+# Fix zope.cachedescriptors.property.Lazy; the property-classes doesn't seem to
+# do anything.
+# https://stackoverflow.com/questions/51160955/pylint-how-to-specify-a-self-defined-property-decorator-with-property-classes
+# For releases prior to 2.14.2, this needs to be a one-line, quoted string. After that,
+# a multi-line string.
+# - Make zope.cachedescriptors.property.Lazy look like a property;
+#   fixes pylint thinking it is a method.
+# - Run in Pure Python mode (ignore C extensions that respect this);
+#   fixes some issues with zope.interface, like IFoo.providedby(ob)
+#   claiming not to have the right number of parameters...except no, it does not.
+init-hook =
+    import astroid.bases
+    astroid.bases.POSSIBLE_PROPERTIES.add('Lazy')
+    astroid.bases.POSSIBLE_PROPERTIES.add('LazyOnClass')
+    astroid.bases.POSSIBLE_PROPERTIES.add('readproperty')
+    astroid.bases.POSSIBLE_PROPERTIES.add('non_overridable')
+    import os
+    os.environ['PURE_PYTHON'] = ("1")
+    # Ending on a quoted string
+    # breaks pylint 2.14.5 (it strips the trailing quote. This is
+    # probably because it tries to handle one-line quoted strings as well as multi-blocks).
+    # The parens around it fix the issue.
+
 extension-pkg-whitelist=gevent.greenlet,gevent.libuv._corecffi,gevent.libev._corecffi,gevent.libev._corecffi.lib,gevent.local,gevent._ident
 
 # Control the amount of potential inferred values when inferring a single
@@ -57,6 +127,9 @@ limit-inference-results=1
 # Pylint 2.6+ adds some python-3-only things that don't apply: raise-missing-from, super-with-arguments, consider-using-f-string, redundant-u-string-prefix
 # unnecessary-lambda-assignment: New check introduced in v2.14.0
 # unnecessary-dunder-call: New check introduced in v2.14.0
+# consider-using-assignment-expr: wants you to use the walrus operator.
+#   It hits way too much and its not clear they would be improvements.
+# confusing-consecutive-elif: Are they though?
 disable=wrong-import-position,
     wrong-import-order,
     missing-docstring,
@@ -82,9 +155,15 @@ disable=wrong-import-position,
     raise-missing-from,
     super-with-arguments,
     consider-using-f-string,
+    consider-using-assignment-expr,
     redundant-u-string-prefix,
     unnecessary-lambda-assignment,
-    unnecessary-dunder-call
+    unnecessary-dunder-call,
+    use-dict-literal,
+    confusing-consecutive-elif,
+
+
+enable=consider-using-augmented-assign
 
 [FORMAT]
 # duplicated from setup.cfg

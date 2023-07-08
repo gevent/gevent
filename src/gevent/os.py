@@ -44,7 +44,7 @@ to manage child processes.
 from __future__ import absolute_import
 
 import os
-import sys
+
 from gevent.hub import _get_hub_noargs as get_hub
 from gevent.hub import reinit
 from gevent._config import config

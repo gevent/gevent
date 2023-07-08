@@ -73,8 +73,8 @@ class Test(greentest.TestCase):
         except:
             conn.close()
             raise
-        else:
-            conn.banner = banner
+
+        conn.banner = banner
         return conn
 
     def _wait_for_prompt(self, conn):

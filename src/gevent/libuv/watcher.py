@@ -204,6 +204,7 @@ class watcher(_base.watcher):
     ref = property(_get_ref, _set_ref)
 
     def feed(self, _revents, _callback, *_args):
+        # pylint:disable-next=broad-exception-raised
         raise Exception("Not implemented")
 
 class io(_base.IoMixin, watcher):
@@ -602,6 +603,7 @@ class async_(_base.AsyncMixin, watcher):
     def send(self):
         assert self._callback is not async_._callback, "Sending to a closed watcher"
         if libuv.uv_is_closing(self._watcher):
+            # pylint:disable-next=broad-exception-raised
             raise Exception("Closing handle")
         libuv.uv_async_send(self._watcher)
 

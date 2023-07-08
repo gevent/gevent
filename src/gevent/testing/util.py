@@ -358,7 +358,7 @@ def _find_test_status(took, out):
         if m:
             skipped = _colorize('skipped', out[m.start():m.end()])
             skipped_count = int(out[m.start(1):m.end(1)])
-    status = status % (took, skipped)
+    status = status % (took, skipped) # pylint:disable=consider-using-augmented-assign
     if took > 10:
         status = _colorize('slow-test', status)
     return status, run_count, skipped_count

@@ -70,8 +70,7 @@ def get_fileno(obj):
         if not isinstance(obj, integer_types):
             raise TypeError('argument must be an int, or have a fileno() method: %r' % (obj,))
         return obj
-    else:
-        return fileno_f()
+    return fileno_f()
 
 
 class SelectResult(object):

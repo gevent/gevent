@@ -47,7 +47,7 @@ class Test(greentest.TestCase):
     def assert_raises_EBADF(self, func):
         try:
             result = func()
-        except (socket.error, OSError) as ex:
+        except OSError as ex:
             # Windows/Py3 raises "OSError: [WinError 10038]"
             if ex.args[0] == errno.EBADF:
                 return

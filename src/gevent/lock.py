@@ -322,7 +322,7 @@ class RLock(object):
         """
         me = getcurrent()
         if self._owner is me:
-            self._count = self._count + 1
+            self._count += 1
             return 1
         rc = self._block.acquire(blocking, timeout)
         if rc:
@@ -344,7 +344,7 @@ class RLock(object):
             raise RuntimeError("cannot release un-acquired lock. Owner: %r Current: %r" % (
                 self._owner, getcurrent()
             ))
-        self._count = count = self._count - 1
+        self._count = count = self._count - 1 # pylint:disable=consider-using-augmented-assign
         if not count:
             self._owner = None
             self._block.release()

@@ -989,7 +989,7 @@ class WSGIHandler(object):
             finally:
                 try:
                     self.wsgi_input._discard()
-                except (socket.error, IOError):
+                except socket.error:
                     # Don't let exceptions during discarding
                     # input override any exception that may have been
                     # raised by the application, such as our own _InvalidClientInput.

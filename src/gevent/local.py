@@ -366,7 +366,7 @@ class local(object):
     """
     __slots__ = tuple(_local_attrs - {'__class__', '__cinit__'})
 
-    def __cinit__(self, *args, **kw):
+    def __cinit__(self, *args, **kw): # pylint:disable=bad-dunder-name
         if args or kw:
             if type(self).__init__ == object.__init__: # pylint:disable=comparison-with-callable
                 raise TypeError("Initialization arguments are not supported", args, kw)
@@ -600,7 +600,7 @@ if local.__module__ == 'gevent.local':
     local.__new__ = classmethod(__new__)
 else: # pragma: no cover
     # Make sure we revisit in case of changes to the (accelerator) module names.
-    if local.__module__ != 'gevent._gevent_clocal':
+    if local.__module__ != 'gevent._gevent_clocal': # pylint:disable=else-if-used
         raise AssertionError("Module names changed (local: %r; __name__: %r); revisit this code" % (
             local.__module__, __name__) )
 

@@ -34,7 +34,7 @@ def Writer(fobj, line):
 def close_fd_quietly(fd):
     try:
         os.close(fd)
-    except (IOError, OSError):
+    except OSError:
         pass
 
 def skipUnlessWorksWithRegularFiles(func):
@@ -275,7 +275,7 @@ class TestFileObjectBlock(CleanupMixin,
         f.close()
         try:
             nf.close()
-        except (OSError, IOError):
+        except OSError:
             # OSError: Py3, IOError: Py2
             pass
         self.assertEqual(f.name, fileno)

@@ -59,14 +59,10 @@ from gevent.hub import linkproxy
 from gevent.hub import sleep
 from gevent.hub import getcurrent
 from gevent._compat import integer_types, string_types, xrange
-# from gevent._compat import PY3
-# from gevent._compat import PY35
-# from gevent._compat import PY36
-# from gevent._compat import PY37
-# from gevent._compat import PY38
+
 from gevent._compat import PY311
 from gevent._compat import PYPY
-from gevent._compat import reraise
+
 from gevent._compat import fsdecode
 from gevent._compat import fsencode
 from gevent._compat import PathLike
@@ -539,7 +535,7 @@ class _CommunicatingGreenlets(object):
                 if hasattr(fobj, 'flush'):
                     # 3.6 started expecting flush to be called.
                     fobj.flush()
-        except (OSError, IOError, BrokenPipeError) as ex:
+        except (OSError, BrokenPipeError) as ex:
             # Test cases from the stdlib can raise BrokenPipeError
             # without setting an errno value. This matters because
             # Python 2 doesn't have a BrokenPipeError.
@@ -824,7 +820,7 @@ class Popen(object):
             for f in filter(None, (self.stdin, self.stdout, self.stderr)):
                 try:
                     f.close()
-                except (OSError, IOError):
+                except OSError:
                     pass  # Ignore EBADF or other errors.
 
             if not self._closed_child_pipe_fds:
@@ -840,7 +836,7 @@ class Popen(object):
                 for fd in to_close:
                     try:
                         os.close(fd)
-                    except (OSError, IOError):
+                    except OSError:
                         pass
             raise
 
@@ -1682,7 +1678,7 @@ class Popen(object):
                             # same fd more than once, or standard fds.
                             if not True:
                                 closed = set([None])
-                                for fd in [p2cread, c2pwrite, errwrite]:
+                                for fd in (p2cread, c2pwrite, errwrite):
                                     if fd not in closed and fd > 2:
                                         os.close(fd)
                                         closed.add(fd)

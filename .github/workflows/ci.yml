@@ -223,20 +223,15 @@ jobs:
           python -c 'import gevent.core; print(gevent.core.loop)'
           python -c 'import gevent.ares; print(gevent.ares)'
           ccache -s
-      # Lint disabled while I get the build back in shape.
-      # - name: Lint (Python 3)
-      #   if: matrix.python-version == '3.10' && startsWith(runner.os, 'Linux')
-      #   # We only need to do this on one version, and it should be Python 3, because
-      #   # pylint has stopped updating for Python 2.
-      #   # We do this here rather than a separate job to avoid the compilation overhead.
-      #   # TODO: Revisit this when we have caching of that part.
-      #   # astroid 2.12.10 and pylint 2.15.3 encounter infinite
-      #   # recursion in gevent/_ssl3.py on CI; I can't reproduce
-      #   # locally on my Mac. Trying some different version pins to see
-      #   # what we get
-      #   run: |
-      #     pip install -U 'pylint<2.15'
-      #     python -m pylint --rcfile=.pylintrc gevent
+
+      - name: Lint
+        if: matrix.python-version == '3.11' && startsWith(runner.os, 'Linux')
+        # We only need to do this on one version.
+        # We do this here rather than a separate job to avoid the compilation overhead.
+        # TODO: Revisit this when we have caching of that part.
+        run: |
+          pip install -U pylint
+          python -m pylint --rcfile=.pylintrc gevent
       - name: "Tests: Basic"
         run: |
           python -m gevent.tests --second-chance $G_USE_COV

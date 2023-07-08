@@ -817,6 +817,7 @@ class TestUseWrite(TestCase):
             write(self.body)
             write(self.body)
         else:
+            # pylint:disable-next=broad-exception-raised
             raise Exception('Invalid url')
         return [self.end]
 
@@ -1145,8 +1146,7 @@ class TestContentLength304(TestCase):
         except AssertionError as ex:
             start_response('200 Raised', [])
             return ex.args
-        else:
-            raise AssertionError('start_response did not fail but it should')
+        raise AssertionError('start_response did not fail but it should')
 
     def test_err(self):
         body = "Invalid Content-Length for 304 response: '100' (must be absent or zero)"
@@ -1699,7 +1699,7 @@ class TestInputRaw(greentest.BaseTestCase):
         data = b'asdf\nghij\n'
         long_data = b'a' * (pywsgi.MAX_REQUEST_LINE + 10)
         long_data += b'\n'
-        data = data + long_data
+        data += long_data
         partial_data = b'qjk\n' # Note terminating \n
         n = 25 * 1000000000
         if hasattr(n, 'bit_length'):

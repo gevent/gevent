@@ -68,7 +68,7 @@ class TestDestroyInChildWithActiveSpawn(unittest.TestCase):
             hub.destroy(destroy_loop=True)
             self.assertFalse(run)
             os._exit(0)
-            return
+            return # pylint:disable=unreachable
 
         # The parent.
         # Briefly prevent us from spinning our event loop.

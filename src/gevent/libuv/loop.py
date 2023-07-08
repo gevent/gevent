@@ -116,6 +116,7 @@ class loop(AbstractLoop):
         self._io_watchers = {}
         self._fork_watchers = set()
         self._pid = os.getpid()
+        # pylint:disable-next=superfluous-parens
         self._default = (self._ptr == libuv.uv_default_loop())
         self._queued_callbacks = []
 
