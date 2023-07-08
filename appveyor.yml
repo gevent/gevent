@@ -44,6 +44,12 @@ environment:
 
     # Pre-installed Python versions, which Appveyor may upgrade to
     # a later point release.
+    # XXX: Cython 3.0b3 won't build us on 3.12 yet.
+    # - PYTHON: "C:\\Python312-x64"
+    #   PYTHON_VERSION: "3.12.0b3"
+    #   PYTHON_ARCH: "64"
+    #   PYTHON_EXE: python
+    #   APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
 
     # 64-bit
     - PYTHON: "C:\\Python311-x64"

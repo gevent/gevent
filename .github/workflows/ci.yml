@@ -83,13 +83,17 @@ jobs:
         # 3.10+ needs more work: dnspython for example doesn't work
         # with it. That means for the bulk of our testing we need to
         # stick to 3.9.
-        python-version: [3.8, 3.9, '3.10', '3.11']
+        # XXX: PyPy came out of the matrix!
+        python-version: ["3.12-dev", 3.8, 3.9, '3.10', '3.11']
         os: [macos-latest, ubuntu-latest]
         exclude:
           - os: macos-latest
             python-version: 3.8
           - os: macos-latest
             python-version: 3.9
+          - os: macos-latest
+            python-version: 3.10
+
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -162,7 +166,7 @@ jobs:
           pip install -U -q setuptools wheel twine
           pip install -q -U 'cffi;platform_python_implementation=="CPython"'
           pip install -q -U 'cython>=3.0b3; python_version < "3.12"' "Cython @ https://github.com/cython/cython/archive/37f4dcdc04547875e2836fda076f5707ec50e579.zip; python_version >= '3.12'"
-          pip install 'greenlet>=2.0.0 ;platform_python_implementation=="CPython"'
+          pip install 'greenlet>=2.0.0 ;platform_python_implementation=="CPython"' 'greenlet >= 3.0a1; python_version >="3.12"'
 
       - name: Build gevent (non-Mac)
         if: ${{ ! startsWith(runner.os, 'Mac') }}
