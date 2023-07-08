@@ -558,6 +558,14 @@ if WIN:
     if sys.version_info[:2] <= (3, 9):
         disabled_tests += [
             'test_context.HamtTest.test_hamt_collision_3',
+            # Sometimes fails::
+            #
+            #     self.assertIn('got more than ', str(cm.exception))
+            # AssertionError: 'got more than ' not found in
+            #    'Remote end closed connection without response'
+            #
+            'test_httplib.BasicTest.test_overflowing_header_limit_after_100',
+
         ]
 
     # These are a problem on 3.5; on 3.6+ they wind up getting (accidentally) disabled.

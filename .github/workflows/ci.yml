@@ -306,6 +306,11 @@ jobs:
           python -m coverage report -i || true
       - name: Coveralls Parallel
         uses: coverallsapp/github-action@v2
+        # 20230707: On macOS, this installs coveralls from homebrew.
+        # It then runs ``coveralls report``. But that is producing
+        # a usage error from ``coveralls`` (report is not recognized) Presumably the
+        # brew and action versions are out of sync?
+        if: (startsWith(runner.os, 'Linux'))
         with:
           flag-name: run-${{ join(matrix.*, '-') }}
           parallel: true
