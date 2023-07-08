@@ -426,7 +426,6 @@ jobs:
       matrix:
         python-version: [3.9]
         image:
-          - manylinux2010_x86_64
           - manylinux2014_aarch64
           - manylinux2014_ppc64le
           - manylinux2014_s390x
@@ -453,7 +452,7 @@ jobs:
           platforms: all
       - name: Build and test gevent
         env:
-          DOCKER_IMAGE: ${{ matrix.image }}
+          DOCKER_IMAGE: quay.io/pypa/${{ matrix.image }}
           GEVENT_MANYLINUX_NAME: ${{ matrix.image }}
 
         run: scripts/releases/make-manylinux
