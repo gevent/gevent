@@ -1228,7 +1228,7 @@ if TRAVIS:
 if RUNNING_ON_MUSLLINUX:
     disabled_tests += [
         # This is supposed to *not* crash, but on the muslilnux image, it
-        # does crash.
+        # does crash (exitcode -11, ie, SIGSEGV)
         'test_threading.ThreadingExceptionTests.test_recursion_limit',
     ]
 
