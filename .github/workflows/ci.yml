@@ -225,7 +225,7 @@ jobs:
           ccache -s
 
       - name: Lint
-        if: matrix.python-version == '3.11' && startsWith(runner.os, 'Linux')
+        if: matrix.python-version == '3.10' && startsWith(runner.os, 'Linux')
         # We only need to do this on one version.
         # We do this here rather than a separate job to avoid the compilation overhead.
         # TODO: Revisit this when we have caching of that part.
