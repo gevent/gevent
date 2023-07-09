@@ -581,9 +581,10 @@ class TestFunctions(greentest.TestCase):
             exclude.append('gethostbyname')
             exclude.append('gethostbyname_ex')
             exclude.append('gethostbyaddr')
-        if sys.version_info[:2] == (3, 11):
-            # Be careful not to exclude this on 3.12, etc, in case of
-            # more changes.
+        if sys.version_info[:2] < (3, 11):
+            # 3.11+ add ``*, all_errors=False``. We allow that on all versions,
+            # forcing it to a false value if the user sends a true value before
+            # exception groups exist.
             exclude.append('create_connection')
         self.assertMonkeyPatchedFuncSignatures('socket', exclude=exclude)
 

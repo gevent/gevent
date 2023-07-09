@@ -39,6 +39,9 @@ __imports__ += [
 # non-Python (native) APIs, so we shouldn't mess with it.
 __imports__.append('get_native_id')
 
+# Added to 3.12
+if hasattr(__thread__, 'daemon_threads_allowed'):
+    __imports__.append('daemon_threads_allowed')
 
 error = __thread__.error
 

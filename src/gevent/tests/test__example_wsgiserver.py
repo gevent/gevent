@@ -62,7 +62,8 @@ class Test_wsgiserver(util.TestServer):
             sock = socket.create_connection((params.DEFAULT_LOCAL_HOST_ADDR, self.PORT))
             ssl_sock = None
             if self._use_ssl:
-                ssl_sock = ssl.wrap_socket(sock) # pylint:disable=deprecated-method
+                context = ssl.SSLContext()
+                ssl_sock = context.wrap_socket(sock)
                 sock_file = ssl_sock.makefile(mode='rwb')
             else:
                 sock_file = sock.makefile(mode='rwb')

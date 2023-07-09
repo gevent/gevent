@@ -8,3 +8,6 @@ Related changes include:
 - Honor ``sys.unraisablehook`` when a callback function produces an
   exception, and handling the exception in the hub *also* produces an
   exception. In older versions, these would be simply printed.
+- ``setup.py`` no longer includes the ``setup_requires`` keyword.
+  Installation with a tool that understands ``pyproject.toml`` is
+  recommended.

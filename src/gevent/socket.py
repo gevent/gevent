@@ -59,7 +59,8 @@ except AttributeError:
     _GLOBAL_DEFAULT_TIMEOUT = object()
 
 
-def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=None, **kwargs):
+def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=None, *,
+                      all_errors=False):
     """
     create_connection(address, timeout=None, source_address=None, *, all_errors=False) -> socket
 
@@ -81,20 +82,18 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
         it will be used instead of ignored, if the platform supplies
         :func:`socket.inet_pton`.
     .. versionchanged:: 22.08.0
-        Add the *all_errors* argument. This only has meaning on Python 3.11;
+        Add the *all_errors* argument. This only has meaning on Python 3.11+;
         it is a programming error to pass it on earlier versions.
+    .. versionchanged:: NEXT
+        You can pass a value for ``all_errors`` on any version of Python.
+        It is forced to false for any version before 3.11 inside the function.
     """
     # Sigh. This function is a near-copy of the CPython implementation.
     # Even though we simplified some things, it's still a little complex to
     # cope with error handling, which got even more complicated in 3.11.
     # pylint:disable=too-many-locals,too-many-branches
-
-    all_errors = False
-    if PY311:
-        all_errors = kwargs.pop('all_errors', False)
-    if kwargs:
-        raise TypeError("Too many keyword arguments to create_connection", kwargs)
-
+    if not PY311:
+        all_errors = False
 
     host, port = address
     exceptions = []

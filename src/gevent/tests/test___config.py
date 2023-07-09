@@ -121,8 +121,6 @@ class TestConfig(unittest.TestCase):
 
 class TestImportableSetting(unittest.TestCase):
 
-    assertRaisesRegex = getattr(unittest.TestCase, 'assertRaisesRegex',
-                                unittest.TestCase.assertRaisesRegexp)
     def test_empty_list(self):
         i = _config.ImportableSetting()
         with self.assertRaisesRegex(ImportError,

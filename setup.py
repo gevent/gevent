@@ -208,7 +208,10 @@ greenlet_requires = [
     # 1.1.3 is needed for 3.11, and supports everything 1.1.0 did.
     # 2.0.0 supports everything 1.1.3 did, but breaks the ABI in a way that hopefully
     # won't break again.
-    'greenlet >= 2.0.0 ; platform_python_implementation=="CPython"',
+    # 3.0 is ABI compatible and adds support for Python 3.12 (but right
+    # now it's alpha because of Cython, so we only require it on 3.12)
+    'greenlet >= 2.0.0 ; platform_python_implementation=="CPython" and python_version < "3.12"',
+    'greenlet >= 3.0a1 ; platform_python_implementation=="CPython" and python_version >= "3.12"',
 ]
 
 # Note that we don't add cffi to install_requires, it's
@@ -235,19 +238,6 @@ install_requires = greenlet_requires + CFFI_REQUIRES + [
     'zope.interface',
 ]
 
-# We use headers from greenlet, so it needs to be installed before we
-# can compile. If it isn't already installed before we start
-# installing, and we say 'pip install gevent', a 'setup_requires'
-# doesn't save us: pip happily downloads greenlet and drops it in a
-# .eggs/ directory in the build directory, but that directory doesn't
-# have includes! So we fail to build a wheel, pip goes ahead and
-# installs greenlet, and builds gevent again, which works.
-
-# Since we ship the greenlet header for buildout support (which fails
-# to install the headers at all, AFAICS, we don't need to bother with
-# the buggy setup_requires.)
-
-setup_requires = CFFI_REQUIRES + []
 
 if PYPY:
     # These use greenlet/greenlet.h, which doesn't exist on PyPy
@@ -397,7 +387,6 @@ def run_setup(ext_modules):
             'clean': GeventClean,
         },
         install_requires=install_requires,
-        setup_requires=setup_requires,
         extras_require={
             # Each extra intended for end users must be documented in install.rst
             'dnspython': EXTRA_DNSPYTHON,
@@ -422,7 +411,6 @@ def run_setup(ext_modules):
                 # anyway (coveralls -> cryptopgraphy -> openssl).
                 # coverage 5 needs coveralls 1.11
                 'coverage >= 5.0 ; sys_platform != "win32"',
-                'coveralls>=1.7.0 ; sys_platform != "win32"',
 
                 # leak checks. previously we had a hand-rolled version.
                 'objgraph',

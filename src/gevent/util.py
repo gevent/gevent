@@ -374,7 +374,20 @@ class GreenletTree(object):
     @staticmethod
     def __render_tb(tree, label, frame, limit):
         tree.child_data(label)
-        tb = ''.join(traceback.format_stack(frame, limit))
+        # XXX: Issues with tblib?
+        # 3.12b3 is crashing walking the stack on macOS;
+        # on Linux CI, it is failing with a nice attribute error
+        # (which watches where the macOS is failing, inside a call to
+        # Py_GetAttr):
+        #
+        # File "/opt/hostedtoolcache/Python/3.12.0-beta.3/x64/lib/python3.12/traceback.py", line 339, in walk_stack
+        #   yield f, f.f_lineno
+        # AttributeError: 'dict' object has no attribute 'f_lineno'
+
+        if sys.version_info != (3, 12, 0, 'beta', 3):
+            tb = ''.join(traceback.format_stack(frame, limit))
+        else:
+            tb = ''
         tree.child_multidata(tb)
 
     @staticmethod

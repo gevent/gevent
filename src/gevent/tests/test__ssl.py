@@ -10,15 +10,25 @@ import gevent.testing as greentest
 from gevent.tests import test__socket
 import ssl
 
-from gevent.testing import PY2
 
 def ssl_listener(private_key, certificate):
     raw_listener = socket.socket()
     greentest.bind_and_listen(raw_listener)
     # pylint:disable=deprecated-method
-    sock = ssl.wrap_socket(raw_listener, private_key, certificate, server_side=True)
+    sock = wrap_socket(raw_listener, keyfile=private_key, certfile=certificate,
+                       server_side=True)
     return sock, raw_listener
 
+def wrap_socket(sock, *, keyfile=None, certfile=None, server_side=False):
+    context = ssl.SSLContext(
+        protocol=ssl.PROTOCOL_TLS
+    )
+    context.verify_mode = ssl.CERT_NONE
+    context.check_hostname = False
+    context.load_default_certs()
+    if keyfile is not None or certfile is not None:
+        context.load_cert_chain(certfile=certfile, keyfile=keyfile)
+    return context.wrap_socket(sock, server_side=server_side)
 
 class TestSSL(test__socket.TestTCP):
 
@@ -34,7 +44,7 @@ class TestSSL(test__socket.TestTCP):
     # PyPy3 7.2 has a bug, though: it shares much of the SSL implementation with Python 2,
     # and it unconditionally does `socket.sslerror = SSLError` when ssl is imported.
     # So we can't rely on getattr/hasattr tests, we must be explicit.
-    TIMEOUT_ERROR = socket.sslerror if PY2 else socket.timeout # pylint:disable=no-member
+    TIMEOUT_ERROR = socket.timeout # pylint:disable=no-member
 
     def _setup_listener(self):
         listener, raw_listener = ssl_listener(self.privfile, self.certfile)
@@ -44,7 +54,7 @@ class TestSSL(test__socket.TestTCP):
     def create_connection(self, *args, **kwargs): # pylint:disable=signature-differs
         return self._close_on_teardown(
             # pylint:disable=deprecated-method
-            ssl.wrap_socket(super(TestSSL, self).create_connection(*args, **kwargs)))
+            wrap_socket(super(TestSSL, self).create_connection(*args, **kwargs)))
 
     # The SSL library can take a long time to buffer the large amount of data we're trying
     # to send, so we can't compare to the timeout values
