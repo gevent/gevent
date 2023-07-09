@@ -228,14 +228,6 @@ jobs:
           python -c 'import gevent.ares; print(gevent.ares)'
           ccache -s
 
-      - name: Lint
-        if: matrix.python-version == '3.10' && startsWith(runner.os, 'Linux')
-        # We only need to do this on one version.
-        # We do this here rather than a separate job to avoid the compilation overhead.
-        # TODO: Revisit this when we have caching of that part.
-        run: |
-          pip install -U pylint
-          python -m pylint --rcfile=.pylintrc gevent
       - name: "Tests: Basic"
         run: |
           python -m gevent.tests --second-chance $G_USE_COV
@@ -313,6 +305,17 @@ jobs:
         with:
           flag-name: run-${{ join(matrix.*, '-') }}
           parallel: true
+
+      - name: Lint
+        if: matrix.python-version == '3.10' && startsWith(runner.os, 'Linux')
+        # We only need to do this on one version.
+        # We do this here rather than a separate job to avoid the compilation overhead.
+        # 20230707: Python 3.11 crashes inside pylint/astroid on _ssl3.py;
+        # reverting to Python 3.10 solved that.
+        # TODO: Revisit this when we have caching of that part.
+        run: |
+          pip install -U pylint
+          python -m pylint --rcfile=.pylintrc gevent
 
   coveralls_finish:
     needs: test
