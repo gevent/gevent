@@ -91,6 +91,7 @@ COVERAGE = _AttrCondition('RUN_COVERAGE')
 RESOLVER_NOT_SYSTEM = _AttrCondition('RESOLVER_NOT_SYSTEM')
 BIT_64 = ConstantCondition(struct.calcsize('P') * 8 == 64, 'BIT_64')
 PY380_EXACTLY = ConstantCondition(sys.version_info[:3] == (3, 8, 0), 'PY380_EXACTLY')
+PY312B3_EXACTLY = ConstantCondition(sys.version_info == (3, 12, 0, 'beta', 3))
 
 class _Definition(object):
     __slots__ = (
@@ -204,6 +205,16 @@ else:
 DefinitionsBase = DefinitionsMeta('DefinitionsBase', (object,), {})
 
 class Definitions(DefinitionsBase):
+
+    test__util = RunAlone(
+        """
+        If we have extra greenlets hanging around due to changes in GC, we won't
+        match the expected output.
+
+        So far, this is only seen on one version, in CI environment.
+        """,
+        when=(CI & PY312B3_EXACTLY)
+    )
 
     test__issue6 = Flaky(
         """test__issue6 (see comments in test file) is really flaky on both Travis and Appveyor;
