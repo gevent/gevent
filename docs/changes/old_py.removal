@@ -11,3 +11,5 @@ Related changes include:
 - ``setup.py`` no longer includes the ``setup_requires`` keyword.
   Installation with a tool that understands ``pyproject.toml`` is
   recommended.
+- The bundled tblib has been updated to version 2.0.
+- On Python 3.12b3, dumping tracebacks of greenlets is not available.
