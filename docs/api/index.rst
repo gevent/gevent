@@ -80,6 +80,7 @@ This section of the document groups gevent APIs by module.
    gevent.resolver.dnspython
    gevent.resolver.thread
    gevent.select
+   gevent.selectors
    gevent.server
    gevent.signal
    gevent.socket
