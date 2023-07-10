@@ -90,7 +90,7 @@ if [ -d /gevent -a -d /opt/python ]; then
         if [ -n "$SLOW_BUILD" ] ; then
             # This provides access to ccache for the 2014 image
             echo Installing epel
-            rpm -Uvh https://dl.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-7-14.noarch.rpm
+            rpm -Uvh https://dl.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-7-14.noarch.rpm || true
         fi
         yum -y install ccache || export CC=gcc LDSHARED="gcc -shared" LDCXXSHARED="gcc -shared"
         # On Fedora Rawhide (F33)
