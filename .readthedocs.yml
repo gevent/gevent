@@ -19,6 +19,12 @@ sphinx:
 
 # Set the version of Python and requirements required to build your
 # docs
+
+build:
+  # os is required for some reason
+  os: ubuntu-22.04
+  tools:
+    python: "3.11"
 python:
   version: 3
   install:
