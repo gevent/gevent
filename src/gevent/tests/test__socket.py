@@ -434,6 +434,31 @@ class TestTCP(greentest.TestCase):
         finally:
             s.close()
 
+    @skipWithoutExternalNetwork("Tries to resolve hostname")
+    def test_connect_ex_not_call_connect(self):
+        # Issue 1931
+
+        def do_it(sock):
+            try:
+                with self.assertRaises(socket.gaierror):
+                    sock.connect_ex(('foo.bar.fizzbuzz', support.find_unused_port()))
+            finally:
+                sock.close()
+
+        # An instance attribute doesn't matter because we can't set it
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        with self.assertRaises(AttributeError):
+            s.connect = None
+        s.close()
+
+        # A subclass
+        class S(socket.socket):
+            def connect(self, *args):
+                raise AssertionError('Should not be called')
+
+        s = S(socket.AF_INET, socket.SOCK_STREAM)
+        do_it(s)
+
     def test_connect_ex_nonblocking_overflow(self):
         # Issue 841
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

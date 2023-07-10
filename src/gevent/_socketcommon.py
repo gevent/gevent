@@ -581,6 +581,49 @@ class SocketMixin(object):
             it will be used instead of ignored, if the platform supplies
             :func:`socket.inet_pton`.
         """
+        # In the standard library, ``connect`` and ``connect_ex`` are implemented
+        # in C, and they both call a C function ``internal_connect`` to do the real
+        # work. This means that it is a visible behaviour difference to have our
+        # Python implementation of ``connect_ex`` simply call ``connect``:
+        # it could be overridden in a subclass or at runtime! Because of our exception handling,
+        # this can make a difference for known subclasses like SSLSocket.
+        self._internal_connect(address)
+
+    def connect_ex(self, address):
+        """
+        Connect to *address*, returning a result code.
+
+        .. versionchanged:: NEXT
+           No longer uses an overridden ``connect`` method on
+           this object. Instead, like the standard library, this method always
+           uses a non-replacable internal connection function.
+        """
+        try:
+            return self._internal_connect(address) or 0
+        except __socket__.timeout:
+            return EAGAIN
+        except __socket__.gaierror: # pylint:disable=try-except-raise
+            # gaierror/overflowerror/typerror is not silenced by connect_ex;
+            # gaierror extends error so catch it first
+            raise
+        except _SocketError as ex:
+            # Python 3: error is now OSError and it has various subclasses.
+            # Only those that apply to actually connecting are silenced by
+            # connect_ex.
+            # On Python 3, we want to check ex.errno; on Python 2
+            # there is no such attribute, we need to look at the first
+            # argument.
+            try:
+                err = ex.errno
+            except AttributeError:
+                err = ex.args[0]
+            if err:
+                return err
+            raise
+
+    def _internal_connect(self, address):
+        # Like the C function ``internal_connect``, not meant to be overridden,
+        # but exposed for testing.
         if self.timeout == 0.0:
             return self._sock.connect(address)
         address = _resolve_addr(self._sock, address)
@@ -610,30 +653,6 @@ class SocketMixin(object):
                         # that. The normal connect just calls connect_ex much like we do.
                         result = ECONNREFUSED
                     raise _SocketError(result, strerror(result))
-
-    def connect_ex(self, address):
-        try:
-            return self.connect(address) or 0
-        except __socket__.timeout:
-            return EAGAIN
-        except __socket__.gaierror: # pylint:disable=try-except-raise
-            # gaierror/overflowerror/typerror is not silenced by connect_ex;
-            # gaierror extends error so catch it first
-            raise
-        except _SocketError as ex:
-            # Python 3: error is now OSError and it has various subclasses.
-            # Only those that apply to actually connecting are silenced by
-            # connect_ex.
-            # On Python 3, we want to check ex.errno; on Python 2
-            # there is no such attribute, we need to look at the first
-            # argument.
-            try:
-                err = ex.errno
-            except AttributeError:
-                err = ex.args[0]
-            if err:
-                return err
-            raise
 
     def recv(self, *args):
         while 1:
