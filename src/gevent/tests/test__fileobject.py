@@ -305,16 +305,17 @@ class TestFileObjectBlock(CleanupMixin,
         os.write(fileno, b'hello world')
         os.close(fileno)
 
-        with self._makeOne(path, 'rb') as f:
-            buf  = bytearray(32)
-            mbuf = memoryview(buf)
-            def assertReadInto(n, dataok):
-                n_ = f.readinto(mbuf[:n])
-                self.assertEqual(n_, len(dataok))
-                self.assertEqual(buf[:n_], dataok)
+        buf = bytearray(32)
+        mbuf = memoryview(buf)
 
-            assertReadInto(2,  b'he')
-            assertReadInto(1,  b'l')
+        def assertReadInto(byte_count, expected_data):
+            bytes_read = f.readinto(mbuf[:byte_count])
+            self.assertEqual(bytes_read, len(expected_data))
+            self.assertEqual(buf[:bytes_read], expected_data)
+
+        with self._makeOne(path, 'rb') as f:
+            assertReadInto(2, b'he')
+            assertReadInto(1, b'l')
             assertReadInto(32, b'lo world')
             assertReadInto(32, b'')
 
@@ -392,8 +393,8 @@ class ConcurrentFileObjectMixin(object):
         # if .readinto() is not cooperative spawned greenlet will not be able
         # to run and call to .readinto() will block forever.
         r, w = self._pipe()
-        rf = self._makeOne(r, 'rb')
-        wf = self._makeOne(w, 'wb')
+        rf = self._close_on_teardown(self._makeOne(r, 'rb'))
+        wf = self._close_on_teardown(self._makeOne(w, 'wb'))
         g = gevent.spawn(Writer, wf, [b'hello'])
 
         try:
