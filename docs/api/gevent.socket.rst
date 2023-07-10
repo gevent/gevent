@@ -57,7 +57,7 @@ Python 2 and Python 3, respectively.
 .. toctree::
 
    Python 3 interface <gevent._socket3>
-   Python 2 interface <gevent._socket2>
+
 
 Gevent Extensions
 =================

@@ -395,6 +395,8 @@ def run_setup(ext_modules):
             'recommended': EXTRA_RECOMMENDED,
             # End end-user extras
             'docs': [
+                # our custom theme has problems on sphinx 7.
+                'sphinx < 7',
                 'repoze.sphinx.autointerface',
                 'sphinxcontrib-programoutput',
                 'zope.schema',

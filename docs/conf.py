@@ -51,16 +51,16 @@ extensions = [
 ]
 
 intersphinx_mapping = {
-    'http://docs.python.org/': None,
-    'https://greenlet.readthedocs.io/en/latest/': None,
-    'https://zopeevent.readthedocs.io/en/latest/': None,
-    'https://zopecomponent.readthedocs.io/en/latest/': None,
+    'python': ('https://docs.python.org/', None),
+    'greenlet': ('https://greenlet.readthedocs.io/en/latest/', None),
+    'zopeevent': ('https://zopeevent.readthedocs.io/en/latest/', None),
+    'zopecomponent': ('https://zopecomponent.readthedocs.io/en/latest/', None),
 }
 
 extlinks = {'issue': ('https://github.com/gevent/gevent/issues/%s',
-                      'issue #'),
+                      'issue #%s'),
             'pr': ('https://github.com/gevent/gevent/pull/%s',
-                   'pull request #')}
+                   'pull request #%s')}
 
 # Sphinx 1.8+ prefers this to `autodoc_default_flags`. It's documented that
 # either True or None mean the same thing as just setting the flag, but

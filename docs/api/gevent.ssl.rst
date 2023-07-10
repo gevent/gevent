@@ -12,7 +12,7 @@ and let the others run.
 
 The exact API exposed by this module varies depending on what version
 of Python you are using. The documents below describe the API for
-Python 3, Python 2.7.9 and above, and Python 2.7.8 and below, respectively.
+Python 3.
 
 .. tip::
 
@@ -34,13 +34,7 @@ Python 3, Python 2.7.9 and above, and Python 2.7.8 and below, respectively.
    Their organization is an implementation detail that may change at
    any time.
 
-.. class:: SSLObject
 
-    The gevent-cooperative SSL object. See the version-specific
-    documentation for details.
 
-.. toctree::
-
-   Python 3 interface <gevent._ssl3>
-   Python 2.7.9 and above interface (including PyPy 2.6.1 and above) <gevent._sslgte279>
-   Python 2.7.8 and below interface <gevent._ssl2>
+.. automodule:: gevent.ssl
+    :members:
