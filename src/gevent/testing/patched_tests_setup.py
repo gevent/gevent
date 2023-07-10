@@ -30,6 +30,7 @@ from .sysinfo import PY38
 from .sysinfo import PY39
 from .sysinfo import PY310
 from .sysinfo import PY311
+from .sysinfo import PY312
 
 from .sysinfo import WIN
 from .sysinfo import OSX
@@ -1211,6 +1212,14 @@ if PY311:
         # We don't support either of those (although USE_VFORK might be possible?)
         'test_subprocess.ProcessTestCase.test__use_vfork',
     ]
+
+if PY312:
+    if RUN_COVERAGE:
+        disabled_tests += [
+            # This test wants to look for installed tracing functions, and
+            # having a coverage tracer function installed breaks it.
+            'test_threading.ThreadTests.test_gettrace_all_threads',
+        ]
 
 if TRAVIS:
     disabled_tests += [
