@@ -35,19 +35,21 @@ export CCACHE_DIR="/ccache"
 # Note that changing the value of these variables invalidates configure caches
 
 GEVENT_WARNFLAGS="-Wno-strict-aliasing -Wno-comment -Wno-unused-value -Wno-unused-but-set-variable -Wno-sign-compare -Wno-parentheses -Wno-unused-function -Wno-tautological-compare -Wno-strict-prototypes -Wno-return-type -Wno-misleading-indentation"
-OPTIMIZATION_FLAGS="-pipe"
-if [ "$DOCKER_IMAGE" == "quay.io/pypa/manylinux2014_aarch64" -a -n "$GITHUB_ACTIONS" ] || [ "$DOCKER_IMAGE" == "quay.io/pypa/manylinux2014_ppc64le" -a -n "$GITHUB_ACTIONS" ] ; then
-    # Compiling with -Ofast is a no-go because of the regression it causes (#1864).
-    # The default settings have -O3, and adding -Os doesn't help much. So maybe -O1 will.
-    echo "Compiling with -O1"
-    OPTIMIZATION_FLAGS="-pipe -O1"
-    SLOW_BUILD=1
-    GEVENTTEST_SKIP_ALL=1
-    export GEVENTSETUP_DISABLE_ARES=1
+OPTIMIZATION_FLAGS="-O3 -pipe"
+if [ -n "$GITHUB_ACTIONS" ]; then
+    if [ "$DOCKER_IMAGE" == "quay.io/pypa/manylinux2014_aarch64" ] || [ "$DOCKER_IMAGE" == "quay.io/pypa/manylinux2014_ppc64le" ] || [ "$DOCKER_IMAGE" == "quay.io/pypa/manylinux2014_s390x" ] ||  [ "$DOCKER_IMAGE" == "quay.io/pypa/musllinux_1_1_aarch64" ] ; then
+        # Compiling with -Ofast is a no-go because of the regression it causes (#1864).
+        # The default settings have -O3, and adding -Os doesn't help much. So maybe -O1 will.
+        echo "Compiling with -O1"
+        OPTIMIZATION_FLAGS="-pipe -O1"
+        SLOW_BUILD=1
+        GEVENTTEST_SKIP_ALL=1
+        export GEVENTSETUP_DISABLE_ARES=1
+    fi
 else
-    echo "Compiling with -O3"
     OPTIMIZATION_FLAGS="-pipe -O3"
 fi
+echo "Compiling with $OPTIMIZATION_FLAGS"
 export CFLAGS="$OPTIMIZATION_FLAGS $GEVENT_WARNFLAGS"
 # -lrt: Needed for clock_gettime libc support on this version.
 # -pthread: Needed for pthread_atfork (cffi).
