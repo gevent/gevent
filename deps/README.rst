@@ -30,7 +30,7 @@ http://git.savannah.gnu.org/gitweb/?p=config.git;a=tree )
 Updating c-ares
 ===============
 
-- Download and clean up the c-ares Makefile.in[c] to empty out the
+- Download and clean up the c-ares Makefile.in[c] and configure script to empty out the
   MANPAGES variables so that we don't have to ship those in the sdist::
 
     export CARES_VER=1.15.0
@@ -52,6 +52,8 @@ Updating c-ares
 
   At this point there might be new files in c-ares that need added to
   git, evaluate them and add them.
+
+  Note that the patch may not apply cleanly.
 
 - Follow the same 'config.guess' and 'config.sub' steps as libev.
 
