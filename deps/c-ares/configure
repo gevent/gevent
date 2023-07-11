@@ -34612,18 +34612,18 @@ fi
 printf "%s\n" "$build_tests" >&6; }
 
 
-BUILD_SUBDIRS="include src docs"
+BUILD_SUBDIRS="include src"
 if test "x$build_tests" = "xyes" ; then
 
 
 subdirs="$subdirs test"
 
-  BUILD_SUBDIRS="${BUILD_SUBDIRS} test"
+  BUILD_SUBDIRS="${BUILD_SUBDIRS}"
 fi
 
 
 
-ac_config_files="$ac_config_files Makefile include/Makefile src/Makefile src/lib/Makefile src/tools/Makefile docs/Makefile libcares.pc"
+ac_config_files="$ac_config_files Makefile include/Makefile src/Makefile src/lib/Makefile src/tools/Makefile libcares.pc"
 
 
 cat >confcache <<\_ACEOF
@@ -35769,7 +35769,6 @@ do
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
     "src/lib/Makefile") CONFIG_FILES="$CONFIG_FILES src/lib/Makefile" ;;
     "src/tools/Makefile") CONFIG_FILES="$CONFIG_FILES src/tools/Makefile" ;;
-    "docs/Makefile") CONFIG_FILES="$CONFIG_FILES docs/Makefile" ;;
     "libcares.pc") CONFIG_FILES="$CONFIG_FILES libcares.pc" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
@@ -37464,6 +37463,3 @@ done
 ## -------------------------------- ##
 ##  End of distclean amending code  ##
 ## -------------------------------- ##
-
-
-

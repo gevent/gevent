@@ -954,7 +954,7 @@ fi
 AC_MSG_RESULT([$build_tests])
 
 
-BUILD_SUBDIRS="include src docs"
+BUILD_SUBDIRS="include src"
 if test "x$build_tests" = "xyes" ; then
   AC_CONFIG_SUBDIRS([test])
   BUILD_SUBDIRS="${BUILD_SUBDIRS} test"
@@ -967,7 +967,6 @@ AC_CONFIG_FILES([Makefile           \
                  src/Makefile       \
                  src/lib/Makefile   \
                  src/tools/Makefile \
-                 docs/Makefile      \
                  libcares.pc ])
 
 AC_OUTPUT

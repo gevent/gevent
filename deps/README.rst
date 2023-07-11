@@ -53,7 +53,15 @@ Updating c-ares
   At this point there might be new files in c-ares that need added to
   git, evaluate them and add them.
 
-  Note that the patch may not apply cleanly.
+  Note that the patch may not apply cleanly. If not, commit the
+  changes before the patch. Then manually apply them by editing the
+  three files to remove the references to ``docs`` and ``test``; this
+  is easiest to do by reading the existing patch file and searching
+  for the relevant lines in the target files. Once this is working
+  correctly, create the new patch using ``git diff -p --minimal -w``
+  (note that you cannot directly redirect the output of this into
+  ``cares-make.patch``, or you'll get the diff of the patch itself in
+  the diff!).
 
 - Follow the same 'config.guess' and 'config.sub' steps as libev.
 
