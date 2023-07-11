@@ -58,6 +58,7 @@ recursive-exclude src/gevent _corecffi.c
 exclude configure-output
 exclude configure-output.txt
 exclude deps/TAGS
+exclude deps/libev/configure-output.txt
 
 exclude deps/c-ares/ares_build.h
 exclude deps/c-ares/ares_config.h

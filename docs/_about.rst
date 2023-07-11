@@ -32,9 +32,11 @@ gevent`_.
 gevent was written by `Denis Bilenko <http://denisbilenko.com/>`_.
 
 Since version 1.1, gevent is maintained by Jason Madden for
-`NextThought <https://nextthought.com>`_ with help from the
-`contributors <https://github.com/gevent/gevent/graphs/contributors>`_
-and is licensed under the MIT license.
+`NextThought <https://nextthought.com>`_ (through gevent 21) and
+`Institutional Shareholder Services <https://www.issgovernance.com>`_
+with help from the `contributors
+<https://github.com/gevent/gevent/graphs/contributors>`_ and is
+licensed under the MIT license.
 
 See `what's new`_ in the latest major release.
 

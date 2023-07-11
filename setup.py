@@ -395,8 +395,10 @@ def run_setup(ext_modules):
             'recommended': EXTRA_RECOMMENDED,
             # End end-user extras
             'docs': [
-                # our custom theme has problems on sphinx 7.
-                'sphinx < 7',
+                # our custom theme has problems on sphinx 7;
+                # For now, we have switched to the furo theme.
+                'sphinx',
+                'furo',
                 'repoze.sphinx.autointerface',
                 'sphinxcontrib-programoutput',
                 'zope.schema',

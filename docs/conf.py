@@ -86,7 +86,7 @@ master_doc = 'contents'
 
 # General information about the project.
 project = u'gevent'
-copyright = u'2009-2019, gevent contributors'
+copyright = u'2009-2023, gevent contributors'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -140,28 +140,32 @@ modindex_common_prefix = ['gevent.']
 
 # The theme to use for HTML and HTML Help pages.  Major themes that come with
 # Sphinx are currently 'default' and 'sphinxdoc'.
-html_theme = 'mytheme'
-html_theme_path = ['.']
-html_theme_options = {'gevent_version': __version__}
-# Theme options are theme-specific and customize the look and feel of a theme
-# further.  For a list of options available for each theme, see the
-# documentation.
-#if html_theme == 'default':
-#    html_theme_options = {'rightsidebar' : True}
+# XXX: Our custom theme stopped working with Sphinx 7.
+#html_theme = 'mytheme'
+html_theme = "furo"
+html_css_files = [
+    'custom.css',
+]
 
-# Add any paths that contain custom themes here, relative to this directory.
-#html_theme_path = []
+html_theme_options = {
+    "sidebar_hide_name": True, # Because we show a logo
 
-# The name for this set of Sphinx documents.  If None, it defaults to
-# "<project> v<release> documentation".
-#html_title = None
+    'light_css_variables': {
+        "color-brand-primary": "#7c9a5e",
+        "color-brand-content": "#7c9a5e",
+        "color-foreground-border": "#b7d897",
+        'font-stack': '"SF Pro",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji"',
+        'font-stack--monospace': '"JetBrainsMono", "JetBrains Mono", "JetBrains Mono Regular", "JetBrainsMono-Regular", ui-monospace, profont, monospace',
+    },
+}
+
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 html_short_title = 'Documentation'
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-#html_logo = None
+html_logo = '_static/5564530.png'
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
@@ -171,7 +175,7 @@ html_short_title = 'Documentation'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-#html_static_path = ['_static']
+html_static_path = ['_static']
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.

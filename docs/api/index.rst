@@ -5,12 +5,14 @@
 Functional Areas
 ================
 
-This section of the document groups gevent APIs by functional area.
-For an alphabetical listing by module, see :ref:`api_module_listing`.
+This section of the document groups gevent APIs by functional area (it
+may not be complete).
+For a complete alphabetical listing by module, see :ref:`api_module_listing`.
 
 High-level concepts
 -------------------
 .. toctree::
+   :maxdepth: 1
 
    gevent
    gevent.timeout
@@ -22,6 +24,7 @@ Networking interfaces
 ---------------------
 
 .. toctree::
+   :maxdepth: 1
 
    gevent.socket
    gevent.ssl
@@ -32,6 +35,7 @@ Synchronization primitives (locks, queues, events)
 --------------------------------------------------
 
 .. toctree::
+   :maxdepth: 1
 
    gevent.event
    gevent.queue
@@ -42,6 +46,7 @@ Low-level details
 -----------------
 
 .. toctree::
+   :maxdepth: 1
 
    gevent.hub
    gevent.core
@@ -56,6 +61,7 @@ This section of the document groups gevent APIs by module.
 .. This should be sorted alphabetically
 
 .. toctree::
+   :maxdepth: 1
 
    gevent
    gevent.backdoor

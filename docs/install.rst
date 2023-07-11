@@ -19,15 +19,16 @@
 Supported Platforms
 ===================
 
-This version of gevent runs on Python 2.7.9 and up, and many versions
-of Python 3 (for exact details, see the classifiers on the PyPI page
-or in ``setup.py``). gevent requires the `greenlet <https://greenlet.readthedocs.io>`_
-library and will install the `cffi`_ library by default on Windows.
-The cffi library will become the default on all platforms in a future
-release of gevent.
+This version of gevent runs on Python 3.8 and up, (for exact details
+of tested versions, see the classifiers on the PyPI page or in
+``setup.py``). gevent requires the `greenlet
+<https://greenlet.readthedocs.io>`_ library and will install the
+`cffi`_ library by default on Windows. The cffi library will become
+the default on all platforms in a future release of gevent.
 
-This version of gevent also runs on PyPy 7.3.7 (7.3.6 for PyPy2) or
-above. On PyPy, there are no external dependencies.
+This version of gevent is also tested on on PyPy 3.10 (7.3.12); it
+should run on PyPy 3.9 and above. On PyPy, there are no external
+dependencies.
 
 gevent is tested on Windows, macOS, and Linux, and should run on most
 other Unix-like operating systems (e.g., FreeBSD, Solaris, etc.)
@@ -77,6 +78,12 @@ supported.
 |       |       |
 |       |       |
 +-------+-------+
+|2.7.9 -|       |
+|2.7.18,| 22.10 |
+|3.6,   |       |
+|3.7    |       |
+|       |       |
++-------+-------+
 
 Installation
 ============
@@ -106,10 +113,10 @@ distributed as binary `wheels`_.
 
 .. tip::
 
-   Binary wheels cannot be installed on non-manylinux2010 compatible
-   Linux systems, such as those that use `musl
-   <https://musl.libc.org>`_, including `Alpine Linux
-   <https://alpinelinux.org>`_. Those systems must install from source.
+   While the x86-64 binaries are considered production quality, they
+   are built with relatively low optimization levels and no hardware
+   specific optimizations. Serious production users are encouraged to
+   install from source with appropriate compiler flags.
 
 .. tip::
 
@@ -124,6 +131,11 @@ distributed as binary `wheels`_.
    Beginning with gevent 22.10.0, ppc64le binaries are distributed on
    PyPI. The same caveats apply as for 64-bit ARM binaries. Using them
    for anything other than local development is discouraged.
+
+   Beginning with gevent 23, muslinux aarch64 and S390X binaries
+   are distributed on PyPI. The same caveats apply as for 64-bit ARM
+   binaries. Using them for anything other than local development is
+   discouraged.
 
 
 Installing From Source
@@ -160,7 +172,7 @@ dnspython
     includes `idna <https://pypi.org/project/idna>`_. They can be
     installed with the ``dnspython`` extra.
 
-    .. note:: This is not compatible with Python 3.10 or dnspython 2.
+    .. note:: This is not compatible with Python 3.10+ or dnspython 2.
 
 monitor
     Enhancements to gevent's self-monitoring capabilities. This
@@ -170,12 +182,9 @@ monitor
 
 recommended
     A shortcut for installing suggested extras together. This includes
-    the non-test extras defined here, plus:
-
-    - `backports.socketpair
-      <https://pypi.org/project/backports.socketpair/>`_ on Python
-      2/Windows (beginning with release 20.6.0);
-    - `selectors2 <https://pypi.org/project/selectors2/>`_ on Python 2 (beginning with release 20.6.0).
+    the non-test extras defined here, plus additions that improve
+    gevent's operation on certain platforms (for example, in the past,
+    it has included backports of newer APIs).
 
 test
     Everything needed to run the complete gevent test suite.
