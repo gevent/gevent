@@ -1,6 +1,6 @@
-===========
- Changelog
-===========
+=================
+ Changes for 1.3
+=================
 
 .. currentmodule:: gevent
 
