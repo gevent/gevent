@@ -21,7 +21,7 @@ systems, you generally will not want to directly modify `subscribers`.
 
 .. versionadded:: 1.3b1
 
-.. versionchanged:: NEXT
+.. versionchanged:: 23.7.0
    Now uses :mod:`importlib.metadata` instead of :mod:`pkg_resources`
    to locate entry points.
 """

@@ -1,6 +1,0 @@
-Work around an ``AttributeError`` during cyclic garbage collection
-when Python finalizers (``__del__`` and the like) attempt to use
-gevent APIs. This is not a recommended practice, and it is unclear if
-catching this ``AttributeError`` will fix any problems or just shift
-them. (If we could determine the root situation that results in this
-cycle, we might be able to solve it.)

@@ -516,7 +516,7 @@ def patch_sys(stdin=True, stdout=True, stderr=True): # pylint:disable=unused-arg
 
     .. _`misinterpreting control keys`: https://github.com/gevent/gevent/issues/274
 
-    .. deprecated:: NEXT
+    .. deprecated:: 23.7.0
        Does nothing on any supported version.
     """
     return
@@ -581,7 +581,7 @@ def patch_contextvars():
        Older versions of Python that have the backport installed will
        still be patched.
 
-    .. deprecated:: NEXT
+    .. deprecated:: 23.7.0
        Does nothing on any supported version.
     """
     return
@@ -1100,7 +1100,7 @@ def patch_builtins():
 
     .. _greenlet safe: https://github.com/gevent/gevent/issues/108
 
-    .. deprecated:: NEXT
+    .. deprecated:: 23.7.0
        Does nothing on any supported platform.
     """
 

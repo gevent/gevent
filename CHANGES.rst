@@ -6,6 +6,66 @@
 
 .. towncrier release notes start
 
+23.7.0 (2023-07-11)
+===================
+
+
+Features
+--------
+
+- Add preliminary support for Python 3.12, using greenlet 3.0a1. This
+  is somewhat tricky to build from source at this time, and there is
+  one known issue: On Python 3.12b3, dumping tracebacks of greenlets
+  is not available.
+  :issue:`1969`.
+- Update the bundled c-ares version to 1.19.1.
+  See :issue:`1947`.
+
+
+Bugfixes
+--------
+
+- Fix an edge case connecting a non-blocking ``SSLSocket`` that could result
+  in an AttributeError. In a change to match the standard library,
+  calling ``sock.connect_ex()`` on a subclass of ``socket`` no longer
+  calls the subclass's ``connect`` method.
+
+  Initial fix by Priyankar Jain.
+  See :issue:`1932`.
+- Make gevent's ``FileObjectThread`` (mostly used on Windows) implement
+  ``readinto`` cooperatively. PR by Kirill Smelkov.
+  See :issue:`1948`.
+- Work around an ``AttributeError`` during cyclic garbage collection
+  when Python finalizers (``__del__`` and the like) attempt to use
+  gevent APIs. This is not a recommended practice, and it is unclear if
+  catching this ``AttributeError`` will fix any problems or just shift
+  them. (If we could determine the root situation that results in this
+  cycle, we might be able to solve it.)
+  See :issue:`1961`.
+
+
+Deprecations and Removals
+-------------------------
+
+- Remove support for obsolete Python versions. This is everything prior
+  to 3.8.
+
+  Related changes include:
+
+  - Stop using ``pkg_resources`` to find entry points (plugins).
+    Instead, use ``importlib.metadata``.
+  - Honor ``sys.unraisablehook`` when a callback function produces an
+    exception, and handling the exception in the hub *also* produces an
+    exception. In older versions, these would be simply printed.
+  - ``setup.py`` no longer includes the ``setup_requires`` keyword.
+    Installation with a tool that understands ``pyproject.toml`` is
+    recommended.
+  - The bundled tblib has been updated to version 2.0.
+
+
+----
+
+
 22.10.2 (2022-10-31)
 ====================
 

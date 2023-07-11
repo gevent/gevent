@@ -272,7 +272,7 @@ def getfqdn(name=''):
     possibly existing aliases. In case no FQDN is available, hostname
     from gethostname() is returned.
 
-    .. versionchanged:: NEXT
+    .. versionchanged:: 23.7.0
        The IPv6 generic address '::' now returns the result of
        ``gethostname``, like the IPv4 address '0.0.0.0'.
     """
@@ -593,7 +593,7 @@ class SocketMixin(object):
         """
         Connect to *address*, returning a result code.
 
-        .. versionchanged:: NEXT
+        .. versionchanged:: 23.7.0
            No longer uses an overridden ``connect`` method on
            this object. Instead, like the standard library, this method always
            uses a non-replacable internal connection function.

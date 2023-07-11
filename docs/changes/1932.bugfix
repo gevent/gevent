@@ -1,6 +1,0 @@
-Fix an edge case connecting a non-blocking ``SSLSocket`` that could result
-in an AttributeError. In a change to match the standard library,
-calling ``sock.connect_ex()`` on a subclass of ``socket`` no longer
-calls the subclass's ``connect`` method.
-
-Initial fix by Priyankar Jain.

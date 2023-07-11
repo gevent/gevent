@@ -88,7 +88,7 @@ def get_hub():
     .. versionchanged:: 1.5a3
        The *args* and *kwargs* arguments are now completely ignored.
 
-    .. versionchanged:: NEXT
+    .. versionchanged:: 23.7.0
        The long-deprecated ``args`` and ``kwargs`` parameters are no
        longer accepted.
     """

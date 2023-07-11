@@ -1,2 +1,0 @@
-Make gevent's ``FileObjectThread`` (mostly used on Windows) implement
-``readinto`` cooperatively. PR by Kirill Smelkov.

@@ -84,7 +84,7 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
     .. versionchanged:: 22.08.0
         Add the *all_errors* argument. This only has meaning on Python 3.11+;
         it is a programming error to pass it on earlier versions.
-    .. versionchanged:: NEXT
+    .. versionchanged:: 23.7.0
         You can pass a value for ``all_errors`` on any version of Python.
         It is forced to false for any version before 3.11 inside the function.
     """
