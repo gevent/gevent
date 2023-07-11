@@ -83,16 +83,20 @@ jobs:
         # 3.10+ needs more work: dnspython for example doesn't work
         # with it. That means for the bulk of our testing we need to
         # stick to 3.9.
-        # XXX: PyPy came out of the matrix!
-        python-version: ["3.12-dev", 3.8, 3.9, '3.10', '3.11']
+        python-version: ["pypy-3.10", "3.12-dev", 3.8, 3.9, '3.10', '3.11']
         os: [macos-latest, ubuntu-latest]
         exclude:
+          # The bulk of the testing is on Linux and Windows (appveyor).
+          # Experience shows that it's sufficient to only test the latest
+          # version on macOS.
           - os: macos-latest
             python-version: 3.8
           - os: macos-latest
             python-version: 3.9
           - os: macos-latest
             python-version: 3.10
+          - os: macos-latest
+            python-version: "pypy-3.10"
 
     steps:
       - name: checkout
@@ -301,7 +305,7 @@ jobs:
         # It then runs ``coveralls report``. But that is producing
         # a usage error from ``coveralls`` (report is not recognized) Presumably the
         # brew and action versions are out of sync?
-        if: (startsWith(runner.os, 'Linux'))
+        if: ${{ !startsWith(matrix.python-version, 'pypy') && startsWith(runner.os, 'Linux') }}
         with:
           flag-name: run-${{ join(matrix.*, '-') }}
           parallel: true
