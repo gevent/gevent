@@ -17,18 +17,8 @@ requires = [
      # This was fixed in 3.0a5 (https://github.com/cython/cython/issues/3578)
      # 3.0a6 fixes an issue cythonizing source on 32-bit platforms.
      # 3.0a9 is needed for Python 3.10.
-     # Python 3.12 requires a snapshot at this writing (2023-06-29). This is just before
-     # 3.0rc1
-     # "Cython @ https://github.com/cython/cython/archive/37f4dcdc04547875e2836fda076f5707ec50e579.zip",
-     # Unfortunately, markers like python_version do not work for remote installs,
-     # so we always install that, even if we then provide a different requirement where
-     # markers DO work. This is a problem beacuse the snapshot cannot be compiled on Appveyor.
-     # That's OK, because our tests.yml and make-manylinux install this stuff manually where markers
-     # DO work. It just means that we cannot be built from a sdist on Python 3.12 without
-     # --no-build-isolation or using setup.py directly; but as soon as the Cython version is released,
-     # we can be.
-
-     "Cython >= 3.0b3",
+     # Python 3.12 requires at least 3.0rc2.
+     "Cython >= 3.0rc2",
      # See version requirements in setup.py
      "cffi >= 1.12.3 ; platform_python_implementation == 'CPython'",
      # Python 3.7 requires at least 0.4.14, which is ABI incompatible with earlier

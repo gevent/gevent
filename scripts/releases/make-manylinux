@@ -172,8 +172,7 @@ if [ -d /gevent -a -d /opt/python ]; then
         # The downside is that we must install dependencies manually.
         # NOTE: We can't upgrade ``wheel`` because ``auditwheel`` depends on
         # it, and auditwheel is installed in one of these environments.
-        time python -m pip install  -U 'cython>=3.0b3; python_version < "3.12"'
-        time python -m pip install -v -U "Cython @ https://github.com/cython/cython/archive/37f4dcdc04547875e2836fda076f5707ec50e579.zip; python_version >= '3.12'"
+        time python -m pip install  -U 'cython>=3.0rc2'
         time python -mpip install -U cffi 'greenlet >= 2.0.0; python_version < "3.12"' 'greenlet >= 3.0a1; python_version >= "3.12"' setuptools
         echo "$variant: Building wheel"
         time (python setup.py bdist_wheel)
