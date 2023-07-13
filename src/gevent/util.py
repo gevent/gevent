@@ -383,7 +383,7 @@ class GreenletTree(object):
         #   g = gevent.spawn(util.print_run_info, file=io)
         #   g.join() (test__util.py, line 53)
         #
-        # 3.12b3 is crashing walking the stack on macOS:
+        # 3.12b3/b4 is crashing walking the stack on macOS:
         # It's a simple segfault on line 340, ``f = f.f_back``.
         # I have confirmed that the object is a real frame object.
         #
@@ -410,7 +410,7 @@ class GreenletTree(object):
         # A workaround on macOS is to not dump the root frame, but that only fixes
         # test__util. test__threadpool:test_greenlet_class crashes similarly, but
         # not 100% of the time.
-        if sys.version_info != (3, 12, 0, 'beta', 3):
+        if sys.version_info not in ((3, 12, 0, 'beta', 3),  (3, 12, 0, 'beta', 4)):
             tb = ''.join(traceback.format_stack(frame, limit))
         else:
             tb = ''

@@ -92,6 +92,7 @@ RESOLVER_NOT_SYSTEM = _AttrCondition('RESOLVER_NOT_SYSTEM')
 BIT_64 = ConstantCondition(struct.calcsize('P') * 8 == 64, 'BIT_64')
 PY380_EXACTLY = ConstantCondition(sys.version_info[:3] == (3, 8, 0), 'PY380_EXACTLY')
 PY312B3_EXACTLY = ConstantCondition(sys.version_info == (3, 12, 0, 'beta', 3))
+PY312B4_EXACTLY = ConstantCondition(sys.version_info == (3, 12, 0, 'beta', 4))
 
 class _Definition(object):
     __slots__ = (
@@ -213,7 +214,7 @@ class Definitions(DefinitionsBase):
 
         So far, this is only seen on one version, in CI environment.
         """,
-        when=(CI & PY312B3_EXACTLY)
+        when=(CI & (PY312B3_EXACTLY | PY312B4_EXACTLY))
     )
 
     test__issue6 = Flaky(

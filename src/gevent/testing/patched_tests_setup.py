@@ -1221,6 +1221,15 @@ if PY312:
             'test_threading.ThreadTests.test_gettrace_all_threads',
         ]
 
+    if WIN:
+        disabled_tests += [
+            # These three are looking for an error string that matches,
+            # and ours differs very slightly
+            'test_socket.BasicHyperVTest.testCreateHyperVSocketAddrNotTupleFailure',
+            'test_socket.BasicHyperVTest.testCreateHyperVSocketAddrServiceIdNotValidUUIDFailure',
+            'test_socket.BasicHyperVTest.testCreateHyperVSocketAddrVmIdNotValidUUIDFailure',
+        ]
+
 if TRAVIS:
     disabled_tests += [
         # These tests frequently break when we try to use newer Travis CI images,
