@@ -89,6 +89,9 @@ def format_date_time(timestamp):
     value = value.encode("latin-1")
     return value
 
+def set_max_request_line(value):
+    global MAX_REQUEST_LINE
+    MAX_REQUEST_LINE = value
 
 class _InvalidClientInput(IOError):
     # Internal exception raised by Input indicating that the client
