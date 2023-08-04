@@ -113,7 +113,7 @@ class TestSelectTypes(greentest.TestCase):
             yield int(sock.fileno())
 
         try:
-            select.select(fileno_iter, [], [], 0.001)
+            select.select(fileno_iter(), [], [], 0.001)
         finally:
             sock.close()
 
