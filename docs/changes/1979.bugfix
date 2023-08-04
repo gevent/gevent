@@ -1,0 +1,5 @@
+Make ``gevent.select.select`` accept arbitrary iterables, not just
+sequences. That is, you can now pass in a generator of file
+descriptors instead of a realized list. Internally, arbitrary
+iterables are copied into lists. This better matches what the standard
+library does. Thanks to David Salvisberg.
