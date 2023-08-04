@@ -159,6 +159,13 @@ def select(rlist, wlist, xlist, timeout=None): # pylint:disable=unused-argument
         # forward compatible
         raise ValueError("timeout must be non-negative")
 
+    # since rlist and wlist can be any iterable we will have to first
+    # copy them into a list, so we can use them in both _original_select
+    # and in SelectResult.select. We don't need to do it for xlist, since
+    # that one will only be passed into _original_select
+    rlist = rlist if isinstance(rlist, (list, tuple)) else list(rlist)
+    wlist = wlist if isinstance(wlist, (list, tuple)) else list(wlist)
+
     # First, do a poll with the original select system call. This is
     # the most efficient way to check to see if any of the file
     # descriptors have previously been closed and raise the correct
