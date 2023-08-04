@@ -106,6 +106,17 @@ class TestSelectTypes(greentest.TestCase):
             finally:
                 sock.close()
 
+    def test_iterable(self):
+        sock = socket.socket()
+
+        def fileno_iter():
+            yield int(sock.fileno())
+
+        try:
+            select.select(fileno_iter(), [], [], 0.001)
+        finally:
+            sock.close()
+
     def test_string(self):
         self.switch_expected = False
         self.assertRaises(TypeError, select.select, ['hello'], [], [], 0.001)
