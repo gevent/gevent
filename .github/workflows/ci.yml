@@ -83,7 +83,8 @@ jobs:
         # 3.10+ needs more work: dnspython for example doesn't work
         # with it. That means for the bulk of our testing we need to
         # stick to 3.9.
-        python-version: ["pypy-3.10", "3.12-dev", 3.8, 3.9, '3.10', '3.11']
+        # 3.12-dev disabled for now, the traceback issue has only gotten worse.
+        python-version: ["pypy-3.10", 3.8, 3.9, '3.10', '3.11']
         os: [macos-latest, ubuntu-latest]
         exclude:
           # The bulk of the testing is on Linux and Windows (appveyor).
@@ -170,7 +171,8 @@ jobs:
           pip install -U -q setuptools wheel twine
           pip install -q -U 'cffi;platform_python_implementation=="CPython"'
           pip install -q -U 'cython>=3.0'
-          pip install 'greenlet>=2.0.0 ;platform_python_implementation=="CPython"' 'greenlet >= 3.0a1; python_version >="3.12"'
+          # Use a debug version of greenlet to help catch any errors earlier.
+          CFLAGS="$CFLAGS -Og -g -UNDEBUG" pip install -v --no-binary :all: 'greenlet>=2.0.0 ;platform_python_implementation=="CPython"' 'greenlet >= 3.0a1; python_version >="3.12"'
 
       - name: Build gevent (non-Mac)
         if: ${{ ! startsWith(runner.os, 'Mac') }}

@@ -155,7 +155,7 @@ if [ -d /gevent -a -d /opt/python ]; then
 
     # Start echoing commands (doing it earlier is too much)
     set -x
-    for variant in /opt/python/cp{312,38,39,310,311,312}*; do
+    for variant in /opt/python/cp{312,38,39,310,311}*; do
         echo $SEP
         export PATH="$variant/bin:$OPATH"
         if [ -n "$SLOW_BUILD" ]; then
