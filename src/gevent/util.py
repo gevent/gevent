@@ -371,8 +371,14 @@ class GreenletTree(object):
     def __str__(self):
         return self.format(False)
 
-    @staticmethod
-    def __render_tb(tree, label, frame, limit):
+    SUPPORTS_TRACEBACK = sys.version_info not in (
+        (3, 12, 0, 'beta', 3),
+        (3, 12, 0, 'beta', 4),
+        (3, 12, 0, 'candidate', 1),
+    )
+
+    @classmethod
+    def __render_tb(cls, tree, label, frame, limit):
         tree.child_data(label)
         # XXX: Issues with tblib? Seen with tblib 1.3 and 2.0.
         # More likely, it's something wrong in greenlet and the way it's
@@ -410,7 +416,7 @@ class GreenletTree(object):
         # A workaround on macOS is to not dump the root frame, but that only fixes
         # test__util. test__threadpool:test_greenlet_class crashes similarly, but
         # not 100% of the time.
-        if sys.version_info not in ((3, 12, 0, 'beta', 3),  (3, 12, 0, 'beta', 4)):
+        if cls.SUPPORTS_TRACEBACK:
             tb = ''.join(traceback.format_stack(frame, limit))
         else:
             tb = ''

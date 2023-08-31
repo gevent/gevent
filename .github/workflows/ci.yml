@@ -83,8 +83,7 @@ jobs:
         # 3.10+ needs more work: dnspython for example doesn't work
         # with it. That means for the bulk of our testing we need to
         # stick to 3.9.
-        # 3.12-dev disabled for now, the traceback issue has only gotten worse.
-        python-version: ["pypy-3.10", 3.8, 3.9, '3.10', '3.11']
+        python-version: ["3.12-dev", "pypy-3.10", 3.8, 3.9, '3.10', '3.11']
         os: [macos-latest, ubuntu-latest]
         exclude:
           # The bulk of the testing is on Linux and Windows (appveyor).
