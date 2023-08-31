@@ -43,6 +43,13 @@ The :mod:`gevent.pywsgi` module contains an implementation of a :pep:`3333`
 :class:`WSGI server <gevent.pywsgi.WSGIServer>`. In addition,
 gunicorn_ is a stand-alone server that supports gevent.
 
+.. important::
+
+   The provided server implementations are intended primarily for
+   development and testing, or internal usage, and otherwise only
+   generally "safe" scenarios. They have not been security audited.
+   Expose them to the public Internet at your own risk.
+
 API Reference
 =============
 

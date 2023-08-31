@@ -1,12 +1,19 @@
 # Copyright (c) 2005-2009, eventlet contributors
 # Copyright (c) 2009-2018, gevent contributors
 """
-A pure-Python, gevent-friendly WSGI server.
+A pure-Python, gevent-friendly WSGI server implementing HTTP/1.1.
 
 The server is provided in :class:`WSGIServer`, but most of the actual
 WSGI work is handled by :class:`WSGIHandler` --- a new instance is
 created for each request. The server can be customized to use
 different subclasses of :class:`WSGIHandler`.
+
+.. important::
+
+   This server is intended primarily for development and testing, and
+   secondarily for other "safe" scenarios where it will not be exposed to
+   potentially malicious input. The code has not been security audited,
+   and is not intended for direct exposure to the public Internet.
 
 """
 from __future__ import absolute_import
