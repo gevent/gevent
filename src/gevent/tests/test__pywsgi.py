@@ -25,21 +25,11 @@ from gevent import monkey
 monkey.patch_all()
 
 from contextlib import contextmanager
-try:
-    from urllib.parse import parse_qs
-except ImportError:
-    # Python 2
-    from urlparse import parse_qs
+from urllib.parse import parse_qs
 import os
 import sys
-try:
-    # On Python 2, we want the C-optimized version if
-    # available; it has different corner-case behaviour than
-    # the Python implementation, and it used by socket.makefile
-    # by default.
-    from cStringIO import StringIO
-except ImportError:
-    from io import BytesIO as StringIO
+from io import BytesIO as StringIO
+
 import weakref
 import unittest
 from wsgiref.validate import validator
@@ -156,6 +146,10 @@ class Response(object):
     @classmethod
     def read(cls, fd, code=200, reason='default', version='1.1',
              body=None, chunks=None, content_length=None):
+        """
+        Read an HTTP response, optionally perform assertions,
+        and return the Response object.
+        """
         # pylint:disable=too-many-branches
         _status_line, headers = read_headers(fd)
         self = cls(_status_line, headers)
@@ -716,7 +710,14 @@ class TestNegativeReadline(TestCase):
 
 class TestChunkedPost(TestCase):
 
+    calls = 0
+
+    def setUp(self):
+        super().setUp()
+        self.calls = 0
+
     def application(self, env, start_response):
+        self.calls += 1
         self.assertTrue(env.get('wsgi.input_terminated'))
         start_response('200 OK', [('Content-Type', 'text/plain')])
         if env['PATH_INFO'] == '/a':
@@ -729,6 +730,8 @@ class TestChunkedPost(TestCase):
 
         if env['PATH_INFO'] == '/c':
             return list(iter(lambda: env['wsgi.input'].read(1), b''))
+
+        return [b'We should not get here', env['PATH_INFO'].encode('ascii')]
 
     def test_014_chunked_post(self):
         data = (b'POST /a HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n'
@@ -796,6 +799,170 @@ class TestChunkedPost(TestCase):
         with self.makefile() as fd:
             fd.write(data)
             read_http(fd, code=400)
+
+    def test_trailers_keepalive_ignored(self):
+        # Trailers after a chunk are ignored.
+        data = (
+            b'POST /a HTTP/1.1\r\n'
+            b'Host: localhost\r\n'
+            b'Connection: keep-alive\r\n'
+            b'Transfer-Encoding: chunked\r\n'
+            b'\r\n'
+            b'2\r\noh\r\n'
+            b'4\r\n hai\r\n'
+            b'0\r\n' # last-chunk
+            # Normally the final CRLF would go here, but if you put in a
+            # trailer, it doesn't.
+            b'trailer1: value1\r\n'
+            b'trailer2: value2\r\n'
+            b'\r\n' # Really terminate the chunk.
+            b'POST /a HTTP/1.1\r\n'
+            b'Host: localhost\r\n'
+            b'Connection: close\r\n'
+            b'Transfer-Encoding: chunked\r\n'
+            b'\r\n'
+            b'2\r\noh\r\n'
+            b'4\r\n bye\r\n'
+            b'0\r\n' # last-chunk
+        )
+        with self.makefile() as fd:
+            fd.write(data)
+            read_http(fd, body='oh hai')
+            read_http(fd, body='oh bye')
+
+        self.assertEqual(self.calls, 2)
+
+    def test_trailers_too_long(self):
+        # Trailers after a chunk are ignored.
+        data = (
+            b'POST /a HTTP/1.1\r\n'
+            b'Host: localhost\r\n'
+            b'Connection: keep-alive\r\n'
+            b'Transfer-Encoding: chunked\r\n'
+            b'\r\n'
+            b'2\r\noh\r\n'
+            b'4\r\n hai\r\n'
+            b'0\r\n' # last-chunk
+            # Normally the final CRLF would go here, but if you put in a
+            # trailer, it doesn't.
+            b'trailer2: value2' # not lack of \r\n
+        )
+        data += b't' * pywsgi.MAX_REQUEST_LINE
+        # No termination, because we detect the trailer as being too
+        # long and abort the connection.
+        with self.makefile() as fd:
+            fd.write(data)
+            read_http(fd, body='oh hai')
+            with self.assertRaises(ConnectionClosed):
+                read_http(fd, body='oh bye')
+
+    def test_trailers_request_smuggling_missing_last_chunk_keep_alive(self):
+        # When something that looks like a request line comes in the trailer
+        # as the first line, immediately after an invalid last chunk.
+        # We detect this and abort the connection, because the
+        # whitespace in the GET line isn't a legal part of a trailer.
+        # If we didn't abort the connection, then, because we specified
+        # keep-alive, the server would be hanging around waiting for more input.
+        data = (
+            b'POST /a HTTP/1.1\r\n'
+            b'Host: localhost\r\n'
+            b'Connection: keep-alive\r\n'
+            b'Transfer-Encoding: chunked\r\n'
+            b'\r\n'
+            b'2\r\noh\r\n'
+            b'4\r\n hai\r\n'
+            b'0' # last-chunk, but missing the \r\n
+            # Normally the final CRLF would go here, but if you put in a
+            # trailer, it doesn't.
+            # b'\r\n'
+            b'GET /path2?a=:123 HTTP/1.1\r\n'
+            b'Host: a.com\r\n'
+            b'Connection: close\r\n'
+            b'\r\n'
+        )
+        with self.makefile() as fd:
+            fd.write(data)
+            read_http(fd, body='oh hai')
+            with self.assertRaises(ConnectionClosed):
+                read_http(fd)
+
+        self.assertEqual(self.calls, 1)
+
+    def test_trailers_request_smuggling_missing_last_chunk_close(self):
+        # Same as the above, except the trailers are actually valid
+        # and since we ask to close the connection we don't get stuck
+        # waiting for more input.
+        data = (
+            b'POST /a HTTP/1.1\r\n'
+            b'Host: localhost\r\n'
+            b'Connection: close\r\n'
+            b'Transfer-Encoding: chunked\r\n'
+            b'\r\n'
+            b'2\r\noh\r\n'
+            b'4\r\n hai\r\n'
+            b'0\r\n' # last-chunk
+            # Normally the final CRLF would go here, but if you put in a
+            # trailer, it doesn't.
+            # b'\r\n'
+            b'GETpath2a:123 HTTP/1.1\r\n'
+            b'Host: a.com\r\n'
+            b'Connection: close\r\n'
+            b'\r\n'
+        )
+        with self.makefile() as fd:
+            fd.write(data)
+            read_http(fd, body='oh hai')
+            with self.assertRaises(ConnectionClosed):
+                read_http(fd)
+
+    def test_trailers_request_smuggling_header_first(self):
+        # When something that looks like a header comes in the first line.
+        data = (
+            b'POST /a HTTP/1.1\r\n'
+            b'Host: localhost\r\n'
+            b'Connection: keep-alive\r\n'
+            b'Transfer-Encoding: chunked\r\n'
+            b'\r\n'
+            b'2\r\noh\r\n'
+            b'4\r\n hai\r\n'
+            b'0\r\n' # last-chunk, but only one CRLF
+            b'Header: value\r\n'
+            b'GET /path2?a=:123 HTTP/1.1\r\n'
+            b'Host: a.com\r\n'
+            b'Connection: close\r\n'
+            b'\r\n'
+        )
+        with self.makefile() as fd:
+            fd.write(data)
+            read_http(fd, body='oh hai')
+            with self.assertRaises(ConnectionClosed):
+                read_http(fd, code=400)
+
+        self.assertEqual(self.calls, 1)
+
+    def test_trailers_request_smuggling_request_terminates_then_header(self):
+        data = (
+            b'POST /a HTTP/1.1\r\n'
+            b'Host: localhost\r\n'
+            b'Connection: keep-alive\r\n'
+            b'Transfer-Encoding: chunked\r\n'
+            b'\r\n'
+            b'2\r\noh\r\n'
+            b'4\r\n hai\r\n'
+            b'0\r\n' # last-chunk
+            b'\r\n'
+            b'Header: value'
+            b'GET /path2?a=:123 HTTP/1.1\r\n'
+            b'Host: a.com\r\n'
+            b'Connection: close\r\n'
+            b'\r\n'
+        )
+        with self.makefile() as fd:
+            fd.write(data)
+            read_http(fd, body='oh hai')
+            read_http(fd, code=400)
+
+        self.assertEqual(self.calls, 1)
 
 
 class TestUseWrite(TestCase):

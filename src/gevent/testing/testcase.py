@@ -225,7 +225,7 @@ class TestCaseMetaClass(type):
                 classDict.pop(key)
                 # XXX: When did we stop doing this?
                 #value = wrap_switch_count_check(value)
-                value = _wrap_timeout(timeout, value)
+                #value = _wrap_timeout(timeout, value)
                 error_fatal = getattr(value, 'error_fatal', error_fatal)
                 if error_fatal:
                     value = errorhandler.wrap_error_fatal(value)

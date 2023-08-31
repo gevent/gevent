@@ -13,7 +13,19 @@ different subclasses of :class:`WSGIHandler`.
    This server is intended primarily for development and testing, and
    secondarily for other "safe" scenarios where it will not be exposed to
    potentially malicious input. The code has not been security audited,
-   and is not intended for direct exposure to the public Internet.
+   and is not intended for direct exposure to the public Internet. For production
+   usage on the Internet, either choose a production-strength server such as
+   gunicorn, or put a reverse proxy between gevent and the Internet.
+
+.. versionchanged:: NEXT
+
+   Complies more closely with the HTTP specification for chunked transfer encoding.
+   In particular, we are much stricter about trailers, and trailers that
+   are invalid (too long or featuring disallowed characters) forcibly close
+   the connection to the client *after* the results have been sent.
+
+   Trailers otherwise continue to be ignored and are not available to the
+   WSGI application.
 
 """
 from __future__ import absolute_import
@@ -29,10 +41,7 @@ import time
 import traceback
 from datetime import datetime
 
-try:
-    from urllib import unquote
-except ImportError:
-    from urllib.parse import unquote # python 2 pylint:disable=import-error,no-name-in-module
+from urllib.parse import unquote
 
 from gevent import socket
 import gevent
@@ -57,29 +66,52 @@ __all__ = [
 
 MAX_REQUEST_LINE = 8192
 # Weekday and month names for HTTP date/time formatting; always English!
-_WEEKDAYNAME = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-_MONTHNAME = [None,  # Dummy so we can use 1-based month numbers
+_WEEKDAYNAME = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+_MONTHNAME = (None,  # Dummy so we can use 1-based month numbers
               "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-              "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+              "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 
 # The contents of the "HEX" grammar rule for HTTP, upper and lowercase A-F plus digits,
 # in byte form for comparing to the network.
 _HEX = string.hexdigits.encode('ascii')
 
+# The characters allowed in "token" rules.
+
+# token          = 1*tchar
+# tchar          = "!" / "#" / "$" / "%" / "&" / "'" / "*"
+#                / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
+#                / DIGIT / ALPHA
+#                ; any VCHAR, except delimiters
+# ALPHA          =  %x41-5A / %x61-7A   ; A-Z / a-z
+_ALLOWED_TOKEN_CHARS = frozenset(
+    # Remember we have to be careful because bytestrings
+    # inexplicably iterate as integers, which are not equal to bytes.
+
+    # explicit chars then DIGIT
+    (c.encode('ascii') for c in "!#$%&'*+-.^_`|~0123456789")
+    # Then we add ALPHA
+) | {c.encode('ascii') for c in string.ascii_letters}
+assert b'A' in _ALLOWED_TOKEN_CHARS
+
+
 # Errors
 _ERRORS = {}
 _INTERNAL_ERROR_STATUS = '500 Internal Server Error'
 _INTERNAL_ERROR_BODY = b'Internal Server Error'
-_INTERNAL_ERROR_HEADERS = [('Content-Type', 'text/plain'),
-                           ('Connection', 'close'),
-                           ('Content-Length', str(len(_INTERNAL_ERROR_BODY)))]
+_INTERNAL_ERROR_HEADERS = (
+    ('Content-Type', 'text/plain'),
+    ('Connection', 'close'),
+    ('Content-Length', str(len(_INTERNAL_ERROR_BODY)))
+)
 _ERRORS[500] = (_INTERNAL_ERROR_STATUS, _INTERNAL_ERROR_HEADERS, _INTERNAL_ERROR_BODY)
 
 _BAD_REQUEST_STATUS = '400 Bad Request'
 _BAD_REQUEST_BODY = ''
-_BAD_REQUEST_HEADERS = [('Content-Type', 'text/plain'),
-                        ('Connection', 'close'),
-                        ('Content-Length', str(len(_BAD_REQUEST_BODY)))]
+_BAD_REQUEST_HEADERS = (
+    ('Content-Type', 'text/plain'),
+    ('Connection', 'close'),
+    ('Content-Length', str(len(_BAD_REQUEST_BODY)))
+)
 _ERRORS[400] = (_BAD_REQUEST_STATUS, _BAD_REQUEST_HEADERS, _BAD_REQUEST_BODY)
 
 _REQUEST_TOO_LONG_RESPONSE = b"HTTP/1.1 414 Request URI Too Long\r\nConnection: close\r\nContent-length: 0\r\n\r\n"
@@ -207,23 +239,32 @@ class Input(object):
         # Read and return the next integer chunk length. If no
         # chunk length can be read, raises _InvalidClientInput.
 
-        # Here's the production for a chunk:
-        # (http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html)
-        #   chunk          = chunk-size [ chunk-extension ] CRLF
-        #                    chunk-data CRLF
-        #   chunk-size     = 1*HEX
-        #   chunk-extension= *( ";" chunk-ext-name [ "=" chunk-ext-val ] )
-        #   chunk-ext-name = token
-        #   chunk-ext-val  = token | quoted-string
+        # Here's the production for a chunk (actually the whole body):
+        # (https://www.rfc-editor.org/rfc/rfc7230#section-4.1)
 
-        # To cope with malicious or broken clients that fail to send valid
-        # chunk lines, the strategy is to read character by character until we either reach
-        # a ; or newline. If at any time we read a non-HEX digit, we bail. If we hit a
-        # ;, indicating an chunk-extension, we'll read up to the next
-        # MAX_REQUEST_LINE characters
-        # looking for the CRLF, and if we don't find it, we bail. If we read more than 16 hex characters,
-        # (the number needed to represent a 64-bit chunk size), we bail (this protects us from
-        # a client that sends an infinite stream of `F`, for example).
+        # chunked-body   = *chunk
+        #                  last-chunk
+        #                  trailer-part
+        #                  CRLF
+        #
+        # chunk          = chunk-size [ chunk-ext ] CRLF
+        #                  chunk-data CRLF
+        # chunk-size     = 1*HEXDIG
+        # last-chunk     = 1*("0") [ chunk-ext ] CRLF
+        # trailer-part   = *( header-field CRLF )
+        # chunk-data     = 1*OCTET ; a sequence of chunk-size octets
+
+        # To cope with malicious or broken clients that fail to send
+        # valid chunk lines, the strategy is to read character by
+        # character until we either reach a ; or newline. If at any
+        # time we read a non-HEX digit, we bail. If we hit a ;,
+        # indicating an chunk-extension, we'll read up to the next
+        # MAX_REQUEST_LINE characters ("A server ought to limit the
+        # total length of chunk extensions received") looking for the
+        # CRLF, and if we don't find it, we bail. If we read more than
+        # 16 hex characters, (the number needed to represent a 64-bit
+        # chunk size), we bail (this protects us from a client that
+        # sends an infinite stream of `F`, for example).
 
         buf = BytesIO()
         while 1:
@@ -231,16 +272,20 @@ class Input(object):
             if not char:
                 self._chunked_input_error = True
                 raise _InvalidClientInput("EOF before chunk end reached")
-            if char == b'\r':
-                break
-            if char == b';':
+
+            if char in (
+                b'\r', # Beginning EOL
+                b';', # Beginning extension
+            ):
                 break
 
-            if char not in _HEX:
+            if char not in _HEX: # Invalid data.
                 self._chunked_input_error = True
                 raise _InvalidClientInput("Non-hex data", char)
+
             buf.write(char)
-            if buf.tell() > 16:
+
+            if buf.tell() > 16: # Too many hex bytes
                 self._chunked_input_error = True
                 raise _InvalidClientInput("Chunk-size too large.")
 
@@ -260,11 +305,72 @@ class Input(object):
         if char == b'\r':
             # We either got here from the main loop or from the
             # end of an extension
+            self.__read_chunk_size_crlf(rfile, newline_only=True)
+            result = int(buf.getvalue(), 16)
+            if result == 0:
+                # The only time a chunk size of zero is allowed is the final
+                # chunk. It is either followed by another \r\n, or some trailers
+                # which are then followed by \r\n.
+                while self.__read_chunk_trailer(rfile):
+                    pass
+            return result
+
+    # Trailers have the following production (they are a header-field followed by CRLF)
+    # See above for the definition of "token".
+    #
+    # header-field   = field-name ":" OWS field-value OWS
+    # field-name     = token
+    # field-value    = *( field-content / obs-fold )
+    # field-content  = field-vchar [ 1*( SP / HTAB ) field-vchar ]
+    # field-vchar    = VCHAR / obs-text
+    # obs-fold       = CRLF 1*( SP / HTAB )
+    #                ; obsolete line folding
+    #                ; see Section 3.2.4
+
+
+    def __read_chunk_trailer(self, rfile, ):
+        # With rfile positioned just after a \r\n, read a trailer line.
+        # Return a true value if a non-empty trailer was read, and
+        # return false if an empty trailer was read (meaning the trailers are
+        # done).
+        # If a single line exceeds the MAX_REQUEST_LINE, raise an exception.
+        # If the field-name portion contains invalid characters, raise an exception.
+
+        i = 0
+        empty = True
+        seen_field_name = False
+        while i < MAX_REQUEST_LINE:
             char = rfile.read(1)
-            if char != b'\n':
+            if char == b'\r':
+                # Either read the next \n or raise an error.
+                self.__read_chunk_size_crlf(rfile, newline_only=True)
+                break
+            # Not a \r, so we are NOT an empty chunk.
+            empty = False
+            if char == b':' and i > 0:
+                # We're ending the field-name part; stop validating characters.
+                # Unless : was the first character...
+                seen_field_name = True
+            if not seen_field_name and char not in _ALLOWED_TOKEN_CHARS:
+                raise _InvalidClientInput('Invalid token character: %r' % (char,))
+            i += 1
+        else:
+            # We read too much
+            self._chunked_input_error = True
+            raise _InvalidClientInput("Too large chunk trailer")
+        return not empty
+
+    def __read_chunk_size_crlf(self, rfile, newline_only=False):
+        # Also for safety, correctly verify that we get \r\n when expected.
+        if not newline_only:
+            char = rfile.read(1)
+            if char != b'\r':
                 self._chunked_input_error = True
-                raise _InvalidClientInput("Line didn't end in CRLF")
-            return int(buf.getvalue(), 16)
+                raise _InvalidClientInput("Line didn't end in CRLF: %r" % (char,))
+        char = rfile.read(1)
+        if char != b'\n':
+            self._chunked_input_error = True
+            raise _InvalidClientInput("Line didn't end in LF: %r" % (char,))
 
     def _chunked_read(self, length=None, use_readline=False):
         # pylint:disable=too-many-branches
@@ -297,7 +403,7 @@ class Input(object):
 
                 self.position += datalen
                 if self.chunk_length == self.position:
-                    rfile.readline()
+                    self.__read_chunk_size_crlf(rfile)
 
                 if length is not None:
                     length -= datalen
@@ -310,9 +416,9 @@ class Input(object):
                 # determine the next size to read
                 self.chunk_length = self.__read_chunk_length(rfile)
                 self.position = 0
-                if self.chunk_length == 0:
-                    # Last chunk. Terminates with a CRLF.
-                    rfile.readline()
+                # If chunk_length was 0, we already read any trailers and
+                # validated that we have ended with \r\n\r\n.
+
         return b''.join(response)
 
     def read(self, length=None):
@@ -531,7 +637,8 @@ class WSGIHandler(object):
         elif len(words) == 2:
             self.command, self.path = words
             if self.command != "GET":
-                raise _InvalidClientRequest('Expected GET method: %r' % (raw_requestline,))
+                raise _InvalidClientRequest('Expected GET method; Got command=%r; path=%r; raw=%r' % (
+                    self.command, self.path, raw_requestline,))
             self.request_version = "HTTP/0.9"
             # QQQ I'm pretty sure we can drop support for HTTP/0.9
         else:
@@ -996,14 +1103,28 @@ class WSGIHandler(object):
             finally:
                 try:
                     self.wsgi_input._discard()
+                except _InvalidClientInput:
+                    # This one is deliberately raised to the outer
+                    # scope, because, with the incoming stream in some bad state,
+                    # we can't be sure we can synchronize and properly parse the next
+                    # request.
+                    raise
                 except socket.error:
-                    # Don't let exceptions during discarding
+                    # Don't let socket exceptions during discarding
                     # input override any exception that may have been
                     # raised by the application, such as our own _InvalidClientInput.
                     # In the general case, these aren't even worth logging (see the comment
                     # just below)
                     pass
-        except _InvalidClientInput:
+        except _InvalidClientInput as ex:
+            # DO log this one because:
+            # - Some of the data may have been read and acted on by the
+            #   application;
+            # - The response may or may not have been sent;
+            # - It's likely that the client is bad, or malicious, and
+            #   users might wish to take steps to block the client.
+            self._handle_client_error(ex)
+            self.close_connection = True
             self._send_error_response_if_possible(400)
         except socket.error as ex:
             if ex.args[0] in self.ignored_socket_errors:
@@ -1046,17 +1167,22 @@ class WSGIHandler(object):
     def _handle_client_error(self, ex):
         # Called for invalid client input
         # Returns the appropriate error response.
-        if not isinstance(ex, ValueError):
+        if not isinstance(ex, (ValueError, _InvalidClientInput)):
             # XXX: Why not self._log_error to send it through the loop's
             # handle_error method?
+            # _InvalidClientRequest is a ValueError; _InvalidClientInput is an IOError.
             traceback.print_exc()
         if isinstance(ex, _InvalidClientRequest):
             # No formatting needed, that's already been handled. In fact, because the
             # formatted message contains user input, it might have a % in it, and attempting
             # to format that with no arguments would be an error.
-            self.log_error(ex.formatted_message)
+            # However, the error messages do not include the requesting IP
+            # necessarily, so we do add that.
+            self.log_error('(from %s) %s', self.client_address, ex.formatted_message)
         else:
-            self.log_error('Invalid request: %s', str(ex) or ex.__class__.__name__)
+            self.log_error('Invalid request (from %s): %s',
+                           self.client_address,
+                           str(ex) or ex.__class__.__name__)
         return ('400', _BAD_REQUEST_RESPONSE)
 
     def _headers(self):

@@ -1,0 +1,26 @@
+Make ``gevent.pywsgi`` comply more closely with the HTTP specification
+for chunked transfer encoding. In particular, we are much stricter
+about trailers, and trailers that are invalid (too long or featuring
+disallowed characters) forcibly close the connection to the client
+*after* the results have been sent.
+
+Trailers otherwise continue to be ignored and are not available to the
+WSGI application.
+
+Previously, carefully crafted invalid trailers in chunked requests on
+keep-alive connections might appear as two requests to
+``gevent.pywsgi``. Because this was handled exactly as a normal
+keep-alive connection with two requests, the WSGI application should
+handle it normally. However, if you were counting on some upstream
+server to filter incoming requests based on paths or header fields,
+and the upstream server simply passed trailers through without
+validating them, then this embedded second request would bypass those
+checks. (If the upstream server validated that the trailers meet the
+HTTP specification, this could not occur, because characters that are
+required in an HTTP request, like a space, are not allowed in
+trailers.) CVE-2023-41419 was reserved for this.
+
+Our thanks to the original reporters, Keran Mu
+(mkr22@mails.tsinghua.edu.cn) and Jianjun Chen
+(jianjun@tsinghua.edu.cn), from Tsinghua University and Zhongguancun
+Laboratory.

@@ -360,10 +360,11 @@ def check_output(*popenargs, **kwargs):
 
     To capture standard error in the result, use ``stderr=STDOUT``::
 
-        >>> print(check_output(["/bin/sh", "-c",
+        >>> output = check_output(["/bin/sh", "-c",
         ...               "ls -l non_existent_file ; exit 0"],
-        ...              stderr=STDOUT).decode('ascii').strip())
-        ls: non_existent_file: No such file or directory
+        ...              stderr=STDOUT).decode('ascii').strip()
+        >>> print(output.rsplit(':', 1)[1].strip())
+        No such file or directory
 
     There is an additional optional argument, "input", allowing you to
     pass a string to the subprocess's stdin.  If you use this argument
