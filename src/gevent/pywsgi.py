@@ -17,7 +17,7 @@ different subclasses of :class:`WSGIHandler`.
    usage on the Internet, either choose a production-strength server such as
    gunicorn, or put a reverse proxy between gevent and the Internet.
 
-.. versionchanged:: NEXT
+.. versionchanged:: 23.9.0
 
    Complies more closely with the HTTP specification for chunked transfer encoding.
    In particular, we are much stricter about trailers, and trailers that

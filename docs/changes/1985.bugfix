@@ -1,7 +1,0 @@
-On Python 3.11 and newer, opt out of Cython's fast exception
-manipulation, which *may* be causing problems in certain circumstances
-when combined with greenlets.
-
-On all versions of Python, adjust some error handling in the default
-C-based loop. This fixes several assertion failures on debug versions
-of CPython. Hopefully it has a positive impact under real conditions.

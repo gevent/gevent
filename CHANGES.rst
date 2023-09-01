@@ -6,6 +6,59 @@
 
 .. towncrier release notes start
 
+23.9.0 (2023-09-01)
+===================
+
+
+Bugfixes
+--------
+
+- Make ``gevent.select.select`` accept arbitrary iterables, not just
+  sequences. That is, you can now pass in a generator of file
+  descriptors instead of a realized list. Internally, arbitrary
+  iterables are copied into lists. This better matches what the standard
+  library does. Thanks to David Salvisberg.
+  See :issue:`1979`.
+- On Python 3.11 and newer, opt out of Cython's fast exception
+  manipulation, which *may* be causing problems in certain circumstances
+  when combined with greenlets.
+
+  On all versions of Python, adjust some error handling in the default
+  C-based loop. This fixes several assertion failures on debug versions
+  of CPython. Hopefully it has a positive impact under real conditions.
+  See :issue:`1985`.
+- Make ``gevent.pywsgi`` comply more closely with the HTTP specification
+  for chunked transfer encoding. In particular, we are much stricter
+  about trailers, and trailers that are invalid (too long or featuring
+  disallowed characters) forcibly close the connection to the client
+  *after* the results have been sent.
+
+  Trailers otherwise continue to be ignored and are not available to the
+  WSGI application.
+
+  Previously, carefully crafted invalid trailers in chunked requests on
+  keep-alive connections might appear as two requests to
+  ``gevent.pywsgi``. Because this was handled exactly as a normal
+  keep-alive connection with two requests, the WSGI application should
+  handle it normally. However, if you were counting on some upstream
+  server to filter incoming requests based on paths or header fields,
+  and the upstream server simply passed trailers through without
+  validating them, then this embedded second request would bypass those
+  checks. (If the upstream server validated that the trailers meet the
+  HTTP specification, this could not occur, because characters that are
+  required in an HTTP request, like a space, are not allowed in
+  trailers.) CVE-2023-41419 was reserved for this.
+
+  Our thanks to the original reporters, Keran Mu
+  (mkr22@mails.tsinghua.edu.cn) and Jianjun Chen
+  (jianjun@tsinghua.edu.cn), from Tsinghua University and Zhongguancun
+  Laboratory.
+  See :issue:`1989`.
+
+
+----
+
+
 23.7.0 (2023-07-11)
 ===================
 
