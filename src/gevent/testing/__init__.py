@@ -112,6 +112,7 @@ from .skipping import skipWithCExtensions
 from .skipping import skipOnLibuvOnTravisOnCPython27
 from .skipping import skipOnPy37
 from .skipping import skipOnPy310
+from .skipping import skipOnPy312
 from .skipping import skipOnPy3
 from .skipping import skipWithoutResource
 from .skipping import skipWithoutExternalNetwork

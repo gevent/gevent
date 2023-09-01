@@ -802,7 +802,7 @@ class TestChunkedPost(TestCase):
 
     def test_trailers_keepalive_ignored(self):
         # Trailers after a chunk are ignored.
-        data = (
+        data1 = (
             b'POST /a HTTP/1.1\r\n'
             b'Host: localhost\r\n'
             b'Connection: keep-alive\r\n'
@@ -816,6 +816,8 @@ class TestChunkedPost(TestCase):
             b'trailer1: value1\r\n'
             b'trailer2: value2\r\n'
             b'\r\n' # Really terminate the chunk.
+        )
+        data2 = (
             b'POST /a HTTP/1.1\r\n'
             b'Host: localhost\r\n'
             b'Connection: close\r\n'
@@ -826,11 +828,36 @@ class TestChunkedPost(TestCase):
             b'0\r\n' # last-chunk
         )
         with self.makefile() as fd:
-            fd.write(data)
+            fd.write(data1)
             read_http(fd, body='oh hai')
+            fd.write(data2)
             read_http(fd, body='oh bye')
 
         self.assertEqual(self.calls, 2)
+
+    def test_trailers_close_ignored(self):
+        data = (
+            b'POST /a HTTP/1.1\r\n'
+            b'Host: localhost\r\n'
+            b'Connection: close\r\n'
+            b'Transfer-Encoding: chunked\r\n'
+            b'\r\n'
+            b'2\r\noh\r\n'
+            b'4\r\n hai\r\n'
+            b'0\r\n' # last-chunk
+            # Normally the final CRLF would go here, but if you put in a
+            # trailer, it doesn't.
+            # b'\r\n'
+            b'GETpath2a:123 HTTP/1.1\r\n'
+            b'Host: a.com\r\n'
+            b'Connection: close\r\n'
+            b'\r\n'
+        )
+        with self.makefile() as fd:
+            fd.write(data)
+            read_http(fd, body='oh hai')
+            with self.assertRaises(ConnectionClosed):
+                read_http(fd)
 
     def test_trailers_too_long(self):
         # Trailers after a chunk are ignored.
@@ -845,7 +872,7 @@ class TestChunkedPost(TestCase):
             b'0\r\n' # last-chunk
             # Normally the final CRLF would go here, but if you put in a
             # trailer, it doesn't.
-            b'trailer2: value2' # not lack of \r\n
+            b'trailer2: value2' # note lack of \r\n
         )
         data += b't' * pywsgi.MAX_REQUEST_LINE
         # No termination, because we detect the trailer as being too
@@ -887,33 +914,6 @@ class TestChunkedPost(TestCase):
                 read_http(fd)
 
         self.assertEqual(self.calls, 1)
-
-    def test_trailers_request_smuggling_missing_last_chunk_close(self):
-        # Same as the above, except the trailers are actually valid
-        # and since we ask to close the connection we don't get stuck
-        # waiting for more input.
-        data = (
-            b'POST /a HTTP/1.1\r\n'
-            b'Host: localhost\r\n'
-            b'Connection: close\r\n'
-            b'Transfer-Encoding: chunked\r\n'
-            b'\r\n'
-            b'2\r\noh\r\n'
-            b'4\r\n hai\r\n'
-            b'0\r\n' # last-chunk
-            # Normally the final CRLF would go here, but if you put in a
-            # trailer, it doesn't.
-            # b'\r\n'
-            b'GETpath2a:123 HTTP/1.1\r\n'
-            b'Host: a.com\r\n'
-            b'Connection: close\r\n'
-            b'\r\n'
-        )
-        with self.makefile() as fd:
-            fd.write(data)
-            read_http(fd, body='oh hai')
-            with self.assertRaises(ConnectionClosed):
-                read_http(fd)
 
     def test_trailers_request_smuggling_header_first(self):
         # When something that looks like a header comes in the first line.

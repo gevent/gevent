@@ -253,6 +253,11 @@ class Input(object):
         # last-chunk     = 1*("0") [ chunk-ext ] CRLF
         # trailer-part   = *( header-field CRLF )
         # chunk-data     = 1*OCTET ; a sequence of chunk-size octets
+        #
+        # chunk-ext      = *( ";" chunk-ext-name [ "=" chunk-ext-val ] )
+        #
+        # chunk-ext-name = token
+        # chunk-ext-val  = token / quoted-string
 
         # To cope with malicious or broken clients that fail to send
         # valid chunk lines, the strategy is to read character by
