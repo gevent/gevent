@@ -14,6 +14,7 @@ import os
 
 PY39 = sys.version_info[:2] >= (3, 9)
 PY311 = sys.version_info[:2] >= (3, 11)
+PY312 = sys.version_info[:2] >= (3, 11)
 PYPY = hasattr(sys, 'pypy_version_info')
 WIN = sys.platform.startswith("win")
 LINUX = sys.platform.startswith('linux')

@@ -39,13 +39,16 @@
 #define GGIL_RELEASE  PyGILState_Release(___save);
 
 
-static CYTHON_INLINE void gevent_check_signals(struct PyGeventLoopObject* loop) {
+static CYTHON_INLINE void gevent_check_signals(struct PyGeventLoopObject* loop)
+{
     if (!ev_is_default_loop(loop->_ptr)) {
         /* only reporting signals on the default loop */
         return;
     }
     PyErr_CheckSignals();
-    if (PyErr_Occurred()) gevent_handle_error(loop, Py_None);
+    if (PyErr_Occurred()) {
+        gevent_handle_error(loop, Py_None);
+    }
 }
 
 #define GET_OBJECT(PY_TYPE, EV_PTR, MEMBER) \
@@ -54,7 +57,8 @@ static CYTHON_INLINE void gevent_check_signals(struct PyGeventLoopObject* loop) 
 
 void gevent_noop(struct ev_loop* loop, void* watcher, int revents) {}
 
-static void gevent_stop(PyObject* watcher, struct PyGeventLoopObject* loop) {
+static void gevent_stop(PyObject* watcher, struct PyGeventLoopObject* loop)
+{
     PyObject *result, *method;
     int error;
     error = 1;
@@ -68,12 +72,14 @@ static void gevent_stop(PyObject* watcher, struct PyGeventLoopObject* loop) {
         Py_DECREF(method);
     }
     if (error) {
+        assert(PyErr_Occurred());
         gevent_handle_error(loop, watcher);
     }
 }
 
 
-static void gevent_callback(struct PyGeventLoopObject* loop, PyObject* callback, PyObject* args, PyObject* watcher, void *c_watcher, int revents) {
+static void gevent_callback(struct PyGeventLoopObject* loop, PyObject* callback, PyObject* args, PyObject* watcher, void *c_watcher, int revents)
+{
     GGIL_DECLARE;
     PyObject *result, *py_events;
     long length;
@@ -89,6 +95,8 @@ static void gevent_callback(struct PyGeventLoopObject* loop, PyObject* callback,
     }
     length = PyTuple_Size(args);
     if (length < 0) {
+        /* returns -1 and sets an error if args isn't a tuple. */
+        assert(PyErr_Occurred());
         gevent_handle_error(loop, watcher);
         goto end;
     }
@@ -108,6 +116,7 @@ static void gevent_callback(struct PyGeventLoopObject* loop, PyObject* callback,
         Py_DECREF(result);
     }
     else {
+        assert(PyErr_Occurred());
         gevent_handle_error(loop, watcher);
         if (revents & (EV_READ|EV_WRITE)) {
             /* io watcher: not stopping it may cause the failing callback to be called repeatedly */
@@ -134,7 +143,8 @@ end:
 }
 
 
-void gevent_call(struct PyGeventLoopObject* loop, struct PyGeventCallbackObject* cb) {
+void gevent_call(struct PyGeventLoopObject* loop, struct PyGeventCallbackObject* cb)
+{
     /* no need for GIL here because it is only called from run_callbacks which already has GIL */
     PyObject *result, *callback, *args;
     if (!loop || !cb)
@@ -152,12 +162,29 @@ void gevent_call(struct PyGeventLoopObject* loop, struct PyGeventCallbackObject*
     Py_INCREF(Py_None);
     Py_DECREF(cb->callback);
     cb->callback = Py_None;
-
+    /*
+      you are not allowed to use PyObject_Call() with an error pending;
+      debug builds crash with an assertion.
+      How do we get here with an error pending? good question. It's been
+      seen in 3.12 before we stopped using CYTHON_FAST_THREAD_STATE.
+      Hopefully changing that makes this dead code.
+    */
+    if (PyErr_Occurred()) {
+        /* by now, cb->callback is None, so using it as the context doesn't
+           produce a useful output. The callable object is more helpful.
+           Writing unraisable clears the error, unless it gets an error of
+           its own.
+        */
+        PyErr_WriteUnraisable(callback);
+        PyErr_Clear();
+    }
+    assert(!PyErr_Occurred());
     result = PyObject_Call(callback, args, NULL);
     if (result) {
         Py_DECREF(result);
     }
     else {
+        assert(PyErr_Occurred());
         gevent_handle_error(loop, (PyObject*)cb);
     }
 
@@ -200,6 +227,14 @@ void gevent_run_callbacks(struct ev_loop *_loop, void *watcher, int revents) {
         Py_DECREF(result);
     }
     else {
+        /*
+         For reasons that are unclear, PyErr_WriteUnraisable, which invokes
+         sys.unraisablehook, isn't safe to call here, at least in some cases.
+         test__pool.TestCoroutinePool.test_stderr_raising fails its timeout
+         if we use that. Instead, we use PyErr_Print, which doesn't have any
+         context, but doesn't hang either. It calls sys.excepthook.
+         */
+
         PyErr_Print();
         PyErr_Clear();
     }

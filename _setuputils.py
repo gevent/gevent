@@ -23,6 +23,9 @@ THIS_DIR = os.path.dirname(__file__)
 
 PYPY = hasattr(sys, 'pypy_version_info')
 WIN = sys.platform.startswith('win')
+PY311 = sys.version_info[:2] >= (3, 11)
+PY312 = sys.version_info[:2] >= (3, 12)
+
 
 RUNNING_ON_TRAVIS = os.environ.get('TRAVIS')
 RUNNING_ON_APPVEYOR = os.environ.get('APPVEYOR')
@@ -233,6 +236,15 @@ def cythonize1(ext):
         # This is for generated include files; see below.
         '.',
     ]
+    if PY311:
+        # The "fast" code is Cython for manipulating
+        # exceptions is, unfortunately, broken, at least in 3.0.2.
+        # The implementation of __Pyx__GetException() doesn't properly set
+        # tstate->current_exception when it normalizes exceptions,
+        # causing assertion errors.
+        # This definitely seems to be a problem on 3.12, and MAY
+        # be a problem on 3.11 (#1985)
+        ext.define_macros.append(('CYTHON_FAST_THREAD_STATE', '0'))
     try:
         new_ext = cythonize(
             [ext],
