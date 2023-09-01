@@ -371,52 +371,17 @@ class GreenletTree(object):
     def __str__(self):
         return self.format(False)
 
-    SUPPORTS_TRACEBACK = sys.version_info not in (
-        (3, 12, 0, 'beta', 3),
-        (3, 12, 0, 'beta', 4),
-        (3, 12, 0, 'candidate', 1),
-    )
+    # Prior to greenlet 3.0rc1, getting tracebacks of inactive
+    # greenlets could crash on Python 3.12. So we  added a version-based
+    # setting here to disable it. That's now fixed, but leave the
+    # hook just in case.
+    _SUPPORTS_TRACEBACK = True
 
     @classmethod
     def __render_tb(cls, tree, label, frame, limit):
         tree.child_data(label)
-        # XXX: Issues with tblib? Seen with tblib 1.3 and 2.0.
-        # More likely, it's something wrong in greenlet and the way it's
-        # keeping track of the frames?
-        #
-        # In a test like this:
-        #
-        #   g = gevent.spawn(util.print_run_info, file=io)
-        #   g.join() (test__util.py, line 53)
-        #
-        # 3.12b3/b4 is crashing walking the stack on macOS:
-        # It's a simple segfault on line 340, ``f = f.f_back``.
-        # I have confirmed that the object is a real frame object.
-        #
-        # It seems unlikely to be a greenlet thing though, because the frame we're
-        # crashing on is the root frame:
-        #
-        # <frame at 0x.., file '/gevent/tests/test__util.py', line 53, code root>
-        #
-        # Interestingly, we see the test case dump the stack of the greenlet (successfully),
-        # then dump the stack of the main thread (successfully) --- this ends in line 53 --,
-        # and then get _another_ frame for line 53, and this is where it crashes.
-        # The difference? The successful dump does not list it as a root frame,
-        # where the failed one does.
-        #
-        #
-        # on Linux CI (not sure what frame), it is failing with a nice attribute error
-        # (which watches where the macOS is failing, inside a call to
-        # Py_GetAttr):
-        #
-        # File "//python3.12/traceback.py", line 339, in walk_stack
-        #   yield f, f.f_lineno
-        # AttributeError: 'dict' object has no attribute 'f_lineno'
-        #
-        # A workaround on macOS is to not dump the root frame, but that only fixes
-        # test__util. test__threadpool:test_greenlet_class crashes similarly, but
-        # not 100% of the time.
-        if cls.SUPPORTS_TRACEBACK:
+
+        if cls._SUPPORTS_TRACEBACK:
             tb = ''.join(traceback.format_stack(frame, limit))
         else:
             tb = ''

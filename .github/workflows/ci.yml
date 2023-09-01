@@ -88,13 +88,14 @@ jobs:
         exclude:
           # The bulk of the testing is on Linux and Windows (appveyor).
           # Experience shows that it's sufficient to only test the latest
-          # version on macOS.
-          - os: macos-latest
-            python-version: 3.8
-          - os: macos-latest
-            python-version: 3.9
-          - os: macos-latest
-            python-version: 3.10
+          # version on macOS. However, that does mean you need to
+          # manually upload macOS wheels for those versions.
+          # - os: macos-latest
+          #   python-version: 3.8
+          # - os: macos-latest
+          #   python-version: 3.9
+          # - os: macos-latest
+          #   python-version: 3.10
           - os: macos-latest
             python-version: "pypy-3.10"
 
@@ -171,7 +172,7 @@ jobs:
           pip install -q -U 'cffi;platform_python_implementation=="CPython"'
           pip install -q -U 'cython>=3.0'
           # Use a debug version of greenlet to help catch any errors earlier.
-          CFLAGS="$CFLAGS -Og -g -UNDEBUG" pip install -v --no-binary :all: 'greenlet>=2.0.0 ;platform_python_implementation=="CPython"' 'greenlet >= 3.0a1; python_version >="3.12"'
+          CFLAGS="$CFLAGS -Og -g -UNDEBUG" pip install -v --no-binary :all: 'greenlet>=2.0.0 ;platform_python_implementation=="CPython"' 'greenlet >= 3.0rc1; python_version >="3.12"'
 
       - name: Build gevent (non-Mac)
         if: ${{ ! startsWith(runner.os, 'Mac') }}
@@ -194,6 +195,10 @@ jobs:
           # output (pip install uses a random temporary directory, making this difficult)
           python setup.py build_ext -i
           python setup.py bdist_wheel
+          # Something in the build system isn't detecting that we're building for both,
+          # so we're getting tagged with just x86_64. Force the universal2 tag.
+          # (I've verified that the .so files are in fact universal, with both architectures.)
+          wheel tags --remove --abi-tag universal2 dist/*whl
         env:
           # Unlike the above, we are actually distributing these
           # wheels, so they need to be built for production use.
@@ -241,6 +246,7 @@ jobs:
       # it's sufficient to run the full suite on the current version
       # and oldest version.
       - name: "Tests: subproccess and FileObjectThread"
+        if: startsWith(runner.os, 'Linux') || (startsWith(runner.os, 'Mac') && matrix.python-version == '3.12-dev')
         # Now, the non-default threaded file object.
         # In the past, we included all test files that had a reference to 'subprocess'' somewhere in their
         # text. The monkey-patched stdlib tests were specifically included here.
@@ -436,7 +442,7 @@ jobs:
           - manylinux2014_aarch64
           - manylinux2014_ppc64le
           - manylinux2014_s390x
-          - manylinux2014_x86_64
+          - manylinux_2_28_x86_64
           - musllinux_1_1_x86_64
           - musllinux_1_1_aarch64
     name: ${{ matrix.image }}

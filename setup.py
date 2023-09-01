@@ -211,7 +211,7 @@ greenlet_requires = [
     # 3.0 is ABI compatible and adds support for Python 3.12 (but right
     # now it's alpha because of Cython, so we only require it on 3.12)
     'greenlet >= 2.0.0 ; platform_python_implementation=="CPython" and python_version < "3.12"',
-    'greenlet >= 3.0a1 ; platform_python_implementation=="CPython" and python_version >= "3.12"',
+    'greenlet >= 3.0rc1 ; platform_python_implementation=="CPython" and python_version >= "3.12"',
 ]
 
 # Note that we don't add cffi to install_requires, it's

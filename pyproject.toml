@@ -30,7 +30,7 @@ requires = [
      # 3.0 is ABI compatible with earlier releases, so we can switch back and
      # forth between 2 and 3 without recompiling. 3.0 is required for
      # Python 3.12
-     "greenlet >= 3.0a1 ; platform_python_implementation == 'CPython'",
+     "greenlet >= 3.0rc1 ; platform_python_implementation == 'CPython'",
 ]
 
 [tool.towncrier]
