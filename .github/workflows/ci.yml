@@ -170,7 +170,7 @@ jobs:
           pip install -U pip
           pip install -U -q setuptools wheel twine
           pip install -q -U 'cffi;platform_python_implementation=="CPython"'
-          pip install -q -U 'cython>=3.0'
+          pip install -q -U 'cython>=3.0.2'
           # Use a debug version of greenlet to help catch any errors earlier.
           CFLAGS="$CFLAGS -Og -g -UNDEBUG" pip install -v --no-binary :all: 'greenlet>=2.0.0;platform_python_implementation=="CPython" and python_version < "3.12"'
           CFLAGS="$CFLAGS -Og -g -UNDEBUG" pip install -v --no-binary :all: 'greenlet>=3.0rc1;platform_python_implementation=="CPython" and python_version >= "3.12"'
@@ -199,7 +199,10 @@ jobs:
           # Something in the build system isn't detecting that we're building for both,
           # so we're getting tagged with just x86_64. Force the universal2 tag.
           # (I've verified that the .so files are in fact universal, with both architectures.)
-          wheel tags --remove --abi-tag universal2 dist/*whl
+          #wheel tags --abi-tag universal2 dist/*whl
+          # XXX: That can produce invalid filenames, for some reason. 3.11 came up with
+          # gevent-23.7.1.dev0-cp311-universal2-macosx_10_9_universal2.whl, which is not valid.
+          # It's not clear why, because greenlet didn't do that. Maybe because it was already universal?
         env:
           # Unlike the above, we are actually distributing these
           # wheels, so they need to be built for production use.
@@ -209,7 +212,7 @@ jobs:
       - name: Check gevent build
         run: |
           ls -l dist
-          twine check dist/*
+          twine check dist/*whl
       - name: Upload gevent wheel
         uses: actions/upload-artifact@v2
         with:
