@@ -6,6 +6,13 @@
 
 .. towncrier release notes start
 
+
+23.9.0.post1 (2023-09-02)
+=========================
+
+- Fix Windows wheel builds.
+- Fix macOS wheel builds.
+
 23.9.0 (2023-09-01)
 ===================
 
