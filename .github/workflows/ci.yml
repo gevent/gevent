@@ -199,16 +199,23 @@ jobs:
           # Something in the build system isn't detecting that we're building for both,
           # so we're getting tagged with just x86_64. Force the universal2 tag.
           # (I've verified that the .so files are in fact universal, with both architectures.)
-          #wheel tags --abi-tag universal2 dist/*whl
+          echo 'Done building'
+          ls -l dist
+          # (wheel tags --abi-tag universal2 dist/*x86_64.whl && ((rm dist/*universal2*universal2.whl || rm dist/*universal2*x86_86.whl) || rm dist/*x86_64.whl)) || true
           # XXX: That can produce invalid filenames, for some reason. 3.11 came up with
           # gevent-23.7.1.dev0-cp311-universal2-macosx_10_9_universal2.whl, which is not valid.
+          # gevent-23.9.1.dev0-cp38-universal2-macosx_11_0_x86_64.whl has also shown up.
           # It's not clear why, because greenlet didn't do that. Maybe because it was already universal?
+          # So we attempt to only do this for non-universal wheels.
+          ls -l dist
         env:
           # Unlike the above, we are actually distributing these
           # wheels, so they need to be built for production use.
           CPPFLAGS: "-O3"
           # Build for both architectures
           ARCHFLAGS: "-arch x86_64 -arch arm64"
+          # Force the wheel tag.
+          _PYTHON_HOST_PLATFORM: "macosx-11.0-universal2"
       - name: Check gevent build
         run: |
           ls -l dist
