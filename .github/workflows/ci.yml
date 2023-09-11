@@ -172,8 +172,8 @@ jobs:
           pip install -q -U 'cffi;platform_python_implementation=="CPython"'
           pip install -q -U 'cython>=3.0.2'
           # Use a debug version of greenlet to help catch any errors earlier.
-          CFLAGS="$CFLAGS -Og -g -UNDEBUG" pip install -v --no-binary :all: 'greenlet>=2.0.0;platform_python_implementation=="CPython" and python_version < "3.12"'
-          CFLAGS="$CFLAGS -Og -g -UNDEBUG" pip install -v --no-binary :all: 'greenlet>=3.0rc1;platform_python_implementation=="CPython" and python_version >= "3.12"'
+          CFLAGS="$CFLAGS -Og -g -UNDEBUG" pip install -v --no-binary :all: 'greenlet>=2.0.0;platform_python_implementation=="CPython" and python_version < "3.11"'
+          CFLAGS="$CFLAGS -Og -g -UNDEBUG" pip install -v --no-binary :all: 'greenlet>=3.0rc2;platform_python_implementation=="CPython" and python_version >= "3.11"'
 
       - name: Build gevent (non-Mac)
         if: ${{ ! startsWith(runner.os, 'Mac') }}
@@ -456,6 +456,7 @@ jobs:
           - manylinux_2_28_x86_64
           - musllinux_1_1_x86_64
           - musllinux_1_1_aarch64
+          - manylinux2014_x86_84
     name: ${{ matrix.image }}
     steps:
       - name: checkout
