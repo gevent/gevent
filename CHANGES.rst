@@ -6,6 +6,23 @@
 
 .. towncrier release notes start
 
+23.9.1 (2023-09-12)
+===================
+
+
+Bugfixes
+--------
+
+- Require greenlet 3.0 on Python 3.11 and Python 3.12; greenlet 3.0 is
+  recommended for all platforms. This fixes a number of obscure crashes
+  on all versions of Python, as well as fixing a fairly common problem
+  on Python 3.11+ that could manifest as either a crash or as a
+  ``SystemError``.
+  See :issue:`1985`.
+
+
+----
+
 
 23.9.0.post1 (2023-09-02)
 =========================
