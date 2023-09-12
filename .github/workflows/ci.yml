@@ -173,7 +173,7 @@ jobs:
           pip install -q -U 'cython>=3.0.2'
           # Use a debug version of greenlet to help catch any errors earlier.
           CFLAGS="$CFLAGS -Og -g -UNDEBUG" pip install -v --no-binary :all: 'greenlet>=2.0.0;platform_python_implementation=="CPython" and python_version < "3.11"'
-          CFLAGS="$CFLAGS -Og -g -UNDEBUG" pip install -v --no-binary :all: 'greenlet>=3.0rc2;platform_python_implementation=="CPython" and python_version >= "3.11"'
+          CFLAGS="$CFLAGS -Og -g -UNDEBUG" pip install -v --no-binary :all: 'greenlet>=3.0rc3;platform_python_implementation=="CPython" and python_version >= "3.11"'
 
       - name: Build gevent (non-Mac)
         if: ${{ ! startsWith(runner.os, 'Mac') }}
