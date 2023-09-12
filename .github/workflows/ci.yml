@@ -456,7 +456,7 @@ jobs:
           - manylinux_2_28_x86_64
           - musllinux_1_1_x86_64
           - musllinux_1_1_aarch64
-          - manylinux2014_x86_84
+          - manylinux2014_x86_64
     name: ${{ matrix.image }}
     steps:
       - name: checkout
