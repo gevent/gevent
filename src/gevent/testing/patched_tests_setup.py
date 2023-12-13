@@ -34,6 +34,7 @@ from .sysinfo import PY312
 
 from .sysinfo import WIN
 from .sysinfo import OSX
+from .sysinfo import LINUX
 
 from .sysinfo import LIBUV
 from .sysinfo import CFFI_BACKEND
@@ -1250,6 +1251,16 @@ if PY312:
             'test_socket.BasicHyperVTest.testCreateHyperVSocketAddrNotTupleFailure',
             'test_socket.BasicHyperVTest.testCreateHyperVSocketAddrServiceIdNotValidUUIDFailure',
             'test_socket.BasicHyperVTest.testCreateHyperVSocketAddrVmIdNotValidUUIDFailure',
+        ]
+
+    if LINUX and RUNNING_ON_CI:
+        disabled_tests += [
+            # These two try to forcibly close a socket, preventing some data
+            # from reaching its destination. That works OK on some platforms, but
+            # in this set of circumstances, because of the event loop, gevent is
+            # able to send that data.
+            'test_ssl.TestPreHandshakeClose.test_preauth_data_to_tls_client',
+            'test_ssl.TestPreHandshakeClose.test_preauth_data_to_tls_server',
         ]
 
 if TRAVIS:

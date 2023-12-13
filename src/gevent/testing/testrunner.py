@@ -128,6 +128,8 @@ class Runner(object):
 
     def __init__(self,
                  tests,
+                 *,
+                 allowed_return_codes,
                  configured_failing_tests=(),
                  failfast=False,
                  quiet=False,
@@ -135,6 +137,9 @@ class Runner(object):
                  worker_count=DEFAULT_NWORKERS,
                  second_chance=False):
         """
+        :keyword allowed_return_codes: Return codes other than
+           0 that are counted as a success. Needed because some versions
+           of Python give ``unittest`` weird return codes.
         :keyword quiet: Set to True or False to explicitly choose. Set to
             `None` to use the default, which may come from the environment variable
             ``GEVENTTEST_QUIET``.
@@ -153,6 +158,7 @@ class Runner(object):
         self._running_jobs = []
 
         self._worker_count = min(len(tests), worker_count) or 1
+        self._allowed_return_codes = allowed_return_codes
 
     def _run_one(self, cmd, **kwargs):
         if self._quiet is not None:
@@ -807,7 +813,7 @@ def _setup_environ(debug=False):
 
 
 def main():
-    # pylint:disable=too-many-locals,too-many-statements
+    # pylint:disable=too-many-locals,too-many-statements,too-many-branches
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--ignore')
@@ -952,12 +958,21 @@ def main():
             # XXX: Add a way to force these.
             print("Not running tests on pypy with c-ares; not a supported configuration")
             return
+
         if options.package:
             # Put this directory on the path so relative imports work.
             package_dir = _dir_from_package_name(options.package)
             os.environ['PYTHONPATH'] = os.environ.get('PYTHONPATH', "") + os.pathsep + package_dir
+
+        allowed_return_codes = ()
+        if sys.version_info[:3] >= (3, 12, 1):
+            # unittest suddenly started failing with this return code
+            # if all tests in a module are skipped in 3.12.1.
+            allowed_return_codes += (5,)
+
         runner = Runner(
             tests,
+            allowed_return_codes=allowed_return_codes,
             configured_failing_tests=FAILING_TESTS,
             failfast=options.failfast,
             quiet=options.quiet,

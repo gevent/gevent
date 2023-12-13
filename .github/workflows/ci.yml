@@ -121,7 +121,10 @@ jobs:
       - name: Set coverage status
         # coverage is too slow on PyPy. We can't submit it from macOS (see that action),
         # so don't bother taking the speed hit there either.
-        if: ${{ !startsWith(matrix.python-version, 'pypy') && startsWith(runner.os, 'Linux') }}
+        # Coverage can't run the test_interpreters.py tests because greenlet can't
+        # run there and that's how coverage is configured. Right now, we only have that
+        # on Python 3.12, so take the quick way out and nix that version too.
+        if: ${{ !startsWith(matrix.python-version, 'pypy') && !startsWith(matrix.python-version, "3.12") && startsWith(runner.os, 'Linux') }}
         run: |
           echo G_USE_COV=--coverage >> $GITHUB_ENV
 

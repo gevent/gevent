@@ -374,6 +374,7 @@ def run(command, **kwargs): # pylint:disable=too-many-locals
     quiet = kwargs.pop('quiet', QUIET)
     verbose = not quiet
     nested = kwargs.pop('nested', False)
+    allowed_return_codes = kwargs.pop('allowed_return_codes', ())
     if buffer_output:
         assert 'stdout' not in kwargs and 'stderr' not in kwargs, kwargs
         kwargs['stderr'] = subprocess.STDOUT
@@ -394,7 +395,7 @@ def run(command, **kwargs): # pylint:disable=too-many-locals
         assert popen.timer is None
 
 
-    failed = bool(result)
+    failed = bool(result) and result not in allowed_return_codes
     if out:
         out = out.strip()
         out = out if isinstance(out, str) else out.decode('utf-8', 'ignore')
