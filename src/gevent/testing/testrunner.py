@@ -161,6 +161,7 @@ class Runner(object):
         self._allowed_return_codes = allowed_return_codes
 
     def _run_one(self, cmd, **kwargs):
+        kwargs['allowed_return_codes'] = self._allowed_return_codes
         if self._quiet is not None:
             kwargs['quiet'] = self._quiet
         result = util.run(cmd, **kwargs)

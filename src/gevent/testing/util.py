@@ -260,7 +260,6 @@ class RunResult(object):
     value of True; otherwise, a boolean value of false.
 
     The integer value of this object is the command's exit code.
-
     """
 
     def __init__(self,
@@ -394,7 +393,9 @@ def run(command, **kwargs): # pylint:disable=too-many-locals
         kill(popen)
         assert popen.timer is None
 
-
+    # We don't want to treat return codes that are allowed as failures,
+    # but we do want to log those specially. That's why we retain the distinction
+    # between ``failed`` and ``result`` (failed takes the allowed codes into account).
     failed = bool(result) and result not in allowed_return_codes
     if out:
         out = out.strip()
@@ -406,11 +407,16 @@ def run(command, **kwargs): # pylint:disable=too-many-locals
         log('| %s\n%s', name, out)
     status, run_count, skipped_count = _find_test_status(duration, out)
     if result:
-        log('! %s [code %s] %s', name, result, status, color='error')
+        log('! %s [code %s] %s', name, result, status,
+            color='error' if failed else 'suboptimal-behaviour')
     elif not nested:
         log('- %s %s', name, status)
+
+    # For everything outside this function, we need to pretend that
+    # allowed codes are actually successes.
     return RunResult(
-        command, kwargs, result,
+        command, kwargs,
+        0 if result in allowed_return_codes else result,
         output=out, error=err,
         name=name,
         run_count=run_count,
