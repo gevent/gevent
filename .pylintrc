@@ -3,7 +3,6 @@ load-plugins=pylint.extensions.bad_builtin,
    pylint.extensions.code_style,
    pylint.extensions.dict_init_mutate,
    pylint.extensions.dunder,
-   pylint.extensions.emptystring,
    pylint.extensions.comparison_placement,
    pylint.extensions.confusing_elif,
    pylint.extensions.for_any_all,
@@ -96,6 +95,7 @@ limit-inference-results=1
 
 # invalid-name, ; We get lots of these, especially in scripts. should fix many of them
 # protected-access, ; We have many cases of this; legit ones need to be examinid and commented, then this removed
+# no-self-use, ; common in superclasses with extension points
 # too-few-public-methods, ; Exception and marker classes get tagged with this
 # exec-used, ; should tag individual instances with this, there are some but not too many
 # global-statement,     ; should tag individual instances

@@ -33,6 +33,7 @@ class Test(greentest.TestCase):
     def test_main_thread(self):
         current = threading.current_thread()
         self.assertNotIsInstance(current, threading._DummyThread)
+        # pylint:disable-next=used-before-assignment
         self.assertIsInstance(current, monkey.get_original('threading', 'Thread'))
         # in 3.4, if the patch is incorrectly done, getting the repr
         # of the thread fails

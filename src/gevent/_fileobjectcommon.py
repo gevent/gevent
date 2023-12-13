@@ -658,6 +658,7 @@ class FileObjectThread(FileObjectBase):
                     try:
                         _fobj.close()
                     except: # pylint:disable=bare-except
+                        # pylint:disable-next=return-in-finally
                         return sys.exc_info()
                     finally:
                         _fobj = None

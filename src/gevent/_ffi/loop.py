@@ -223,7 +223,7 @@ class AbstractCallbacks(object):
                 watcher.stop()
             except: # pylint:disable=bare-except
                 watcher.loop.handle_error(watcher, *sys.exc_info())
-            return # pylint:disable=lost-exception
+            return # pylint:disable=lost-exception,return-in-finally
 
     def unhandled_onerror(self, t, v, tb):
         # This is supposed to be called for signals, etc.
