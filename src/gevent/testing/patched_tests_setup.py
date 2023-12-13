@@ -1221,6 +1221,21 @@ if PY312:
         'test_ssl.ThreadedTests.test_recv_into_buffer_protocol_len',
     ]
 
+    if sys.version_info[:3] < (3, 12, 1):
+        # Appveyor still has 3.12.0 when we added the 3.12.1 tests.
+        # Some of them depend on changes to the stdlib/interpreter.
+        disabled_tests += [
+            'test_httplib.HeaderTests.test_ipv6host_header',
+            'test_interpreters.TestInterpreterClose.test_subthreads_still_running',
+            'test_interpreters.TestInterpreterIsRunning.test_main',
+            'test_interpreters.TestInterpreterIsRunning.test_with_only_background_threads',
+            'test_interpreters.TestInterpreterRun.test_with_background_threads_still_running',
+            'test_interpreters.FinalizationTests.test_gh_109793',
+            'test_interpreters.StartupTests.test_sys_path_0',
+            'test_threading.SubinterpThreadingTests.test_threads_join_with_no_main',
+            'test_threading.MiscTestCase.test_gh112826_missing__thread__is_main_interpreter',
+        ]
+
     if RUN_COVERAGE:
         disabled_tests += [
             # This test wants to look for installed tracing functions, and

@@ -83,7 +83,8 @@ jobs:
         # 3.10+ needs more work: dnspython for example doesn't work
         # with it. That means for the bulk of our testing we need to
         # stick to 3.9.
-        python-version: ["3.12-dev", "pypy-3.10", 3.8, 3.9, '3.10', '3.11']
+        # PyPy 7.3.13 started crashing for unknown reasons.
+        python-version: ["3.12.1", "pypy-3.10-v7.3.12", 3.8, 3.9, '3.10', '3.11']
         os: [macos-latest, ubuntu-latest]
         exclude:
           # The bulk of the testing is on Linux and Windows (appveyor).
@@ -97,13 +98,13 @@ jobs:
           # - os: macos-latest
           #   python-version: 3.10
           - os: macos-latest
-            python-version: "pypy-3.10"
+            python-version: "pypy-3.10-v7.3.12"
 
     steps:
       - name: checkout
         uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
@@ -257,7 +258,7 @@ jobs:
       # it's sufficient to run the full suite on the current version
       # and oldest version.
       - name: "Tests: subproccess and FileObjectThread"
-        if: startsWith(runner.os, 'Linux') || (startsWith(runner.os, 'Mac') && matrix.python-version == '3.12-dev')
+        if: startsWith(runner.os, 'Linux') || (startsWith(runner.os, 'Mac') && matrix.python-version == '3.12.1')
         # Now, the non-default threaded file object.
         # In the past, we included all test files that had a reference to 'subprocess'' somewhere in their
         # text. The monkey-patched stdlib tests were specifically included here.
@@ -359,7 +360,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
