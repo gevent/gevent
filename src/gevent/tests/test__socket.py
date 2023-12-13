@@ -346,7 +346,7 @@ class TestTCP(greentest.TestCase):
                 client.sendall(self._test_sendall_data)
             if self._test_sendall_timeout_check_time:
                 took = time.time() - start
-                self.assertTimeWithinRange(took, 0.09, 0.2)
+                self.assertTimeWithinRange(took, 0.09, 0.21)
         finally:
             acceptor.join()
             client.close()

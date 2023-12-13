@@ -1214,6 +1214,13 @@ if PY311:
     ]
 
 if PY312:
+    disabled_tests += [
+        # This test is new in 3.12.1; it appears to essentially rely
+        # on blocking sockets to fully read data in one call, and our
+        # version delivers a short initial read.
+        'test_ssl.ThreadedTests.test_recv_into_buffer_protocol_len',
+    ]
+
     if RUN_COVERAGE:
         disabled_tests += [
             # This test wants to look for installed tracing functions, and

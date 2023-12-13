@@ -372,10 +372,11 @@ class GreenletTree(object):
         return self.format(False)
 
     # Prior to greenlet 3.0rc1, getting tracebacks of inactive
-    # greenlets could crash on Python 3.12. So we  added a version-based
-    # setting here to disable it. That's now fixed, but leave the
-    # hook just in case.
-    _SUPPORTS_TRACEBACK = True
+    # greenlets could crash on Python 3.12. So we added a
+    # version-based setting here to disable it. That's fixed in the
+    # 3.0 final releases, but appears to be back with Python 3.12.1;
+    # this is likely related to https://github.com/python-greenlet/greenlet/issues/388
+    _SUPPORTS_TRACEBACK = sys.version_info[:3] < (3, 12, 1)
 
     @classmethod
     def __render_tb(cls, tree, label, frame, limit):

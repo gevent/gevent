@@ -793,6 +793,9 @@ def _setup_environ(debug=False):
         os.environ['PYTHONMALLOC'] = 'default'
         os.environ['PYTHONDEVMODE'] = ''
 
+    # PYTHONSAFEPATH breaks the assumptions of some tests, notably test_interpreters.py
+    os.environ.pop('PYTHONSAFEPATH', None)
+
     interesting_envs = {
         k: os.environ[k]
         for k in os.environ
