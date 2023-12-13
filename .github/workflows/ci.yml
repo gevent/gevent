@@ -124,6 +124,7 @@ jobs:
         # Coverage can't run the test_interpreters.py tests because greenlet can't
         # run there and that's how coverage is configured. Right now, we only have that
         # on Python 3.12, so take the quick way out and nix that version too.
+        # Remember this condition needs to be synced with the coveralls/report step.
         if: ${{ !startsWith(matrix.python-version, 'pypy') && !startsWith(matrix.python-version, '3.12') && startsWith(runner.os, 'Linux') }}
         run: |
           echo G_USE_COV=--coverage >> $GITHUB_ENV
@@ -327,7 +328,7 @@ jobs:
         # It then runs ``coveralls report``. But that is producing
         # a usage error from ``coveralls`` (report is not recognized) Presumably the
         # brew and action versions are out of sync?
-        if: ${{ !startsWith(matrix.python-version, 'pypy') && startsWith(runner.os, 'Linux') }}
+        if: ${{ !startsWith(matrix.python-version, 'pypy') && !startsWith(matrix.python-version, '3.12') && startsWith(runner.os, 'Linux') }}
         with:
           flag-name: run-${{ join(matrix.*, '-') }}
           parallel: true
