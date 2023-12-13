@@ -129,7 +129,7 @@ class Runner(object):
     def __init__(self,
                  tests,
                  *,
-                 allowed_return_codes,
+                 allowed_return_codes=(),
                  configured_failing_tests=(),
                  failfast=False,
                  quiet=False,
