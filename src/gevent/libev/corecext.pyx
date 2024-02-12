@@ -1354,7 +1354,7 @@ cdef public class stat(watcher) [object PyGeventStatObject, type PyGeventStat_Ty
 cdef object SYSERR_CALLBACK = None
 
 
-cdef void _syserr_cb(char* msg) with gil:
+cdef void _syserr_cb(char* msg) noexcept with gil:
     try:
         SYSERR_CALLBACK(msg, errno)
     except:

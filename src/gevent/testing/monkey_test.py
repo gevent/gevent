@@ -22,6 +22,7 @@ from . import SkipTest
 from . import util
 
 
+
 # This uses the internal built-in function ``_thread._count()``,
 # which we don't/can't monkey-patch, so it returns inaccurate information.
 def threading_setup():
@@ -86,6 +87,17 @@ else:
     threading_helper.wait_threads_exit = wait_threads_exit
     threading_helper.threading_setup = threading_setup
     threading_helper.threading_cleanup = threading_cleanup
+
+# So we don't have to patch test_threading to use our
+# version of lock_tests, we patch
+from gevent.tests import lock_tests
+try:
+    import test.lock_tests
+except ImportError:
+    pass
+else:
+    test.lock_tests = lock_tests
+    sys.modules['tests.lock_tests'] = lock_tests
 
 # Configure allowed resources
 resources.setup_resources()

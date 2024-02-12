@@ -401,6 +401,7 @@ def check_output(*popenargs, **kwargs):
         kwargs['stdin'] = PIPE
     else:
         inputdata = None
+
     with Popen(*popenargs, stdout=PIPE, **kwargs) as process:
         try:
             output, unused_err = process.communicate(inputdata, timeout=timeout)
@@ -1629,6 +1630,19 @@ class Popen(object):
                     if self.pid == 0:
                         # Child
 
+                        # In various places on the child side of things, we catch OSError
+                        # and add attributes to it that detail where in the process we failed;
+                        # like all exceptions until we have exec'd, this exception is pickled
+                        # and sent to the parent to raise in the calling process.
+                        # The parent uses this to decide how to treat that exception,
+                        # adjusting certain information about it as needed.
+                        #
+                        # Python 3.11.8 --- yes, a minor patch release --- stopped
+                        # letting the 'filename' parameter get set in the resulting
+                        # exception for many cases. We're not quite interpreting this
+                        # the same way the stdlib is, I'm sure, but this makes the stdlib
+                        # tests pass.
+
                         # XXX: Technically we're doing a lot of stuff here that
                         # may not be safe to do before a exec(), depending on the OS.
                         # CPython 3 goes to great lengths to precompute a lot
@@ -1702,14 +1716,19 @@ class Popen(object):
                                 os.umask(umask)
                             # XXX: CPython does _Py_RestoreSignals here.
                             # Then setsid() based on ???
-                            if gids:
-                                os.setgroups(gids)
-                            if gid:
-                                os.setregid(gid, gid)
-                            if uid:
-                                os.setreuid(uid, uid)
-                            if process_group is not None:
-                                os.setpgid(0, process_group)
+                            try:
+                                if gids:
+                                    os.setgroups(gids)
+                                if gid:
+                                    os.setregid(gid, gid)
+                                if uid:
+                                    os.setreuid(uid, uid)
+                                if process_group is not None:
+                                    os.setpgid(0, process_group)
+                            except OSError as e:
+                                e._failed_chuser = True
+                                raise
+
                             if preexec_fn:
                                 preexec_fn()
 
@@ -1731,21 +1750,24 @@ class Popen(object):
                             if start_new_session:
                                 os.setsid()
 
-                            if env is None:
-                                os.execvp(executable, args)
-                            else:
-                                # Python 3.6 started testing for
-                                # bytes values in the env; it also
-                                # started encoding strs using
-                                # fsencode and using a lower-level
-                                # API that takes a list of keys
-                                # and values. We don't have access
-                                # to that API, so we go the reverse direction.
-                                env = {os.fsdecode(k) if isinstance(k, bytes) else k:
-                                       os.fsdecode(v) if isinstance(v, bytes) else v
-                                       for k, v in env.items()}
-                                os.execvpe(executable, args, env)
-
+                            try:
+                                if env is None:
+                                    os.execvp(executable, args)
+                                else:
+                                    # Python 3.6 started testing for
+                                    # bytes values in the env; it also
+                                    # started encoding strs using
+                                    # fsencode and using a lower-level
+                                    # API that takes a list of keys
+                                    # and values. We don't have access
+                                    # to that API, so we go the reverse direction.
+                                    env = {os.fsdecode(k) if isinstance(k, bytes) else k:
+                                           os.fsdecode(v) if isinstance(v, bytes) else v
+                                           for k, v in env.items()}
+                                    os.execvpe(executable, args, env)
+                            except OSError as e:
+                                e._failed_exec = True
+                                raise
                         except:
                             exc_type, exc_value, tb = sys.exc_info()
                             # Save the traceback and attach it to the exception object
@@ -1811,6 +1833,8 @@ class Popen(object):
                     child_exception.filename = executable
                     if hasattr(child_exception, '_failed_chdir'):
                         child_exception.filename = cwd
+                    if getattr(child_exception, '_failed_chuser', False):
+                        child_exception.filename = None
                 raise child_exception
 
         def _handle_exitstatus(self, sts, _WIFSIGNALED=os.WIFSIGNALED,

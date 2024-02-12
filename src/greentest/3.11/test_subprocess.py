@@ -268,6 +268,7 @@ class ProcessTestCase(BaseTestCase):
         self.assertIn('stdin', c.exception.args[0])
         self.assertIn('input', c.exception.args[0])
 
+    @support.requires_resource('walltime')
     def test_check_output_timeout(self):
         # check_output() function with timeout arg
         with self.assertRaises(subprocess.TimeoutExpired) as c:
@@ -746,31 +747,36 @@ class ProcessTestCase(BaseTestCase):
     @unittest.skipUnless(fcntl and hasattr(fcntl, 'F_GETPIPE_SZ'),
                          'fcntl.F_GETPIPE_SZ required for test.')
     def test_pipesize_default(self):
-        p = subprocess.Popen(
+        proc = subprocess.Popen(
             [sys.executable, "-c",
              'import sys; sys.stdin.read(); sys.stdout.write("out"); '
              'sys.stderr.write("error!")'],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, pipesize=-1)
-        try:
-            fp_r, fp_w = os.pipe()
+
+        with proc:
             try:
-                default_pipesize = fcntl.fcntl(fp_w, fcntl.F_GETPIPE_SZ)
-                for fifo in [p.stdin, p.stdout, p.stderr]:
-                    self.assertEqual(
-                        fcntl.fcntl(fifo.fileno(), fcntl.F_GETPIPE_SZ),
-                        default_pipesize)
+                fp_r, fp_w = os.pipe()
+                try:
+                    default_read_pipesize = fcntl.fcntl(fp_r, fcntl.F_GETPIPE_SZ)
+                    default_write_pipesize = fcntl.fcntl(fp_w, fcntl.F_GETPIPE_SZ)
+                finally:
+                    os.close(fp_r)
+                    os.close(fp_w)
+
+                self.assertEqual(
+                    fcntl.fcntl(proc.stdin.fileno(), fcntl.F_GETPIPE_SZ),
+                    default_read_pipesize)
+                self.assertEqual(
+                    fcntl.fcntl(proc.stdout.fileno(), fcntl.F_GETPIPE_SZ),
+                    default_write_pipesize)
+                self.assertEqual(
+                    fcntl.fcntl(proc.stderr.fileno(), fcntl.F_GETPIPE_SZ),
+                    default_write_pipesize)
+                # On other platforms we cannot test the pipe size (yet). But above
+                # code using pipesize=-1 should not crash.
             finally:
-                os.close(fp_r)
-                os.close(fp_w)
-            # On other platforms we cannot test the pipe size (yet). But above
-            # code using pipesize=-1 should not crash.
-            p.stdin.close()
-            p.stdout.close()
-            p.stderr.close()
-        finally:
-            p.kill()
-            p.wait()
+                proc.kill()
 
     def test_env(self):
         newenv = os.environ.copy()
@@ -782,6 +788,19 @@ class ProcessTestCase(BaseTestCase):
                               env=newenv) as p:
             stdout, stderr = p.communicate()
             self.assertEqual(stdout, b"orange")
+
+    @unittest.skipUnless(sys.platform == "win32", "Windows only issue")
+    def test_win32_duplicate_envs(self):
+        newenv = os.environ.copy()
+        newenv["fRUit"] = "cherry"
+        newenv["fruit"] = "lemon"
+        newenv["FRUIT"] = "orange"
+        newenv["frUit"] = "banana"
+        with subprocess.Popen(["CMD", "/c", "SET", "fruit"],
+                              stdout=subprocess.PIPE,
+                              env=newenv) as p:
+            stdout, _ = p.communicate()
+            self.assertEqual(stdout.strip(), b"frUit=banana")
 
     # Windows requires at least the SYSTEMROOT environment variable to start
     # Python
@@ -813,6 +832,26 @@ class ProcessTestCase(BaseTestCase):
             child_env_names = [k for k in child_env_names
                                if not is_env_var_to_ignore(k)]
             self.assertEqual(child_env_names, [])
+
+    @unittest.skipIf(sysconfig.get_config_var('Py_ENABLE_SHARED') == 1,
+                     'The Python shared library cannot be loaded '
+                     'without some system environments.')
+    @unittest.skipIf(check_sanitizer(address=True),
+                     'AddressSanitizer adds to the environment.')
+    def test_one_environment_variable(self):
+        newenv = {'fruit': 'orange'}
+        cmd = [sys.executable, '-c',
+                               'import sys,os;'
+                               'sys.stdout.write("fruit="+os.getenv("fruit"))']
+        if sys.platform == "win32":
+            cmd = ["CMD", "/c", "SET", "fruit"]
+        with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=newenv) as p:
+            stdout, stderr = p.communicate()
+            if p.returncode and support.verbose:
+                print("STDOUT:", stdout.decode("ascii", "replace"))
+                print("STDERR:", stderr.decode("ascii", "replace"))
+            self.assertEqual(p.returncode, 0)
+            self.assertEqual(stdout.strip(), b"fruit=orange")
 
     def test_invalid_cmd(self):
         # null character in the command name
@@ -853,6 +892,19 @@ class ProcessTestCase(BaseTestCase):
                               env=newenv) as p:
             stdout, stderr = p.communicate()
             self.assertEqual(stdout, b"orange=lemon")
+
+    @unittest.skipUnless(sys.platform == "win32", "Windows only issue")
+    def test_win32_invalid_env(self):
+        # '=' in the environment variable name
+        newenv = os.environ.copy()
+        newenv["FRUIT=VEGETABLE"] = "cabbage"
+        with self.assertRaises(ValueError):
+            subprocess.Popen(ZERO_RETURN_CMD, env=newenv)
+
+        newenv = os.environ.copy()
+        newenv["==FRUIT"] = "cabbage"
+        with self.assertRaises(ValueError):
+            subprocess.Popen(ZERO_RETURN_CMD, env=newenv)
 
     def test_communicate_stdin(self):
         p = subprocess.Popen([sys.executable, "-c",
@@ -1290,6 +1342,7 @@ class ProcessTestCase(BaseTestCase):
         with self.assertWarnsRegex(RuntimeWarning, 'line buffering'):
             self._test_bufsize_equal_one(line, b'', universal_newlines=False)
 
+    @support.requires_resource('cpu')
     def test_leaking_fds_on_error(self):
         # see bug #5179: Popen leaks file descriptors to PIPEs if
         # the child fails to execute; this will eventually exhaust
@@ -1640,6 +1693,7 @@ class RunFuncTestCase(BaseTestCase):
         self.assertIn('stdin', c.exception.args[0])
         self.assertIn('input', c.exception.args[0])
 
+    @support.requires_resource('walltime')
     def test_check_output_timeout(self):
         with self.assertRaises(subprocess.TimeoutExpired) as c:
             cp = self.run_python((
@@ -1689,6 +1743,14 @@ class RunFuncTestCase(BaseTestCase):
         args = [path, '-c', 'import sys; sys.exit(57)']
         res = subprocess.run(args)
         self.assertEqual(res.returncode, 57)
+
+    @unittest.skipUnless(mswindows, "Maybe test trigger a leak on Ubuntu")
+    def test_run_with_an_empty_env(self):
+        # gh-105436: fix subprocess.run(..., env={}) broken on Windows
+        args = [sys.executable, "-c", 'pass']
+        # Ignore subprocess errors - we only care that the API doesn't
+        # raise an OSError
+        subprocess.run(args, env={})
 
     def test_capture_output(self):
         cp = self.run_python(("import sys;"
@@ -1942,9 +2004,9 @@ class POSIXProcessTestCase(BaseTestCase):
 
     @unittest.skipUnless(hasattr(os, 'setreuid'), 'no setreuid on platform')
     def test_user(self):
-        # For code coverage of the user parameter.  We don't care if we get an
-        # EPERM error from it depending on the test execution environment, that
-        # still indicates that it was called.
+        # For code coverage of the user parameter.  We don't care if we get a
+        # permission error from it depending on the test execution environment,
+        # that still indicates that it was called.
 
         uid = os.geteuid()
         test_users = [65534 if uid != 65534 else 65533, uid]
@@ -1968,11 +2030,11 @@ class POSIXProcessTestCase(BaseTestCase):
                                  "import os; print(os.getuid())"],
                                 user=user,
                                 close_fds=close_fds)
-                    except PermissionError:  # (EACCES, EPERM)
-                        pass
-                    except OSError as e:
-                        if e.errno not in (errno.EACCES, errno.EPERM):
-                            raise
+                    except PermissionError as e:  # (EACCES, EPERM)
+                        if e.errno == errno.EACCES:
+                            self.assertEqual(e.filename, sys.executable)
+                        else:
+                            self.assertIsNone(e.filename)
                     else:
                         if isinstance(user, str):
                             user_uid = pwd.getpwnam(user).pw_uid
@@ -2016,8 +2078,8 @@ class POSIXProcessTestCase(BaseTestCase):
                                  "import os; print(os.getgid())"],
                                 group=group,
                                 close_fds=close_fds)
-                    except PermissionError:  # (EACCES, EPERM)
-                        pass
+                    except PermissionError as e:  # (EACCES, EPERM)
+                        self.assertIsNone(e.filename)
                     else:
                         if isinstance(group, str):
                             group_gid = grp.getgrnam(group).gr_gid
@@ -2062,6 +2124,7 @@ class POSIXProcessTestCase(BaseTestCase):
         except OSError as ex:
             if ex.errno != errno.EPERM:
                 raise
+            self.assertIsNone(ex.filename)
             perm_error = True
 
         else:

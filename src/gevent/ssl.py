@@ -373,13 +373,22 @@ class SSLSocket(socket):
 
     def read(self, nbytes=2014, buffer=None):
         """Read up to LEN bytes and return them.
-        Return zero-length string on EOF."""
+        Return zero-length string on EOF.
+
+        .. versionchanged:: NEXT
+           No longer requires a non-None *buffer* to implement ``len()``.
+           This is a backport from 3.11.8.
+        """
         # pylint:disable=too-many-branches
         self._checkClosed()
         # The stdlib signature is (len=1024, buffer=None)
         # but that shadows the len builtin, and its hard/annoying to
         # get it back.
-        initial_buf_len = len(buffer) if buffer is not None else None
+        #
+        # Also, the return values are weird. If *buffer* is given,
+        # we return the count of bytes added to buffer. Otherwise,
+        # we return the string we read.
+        bytes_read = 0
         while True:
             if not self._sslobj:
                 raise ValueError("Read on closed or unwrapped SSL socket.")
@@ -389,7 +398,8 @@ class SSLSocket(socket):
             # to raise a ValueError
             try:
                 if buffer is not None:
-                    return self._sslobj.read(nbytes, buffer)
+                    bytes_read += self._sslobj.read(nbytes, buffer)
+                    return bytes_read
                 return self._sslobj.read(nbytes or 1024)
             except SSLWantReadError:
                 if self.timeout == 0.0:
@@ -402,7 +412,7 @@ class SSLSocket(socket):
                 self._wait(self._write_event, timeout_exc=_SSLErrorReadTimeout)
             except SSLError as ex:
                 if ex.args[0] == SSL_ERROR_EOF and self.suppress_ragged_eofs:
-                    return b'' if buffer is None else len(buffer) - initial_buf_len
+                    return b'' if buffer is None else bytes_read
                 raise
             # Certain versions of Python, built against certain
             # versions of OpenSSL operating in certain modes, can
@@ -563,11 +573,19 @@ class SSLSocket(socket):
         return socket.recv(self, buflen, flags)
 
     def recv_into(self, buffer, nbytes=None, flags=0):
+        """
+        .. versionchanged:: NEXT
+           No longer requires a non-None *buffer* to implement ``len()``.
+           This is a backport from 3.11.8.
+        """
         self._checkClosed()
-        if buffer and (nbytes is None):
-            nbytes = len(buffer)
-        elif nbytes is None:
-            nbytes = 1024
+        if nbytes is None:
+            if buffer is not None:
+                with memoryview(buffer) as view:
+                    nbytes = view.nbytes
+            if not nbytes:
+                nbytes = 1024
+
         if self._sslobj:
             if flags != 0:
                 raise ValueError("non-zero flags not allowed in calls to recv_into() on %s" % self.__class__)
