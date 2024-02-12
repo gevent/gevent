@@ -84,7 +84,7 @@ jobs:
         # with it. That means for the bulk of our testing we need to
         # stick to 3.9.
         # PyPy 7.3.13 started crashing for unknown reasons.
-        python-version: ["3.12.1", "pypy-3.10-v7.3.12", 3.8, 3.9, '3.10', '3.11']
+        python-version: ["3.12.1", "pypy-3.10-v7.3.12", 3.8, 3.9, '3.10', '3.11.8']
         os: [macos-latest, ubuntu-latest]
         exclude:
           # The bulk of the testing is on Linux and Windows (appveyor).

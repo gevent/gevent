@@ -1214,6 +1214,15 @@ if PY311:
         'test_subprocess.ProcessTestCase.test__use_vfork',
     ]
 
+    if sys.version_info[:3] < (3, 11, 8):
+        # New tests in that version that won't pass on earlier versions.
+        disabled_tests += [
+            'test_threading.ThreadTests.test_main_thread_after_fork_from_dummy_thread',
+            'tets_ssl.TestPreHandshakeClose.test_preauth_data_to_tls_client',
+            'test_ssl.TestPreHandshakeClose.test_preauth_data_to_tls_server',
+            'test_signal.PosixTests.test_no_repr_is_called_on_signal_handler',
+        ]
+
 if PY312:
     disabled_tests += [
         # This test is new in 3.12.1; it appears to essentially rely
