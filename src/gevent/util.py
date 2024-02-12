@@ -376,7 +376,8 @@ class GreenletTree(object):
     # version-based setting here to disable it. That's fixed in the
     # 3.0 final releases, but appears to be back with Python 3.12.1;
     # this is likely related to https://github.com/python-greenlet/greenlet/issues/388
-    _SUPPORTS_TRACEBACK = sys.version_info[:3] < (3, 12, 1)
+    #_SUPPORTS_TRACEBACK = sys.version_info[:3] < (3, 12, 1)
+    _SUPPORTS_TRACEBACK = True
 
     @classmethod
     def __render_tb(cls, tree, label, frame, limit):
