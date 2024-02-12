@@ -269,14 +269,16 @@ class SSLSocket(socket):
         self.do_handshake_on_connect = do_handshake_on_connect
         self.suppress_ragged_eofs = suppress_ragged_eofs
         connected = False
+        sock_timeout = None
         if sock is not None:
-            timeout = sock.gettimeout()
+            # We're going non-blocking below, can't set timeout yet.
+            sock_timeout = sock.gettimeout()
             socket.__init__(self,
                             family=sock.family,
                             type=sock.type,
                             proto=sock.proto,
                             fileno=sock.fileno())
-            self.settimeout(timeout)
+
             # When Python 3 sockets are __del__, they close() themselves,
             # including their underlying fd, unless they have been detached.
             # Only detach if we succeed in taking ownership; if we raise an exception,
@@ -331,6 +333,8 @@ class SSLSocket(socket):
                 raise notconn_pre_handshake_data_error
         else:
             connected = True
+
+        self.settimeout(sock_timeout)
         self._connected = connected
         if connected:
             # create the SSL object
