@@ -7,3 +7,4 @@ Other updates for compatibility with the standard library include:
 - ``SSLSocket.recv_into`` and ``SSLSocket.read`` no longer require the
   buffer to implement ``len`` and now work with buffers whose size is
   not 1.
+- gh-108310: Fix CVE-2023-40217: Check for & avoid the ssl pre-close flaw.

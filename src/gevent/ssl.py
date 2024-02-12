@@ -16,10 +16,9 @@ import errno
 
 
 from gevent.socket import socket, timeout_default
-from gevent.socket import error as socket_error
 from gevent.socket import timeout as _socket_timeout
 from gevent._util import copy_globals
-
+socket_error = OSError
 
 from weakref import ref as _wref
 
@@ -293,12 +292,43 @@ class SSLSocket(socket):
         # see if we're connected
         try:
             self._sock.getpeername()
-        except socket_error as e:
+        except OSError as e:
             if e.errno != errno.ENOTCONN:
                 # This file descriptor is hosed, shared or not.
                 # Clean up.
                 self.close()
                 raise
+            # Next block is originally from
+            # https://github.com/python/cpython/commit/75a875e0df0530b75b1470d797942f90f4a718d3,
+            # intended to fix https://github.com/python/cpython/issues/108310
+            blocking = self.getblocking()
+            self.setblocking(False)
+            try:
+                # We are not connected so this is not supposed to block, but
+                # testing revealed otherwise on macOS and Windows so we do
+                # the non-blocking dance regardless. Our raise when any data
+                # is found means consuming the data is harmless.
+                notconn_pre_handshake_data = self.recv(1)
+            except OSError as e: # pylint:disable=redefined-outer-name
+                # EINVAL occurs for recv(1) on non-connected on unix sockets.
+                if e.errno not in (errno.ENOTCONN, errno.EINVAL):
+                    raise
+                notconn_pre_handshake_data = b''
+            self.setblocking(blocking)
+            if notconn_pre_handshake_data:
+                # This prevents pending data sent to the socket before it was
+                # closed from escaping to the caller who could otherwise
+                # presume it came through a successful TLS connection.
+                reason = "Closed before TLS handshake with data in recv buffer."
+                notconn_pre_handshake_data_error = SSLError(e.errno, reason)
+                # Add the SSLError attributes that _ssl.c always adds.
+                notconn_pre_handshake_data_error.reason = reason
+                notconn_pre_handshake_data_error.library = None
+                try:
+                    self.close()
+                except OSError:
+                    pass
+                raise notconn_pre_handshake_data_error
         else:
             connected = True
         self._connected = connected

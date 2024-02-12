@@ -84,6 +84,11 @@ jobs:
         # with it. That means for the bulk of our testing we need to
         # stick to 3.9.
         # PyPy 7.3.13 started crashing for unknown reasons.
+        # CAREFUL: Some of the tests are only run on specific versions of Python,
+        # as dictated by the conditions found below. So when you change a version,
+        # for example to force a specific patch release, don't forget to change conditions!
+        # XXX: We could probably make this easier on ourself by adding a specific
+        # key to the matrix in the version we care about and checking for that matrix key.
         python-version: ["3.12.1", "pypy-3.10-v7.3.12", 3.8, 3.9, '3.10', '3.11.8']
         os: [macos-latest, ubuntu-latest]
         exclude:
@@ -275,7 +280,7 @@ jobs:
           python -m gevent.tests --second-chance $G_USE_COV `(cd src/gevent/tests >/dev/null && ls test__*subprocess*.py)`
       - name: "Tests: c-ares resolver"
         # This sometimes fails on mac.
-        if: (matrix.python-version == '3.11') && startsWith(runner.os, 'Linux')
+        if: (matrix.python-version == '3.11.8') && startsWith(runner.os, 'Linux')
         env:
           GEVENT_RESOLVER: ares
         run: |
@@ -292,7 +297,7 @@ jobs:
         # Run the leaktests;
         # This is incredibly important and we MUST have an environment that successfully passes
         # these tests.
-        if: (startsWith(matrix.python-version, '3.11')) && startsWith(runner.os, 'Linux')
+        if: (startsWith(matrix.python-version, '3.11.8')) && startsWith(runner.os, 'Linux')
         env:
           GEVENTTEST_LEAKCHECK: 1
         run: |
@@ -300,19 +305,19 @@ jobs:
       - name: "Tests: PURE_PYTHON"
         # No compiled cython modules on CPython, using the default backend. Get coverage here.
         # We should only need to run this for a single version.
-        if: (matrix.python-version == '3.11') && startsWith(runner.os, 'Linux')
+        if: (matrix.python-version == '3.11.8') && startsWith(runner.os, 'Linux')
         env:
           PURE_PYTHON: 1
         run: |
           python -mgevent.tests --second-chance --coverage
       - name: "Tests: libuv"
-        if: (startsWith(matrix.python-version, '3.11'))
+        if: (startsWith(matrix.python-version, '3.11.8'))
         env:
           GEVENT_LOOP: libuv
         run: |
           python -m gevent.tests --second-chance $G_USE_COV
       - name: "Tests: libev-cffi"
-        if: (matrix.python-version == '3.11') && startsWith(runner.os, 'Linux')
+        if: (matrix.python-version == '3.11.8') && startsWith(runner.os, 'Linux')
         env:
           GEVENT_LOOP: libev-cffi
         run: |
