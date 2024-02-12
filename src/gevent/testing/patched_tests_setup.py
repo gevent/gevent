@@ -1221,6 +1221,7 @@ if PY311:
             'tets_ssl.TestPreHandshakeClose.test_preauth_data_to_tls_client',
             'test_ssl.TestPreHandshakeClose.test_preauth_data_to_tls_server',
             'test_signal.PosixTests.test_no_repr_is_called_on_signal_handler',
+            'test_socket.GeneralModuleTests.testInvalidInterfaceIndexToName',
         ]
 
 if PY312:
