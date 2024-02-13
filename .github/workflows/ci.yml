@@ -113,7 +113,7 @@ jobs:
 
     steps:
       - name: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
@@ -147,7 +147,7 @@ jobs:
       # the cache.
       ###
       - name: Cache ~/.ccache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: ~/.ccache/
           key: ${{ runner.os }}-ccache2-${{ matrix.python-version }}
@@ -155,11 +155,11 @@ jobs:
       - name: Cache config.cache
         # Store the configure caches. Having a cache can speed up c-ares
         # configure from 2-3 minutes to 20 seconds.
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: deps/*/config.cache
           # XXX: This should probably include a hash of each configure
-          # script We don't have a restore-keys that doesn't include
+          # script (which is possible with hashFiles()). We don't have a restore-keys that doesn't include
           # the CFLAGS becouse the scripts fail to run if they get
           # different CFLAGS, CC, CPPFLAGS, etc, and GHA offers no way
           # to manually clear the cache. At one time, we had a
@@ -237,7 +237,7 @@ jobs:
           ls -l dist
           twine check dist/*whl
       - name: Upload gevent wheel
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: gevent-${{ runner.os }}-${{ matrix.python-version }}.whl
           path: dist/*whl
@@ -373,7 +373,7 @@ jobs:
         os: [ubuntu-latest]
     steps:
       - name: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
@@ -386,7 +386,7 @@ jobs:
         run: |
           sudo apt-get install -y ccache sed gcc
       - name: Cache ~/.ccache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: ~/.ccache/
           key: ${{ runner.os }}-ccache2_embed-${{ matrix.python-version }}
@@ -394,7 +394,7 @@ jobs:
       - name: Cache config.cache
         # Store the configure caches. Having a cache can speed up c-ares
         # configure from 2-3 minutes to 20 seconds.
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: deps/*/config.cache
           # XXX: This should probably include a hash of each configure
@@ -476,19 +476,19 @@ jobs:
     name: ${{ matrix.image }}
     steps:
       - name: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - name: Cache ~/.ccache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: ~/.ccache/
           key: ${{ runner.os }}-ccache_${{ matrix.config[2] }}-${{ matrix.config[0] }}
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
         with:
           platforms: all
       - name: Build and test gevent
@@ -498,7 +498,7 @@ jobs:
 
         run: scripts/releases/make-manylinux
       - name: Upload gevent wheels
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           path: wheelhouse/*whl
           name: ${{ matrix.config[2] }}_x86_64_wheels.zip

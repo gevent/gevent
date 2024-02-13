@@ -1235,6 +1235,7 @@ if PY311:
                 'test_httplib.ExtendedReadTestContentLengthKnown.test_read1_unbounded',
                 'test_httplib.ExtendedReadTestContentLengthKnown.test_read1_bounded',
                 'test_httplib.ExtendedReadTestContentLengthKnown.test_read1',
+                'test_httplib.HeaderTests.test_ipv6host_header',
             ]
 
 if PY312:
