@@ -23,4 +23,4 @@ Other changes:
   threads (not recommended), no longer spin to implement timeouts
   and interruptible blocking. Instead, they use the native
   functionality of the Python 3 lock. This may improve some scenarios.
-  See :issue:`2013`
+  See :issue:`2013`.
