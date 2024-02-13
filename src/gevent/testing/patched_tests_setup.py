@@ -1224,6 +1224,19 @@ if PY311:
             'test_socket.GeneralModuleTests.testInvalidInterfaceIndexToName',
         ]
 
+        if WIN:
+            disabled_tests += [
+                'test_subprocess.ProcessTestCase.test_win32_duplicate_envs',
+                'test_ssl.SimpleBackgroundTests.test_transport_eof',
+                'test_ssl.SimpleBackgroundTests.test_bio_read_write_data',
+                'test_ssl.SimpleBackgroundTests.test_bio_handshake',
+                'test_httplib.ExtendedReadTestContentLengthKnown.test_readline_without_limit',
+                'test_httplib.ExtendedReadTestContentLengthKnown.test_readline',
+                'test_httplib.ExtendedReadTestContentLengthKnown.test_read1_unbounded',
+                'test_httplib.ExtendedReadTestContentLengthKnown.test_read1_bounded',
+                'test_httplib.ExtendedReadTestContentLengthKnown.test_read1',
+            ]
+
 if PY312:
     disabled_tests += [
         # This test is new in 3.12.1; it appears to essentially rely
@@ -1262,6 +1275,17 @@ if PY312:
             'test_socket.BasicHyperVTest.testCreateHyperVSocketAddrServiceIdNotValidUUIDFailure',
             'test_socket.BasicHyperVTest.testCreateHyperVSocketAddrVmIdNotValidUUIDFailure',
         ]
+        # Like the case for 3.12.1, these need VM or stdlib updates.
+        if sys.version_info[:3] < (3, 12, 2):
+            disabled_tests += [
+                'test_socket.GeneralModuleTests.testInvalidInterfaceIndexToName',
+                'test_subprocess.ProcessTestCase.test_win32_duplicate_envs',
+                'test_httplib.ExtendedReadTestContentLengthKnown.test_readline_without_limit',
+                'test_httplib.ExtendedReadTestContentLengthKnown.test_readline',
+                'test_httplib.ExtendedReadTestContentLengthKnown.test_read1_unbounded',
+                'test_httplib.ExtendedReadTestContentLengthKnown.test_read1_bounded',
+                'test_httplib.ExtendedReadTestContentLengthKnown.test_read1',
+            ]
 
     if LINUX and RUNNING_ON_CI:
         disabled_tests += [
