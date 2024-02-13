@@ -83,13 +83,19 @@ jobs:
         # 3.10+ needs more work: dnspython for example doesn't work
         # with it. That means for the bulk of our testing we need to
         # stick to 3.9.
-        # PyPy 7.3.13 started crashing for unknown reasons.
+        #
+        # PyPy 7.3.13 started crashing for unknown reasons. 7.3.15
+        # still crashes. The crash is somewhere in
+        # ``gevent.tests.test__queue gevent.tests.test__real_greenlet
+        # gevent.tests.test__refcount_core
+        # gevent.tests.test__resolver_dnspython``
+        #
         # CAREFUL: Some of the tests are only run on specific versions of Python,
         # as dictated by the conditions found below. So when you change a version,
         # for example to force a specific patch release, don't forget to change conditions!
         # XXX: We could probably make this easier on ourself by adding a specific
         # key to the matrix in the version we care about and checking for that matrix key.
-        python-version: ["3.12.2", "pypy-3.10-v7.3.15", 3.8, 3.9, '3.10', '3.11.8']
+        python-version: ["3.12.2", "pypy-3.10-v7.3.12", 3.8, 3.9, '3.10', '3.11.8']
         os: [macos-latest, ubuntu-latest]
         exclude:
           # The bulk of the testing is on Linux and Windows (appveyor).
