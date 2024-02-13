@@ -94,6 +94,8 @@ class Resolver(AbstractResolver):
     - ``getaddrinfo`` may return canonical names even without the ``AI_CANONNAME``
       being set.
 
+    - ``getaddrinfo`` does not appear to support IPv6 symbolic scope IDs.
+
     .. caution::
 
         This module is considered extremely experimental on PyPy, and

@@ -1298,6 +1298,12 @@ if PY312:
             'test_ssl.TestPreHandshakeClose.test_preauth_data_to_tls_server',
         ]
 
+    if ARES:
+        disabled_tests += [
+            # c-ares doesn't like the IPv6 syntax it uses here.
+            'test_socket.GeneralModuleTeststest_getaddrinfo_ipv6_scopeid_symbolic',
+        ]
+
 if TRAVIS:
     disabled_tests += [
         # These tests frequently break when we try to use newer Travis CI images,
