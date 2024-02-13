@@ -12,7 +12,11 @@ class Test(unittest.TestCase):
         # as is done for namespace packages, imports ssl,
         # leading to an unwanted SSL warning.
         # This is a deprecated API though.
-        __import__('pkg_resources')
+        with warnings.catch_warnings():
+            try:
+                __import__('pkg_resources')
+            except ImportError:
+                self.skipTest('Uses pkg_resources (setuptools) which is not installed')
 
         from gevent import monkey
 

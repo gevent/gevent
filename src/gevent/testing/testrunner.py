@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-from __future__ import print_function, absolute_import, division
+# -*- coding: utf-8 -*-
 
 import re
 import sys

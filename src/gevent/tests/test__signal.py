@@ -2,14 +2,6 @@ from __future__ import print_function
 import signal
 import gevent.testing as greentest
 import gevent
-import pkg_resources
-
-try:
-    cffi_version = pkg_resources.get_distribution('cffi').parsed_version
-except Exception: # pylint:disable=broad-except
-    # No cffi installed. Shouldn't happen to gevent standard tests,
-    # but maybe some downstream distributor removed it.
-    cffi_version = None
 
 class Expected(Exception):
     pass
@@ -52,11 +44,6 @@ class TestSignal(greentest.TestCase):
         finally:
             sig.cancel()
 
-
-    @greentest.skipIf((greentest.PY3
-                       and greentest.CFFI_BACKEND
-                       and cffi_version < pkg_resources.parse_version('1.11.3')),
-                      "https://bitbucket.org/cffi/cffi/issues/352/systemerror-returned-a-result-with-an")
     @greentest.ignores_leakcheck
     def test_reload(self):
         # The site module tries to set attributes

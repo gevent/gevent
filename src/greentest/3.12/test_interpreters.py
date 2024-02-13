@@ -1054,7 +1054,6 @@ class TestSendRecv(TestBase):
         self.assertEqual(obj5, b'eggs')
         self.assertIs(obj6, default)
 
-# gevent: This was missing, making it unlike
-# ALL OTHER TESTS.
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()
