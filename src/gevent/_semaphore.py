@@ -77,6 +77,10 @@ class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
     .. versionchanged:: 20.12.0
        Improved support for multi-threaded usage. When multi-threaded usage is detected,
        instances will no longer create the thread's hub if it's not present.
+
+    .. versionchanged:: NEXT
+       Uses Python 3 native lock timeouts for cross-thread operations instead
+       of spinning.
     """
 
     __slots__ = (
@@ -449,22 +453,16 @@ class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
                     return False
 
     def __spin_on_native_lock(self, thread_lock, timeout):
-        expiration = 0
-        if timeout:
-            expiration = monotonic() + timeout
-
         self._drop_lock_for_switch_out()
         try:
-            # TODO: When timeout is given and the lock supports that
-            # (Python 3), pass that.
-            # Python 2 has terrible behaviour where lock acquires can't
-            # be interrupted, so we use a spin loop
-            while not thread_lock.acquire(0):
-                if expiration and monotonic() >= expiration:
-                    return False
+            # Unlike Python 2, Python 3 thread locks
+            # can be interrupted when blocking, with or
+            # without a timeout. Python 2 didn't even
+            # support a timeout for non -blocking.
+            if timeout:
+                return thread_lock.acquire(True, timeout)
 
-                _native_sleep(0.001)
-            return True
+            return thread_lock.acquire()
         finally:
             self._acquire_lock_for_switch_in()
 

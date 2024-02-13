@@ -19,3 +19,8 @@ Other changes:
 - Drop ``setuptools`` to a soft test dependency.
 - Drop support for very old versions of CFFI.
 - Update bundled c-ares from 1.19.1 to 1.26.0.
+- Locks created by gevent, but acquired from multiple different
+  threads (not recommended), no longer spin to implement timeouts
+  and interruptible blocking. Instead, they use the native
+  functionality of the Python 3 lock. This may improve some scenarios.
+  See :issue:`2013`

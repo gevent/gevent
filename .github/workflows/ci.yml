@@ -517,11 +517,6 @@ jobs:
           GEVENT_MANYLINUX_NAME: ${{ matrix.image }}
 
         run: scripts/releases/make-manylinux
-      - name: Upload gevent wheels
-        uses: actions/upload-artifact@v4
-        with:
-          path: wheelhouse/*whl
-          name: ${{ matrix.config[2] }}_x86_64_wheels.zip
       - name: Publish package to PyPI
         uses: pypa/gh-action-pypi-publish@v1.4.1
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
@@ -530,6 +525,11 @@ jobs:
           password: ${{ secrets.TWINE_PASSWORD }}
           skip_existing: true
           packages_dir: wheelhouse/
+      - name: Upload gevent wheels
+        uses: actions/upload-artifact@v4
+        with:
+          path: wheelhouse/*whl
+          name: ${{ matrix.image }}_wheels.zip
 
 # TODO:
 # * Use YAML syntax to share snippets, like the old .travis.yml did
