@@ -47,6 +47,7 @@ Updating c-ares
     rm -f c-ares/CMakeLists.txt
     rm -f c-ares/RELEASE-PROCEDURE.md c-ares/CONTRIBUTING.md c-ares/SECURITY.md
     rm -f c-ares/*.cmake c-ares/*.cmake.in
+    rm -f c-ares/config/
     rm -f c-ares/buildconf.bat
     git apply cares-make.patch
 
@@ -63,7 +64,8 @@ Updating c-ares
   ``cares-make.patch``, or you'll get the diff of the patch itself in
   the diff!).
 
-- Follow the same 'config.guess' and 'config.sub' steps as libev.
+- Follow the same 'config.guess' and 'config.sub' steps as libev,
+  except the files belong in the ``config/`` subdir.
 
 
 Updating libuv

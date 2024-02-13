@@ -152,6 +152,10 @@ jobs:
       ###
       - name: Cache ~/.ccache
         uses: actions/cache@v4
+        # This is repeated in an explicit save always step below
+        # because normally it won't save anything if there's a cache hit!
+        # Which is silly, because things in the cache might have (will have)
+        # been changed.
         with:
           path: ~/.ccache/**
           key: ${{ runner.os }}-ccache2-${{ matrix.python-version }}
@@ -240,6 +244,12 @@ jobs:
         run: |
           ls -l dist
           twine check dist/*whl
+      - name: Cache ~/.ccache
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: ~/.ccache/**
+          key: ${{ runner.os }}-ccache2-${{ matrix.python-version }}
       - name: Upload gevent wheel
         uses: actions/upload-artifact@v4
         with:
@@ -270,8 +280,7 @@ jobs:
           echo CCache stats
           ccache --version
           ccache -s -v
-          echo CCache Dir
-          ls -l $CCACHE_DIR || true
+
 
       - name: "Tests: Basic"
         run: |
@@ -293,8 +302,8 @@ jobs:
         run: |
           python -m gevent.tests --second-chance $G_USE_COV `(cd src/gevent/tests >/dev/null && ls test__*subprocess*.py)`
       - name: "Tests: c-ares resolver"
-        # This sometimes fails on mac.
-        if: (matrix.python-version == '3.11.8') && startsWith(runner.os, 'Linux')
+        # This sometimes fails on mac. # && (matrix.python-version == '3.11.8')
+        if: startsWith(runner.os, 'Linux')
         env:
           GEVENT_RESOLVER: ares
         run: |
