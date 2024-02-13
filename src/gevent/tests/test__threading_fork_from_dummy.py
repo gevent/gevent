@@ -22,6 +22,9 @@ class Test(greentest.TestCase):
         import contextlib
 
         import gevent
+        from gevent.threading import _DummyThread
+        if not _DummyThread._NEEDS_CLASS_FORK_FIXUP:
+            self.skipTest('No patch need be applied')
 
         def do_it(out):
             # Be sure we've put the DummyThread in the threading

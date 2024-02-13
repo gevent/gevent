@@ -218,7 +218,8 @@ class _DummyThread(_DummyThread_):
     #   would (probably?) have the exact same issues, so we can be pretty
     #   sure nobody is doing that.
     #
-    # We're initially going with the last fix.
+    # We're initially going with the last fix; the __class__ part is here,
+    # the ``after_in_child`` fixup we only apply if we're monkey-patching.
     #
     # Now, all of this is moot in 3.13, which takes a very different
     # approach to handling this, and also changes some names. See
@@ -231,40 +232,42 @@ class _DummyThread(_DummyThread_):
         or sys.version_info[:3] >= (3, 12, 2)
     )
 
-    # Override with a property, as opposed to using __setattr__,
-    # to avoid adding overhead on any other attribute setting.
-    @property
-    def __class__(self):
-        return type(self)
+    if _NEEDS_CLASS_FORK_FIXUP:
+        # Override with a property, as opposed to using __setattr__,
+        # to avoid adding overhead on any other attribute setting.
+        @property
+        def __class__(self):
+            return type(self)
 
-    @__class__.setter
-    def __class__(self, new_class):
-        # Even if we wanted to allow setting this, I'm not sure
-        # exactly how to do so when we have a property object handling it.
-        # Getting the descriptor from ``object.__dict__['__class__']``
-        # and using its ``__set__`` method raises a TypeError (as does
-        # the simpler ``super().__class__``).
-        #
-        # Better allow the TypeError for now as opposed to silently ignoring
-        # the assignment.
-        if new_class is not _MainThread_:
-            object.__dict__['__class__'].__set__(self, new_class)
-
-if _DummyThread._NEEDS_CLASS_FORK_FIXUP:
-
-    def _after_fork_in_child():
-        # We've already imported threading, which installed its "after" hook,
-        # so we're going to be called after that hook.
-        active = __threading__._active
-        assert len(active) == 1
-        main = __threading__._MainThread()
-        __threading__._active[__threading__.get_ident()] = main
-        __threading__._main_thread = main
-        assert main.ident == __threading__.get_ident()
+        @__class__.setter
+        def __class__(self, new_class):
+            # Even if we wanted to allow setting this, I'm not sure
+            # exactly how to do so when we have a property object handling it.
+            # Getting the descriptor from ``object.__dict__['__class__']``
+            # and using its ``__set__`` method raises a TypeError (as does
+            # the simpler ``super().__class__``).
+            #
+            # Better allow the TypeError for now as opposed to silently ignoring
+            # the assignment.
+            if new_class is not _MainThread_:
+                object.__dict__['__class__'].__set__(self, new_class)
 
 
-    if hasattr(os, 'register_at_fork'):
-        os.register_at_fork(after_in_child=_after_fork_in_child)
+
+def _after_fork_in_child():
+    # We've already imported threading, which installed its "after" hook,
+    # so we're going to be called after that hook.
+    # Note that this is only installed when monkey-patching.
+    # TODO: Is there any point to checking to see if the current thread is
+    # our dummy thread before doing this?
+    active = __threading__._active
+    assert len(active) == 1
+    main = __threading__._MainThread()
+    __threading__._active[__threading__.get_ident()] = main
+    __threading__._main_thread = main
+    assert main.ident == __threading__.get_ident()
+
+
 
 def main_native_thread():
     return __threading__.main_thread() # pylint:disable=no-member
@@ -337,3 +340,6 @@ def _gevent_will_monkey_patch(native_module, items, warn): # pylint:disable=unus
         del __threading__._active[main_id]
         main_thread._ident = main_thread._Thread__ident = _get_ident()
         __threading__._active[_get_ident()] = main_thread
+
+    if _DummyThread._NEEDS_CLASS_FORK_FIXUP and hasattr(os, 'register_at_fork'):
+        os.register_at_fork(after_in_child=_after_fork_in_child)
