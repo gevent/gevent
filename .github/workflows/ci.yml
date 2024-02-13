@@ -263,7 +263,8 @@ jobs:
           python -c 'from gevent._compat import get_clock_info; print(get_clock_info("perf_counter"))'
           python -c 'import gevent.core; print(gevent.core.loop)'
           python -c 'import gevent.ares; print(gevent.ares)'
-          ccache -s
+          echo CCache stats
+          ccache -s -v
 
       - name: "Tests: Basic"
         run: |
