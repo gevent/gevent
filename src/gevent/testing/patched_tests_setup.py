@@ -1301,7 +1301,7 @@ if PY312:
     if ARES:
         disabled_tests += [
             # c-ares doesn't like the IPv6 syntax it uses here.
-            'test_socket.GeneralModuleTeststest_getaddrinfo_ipv6_scopeid_symbolic',
+            'test_socket.GeneralModuleTests.test_getaddrinfo_ipv6_scopeid_symbolic',
         ]
 
 if TRAVIS:
