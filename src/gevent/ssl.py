@@ -347,10 +347,9 @@ class SSLSocket(socket):
                         # non-blocking
                         raise ValueError("do_handshake_on_connect should not be specified for non-blocking sockets")
                     self.do_handshake()
-
-            except socket_error as x:
+            except OSError:
                 self.close()
-                raise x
+                raise
 
     def _gevent_sock_class(self, family, type, proto, fileno):
         return _contextawaresock(family, type, proto, fileno, _wref(self))

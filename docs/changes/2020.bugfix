@@ -1,6 +1,10 @@
 Add support for Python patch releases 3.11.8 and 3.12.2, which changed
 internal details of threading.
 
+As a result of these changes, note that it is no longer possible to
+change the ``__class__`` of a ``gevent.threading._DummyThread``
+object on those versions.
+
 Other updates for compatibility with the standard library include:
 
 - Errors raised from ``subprocess.Popen`` may not have a filename set.
