@@ -149,7 +149,7 @@ jobs:
       - name: Cache ~/.ccache
         uses: actions/cache@v4
         with:
-          path: ~/.ccache/
+          path: ~/.ccache/**
           key: ${{ runner.os }}-ccache2-${{ matrix.python-version }}
 
       - name: Cache config.cache
@@ -265,6 +265,8 @@ jobs:
           python -c 'import gevent.ares; print(gevent.ares)'
           echo CCache stats
           ccache -s -v
+          echo CCache Dir
+          ls -l ~/.ccache/ || true
 
       - name: "Tests: Basic"
         run: |
@@ -389,7 +391,7 @@ jobs:
       - name: Cache ~/.ccache
         uses: actions/cache@v4
         with:
-          path: ~/.ccache/
+          path: ~/.ccache/**
           key: ${{ runner.os }}-ccache2_embed-${{ matrix.python-version }}
 
       - name: Cache config.cache
@@ -485,7 +487,7 @@ jobs:
       - name: Cache ~/.ccache
         uses: actions/cache@v4
         with:
-          path: ~/.ccache/
+          path: ~/.ccache/**
           key: ${{ runner.os }}-ccache_${{ matrix.config[2] }}-${{ matrix.config[0] }}
 
       - name: Set up QEMU
