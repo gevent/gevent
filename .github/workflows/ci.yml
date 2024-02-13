@@ -65,7 +65,7 @@ env:
   ###
   # caching
   ###
-  CCACHE_DIR: ~/.ccache
+  # CCACHE_DIR: ~/.ccache # Using ~ here makes it not find its cache.
   CC: "ccache gcc"
   CCACHE_NOCPP2: true
   CCACHE_SLOPPINESS: file_macro,time_macros,include_file_ctime,include_file_mtime
@@ -124,11 +124,15 @@ jobs:
         if: startsWith(runner.os, 'Linux')
         run: |
           sudo apt-get install -y ccache sed gcc
+          echo CCACHE_DIR=$HOME/.ccache >>$GITHUB_ENV
+          mkdir -p $HOME/.ccache
       - name: Install ccache (macos)
         if: startsWith(runner.os, 'macOS')
         run: |
           brew install ccache
           echo CFLAGS=$CFLAGS -Wno-parentheses-equality >>$GITHUB_ENV
+          echo CCACHE_DIR=$HOME/.ccache >>$GITHUB_ENV
+          mkdir -p $HOME/.ccache
       - name: Set coverage status
         # coverage is too slow on PyPy. We can't submit it from macOS (see that action),
         # so don't bother taking the speed hit there either.
@@ -264,9 +268,10 @@ jobs:
           python -c 'import gevent.core; print(gevent.core.loop)'
           python -c 'import gevent.ares; print(gevent.ares)'
           echo CCache stats
+          ccache --version
           ccache -s -v
           echo CCache Dir
-          ls -l ~/.ccache/ || true
+          ls -l $CCACHE_DIR || true
 
       - name: "Tests: Basic"
         run: |
@@ -388,6 +393,9 @@ jobs:
         if: startsWith(runner.os, 'Linux')
         run: |
           sudo apt-get install -y ccache sed gcc
+          echo CCACHE_DIR=$HOME/.ccache >>$GITHUB_ENV
+          mkdir -p $HOME/.ccache
+
       - name: Cache ~/.ccache
         uses: actions/cache@v4
         with:
