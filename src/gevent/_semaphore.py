@@ -78,7 +78,7 @@ class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
        Improved support for multi-threaded usage. When multi-threaded usage is detected,
        instances will no longer create the thread's hub if it's not present.
 
-    .. versionchanged:: NEXT
+    .. versionchanged:: 24.2.1
        Uses Python 3 native lock timeouts for cross-thread operations instead
        of spinning.
     """

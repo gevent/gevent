@@ -408,7 +408,7 @@ class SSLSocket(socket):
         """Read up to LEN bytes and return them.
         Return zero-length string on EOF.
 
-        .. versionchanged:: NEXT
+        .. versionchanged:: 24.2.1
            No longer requires a non-None *buffer* to implement ``len()``.
            This is a backport from 3.11.8.
         """
@@ -607,7 +607,7 @@ class SSLSocket(socket):
 
     def recv_into(self, buffer, nbytes=None, flags=0):
         """
-        .. versionchanged:: NEXT
+        .. versionchanged:: 24.2.1
            No longer requires a non-None *buffer* to implement ``len()``.
            This is a backport from 3.11.8.
         """
