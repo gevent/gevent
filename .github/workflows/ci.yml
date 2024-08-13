@@ -79,6 +79,7 @@ jobs:
   test:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         # 3.10+ needs more work: dnspython for example doesn't work
         # with it. That means for the bulk of our testing we need to
@@ -95,7 +96,7 @@ jobs:
         # for example to force a specific patch release, don't forget to change conditions!
         # XXX: We could probably make this easier on ourself by adding a specific
         # key to the matrix in the version we care about and checking for that matrix key.
-        python-version: ["3.12.2", "pypy-3.10-v7.3.12", 3.8, 3.9, '3.10', '3.11.8']
+        python-version: ["3.13", "3.12.2", "pypy-3.10-v7.3.12", 3.8, 3.9, '3.10', '3.11.8']
         os: [macos-latest, ubuntu-latest]
         exclude:
           # The bulk of the testing is on Linux and Windows (appveyor).
@@ -120,6 +121,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
           cache-dependency-path: setup.py
+          allow-prereleases: true
       - name: Install ccache (ubuntu)
         if: startsWith(runner.os, 'Linux')
         run: |
@@ -483,6 +485,7 @@ jobs:
     # remove this for release branches.
     needs: test
     strategy:
+      fail-fast: false
       matrix:
         python-version: [3.9]
         image:
