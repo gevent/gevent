@@ -45,8 +45,14 @@ environment:
     # Pre-installed Python versions, which Appveyor may upgrade to
     # a later point release.
 
+    - PYTHON: "C:\\Python313-x64"
+      PYTHON_VERSION: "3.13.0rc1"
+      PYTHON_ARCH: "64"
+      PYTHON_EXE: python
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
+
     - PYTHON: "C:\\Python312-x64"
-      PYTHON_VERSION: "3.12.0b4"
+      PYTHON_VERSION: "3.12.0"
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
