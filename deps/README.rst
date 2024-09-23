@@ -33,22 +33,25 @@ Updating c-ares
 - Download and clean up the c-ares Makefile.in[c] and configure script to empty out the
   MANPAGES variables so that we don't have to ship those in the sdist::
 
-    export CARES_VER=1.15.0
+    export CARES_VER=1.33.1
 
     cd deps/
-    wget https://c-ares.haxx.se/download/c-ares-$CARES_VER.tar.gz
+    wget https://github.com/c-ares/c-ares/releases/download/v$CARES_VER/c-ares-$CARES_VER.tar.gz
     tar -xf c-ares-$CARES_VER.tar.gz
     rm -rf c-ares c-ares-$CARES_VER.tar.gz
     mv c-ares-$CARES_VER c-ares
     cp c-ares/include/ares_build.h c-ares/include/ares_build.h.dist
     rm -rf c-ares/docs
     rm -rf c-ares/test
+    rm -rf c-ares/cmake
     rm -f c-ares/maketgz
     rm -f c-ares/CMakeLists.txt
     rm -f c-ares/RELEASE-PROCEDURE.md c-ares/CONTRIBUTING.md c-ares/SECURITY.md
     rm -f c-ares/*.cmake c-ares/*.cmake.in
-    rm -f c-ares/config/
+    rm -rf c-ares/config/
+    rm -f c-ares/INSTALL.md c-ares/LICENSE.md 	c-ares/DEVELOPER-NOTES.md
     rm -f c-ares/buildconf.bat
+    rm -f c-ares/Makefile*
     git apply cares-make.patch
 
   At this point there might be new files in c-ares that need added to
