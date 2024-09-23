@@ -18,9 +18,9 @@ requires = [
      # 3.0a6 fixes an issue cythonizing source on 32-bit platforms.
      # 3.0a9 is needed for Python 3.10.
      # Python 3.12 requires at least 3.0rc2.
-     "Cython >= 3.0.8",
+     "Cython >= 3.0.11",
      # See version requirements in setup.py
-     "cffi >= 1.12.3 ; platform_python_implementation == 'CPython'",
+     "cffi >= 1.17.1 ; platform_python_implementation == 'CPython'",
      # Python 3.7 requires at least 0.4.14, which is ABI incompatible with earlier
      # releases. Python 3.9 and 3.10 require 0.4.16;
      # 0.4.17 is ABI incompatible with earlier releases, but compatible with 1.0

@@ -210,8 +210,7 @@ greenlet_requires = [
     # won't break again.
     # 3.0 is ABI compatible and adds support for Python 3.12 (but right
     # now it's RC pending additional testing, so we only require it on 3.12)
-    'greenlet >= 2.0.0 ; platform_python_implementation=="CPython" and python_version < "3.11"',
-    'greenlet >= 3.0rc3 ; platform_python_implementation=="CPython" and python_version >= "3.11"',
+    'greenlet >= 3.1.1 ; platform_python_implementation=="CPython"',
 ]
 
 # Note that we don't add cffi to install_requires, it's
@@ -223,7 +222,7 @@ greenlet_requires = [
 # The exception is on Windows, where we want the libuv backend we distribute
 # to be the default, and that requires cffi; but don't try to install it
 # on PyPy or it messes up the build
-CFFI_DEP = "cffi >= 1.12.2 ; platform_python_implementation == 'CPython'"
+CFFI_DEP = "cffi >= 1.17.1 ; platform_python_implementation == 'CPython'"
 CFFI_REQUIRES = [
     CFFI_DEP + " and sys_platform == 'win32'"
 ]
@@ -428,11 +427,11 @@ def run_setup(ext_modules):
         classifiers=[
             "License :: OSI Approved :: MIT License",
             "Programming Language :: Python :: 3 :: Only",
-            "Programming Language :: Python :: 3.8",
             "Programming Language :: Python :: 3.9",
             "Programming Language :: Python :: 3.10",
             "Programming Language :: Python :: 3.11",
             "Programming Language :: Python :: 3.12",
+            "Programming Language :: Python :: 3.13",
             "Programming Language :: Python :: Implementation :: CPython",
             "Programming Language :: Python :: Implementation :: PyPy",
             "Operating System :: MacOS :: MacOS X",
@@ -443,7 +442,7 @@ def run_setup(ext_modules):
             "Intended Audience :: Developers",
             "Development Status :: 4 - Beta"
         ],
-        python_requires=">=3.8",
+        python_requires=">=3.9",
         entry_points={
             'gevent.plugins.monkey.will_patch_all': [
                 "signal_os_incompat = gevent.monkey:_subscribe_signal_os",

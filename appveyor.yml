@@ -4,9 +4,7 @@ shallow_clone: true
 build:
   parallel: true
   verbosity: minimal
-# The VS 2019 image doesn't have
-# the MSVC needed for Python 2.7.
-image: Visual Studio 2015
+image: Visual Studio 2022
 
 environment:
   global:
@@ -41,22 +39,25 @@ environment:
 
 
   matrix:
+    # http://www.appveyor.com/docs/installed-software#python
 
-    # Pre-installed Python versions, which Appveyor may upgrade to
-    # a later point release.
-
-    - PYTHON: "C:\\Python312-x64"
-      PYTHON_VERSION: "3.12.0b4"
+    # Fully supported 64-bit versions, with testing. This should be
+    # all the current (non EOL) versions.
+    - PYTHON: "C:\\Python313-x64"
+      PYTHON_VERSION: "3.13.0"
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
+
+    - PYTHON: "C:\\Python312-x64"
+      PYTHON_VERSION: "3.12.0b"
+      PYTHON_ARCH: "64"
+      PYTHON_EXE: python
 
     # 64-bit
     - PYTHON: "C:\\Python311-x64"
       PYTHON_VERSION: "3.11.0"
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
 
     # TODO: What's the latest pypy?
     # - PYTHON: "C:\\pypy3.7-v7.3.7-win64"
@@ -70,20 +71,11 @@ environment:
       PYTHON_VERSION: "3.10.0"
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
 
     - PYTHON: "C:\\Python39-x64"
       PYTHON_VERSION: "3.9.x"
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-
-
-    - PYTHON: "C:\\Python38-x64"
-      PYTHON_VERSION: "3.8.x"
-      PYTHON_ARCH: "64"
-      PYTHON_EXE: python
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
 
 
     # 32-bit, wheel only (no testing)
@@ -91,14 +83,6 @@ environment:
       PYTHON_VERSION: "3.9.x"
       PYTHON_ARCH: "32"
       PYTHON_EXE: python
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-      GWHEEL_ONLY: true
-
-    - PYTHON: "C:\\Python38"
-      PYTHON_VERSION: "3.8.x"
-      PYTHON_ARCH: "32"
-      PYTHON_EXE: python
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       GWHEEL_ONLY: true
 
 
