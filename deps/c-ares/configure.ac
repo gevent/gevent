@@ -787,7 +787,7 @@ fi
 CARES_PRIVATE_LIBS="$LIBS"
 AC_SUBST(CARES_PRIVATE_LIBS)
 
-BUILD_SUBDIRS="include src docs"
+BUILD_SUBDIRS="include src"
 
 
 dnl ******** TESTS *******
@@ -850,7 +850,6 @@ AC_CONFIG_FILES([Makefile
                  src/Makefile
                  src/lib/Makefile
                  src/tools/Makefile
-                 docs/Makefile
                  libcares.pc ])
 AM_COND_IF([BUILD_TESTS],
            [AC_CONFIG_FILES([test/Makefile])])

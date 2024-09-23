@@ -78,6 +78,24 @@ deps/c-ares/src/lib/ares_config.h
 deps/c-ares/src/lib/stamp-h1
 deps/c-ares/src/tools/Makefile
 
+deps/c-ares/autom4te.cache/
+deps/c-ares/configure~
+deps/c-ares/src/lib/.deps/
+deps/c-ares/src/lib/ares_config.h.in~
+deps/c-ares/src/lib/dsa/.deps/
+deps/c-ares/src/lib/dsa/.dirstamp
+deps/c-ares/src/lib/event/.deps/
+deps/c-ares/src/lib/event/.dirstamp
+deps/c-ares/src/lib/legacy/.deps/
+deps/c-ares/src/lib/legacy/.dirstamp
+deps/c-ares/src/lib/record/.deps/
+deps/c-ares/src/lib/record/.dirstamp
+deps/c-ares/src/lib/str/.deps/
+deps/c-ares/src/lib/str/.dirstamp
+deps/c-ares/src/lib/util/.deps/
+deps/c-ares/src/lib/util/.dirstamp
+deps/c-ares/src/tools/.deps/
+
 deps/libev/.deps
 deps/libev/Makefile
 deps/libev/config.log
