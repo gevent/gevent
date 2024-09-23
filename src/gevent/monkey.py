@@ -823,19 +823,25 @@ def patch_thread(threading=True, _threading_local=True, Event=True, logging=True
     if orig_current_thread == threading_mod.main_thread() and not already_patched:
         main_thread = threading_mod.main_thread()
         _greenlet = main_thread._greenlet = greenlet.getcurrent()
-        main_thread.__real_tstate_lock = main_thread._tstate_lock
-        assert main_thread.__real_tstate_lock is not None
-        # The interpreter will call threading._shutdown
-        # when the main thread exits and is about to
-        # go away. It is called *in* the main thread. This
-        # is a perfect place to notify other greenlets that
-        # the main thread is done. We do this by overriding the
-        # lock of the main thread during operation, and only restoring
-        # it to the native blocking version at shutdown time
-        # (the interpreter also has a reference to this lock in a
-        # C data structure).
-        main_thread._tstate_lock = threading_mod.Lock()
-        main_thread._tstate_lock.acquire()
+        # XXX: Changed for 3.13. No longer uses this, uses a 'handle'
+        #
+        try:
+            main_thread.__real_tstate_lock = main_thread._tstate_lock
+        except AttributeError:
+            pass
+        else:
+            assert main_thread.__real_tstate_lock is not None
+            # The interpreter will call threading._shutdown
+            # when the main thread exits and is about to
+            # go away. It is called *in* the main thread. This
+            # is a perfect place to notify other greenlets that
+            # the main thread is done. We do this by overriding the
+            # lock of the main thread during operation, and only restoring
+            # it to the native blocking version at shutdown time
+            # (the interpreter also has a reference to this lock in a
+            # C data structure).
+            main_thread._tstate_lock = threading_mod.Lock()
+            main_thread._tstate_lock.acquire()
 
         def _shutdown():
             # Release anyone trying to join() me,

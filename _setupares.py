@@ -108,6 +108,12 @@ ARES.optional = not ares_required
 
 if CARES_EMBED:
     ARES.sources += glob_many('deps/c-ares/src/lib/*.c')
+    ARES.sources += glob_many('deps/c-ares/src/lib/dsa/*.c')
+    ARES.sources += glob_many('deps/c-ares/src/lib/str/*.c')
+    ARES.sources += glob_many('deps/c-ares/src/lib/record/*.c')
+    ARES.sources += glob_many('deps/c-ares/src/lib/util/*.c')
+    ARES.sources += glob_many('deps/c-ares/src/lib/event/*.c')
+    ARES.sources += glob_many('deps/c-ares/src/lib/legacy/*.c')
     ARES.configure = configure_ares
     if WIN:
         ARES.libraries += ['advapi32']
