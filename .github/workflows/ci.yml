@@ -350,6 +350,7 @@ jobs:
         run: |
           python -m coverage combine || true
           python -m coverage report -i || true
+          python -m coverage xml -i || true
       - name: Coveralls Parallel
         uses: coverallsapp/github-action@v2
         # 20230707: On macOS, this installs coveralls from homebrew.
@@ -360,6 +361,7 @@ jobs:
         with:
           flag-name: run-${{ join(matrix.*, '-') }}
           parallel: true
+          format: cobertura
 
       - name: Lint
         if: matrix.python-version == '3.10' && startsWith(runner.os, 'Linux')
