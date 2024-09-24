@@ -49,6 +49,7 @@ from socket import SOL_SOCKET
 from ssl import SSLWantReadError
 from ssl import SSLWantWriteError
 from ssl import SSLEOFError
+from ssl import SSLZeroReturnError
 from ssl import CERT_NONE
 from ssl import SSLError
 from ssl import SSL_ERROR_EOF
@@ -422,6 +423,7 @@ class SSLSocket(socket):
         # we return the count of bytes added to buffer. Otherwise,
         # we return the string we read.
         bytes_read = 0
+
         while True:
             if not self._sslobj:
                 raise ValueError("Read on closed or unwrapped SSL socket.")
@@ -443,7 +445,14 @@ class SSLSocket(socket):
                     raise
                 # note: using _SSLErrorReadTimeout rather than _SSLErrorWriteTimeout below is intentional
                 self._wait(self._write_event, timeout_exc=_SSLErrorReadTimeout)
+            except SSLZeroReturnError:
+                # This one is only seen in PyPy 7.3.17
+                if self.suppress_ragged_eofs:
+                    return b'' if buffer is None else bytes_read
+                raise
             except SSLError as ex:
+                # All the other SSLxxxxxError classes extend SSLError,
+                # so catch it last.
                 if ex.args[0] == SSL_ERROR_EOF and self.suppress_ragged_eofs:
                     return b'' if buffer is None else bytes_read
                 raise
@@ -688,6 +697,12 @@ class SSLSocket(socket):
                     raise
                 self._wait(self._write_event)
             except SSLEOFError:
+                break
+            except SSLZeroReturnError:
+                # Between PyPy 7.3.12 and PyPy 7.3.17, it started raising
+                # this. This is equivalent to SSLEOFError for our purposes:
+                # both indicate the connection has been closed,
+                # the former uncleanly, the latter cleanly.
                 break
             except OSError as e:
                 if e.errno == 0:
