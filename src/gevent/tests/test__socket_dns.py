@@ -666,6 +666,8 @@ class TestGeventOrg(TestCase):
     def _normalize_result_gethostbyname(self, result):
         if result == '104.17.33.82':
             result = '104.17.32.82'
+        if result == '104.16.254.120':
+            result = '104.16.253.120'
         return result
 
     def _normalize_result_gethostbyname_ex(self, result):
