@@ -289,8 +289,7 @@ def sqr_random_sleep(x):
 
 
 def final_sleep():
-    for i in range(3):
-        yield i
+    yield from range(3)
     gevent.sleep(0.2)
 
 

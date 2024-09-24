@@ -124,6 +124,7 @@ def _on_child_hook():
 
 import gevent.os
 
+# pylint:disable=no-member
 if 'waitpid' in gevent.os.__implements__ and hasattr(_signal, 'SIGCHLD'):
     # Tightly coupled here to gevent.os and its waitpid implementation; only use these
     # if necessary.

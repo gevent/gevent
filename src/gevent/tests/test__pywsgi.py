@@ -629,8 +629,7 @@ class TestChunkedApp(TestCase):
     def application(self, env, start_response):
         self.assertTrue(env.get('wsgi.input_terminated'))
         start_response('200 OK', [('Content-Type', 'text/plain')])
-        for chunk in self.chunks:
-            yield chunk
+        yield from self.chunks
 
     def test_chunked_response(self):
         with self.makefile() as fd:

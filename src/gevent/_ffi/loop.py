@@ -302,6 +302,7 @@ class AbstractCallbacks(object):
         loop._run_callbacks()
 
     def check_callback_onerror(self, t, v, tb):
+        loop = None
         watcher_ptr = self._find_watcher_ptr_in_traceback(tb)
         if watcher_ptr:
             loop = self._find_loop_from_c_watcher(watcher_ptr)
@@ -357,15 +358,9 @@ def assign_standard_callbacks(ffi, lib, callbacks_class, extras=()): # pylint:di
     return callbacks
 
 
-if sys.version_info[0] >= 3:
-    basestring = (bytes, str)
-    integer_types = (int,)
-else:
-    import __builtin__ # pylint:disable=import-error
-    basestring = (__builtin__.basestring,)
-    integer_types = (int, __builtin__.long)
 
-
+basestring = (bytes, str)
+integer_types = (int,)
 
 
 _NOARGS = ()

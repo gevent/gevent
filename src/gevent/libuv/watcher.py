@@ -699,8 +699,7 @@ class stat(_base.StatMixin, watcher):
 
     def _watcher_ffi_start(self):
         # libev changes this when the watcher is started
-        if self._interval < self.MIN_STAT_INTERVAL:
-            self._interval = self.MIN_STAT_INTERVAL
+        self._interval = max(self._interval, self.MIN_STAT_INTERVAL)
         self._watcher_start(self._watcher, self._watcher_callback,
                             self._cpath,
                             int(self._interval * 1000))

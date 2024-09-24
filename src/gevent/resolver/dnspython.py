@@ -241,6 +241,8 @@ class _HostsResolver(object):
         rrset = dns.rrset.RRset(qname, rdclass, rdtype)
         rrset.ttl = self._last_load + self.interval - now
 
+        mapping = None
+        kind = None
         if rdtype == dns.rdatatype.A:
             mapping = hosts_file.v4
             kind = dns.rdtypes.IN.A.A

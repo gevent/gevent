@@ -128,6 +128,9 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
                     del exceptions[:]
                     raise
                 try:
+                    # pylint isn't smart enough to see that we only use this
+                    # on supported versions.
+                    # pylint:disable=using-exception-groups-in-unsupported-version
                     raise ExceptionGroup("create_connection failed", exceptions)
                 finally:
                     # Break explicitly a reference cycle

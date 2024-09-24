@@ -203,6 +203,8 @@ ignored-modules=gevent._corecffi,gevent.os,os,greenlet,threading,gevent.libev.co
 [DESIGN]
 max-attributes=12
 max-parents=10
+# XXX: Eww!
+max-positional-arguments=20
 
 [BASIC]
 bad-functions=input

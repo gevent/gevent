@@ -78,7 +78,7 @@ def walk_modules(
        for an `ImportError`; the caller can examine *optional_modules* against
        the yielded *importable_module_name*.
     """
-    # pylint:disable=too-many-branches
+    # pylint:disable=too-many-branches,too-many-locals
     if sysinfo.PYPY:
         include_so = False
     if basedir is None:

@@ -22,9 +22,7 @@ PYPY = greentest.PYPY
 CPYTHON = not PYPY
 PY2 = not PY3
 fd_types = int
-if PY3:
-    long = int
-fd_types = (int, long)
+
 WIN = greentest.WIN
 
 from gevent.testing import get_open_files

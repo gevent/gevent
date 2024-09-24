@@ -715,6 +715,7 @@ def patch_thread(threading=True, _threading_local=True, Event=True, logging=True
     # before we patch thread, or manually clean up the attributes that
     # are in trouble. The latter is tricky because of the different names
     # on different versions.
+    gevent_threading_mod = None
     if threading:
         threading_mod = __import__('threading')
         # Capture the *real* current thread object before
@@ -723,7 +724,6 @@ def patch_thread(threading=True, _threading_local=True, Event=True, logging=True
         orig_current_thread = threading_mod.current_thread()
     else:
         threading_mod = None
-        gevent_threading_mod = None
         orig_current_thread = None
 
     gevent_thread_mod, thread_mod = _patch_module('thread',
@@ -915,7 +915,8 @@ def patch_thread(threading=True, _threading_local=True, Event=True, logging=True
 
     from gevent import events
     _notify_patch(events.GeventDidPatchModuleEvent('thread', gevent_thread_mod, thread_mod))
-    _notify_patch(events.GeventDidPatchModuleEvent('threading', gevent_threading_mod, threading_mod))
+    if gevent_threading_mod is not None:
+        _notify_patch(events.GeventDidPatchModuleEvent('threading', gevent_threading_mod, threading_mod))
 
 @_ignores_DoNotPatch
 def patch_socket(dns=True, aggressive=True):
@@ -1328,10 +1329,8 @@ def main():
 def _get_script_help():
     # pylint:disable=deprecated-method
     import inspect
-    try:
-        getter = inspect.getfullargspec # deprecated in 3.5, un-deprecated in 3.6
-    except AttributeError:
-        getter = inspect.getargspec
+    getter = inspect.getfullargspec
+
     patch_all_args = getter(patch_all)[0]
     modules = [x for x in patch_all_args if 'patch_' + x in globals()]
     script_help = """gevent.monkey - monkey patch the standard modules to use gevent.

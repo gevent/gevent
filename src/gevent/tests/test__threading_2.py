@@ -121,6 +121,7 @@ class ThreadTests(unittest.TestCase):
         for i in range(NUMTASKS):
             t = TestThread("<thread %d>" % i, self, sema, mutex, numrunning)
             threads.append(t)
+            # pylint:disable-next=attribute-defined-outside-init
             t.daemon = False # Under PYPY we get daemon by default?
             if hasattr(t, 'ident'):
                 self.assertIsNone(t.ident)
@@ -251,6 +252,7 @@ class ThreadTests(unittest.TestCase):
                     worker_saw_exception.set()
 
         t = Worker()
+        # pylint:disable-next=attribute-defined-outside-init
         t.daemon = True  # so if this fails, we don't hang Python at shutdown
         t.start()
         if verbose:

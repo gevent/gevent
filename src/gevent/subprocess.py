@@ -649,6 +649,7 @@ class Popen(object):
     # Changes if we're in text mode or universal newlines mode.
     _communicate_empty_value = b''
 
+    # pylint:disable-next=too-many-positional-arguments
     def __init__(self, args,
                  bufsize=-1,
                  executable=None,
@@ -1568,7 +1569,7 @@ class Popen(object):
                     os.close(i)
                 except:
                     pass
-
+        # pylint:disable-next=too-many-positional-arguments
         def _execute_child(self, args, executable, preexec_fn, close_fds,
                            pass_fds, cwd, env, universal_newlines,
                            startupinfo, creationflags, shell,

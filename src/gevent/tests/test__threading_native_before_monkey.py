@@ -20,6 +20,7 @@ class NativeThread(threading.Thread):
         self.join(timeout=timeout)
 
 native_thread = None
+monkey = None
 
 class Test(greentest.TestCase):
 
@@ -59,7 +60,7 @@ class Test(greentest.TestCase):
 
 if __name__ == '__main__':
     native_thread = NativeThread()
-    native_thread.daemon = True
+    native_thread.daemon = True # pylint:disable=attribute-defined-outside-init
     native_thread.start()
 
     # Only patch after we're running

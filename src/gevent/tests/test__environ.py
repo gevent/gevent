@@ -11,6 +11,7 @@ if not sys.argv[1:]:
     assert popen.wait() == 0, popen.poll()
 else: # pragma: no cover
     hub = gevent.get_hub()
+    # pylint:disable-next=no-member
     if 'select' in gevent.core.supported_backends():
         assert hub.loop.backend == 'select', hub.loop.backend
     else:

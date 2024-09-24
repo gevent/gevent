@@ -7,6 +7,7 @@ import sys
 
 import signal
 
+pid = None
 
 def handle(*_args):
     if not pid:

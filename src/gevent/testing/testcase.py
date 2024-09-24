@@ -428,11 +428,7 @@ class TestCase(TestCaseMetaClass("NewBase",
 
             try:
                 with warnings.catch_warnings():
-                    try:
-                        getfullargspec = inspect.getfullargspec
-                    except AttributeError:
-                        warnings.simplefilter("ignore")
-                        getfullargspec = inspect.getargspec
+                    getfullargspec = inspect.getfullargspec
                     gevent_sig = getfullargspec(gevent_func)
                     sig = getfullargspec(func)
             except TypeError:
