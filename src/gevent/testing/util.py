@@ -1,4 +1,11 @@
-from __future__ import print_function, absolute_import, division
+"""
+.. caution::
+
+    This module imports `subprocess` and `threading`; this can
+    break monkey-patched unittests. Specifically,
+    ``test_threading.ThreadTests.test_import_from_another_thread``.
+"""
+
 import re
 import sys
 import os

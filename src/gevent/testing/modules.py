@@ -26,7 +26,11 @@ import warnings
 import gevent
 
 from . import sysinfo
-from . import util
+# Avoid importing this at the top level because
+# it imports threading and subprocess, and this module
+# is always imported in our monkey-patched stdlib unittests,
+# and some of them don't like it when those are imported.
+# from . import util
 
 
 OPTIONAL_MODULES = frozenset({
@@ -120,6 +124,7 @@ def walk_modules(
                         warnings.simplefilter('ignore', DeprecationWarning)
                         importlib.import_module(modname)
                 except ImportError:
+                    from . import util
                     util.debug("Unable to import optional module %s", modname)
                     continue
             yield path, modname
