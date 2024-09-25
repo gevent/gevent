@@ -1182,7 +1182,6 @@ if PY39:
 if  PY39_EXACTLY:
     if OSX:
         disabled_tests += [
-            'test_context.HamtTest.test_hamt_collision_3',
         ]
 
 if PY310:
