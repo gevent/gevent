@@ -59,13 +59,14 @@ PLATFORM_SPECIFIC_SUFFIXES = ('2', '279', '3')
 if WIN:
     PLATFORM_SPECIFIC_SUFFIXES += ('posix',)
 
-PY2 = None
-PY3 = None
+PY2 = False # Never again
+PY3 = True
 PY35 = None
 PY36 = None
 PY37 = None
 PY38 = None
 PY39 = None
+PY39_EXACTLY = None
 PY310 = None
 PY311 = None
 PY312 = None
@@ -86,6 +87,8 @@ if sys.version_info[0] == 3:
         PY38 = True
     if sys.version_info[1] >= 9:
         PY39 = True
+        if sys.version_info[:2] == (3, 9):
+            PY39_EXACTLY = True
     if sys.version_info[1] >= 10:
         PY310 = True
     if sys.version_info[1] >= 11:
@@ -93,28 +96,12 @@ if sys.version_info[0] == 3:
     if sys.version_info[1] >= 12:
         PY312 = True
 
-elif sys.version_info[0] == 2:
-    # Any python 2
-    PY3 = False
-    PY2 = True
-    NON_APPLICABLE_SUFFIXES += ('3',)
-    if (sys.version_info[1] < 7
-            or (sys.version_info[1] == 7 and sys.version_info[2] < 9)):
-        # Python 2, < 2.7.9
-        NON_APPLICABLE_SUFFIXES += ('279',)
+
 else: # pragma: no cover
     # Python 4?
     raise ImportError('Unsupported major python version')
 
 PYPY3 = PYPY and PY3
-
-PY27_ONLY = sys.version_info[0] == 2 and sys.version_info[1] == 7
-
-PYGTE279 = (
-    sys.version_info[0] == 2
-    and sys.version_info[1] >= 7
-    and sys.version_info[2] >= 9
-)
 
 if WIN:
     NON_APPLICABLE_SUFFIXES += ("posix",)

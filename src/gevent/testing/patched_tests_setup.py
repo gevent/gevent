@@ -28,6 +28,7 @@ from .sysinfo import PYPY3
 
 from .sysinfo import PY38
 from .sysinfo import PY39
+from .sysinfo import PY39_EXACTLY
 from .sysinfo import PY310
 from .sysinfo import PY311
 from .sysinfo import PY312
@@ -1176,6 +1177,12 @@ if PY39:
             # These time out on 3.9.1 on Appveyor
             'test_ftplib.TestTLS_FTPClassMixin.test_retrbinary_rest',
             'test_ftplib.TestTLS_FTPClassMixin.test_retrlines_too_long',
+        ]
+
+if  PY39_EXACTLY:
+    if OSX:
+        disabled_tests += [
+            'test_context.HamtTest.test_hamt_collision_3',
         ]
 
 if PY310:

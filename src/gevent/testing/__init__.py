@@ -109,7 +109,6 @@ from .skipping import skipOnLibuvOnCIOnPyPy
 from .skipping import skipOnLibuvOnPyPyOnWin
 from .skipping import skipOnPurePython
 from .skipping import skipWithCExtensions
-from .skipping import skipOnLibuvOnTravisOnCPython27
 from .skipping import skipOnPy37
 from .skipping import skipOnPy310
 from .skipping import skipOnPy312

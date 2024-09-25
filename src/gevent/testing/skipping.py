@@ -58,7 +58,7 @@ skipOnLibuvOnWin = _do_not_skip
 skipOnLibuvOnCI = _do_not_skip
 skipOnLibuvOnCIOnPyPy = _do_not_skip
 skipOnLibuvOnPyPyOnWin = _do_not_skip
-skipOnLibuvOnTravisOnCPython27 = _do_not_skip
+
 
 skipOnLibev = _do_not_skip
 
@@ -164,10 +164,6 @@ if sysinfo.LIBUV:
         skipOnLibuvOnCI = unittest.skip
         if sysinfo.PYPY:
             skipOnLibuvOnCIOnPyPy = unittest.skip
-    if sysinfo.RUNNING_ON_TRAVIS:
-        if sysinfo.CPYTHON:
-            if sysinfo.PY27_ONLY:
-                skipOnLibuvOnTravisOnCPython27 = unittest.skip
 
     if sysinfo.WIN:
         skipOnLibuvOnWin = unittest.skip

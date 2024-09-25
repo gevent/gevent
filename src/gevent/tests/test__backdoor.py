@@ -90,9 +90,6 @@ class Test(greentest.TestCase):
         "Sometimes fails to get the right answers; "
         "https://travis-ci.org/github/gevent/gevent/jobs/692184822"
     )
-    @greentest.skipOnLibuvOnTravisOnCPython27(
-        "segfaults; "
-        "See https://github.com/gevent/gevent/pull/1156")
     def test_multi(self):
         with self._make_and_start_server() as server:
             def connect():
