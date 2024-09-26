@@ -54,6 +54,7 @@ NO_ALL = {
     'gevent._util',
     'gevent.resolver._addresses',
     'gevent.resolver._hostsfile',
+    # gevent.monkey is handled specially.
 }
 
 ALLOW_IMPLEMENTS = [
@@ -138,7 +139,11 @@ class AbstractTestMixin(object):
 
     def skipIfNoAll(self):
         if not hasattr(self.module, '__all__'):
-            self.assertIn(self.modname, NO_ALL)
+            self.assertTrue(
+                self.modname in NO_ALL or self.modname.startswith('gevent.monkey.'),
+                "Module has no all"
+            )
+
             self.skipTest("%s Needs __all__" % self.modname)
 
     def test_all(self):
@@ -280,6 +285,10 @@ def _create_tests():
     for _, modname in modules.walk_modules(include_so=False, recursive=True,
                                            check_optional=False):
         if modname.endswith(PLATFORM_SPECIFIC_SUFFIXES):
+            continue
+        if modname.endswith('__main__'):
+            # gevent.monkey.__main__ especially is a problem.
+            # These aren't meant to be imported anyway.
             continue
 
         orig_modname = modname

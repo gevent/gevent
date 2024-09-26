@@ -1,0 +1,7 @@
+gevent.monkey changed from a module to a package. The public API
+remains the same.
+
+For this release, private APIs (undocumented, marked internal, or
+beginning with an underscore) are also preserved. However, these may
+be changed or removed at any time in the future. If you are using one
+of these APIs and cannot replace it, please contact the gevent team.

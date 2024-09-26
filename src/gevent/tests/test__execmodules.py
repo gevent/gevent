@@ -6,15 +6,25 @@ from gevent.testing import main
 from gevent.testing.sysinfo import NON_APPLICABLE_SUFFIXES
 from gevent.testing import six
 
+import pathlib
 
 def make_exec_test(path, module):
+    path = pathlib.Path(path)
+
     def test(_):
+
         with open(path, 'rb') as f:
             src = f.read()
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', DeprecationWarning)
+            globs = {'__file__': path, '__name__': module}
+            if path.name == '__init__.py':
+                globs['__path__'] = [path]
+                globs['__package__'] = module
+            elif '.' in module:
+                globs['__package__'] = module.rsplit('.', 1)[0]
             try:
-                six.exec_(src, {'__file__': path, '__name__': module})
+                six.exec_(src, globs)
             except ImportError:
                 if module in modules.OPTIONAL_MODULES:
                     raise unittest.SkipTest("Unable to import optional module %s" % module)
