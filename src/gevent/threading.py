@@ -22,12 +22,15 @@ Implementation of the standard :mod:`threading` using greenlets.
    threading; threading.current_thread()`` will no longer return a DummyThread
    before monkey-patching.
 """
-from __future__ import absolute_import
 
+
+import os
+import sys
 
 __implements__ = [
     'local',
-    '_start_new_thread', # Gone in 3.13; now start_joinable_thread
+    # Gone in 3.13; now start_joinable_thread
+    '_start_new_thread' if sys.version_info[:2] < (3, 13) else '_start_joinable_thread',
     '_allocate_lock',
     'Lock',
     '_get_ident',
@@ -39,13 +42,14 @@ __implements__ = [
     # things import this module.
     #'RLock',
 ]
+__extensions__ = [
+]
 
 
 import threading as __threading__ # imports os, sys, _thread, functools, time, itertools
 _DummyThread_ = __threading__._DummyThread
 _MainThread_ = __threading__._MainThread
-import os
-import sys
+
 
 from gevent.local import local
 from gevent.thread import start_new_thread as _start_new_thread
@@ -61,6 +65,7 @@ from gevent._util import LazyOnClass
 # XXX: Why don't we use __all__?
 local = local
 start_new_thread = _start_new_thread
+_start_joinable_thread = _start_new_thread
 allocate_lock = _allocate_lock
 _get_ident = _get_ident
 _sleep = _sleep
@@ -303,7 +308,10 @@ class Timer(Thread, __threading__.Timer): # pylint:disable=abstract-method,inher
 __implements__.append('Timer')
 
 _set_sentinel = allocate_lock
-__implements__.append('_set_sentinel')
+if sys.version_info[:2] < (3, 13):
+    __implements__.append('_set_sentinel')
+else:
+    __extensions__.append('_set_sentinel')
 # The main thread is patched up with more care
 # in _gevent_will_monkey_patch
 

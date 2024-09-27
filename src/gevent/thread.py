@@ -8,7 +8,7 @@ Implementation of the standard :mod:`thread` module that spawns greenlets.
     applications, prefer higher level constructs like
     :class:`gevent.Greenlet` class or :func:`gevent.spawn`.
 """
-from __future__ import absolute_import
+import sys
 
 __implements__ = [
     'allocate_lock',
@@ -18,7 +18,13 @@ __implements__ = [
     'stack_size',
     'start_new_thread',
     '_local',
-]
+] + (
+    [
+        'start_joinable_thread',
+        'lock',
+] if sys.version_info[:2] >= (3, 13) else [
+
+])
 
 __imports__ = ['error']
 
@@ -75,6 +81,31 @@ def start_new_thread(function, args=(), kwargs=None):
         greenlet = Greenlet.spawn(function, *args)
     return get_ident(greenlet)
 
+def start_joinable_thread(function, handle=None, daemon=True):
+    """
+    *For internal use only*: start a new thread.
+
+    Like start_new_thread(), this starts a new thread calling the given function.
+    Unlike start_new_thread(), this returns a handle object with methods to join
+    or detach the given thread.
+    This function is not for third-party code, please use the
+    `threading` module instead. During finalization the runtime will not wait for
+    the thread to exit if daemon is True. If handle is provided it must be a
+    newly created thread._ThreadHandle instance.
+    """
+    # The above docstring is from python 3.13.
+    #
+    # _thread._ThreadHandle has:
+    #  - readonly property `ident`
+    #  - method is_done
+    #  - method join
+    #  - method _set_done
+    #
+    # I have no idea what it means  if you pass a provided handle,
+    # because you can't change the ident once created, and
+    # the constructor of ThreadHande takes arbitrary positional
+    # and keyword arguments, and throws them away.
+    raise NotImplementedError
 
 class LockType(BoundedSemaphore):
     # Change the ValueError into the appropriate thread error
@@ -135,7 +166,7 @@ class LockType(BoundedSemaphore):
     # Should we implement _is_owned, at least for Python 2? See notes in
     # monkey.py's patch_existing_locks.
 
-allocate_lock = LockType
+allocate_lock = lock = LockType
 
 
 def exit():

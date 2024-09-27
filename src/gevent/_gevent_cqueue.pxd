@@ -65,6 +65,7 @@ cdef class Queue:
     cpdef get_nowait(self)
     cpdef peek(self, block=*, timeout=*)
     cpdef peek_nowait(self)
+    cpdef shutdown(self, immediate=*)
 
     cdef _schedule_unlock(self)
 

@@ -28,17 +28,14 @@ class, not an instance or subclass).
        will be issued with this argument.
 """
 
-from __future__ import absolute_import
+
 import sys
 from heapq import heappush as _heappush
 from heapq import heappop as _heappop
 from heapq import heapify as _heapify
 import collections
 
-if sys.version_info[0] == 2:
-    import Queue as __queue__ # python 3: pylint:disable=import-error
-else:
-    import queue as __queue__ # python 2: pylint:disable=import-error
+import queue as __queue__
 # We re-export these exceptions to client modules.
 # But we also want fast access to them from Cython with a cdef,
 # and we do that with the _ definition.
@@ -53,11 +50,22 @@ __all__ = []
 __implements__ = ['Queue', 'PriorityQueue', 'LifoQueue']
 __extensions__ = ['JoinableQueue', 'Channel']
 __imports__ = ['Empty', 'Full']
+
 if hasattr(__queue__, 'SimpleQueue'):
     __all__.append('SimpleQueue') # New in 3.7
     # SimpleQueue is implemented in C and directly allocates locks
     # unaffected by monkey patching. We need the Python version.
     SimpleQueue = __queue__._PySimpleQueue # pylint:disable=no-member
+if hasattr(__queue__, 'ShutDown'): # New in 3.13
+    ShutDown = __queue__.ShutDown
+    __imports__.append('ShutDown')
+else:
+    class ShutDown(Exception):
+        """
+        gevent extension for Python versions less than 3.13
+        """
+    __extensions__.append(ShutDown)
+
 __all__ += (__implements__ + __extensions__ + __imports__)
 
 
@@ -125,6 +133,7 @@ class Queue(object):
         'queue',
         '__weakref__',
     )
+
 
     def __init__(self, maxsize=None, items=(), _warn_depth=2):
         if maxsize is not None and maxsize <= 0:
@@ -414,7 +423,8 @@ class Queue(object):
             raise result
         return result
 
-    next = __next__ # Py2
+    def shutdown(self, immediate=False):
+        raise NotImplementedError
 
 
 class UnboundQueue(Queue):
