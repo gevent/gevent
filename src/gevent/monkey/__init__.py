@@ -349,10 +349,12 @@ def patch_thread(threading=True, _threading_local=True, Event=True, logging=True
     """
     if sys.version_info[:2] < (3, 13):
         from ._patch_thread_lt313 import patch
-        patch(threading+threading, _threading_local=_threading_local, Event=Event,
-              logging=logging, existing_locks=existing_locks, _warnings=_warnings)
     else:
-        _queue_warning("Unable to patch threads on 3.13", _warnings)
+        from ._patch_thread_gte313 import patch
+
+    patch(threading=threading, _threading_local=_threading_local, Event=Event,
+          logging=logging, existing_locks=existing_locks, _warnings=_warnings)
+
 
 @_ignores_DoNotPatch
 def patch_socket(dns=True, aggressive=True):

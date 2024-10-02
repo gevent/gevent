@@ -239,38 +239,38 @@ def patch(threading=True, _threading_local=True, Event=True, logging=True,
             main_thread._tstate_lock = threading_mod.Lock()
             main_thread._tstate_lock.acquire()
 
-        def _shutdown():
-            # Release anyone trying to join() me,
-            # and let us switch to them.
-            if not main_thread._tstate_lock:
-                return
+        # def _shutdown():
+        #     # Release anyone trying to join() me,
+        #     # and let us switch to them.
+        #     if not main_thread._tstate_lock:
+        #         return
 
-            main_thread._tstate_lock.release()
-            from gevent import sleep
-            try:
-                sleep()
-            except: # pylint:disable=bare-except
-                # A greenlet could have .kill() us
-                # or .throw() to us. I'm the main greenlet,
-                # there's no where else for this to go.
-                from gevent  import get_hub
-                get_hub().print_exception(_greenlet, *sys.exc_info())
+        #     main_thread._tstate_lock.release()
+        #     from gevent import sleep
+        #     try:
+        #         sleep()
+        #     except: # pylint:disable=bare-except
+        #         # A greenlet could have .kill() us
+        #         # or .throw() to us. I'm the main greenlet,
+        #         # there's no where else for this to go.
+        #         from gevent  import get_hub
+        #         get_hub().print_exception(_greenlet, *sys.exc_info())
 
-            # Now, this may have resulted in us getting stopped
-            # if some other greenlet actually just ran there.
-            # That's not good, we're not supposed to be stopped
-            # when we enter _shutdown.
-            main_thread._is_stopped = False
-            main_thread._tstate_lock = main_thread.__real_tstate_lock
-            main_thread.__real_tstate_lock = None
-            # The only truly blocking native shutdown lock to
-            # acquire should be our own (hopefully), and the call to
-            # _stop that orig_shutdown makes will discard it.
+        #     # Now, this may have resulted in us getting stopped
+        #     # if some other greenlet actually just ran there.
+        #     # That's not good, we're not supposed to be stopped
+        #     # when we enter _shutdown.
+        #     main_thread._is_stopped = False
+        #     main_thread._tstate_lock = main_thread.__real_tstate_lock
+        #     main_thread.__real_tstate_lock = None
+        #     # The only truly blocking native shutdown lock to
+        #     # acquire should be our own (hopefully), and the call to
+        #     # _stop that orig_shutdown makes will discard it.
 
-            orig_shutdown()
-            patch_item(threading_mod, '_shutdown', orig_shutdown)
+        #     orig_shutdown()
+        #     patch_item(threading_mod, '_shutdown', orig_shutdown)
 
-        patch_item(threading_mod, '_shutdown', _shutdown)
+        # patch_item(threading_mod, '_shutdown', _shutdown)
 
         # We create a bit of a reference cycle here,
         # so main_thread doesn't get to be collected in a timely way.

@@ -29,8 +29,6 @@ import sys
 
 __implements__ = [
     'local',
-    # Gone in 3.13; now start_joinable_thread
-    '_start_new_thread' if sys.version_info[:2] < (3, 13) else '_start_joinable_thread',
     '_allocate_lock',
     'Lock',
     '_get_ident',
@@ -41,7 +39,14 @@ __implements__ = [
     # threading module, but we really just need it here when some
     # things import this module.
     #'RLock',
-]
+] + ([
+    '_start_new_thread',
+] if sys.version_info[:2] < (3, 13) else [
+    '_start_joinable_thread',
+    '_ThreadHandle',
+])
+
+
 __extensions__ = [
 ]
 
@@ -53,6 +58,8 @@ _MainThread_ = __threading__._MainThread
 
 from gevent.local import local
 from gevent.thread import start_new_thread as _start_new_thread
+from gevent.thread import start_joinable_thread
+from gevent.thread import _ThreadHandle
 from gevent.thread import allocate_lock as _allocate_lock
 from gevent.thread import get_ident as _get_ident
 from gevent.hub import sleep as _sleep, getcurrent
@@ -65,7 +72,8 @@ from gevent._util import LazyOnClass
 # XXX: Why don't we use __all__?
 local = local
 start_new_thread = _start_new_thread
-_start_joinable_thread = _start_new_thread
+_start_joinable_thread = start_joinable_thread
+_ThreadHandle = _ThreadHandle
 allocate_lock = _allocate_lock
 _get_ident = _get_ident
 _sleep = _sleep

@@ -18,13 +18,14 @@ __implements__ = [
     'stack_size',
     'start_new_thread',
     '_local',
-] + (
-    [
-        'start_joinable_thread',
-        'lock',
+] + ([
+    'start_joinable_thread',
+    'lock',
+    '_ThreadHandle',
 ] if sys.version_info[:2] >= (3, 13) else [
 
 ])
+
 
 __imports__ = ['error']
 
@@ -74,14 +75,17 @@ def get_ident(gr=None):
     return id(gr)
 
 
-def start_new_thread(function, args=(), kwargs=None):
+def _start_new_greenlet(function, args=(), kwargs=None):
     if kwargs is not None:
         greenlet = Greenlet.spawn(function, *args, **kwargs) # pylint:disable=not-a-mapping
     else:
         greenlet = Greenlet.spawn(function, *args)
-    return get_ident(greenlet)
+    return greenlet
 
-def start_joinable_thread(function, handle=None, daemon=True):
+def start_new_thread(function, args=(), kwargs=None):
+    return get_ident(_start_new_greenlet(function, args, kwargs))
+
+def start_joinable_thread(function, handle=None, daemon=True): # pylint:disable=unused-argument
     """
     *For internal use only*: start a new thread.
 
@@ -104,8 +108,23 @@ def start_joinable_thread(function, handle=None, daemon=True):
     # I have no idea what it means  if you pass a provided handle,
     # because you can't change the ident once created, and
     # the constructor of ThreadHande takes arbitrary positional
-    # and keyword arguments, and throws them away.
-    raise NotImplementedError
+    # and keyword arguments, and throws them away. (The ident is set
+    # by C code directly accessing internal structure members).
+    greenlet = _start_new_greenlet(function) # XXX: Daemon is ignored
+
+    if handle is not None:
+        assert isinstance(handle, _ThreadHandle)
+        handle._set_greenlet(greenlet)
+
+    return handle
+
+class _ThreadHandle:
+    _greenlet = None
+    def _set_greenlet(self, glet):
+        self._greenlet = glet
+
+    def join(self, timeout):
+        return self._greenlet.join(timeout)
 
 class LockType(BoundedSemaphore):
     # Change the ValueError into the appropriate thread error

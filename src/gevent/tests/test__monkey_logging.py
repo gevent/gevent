@@ -4,14 +4,14 @@ import logging
 logging.basicConfig()
 
 import threading
-import sys
-PY2 = sys.version_info[0] == 2
 
 
 def _inner_lock(lock):
-    # The inner attribute changed between 2 and 3
-    attr = getattr(lock, '_block' if not PY2 else '_RLock__block', None)
-    return attr
+    try:
+        return lock._block
+    except AttributeError:
+        return None
+
 
 def _check_type(root, lock, inner_semaphore, kind):
     if not isinstance(inner_semaphore, kind):
@@ -52,5 +52,6 @@ import gevent.monkey
 gevent.monkey.patch_all()
 
 import gevent.lock
+import gevent.thread
 
 checkLocks(type(gevent.thread.allocate_lock()), ignore_none=False)
