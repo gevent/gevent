@@ -30,7 +30,6 @@ class Test(greentest.TestCase):
             # Be sure we've put the DummyThread in the threading
             # maps
             assert isinstance(threading.current_thread(), threading._DummyThread)
-
             with open(out, 'wt', encoding='utf-8') as f:
                 with contextlib.redirect_stderr(f):
                     r = os.fork()

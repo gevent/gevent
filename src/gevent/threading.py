@@ -44,6 +44,7 @@ __implements__ = [
 ] if sys.version_info[:2] < (3, 13) else [
     '_start_joinable_thread',
     '_ThreadHandle',
+    '_make_thread_handle',
 ])
 
 
@@ -60,6 +61,7 @@ from gevent.local import local
 from gevent.thread import start_new_thread as _start_new_thread
 from gevent.thread import start_joinable_thread
 from gevent.thread import _ThreadHandle
+from gevent.thread import _make_thread_handle
 from gevent.thread import allocate_lock as _allocate_lock
 from gevent.thread import get_ident as _get_ident
 from gevent.hub import sleep as _sleep, getcurrent
@@ -73,6 +75,7 @@ from gevent._util import LazyOnClass
 local = local
 start_new_thread = _start_new_thread
 _start_joinable_thread = start_joinable_thread
+_make_thread_handle = _make_thread_handle
 _ThreadHandle = _ThreadHandle
 allocate_lock = _allocate_lock
 _get_ident = _get_ident
@@ -150,6 +153,8 @@ class _DummyThread(_DummyThread_):
         # All dummy threads in the same native thread share the same ident
         # (that of the native thread), unless we're monkey-patched.
         self._set_ident()
+        # For 3.13
+        self._handle = _make_thread_handle(self._ident)
 
         g = getcurrent()
         gid = _get_ident(g)
@@ -276,6 +281,7 @@ def _after_fork_in_child():
     active = __threading__._active
     assert len(active) == 1
     main = __threading__._MainThread()
+    main._ident = id(getcurrent()) # 3.13: reset to the greenlet version.
     __threading__._active[__threading__.get_ident()] = main
     __threading__._main_thread = main
     assert main.ident == __threading__.get_ident()

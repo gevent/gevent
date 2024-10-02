@@ -22,6 +22,7 @@ __implements__ = [
     'start_joinable_thread',
     'lock',
     '_ThreadHandle',
+    '_make_thread_handle',
 ] if sys.version_info[:2] >= (3, 13) else [
 
 ])
@@ -62,6 +63,7 @@ from gevent.greenlet import Greenlet
 from gevent.lock import BoundedSemaphore
 from gevent.local import local as _local
 from gevent.exceptions import LoopExit
+
 
 if hasattr(__thread__, 'RLock'):
     # Added in Python 3.4, backported to PyPy 2.7-7.0
@@ -120,11 +122,29 @@ def start_joinable_thread(function, handle=None, daemon=True): # pylint:disable=
 
 class _ThreadHandle:
     _greenlet = None
+
     def _set_greenlet(self, glet):
         self._greenlet = glet
 
     def join(self, timeout):
         return self._greenlet.join(timeout)
+
+    @property
+    def ident(self):
+        return get_ident(self._greenlet)
+
+    def is_done(self):
+        return self._greenlet.dead
+
+def _make_thread_handle(*args):
+    """
+    Called on 3.13 after forking in the child.
+    Takes ``(module, ident)``, returns a handle object
+    with that ident.
+    """
+    handle = _ThreadHandle()
+    handle._set_greenlet(getcurrent())
+    return handle
 
 class LockType(BoundedSemaphore):
     # Change the ValueError into the appropriate thread error
