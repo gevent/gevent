@@ -118,6 +118,15 @@ class GeventSelector(_BaseSelectorImpl):
         self._ready = Event()
         super(GeventSelector, self).__init__()
 
+    if not hasattr(_BaseSelectorImpl, '_key_from_fd'):
+        def _key_from_fd(self, fd):
+            # Removed in 3.13; this duplicates the old function.
+            try:
+                return self._fd_to_key[fd]
+            except KeyError:
+                return None
+
+
     def __callback(self, events, fd):
         if events > 0:
             cur_event_for_fd = self._accumulated_events[fd]
