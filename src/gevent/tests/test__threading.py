@@ -16,14 +16,15 @@ def helper():
     threading.current_thread()
     gevent.sleep(0.2)
 
-
 class TestCleanup(greentest.TestCase):
 
     def _do_test(self, spawn):
         before = len(threading._active)
+
         g = spawn(helper)
         gevent.sleep(0.1)
         self.assertEqual(len(threading._active), before + 1)
+
         try:
             g.join()
         except AttributeError:

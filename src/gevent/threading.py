@@ -153,7 +153,8 @@ class _DummyThread(_DummyThread_):
         # All dummy threads in the same native thread share the same ident
         # (that of the native thread), unless we're monkey-patched.
         self._set_ident()
-        # For 3.13
+        # _handle is only needed for 3.13; keeps a weak reference
+        # to the greenlet.
         self._handle = _make_thread_handle(self._ident)
 
         g = getcurrent()

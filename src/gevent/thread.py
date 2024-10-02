@@ -121,20 +121,48 @@ def start_joinable_thread(function, handle=None, daemon=True): # pylint:disable=
     return handle
 
 class _ThreadHandle:
-    _greenlet = None
+    # The constructor must accept and ignore all arguments
+    # to match the stdlib.
+    def __init__(self, *_args, **_kwargs):
+        """Does nothing; ignores args"""
+
+    # Must keep a weak reference to the greenlet
+    # to avoid problems managing the _active list of
+    # threads, which can sometimes rely on garbage collection.
+    # Also, this breaks a cycle.
+    _greenlet_ref = None
 
     def _set_greenlet(self, glet):
-        self._greenlet = glet
+        from weakref import ref
+        assert glet is not None
+        self._greenlet_ref = ref(glet)
+
+    def __get_greenlet(self):
+        return (
+            self._greenlet_ref()
+            if self._greenlet_ref is not None
+            else None
+        )
 
     def join(self, timeout):
-        return self._greenlet.join(timeout)
+        glet = self.__get_greenlet()
+        if glet is not None:
+            return glet.join(timeout)
+        return None
 
     @property
     def ident(self):
-        return get_ident(self._greenlet)
+        glet = self.__get_greenlet()
+        if glet is not None:
+            return get_ident(glet)
+        return None
 
     def is_done(self):
-        return self._greenlet.dead
+        glet = self.__get_greenlet()
+        if glet is None:
+            return True
+
+        return glet.dead
 
 def _make_thread_handle(*args):
     """
@@ -142,6 +170,7 @@ def _make_thread_handle(*args):
     Takes ``(module, ident)``, returns a handle object
     with that ident.
     """
+    # The argument _should_ be a thread identifier int
     handle = _ThreadHandle()
     handle._set_greenlet(getcurrent())
     return handle
