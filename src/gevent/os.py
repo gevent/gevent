@@ -189,7 +189,10 @@ if hasattr(os, 'fork'):
         .. versionadded:: 1.1b2
         """
         import warnings
-        with warnings.catch_warnings(action='ignore', category=DeprecationWarning):
+        # The simple `catch_warnings(action='ignore', category=DeprecationWarning)`
+        # is only available in 3.11+.
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', DeprecationWarning)
             result = _raw_fork()
         if not result:
             reinit()
