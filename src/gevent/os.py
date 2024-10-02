@@ -188,7 +188,9 @@ if hasattr(os, 'fork'):
 
         .. versionadded:: 1.1b2
         """
-        result = _raw_fork()
+        import warnings
+        with warnings.catch_warnings(action='ignore', category=DeprecationWarning):
+            result = _raw_fork()
         if not result:
             reinit()
         return result

@@ -57,7 +57,6 @@ class QuietHub(Hub):
         # and return, we completely change the semantics: We avoid raising
         # this error in the main greenlet, which cuts out several switches.
         # Overall, not good.
-
         if self.IGNORE_EXPECTED_TEST_ERROR and issubclass(type, self.EXPECTED_TEST_ERROR):
             # Don't pass these up; avoid switches
             return

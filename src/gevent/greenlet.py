@@ -486,8 +486,6 @@ class Greenlet(greenlet):
                 args = (GreenletExit, GreenletExit(), None)
             if not issubclass(args[0], BaseException):
                 # Random non-type, non-exception arguments.
-                print("RANDOM CRAP", args)
-                import traceback; traceback.print_stack()
                 args = (BaseException, BaseException(args), None)
             assert issubclass(args[0], BaseException)
             self.__report_error(args)

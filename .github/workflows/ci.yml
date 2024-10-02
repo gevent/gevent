@@ -79,6 +79,13 @@ jobs:
   test:
     runs-on: ${{ matrix.os }}
     strategy:
+      # fail-fast is for the entire job, and defaults to true,
+      # when adding a new Python version that we expect to have test failures for,
+      # it's good to set this to false so we can be sure that none of the
+      # stable versions fail as we make modifications for the new version.
+      # See also ``continue-on-error``.
+      # https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idstrategyfail-fast
+      fail-fast: false
       matrix:
         # 3.10+ needs more work: dnspython for example doesn't work
         # with it. That means for the bulk of our testing we need to
@@ -89,6 +96,7 @@ jobs:
         # ``gevent.tests.test__queue gevent.tests.test__real_greenlet
         # gevent.tests.test__refcount_core
         # gevent.tests.test__resolver_dnspython``
+        # Seems resolved in 7.3.17
         #
         # CAREFUL: Some of the tests are only run on specific versions of Python,
         # as dictated by the conditions found below. So when you change a version,
@@ -102,6 +110,9 @@ jobs:
           # Experience shows that it's sufficient to only test the latest
           # version on macOS. However, that does mean you need to
           # manually upload macOS wheels for those versions.
+          #
+          # XXX: Automate this part with another job.
+          #
           # - os: macos-latest
           #   python-version: 3.8
           # - os: macos-latest

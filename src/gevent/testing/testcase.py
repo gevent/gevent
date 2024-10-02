@@ -203,7 +203,7 @@ class TestCaseMetaClass(type):
     # b) fatal error check
     # c) restore the hub's error handler (see expect_one_error)
     # d) totalrefcount check
-    def __new__(cls, classname, bases, classDict):
+    def __new__(mcs, classname, bases, classDict):
         # pylint and pep8 fight over what this should be called (mcs or cls).
         # pylint gets it right, but we cant scope disable pep8, so we go with
         # its convention.
@@ -234,7 +234,7 @@ class TestCaseMetaClass(type):
                 if check_totalrefcount and sysinfo.RUN_LEAKCHECKS:
                     value = leakcheck.wrap_refcount(value)
                 classDict[key] = value
-        return type.__new__(cls, classname, bases, classDict)
+        return type.__new__(mcs, classname, bases, classDict)
 
 def _noop():
     return
@@ -256,13 +256,18 @@ class SubscriberCleanupMixin(object):
         super(SubscriberCleanupMixin, self).tearDown()
 
 
-class TestCase(TestCaseMetaClass("NewBase",
-                                 (SubscriberCleanupMixin,
-                                  TimeAssertMixin,
-                                  GreenletAssertMixin,
-                                  StringAssertMixin,
-                                  BaseTestCase,),
-                                 {})):
+class TestCase(
+        # TestCaseMetaClass("NewBase",
+        #                          (SubscriberCleanupMixin,
+        #                           TimeAssertMixin,
+        #                           GreenletAssertMixin,
+        #                           StringAssertMixin,
+        #                           BaseTestCase,),
+        #                          {})):
+        SubscriberCleanupMixin, TimeAssertMixin, GreenletAssertMixin,
+        StringAssertMixin, BaseTestCase,
+        metaclass=TestCaseMetaClass
+):
     __timeout__ = params.LOCAL_TIMEOUT if not sysinfo.RUNNING_ON_CI else params.CI_TIMEOUT
 
     switch_expected = 'default'

@@ -20,6 +20,7 @@
 # THE SOFTWARE.
 import functools
 import unittest
+from unittest.mock import patch as Patch
 
 import gevent.testing as greentest
 import gevent
@@ -767,6 +768,14 @@ class TestBasic(greentest.TestCase):
 
 
 class TestKill(greentest.TestCase):
+
+    def setUp(self):
+        super().setUp()
+        hub = gevent.get_hub()
+        patcher = Patch.object(hub, 'print_exception', autospec=True)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
 
     def __assertKilled(self, g, successful):
         self.assertFalse(g)
