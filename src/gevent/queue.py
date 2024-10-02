@@ -64,7 +64,7 @@ else:
         """
         gevent extension for Python versions less than 3.13
         """
-    __extensions__.append(ShutDown)
+    __extensions__.append('ShutDown')
 
 __all__ += (__implements__ + __extensions__ + __imports__)
 
