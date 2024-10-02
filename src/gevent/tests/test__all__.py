@@ -177,6 +177,13 @@ class AbstractTestMixin(object):
                              sorted(self.module.__all__))
         except AssertionError:
             self.skipTest("Module %s fails the all formula; fix it" % self.modname)
+        except TypeError:
+            # TypeError: '<' not supported between instances of 'type' and 'str'
+            raise AssertionError(
+                "Unable to sort %r from all %s in %s" % (
+                    all_calculated, self.module.__all__, self.module
+                )
+            )
 
     def test_implements_presence_justified(self):
         # Check that __implements__ is present only if the module is modeled
@@ -233,8 +240,18 @@ class AbstractTestMixin(object):
         if self.modname in EXTRA_EXTENSIONS:
             return
         for name in self.__extensions__:
-            if hasattr(self.stdlib_module, name):
-                raise AssertionError("'%r' is not an extension, it is found in %r" % (name, self.stdlib_module))
+            try:
+                if hasattr(self.stdlib_module, name):
+                    raise AssertionError("'%r' is not an extension, it is found in %r" % (
+                        name, self.stdlib_module
+                    ))
+            except TypeError as ex:
+                # TypeError: attribute name must be string, not 'type'
+                raise AssertionError(
+                    "Got TypeError (%r) getting %r (of %s) from %s/%s" % (
+                        ex, name, self.__extensions__, self.stdlib_module, self.modname
+                    )
+                )
 
     @skip_if_no_stdlib_counterpart
     def test_completeness(self): # pylint:disable=too-many-branches
