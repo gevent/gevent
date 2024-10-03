@@ -163,6 +163,12 @@ if [ -d /gevent -a -d /opt/python ]; then
     set -x
     for variant in /opt/python/cp{313,312,39,310,311}*; do
         echo $SEP
+        if [ "$variant" = "/opt/python/cp313-cp313t" ]; then
+            # It appears that Cython 3.0.11 cannot produce code that
+            # works here. Lots of compiler errors.
+            echo "Unable to build without gil"
+            continue
+        fi
         export PATH="$variant/bin:$OPATH"
         if [ -n "$SLOW_BUILD" ]; then
             is_security_fix_only=$(python -c 'import sys; print(sys.version_info[:2] < (3, 10))')
