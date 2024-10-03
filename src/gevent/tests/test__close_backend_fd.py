@@ -33,7 +33,19 @@ class Test(unittest.TestCase):
         # why; needs investigated.
         'linux_iouring',
     ) if not sysinfo.libev_supports_linux_iouring() else (
+        # Even on systems that ought to support it, according to the
+        # version number, it often fails to actually work. See the
+        # manylinux_2_28_x86_64 image as-of 2024-10-03; it seems that
+        # 6.8.0-1014-azure, as used in the Ubuntu 22.04 Github Actions
+        # runner works fine, though. So it's not clear what we can do
+        # other than skip it. It's possible this has to do with
+        # running the manylinux images in docker? " Docker also
+        # consequently disabled io_uring from their default seccomp
+        # profile."
+    )
 
+    BACKENDS_TO_SKIP = (
+        'linux_iouring',
     )
 
     BACKENDS_THAT_WILL_FAIL_TO_CREATE_AT_RUNTIME += (
@@ -41,7 +53,7 @@ class Test(unittest.TestCase):
         # linux, but there's a runtime check that you're
         # running at least kernel 4.19, so we can fail to create
         # the hub. When we updated to libev 4.31 from 4.25, Travis Ci
-        # was still on kernel 1.15 (Ubunto 16.04).
+        # was still on kernel 1.15 (Ubuntu 16.04).
         'linux_aio',
     ) if not sysinfo.libev_supports_linux_aio() else (
     )
@@ -73,7 +85,10 @@ class Test(unittest.TestCase):
 
     @classmethod
     def _make_test(cls, count, backend): # pylint:disable=no-self-argument
-        if backend in cls.BACKENDS_THAT_WILL_FAIL_TO_CREATE_AT_RUNTIME:
+        if backend in cls.BACKENDS_TO_SKIP:
+            def test(self):
+                self.skipTest('Expecting %s to fail' % (backend, ))
+        elif backend in cls.BACKENDS_THAT_WILL_FAIL_TO_CREATE_AT_RUNTIME:
             def test(self):
                 with self.assertRaisesRegex(SystemError, 'ev_loop_new'):
                     Hub(backend, default=False)
