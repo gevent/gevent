@@ -91,6 +91,12 @@ if [ -d /gevent -a -d /opt/python ]; then
     ls -ld /cache
     ls -ld /cache/pip
     echo $SEP
+
+    # Ahh, overprotective security. Disable it.
+    echo "Fixing get's paranoia"
+    git config --global --add safe.directory /gevent/.git
+    echo $SEP
+
     echo "Installing Build Deps"
     if [ -e /usr/bin/yum ]; then
         yum -y install libffi-devel
