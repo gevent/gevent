@@ -204,6 +204,13 @@ def patch(threading=True, _threading_local=True, Event=True, logging=True,
 
         for thread in threading_mod._active.values():
             if thread == main_native_thread():
+                from greenlet import getcurrent
+                from gevent.thread import _ThreadHandle
+                thread._after_fork = lambda new_ident=None: new_ident
+                thread._handle = _ThreadHandle()
+                thread._handle._set_greenlet(getcurrent())
+                thread._ident = thread._handle.ident
+                assert thread.ident == thread._handle.ident
                 continue
             thread.join = _make_existing_non_main_thread_join_func(thread, None, threading_mod)
 
@@ -217,60 +224,81 @@ def patch(threading=True, _threading_local=True, Event=True, logging=True,
     orig_shutdown = threading_mod._shutdown
 
     if orig_current_thread == threading_mod.main_thread() and not already_patched:
+
         main_thread = threading_mod.main_thread()
         _greenlet = main_thread._greenlet = greenlet.getcurrent()
         # XXX: Changed for 3.13. No longer uses this, uses a 'handle'
         #
-        try:
-            main_thread.__real_tstate_lock = main_thread._tstate_lock
-        except AttributeError:
-            pass
-        else:
-            assert main_thread.__real_tstate_lock is not None
-            # The interpreter will call threading._shutdown
-            # when the main thread exits and is about to
-            # go away. It is called *in* the main thread. This
-            # is a perfect place to notify other greenlets that
-            # the main thread is done. We do this by overriding the
-            # lock of the main thread during operation, and only restoring
-            # it to the native blocking version at shutdown time
-            # (the interpreter also has a reference to this lock in a
-            # C data structure).
-            main_thread._tstate_lock = threading_mod.Lock()
-            main_thread._tstate_lock.acquire()
+        # try:
+        #     main_thread.__real_tstate_lock = main_thread._tstate_lock
+        # except AttributeError:
+        #     pass
+        # else:
+        #     assert main_thread.__real_tstate_lock is not None
+        #     # The interpreter will call threading._shutdown
+        #     # when the main thread exits and is about to
+        #     # go away. It is called *in* the main thread. This
+        #     # is a perfect place to notify other greenlets that
+        #     # the main thread is done. We do this by overriding the
+        #     # lock of the main thread during operation, and only restoring
+        #     # it to the native blocking version at shutdown time
+        #     # (the interpreter also has a reference to this lock in a
+        #     # C data structure).
+        #     main_thread._tstate_lock = threading_mod.Lock()
+        #     main_thread._tstate_lock.acquire()
 
-        # def _shutdown():
-        #     # Release anyone trying to join() me,
-        #     # and let us switch to them.
-        #     if not main_thread._tstate_lock:
-        #         return
+        def _shutdown():
+            # Release anyone trying to join() me,
+            # and let us switch to them.
+            main_thread._handle._set_done()
+            from gevent import sleep
+            try:
+                sleep()
+            except: # pylint:disable=bare-except
+                # A greenlet could have .kill() us
+                # or .throw() to us. I'm the main greenlet,
+                # there's no where else for this to go.
+                from gevent  import get_hub
+                get_hub().print_exception(_greenlet, *sys.exc_info())
 
-        #     main_thread._tstate_lock.release()
-        #     from gevent import sleep
-        #     try:
-        #         sleep()
-        #     except: # pylint:disable=bare-except
-        #         # A greenlet could have .kill() us
-        #         # or .throw() to us. I'm the main greenlet,
-        #         # there's no where else for this to go.
-        #         from gevent  import get_hub
-        #         get_hub().print_exception(_greenlet, *sys.exc_info())
+            # Now, this may have resulted in us getting stopped
+            # if some other greenlet actually just ran there.
+            # That's not good, we're not supposed to be stopped
+            # when we enter _shutdown.
+            class FakeHandle:
+                def is_done(self):
+                    return False
+                def _set_done(self):
+                    return
+                def join(self):
+                    return
+            main_thread._handle = FakeHandle()
+            assert main_thread.is_alive()
+            # main_thread._is_stopped = False
+            # main_thread._tstate_lock = main_thread.__real_tstate_lock
+            # main_thread.__real_tstate_lock = None
+            # The only truly blocking native shutdown lock to
+            # acquire should be our own (hopefully), and the call to
+            # _stop that orig_shutdown makes will discard it.
 
-        #     # Now, this may have resulted in us getting stopped
-        #     # if some other greenlet actually just ran there.
-        #     # That's not good, we're not supposed to be stopped
-        #     # when we enter _shutdown.
-        #     main_thread._is_stopped = False
-        #     main_thread._tstate_lock = main_thread.__real_tstate_lock
-        #     main_thread.__real_tstate_lock = None
-        #     # The only truly blocking native shutdown lock to
-        #     # acquire should be our own (hopefully), and the call to
-        #     # _stop that orig_shutdown makes will discard it.
+            # XXX: What if more get spawned?
+            for t in list(threading_mod.enumerate()):
+                if t.daemon or t is main_thread:
+                    continue
+                while t.is_alive():
+                    try:
+                        t._handle.join(0.001)
+                    except RuntimeError:
+                        # Joining ourself.
+                        t._handle._set_done()
+                        break
 
-        #     orig_shutdown()
-        #     patch_item(threading_mod, '_shutdown', orig_shutdown)
 
-        # patch_item(threading_mod, '_shutdown', _shutdown)
+
+            orig_shutdown()
+            patch_item(threading_mod, '_shutdown', orig_shutdown)
+
+        patch_item(threading_mod, '_shutdown', _shutdown)
 
         # We create a bit of a reference cycle here,
         # so main_thread doesn't get to be collected in a timely way.

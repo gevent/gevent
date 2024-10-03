@@ -105,7 +105,7 @@ def start_joinable_thread(function, handle=None, daemon=True): # pylint:disable=
     #  - readonly property `ident`
     #  - method is_done
     #  - method join
-    #  - method _set_done
+    #  - method _set_done - threading._shutdown calls this
     #
     # I have no idea what it means  if you pass a provided handle,
     # because you can't change the ident once created, and
@@ -137,7 +137,7 @@ class _ThreadHandle:
         assert glet is not None
         self._greenlet_ref = ref(glet)
 
-    def __get_greenlet(self):
+    def _get_greenlet(self):
         return (
             self._greenlet_ref()
             if self._greenlet_ref is not None
@@ -145,26 +145,58 @@ class _ThreadHandle:
         )
 
     def join(self, timeout):
-        glet = self.__get_greenlet()
+        glet = self._get_greenlet()
         if glet is not None:
-            return glet.join(timeout)
+            if glet is getcurrent():
+                raise RuntimeError('Cannot joint current thread')
+            if hasattr(glet, 'join'):
+                return glet.join(timeout)
+            # working with a raw greenlet. That
+            # means it's probably the MainThread, because the main
+            # greenlet is always raw. But it could also be a dummy
+            from time import time
+
+            end = None
+            if timeout:
+                end = time() + timeout
+
+            while not self.is_done():
+                if end is not None and time() > end:
+                    return
+                sleep(0.001)
         return None
 
     @property
     def ident(self):
-        glet = self.__get_greenlet()
+        glet = self._get_greenlet()
         if glet is not None:
             return get_ident(glet)
         return None
 
     def is_done(self):
-        glet = self.__get_greenlet()
+        glet = self._get_greenlet()
         if glet is None:
             return True
 
         return glet.dead
 
-def _make_thread_handle(*args):
+    def _set_done(self):
+        self._greenlet_ref = None
+        # Let the loop go around so that anyone waiting in
+        # join() gets to know about it. This is particularly
+        # important during threading/interpreter shutdown.
+        sleep(0.001)
+
+
+    def __repr__(self):
+        return '<%s.%s at 0x%x greenlet=%r>' % (
+            self.__class__.__module__,
+            self.__class__.__name__,
+            id(self),
+            self._get_greenlet()
+        )
+
+def _make_thread_handle(*_args):
     """
     Called on 3.13 after forking in the child.
     Takes ``(module, ident)``, returns a handle object

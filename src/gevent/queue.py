@@ -424,7 +424,7 @@ class Queue(object):
         return result
 
     def shutdown(self, immediate=False):
-        raise NotImplementedError
+        raise AttributeError('_shutdown is new on 3.13; not yet implemented')
 
 
 class UnboundQueue(Queue):

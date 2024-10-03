@@ -1,10 +1,9 @@
 # testing gevent's Event, Lock, RLock, Semaphore, BoundedSemaphore with standard test_threading
-from __future__ import print_function
 
 from gevent.testing.six import xrange
 import gevent.testing as greentest
 
-setup_ = '''from gevent import monkey; monkey.patch_all()
+setup_ = """from gevent import monkey; monkey.patch_all()
 from gevent.event import Event
 from gevent.lock import RLock, Semaphore, BoundedSemaphore
 from gevent.thread import allocate_lock as Lock
@@ -21,7 +20,7 @@ threading.NativeRLock = threading.RLock
 threading.RLock = RLock
 threading.Semaphore = Semaphore
 threading.BoundedSemaphore = BoundedSemaphore
-'''
+"""
 
 exec(setup_)
 
@@ -35,19 +34,19 @@ import random
 import re
 import sys
 import threading
-try:
-    import thread
-except ImportError:
-    import _thread as thread
+import _thread as thread
 import time
 import unittest
 import weakref
+
 
 from gevent.tests import lock_tests
 verbose = False
 # pylint:disable=consider-using-with
 
-# A trivial mutable counter.
+from unittest.mock import patch as Patch
+
+
 
 def skipDueToHang(cls):
     return unittest.skipIf(
@@ -56,6 +55,7 @@ def skipDueToHang(cls):
     )(cls)
 
 class Counter(object):
+    # A trivial mutable counter.
     def __init__(self):
         self.value = 0
 
@@ -72,6 +72,7 @@ class Counter(object):
 class TestThread(threading.Thread):
     def __init__(self, name, testcase, sema, mutex, nrunning):
         threading.Thread.__init__(self, name=name)
+
         self.testcase = testcase
         self.sema = sema
         self.mutex = mutex
@@ -103,6 +104,7 @@ class TestThread(threading.Thread):
 
 @skipDueToHang
 class ThreadTests(unittest.TestCase):
+    maxDiff = None
 
     # Create a bunch of threads, let each do some work, wait until all are
     # done.
@@ -118,15 +120,21 @@ class ThreadTests(unittest.TestCase):
 
         threads = []
 
+        initial_regex = r'<TestThread\(.*, stopped\)>'
+        if sys.version_info[:2] < (3, 13):
+            # prior to 3.13, they distinguished the initial state from
+            # the stopped state.
+            initial_regex = r'<TestThread\(.*, initial\)>'
+
         for i in range(NUMTASKS):
             t = TestThread("<thread %d>" % i, self, sema, mutex, numrunning)
             threads.append(t)
             # pylint:disable-next=attribute-defined-outside-init
             t.daemon = False # Under PYPY we get daemon by default?
-            if hasattr(t, 'ident'):
-                self.assertIsNone(t.ident)
-                self.assertFalse(t.daemon)
-                self.assertTrue(re.match(r'<TestThread\(.*, initial\)>', repr(t)))
+            self.assertIsNone(t.ident)
+            self.assertFalse(t.daemon)
+            self.assertTrue(re.match(initial_regex, repr(t)),
+                            repr(t))
             t.start()
 
         if verbose:
@@ -287,18 +295,22 @@ class ThreadTests(unittest.TestCase):
 
     def test_limbo_cleanup(self):
         # Issue 7481: Failure to start thread should cleanup the limbo map.
-        def fail_new_thread(*_args):
+        def fail_new_thread(*_args, **_kw):
             raise thread.error()
-        _start_new_thread = threading._start_new_thread
-        threading._start_new_thread = fail_new_thread
-        try:
-            t = threading.Thread(target=lambda: None)
-            self.assertRaises(thread.error, t.start)
-            self.assertFalse(
-                t in threading._limbo,
-                "Failed to cleanup _limbo map on failure of Thread.start().")
-        finally:
-            threading._start_new_thread = _start_new_thread
+        if hasattr(threading, '_start_new_thread'):
+            patcher = Patch.object(threading, '_start_new_thread', new=fail_new_thread)
+        else:
+            # 3.13 or later
+            patcher = Patch.object(threading, '_start_joinable_thread', new=fail_new_thread)
+
+        self.addCleanup(patcher.stop)
+        patcher.start()
+
+        t = threading.Thread(target=lambda: None)
+        self.assertRaises(thread.error, t.start)
+        self.assertFalse(
+            t in threading._limbo,
+            "Failed to cleanup _limbo map on failure of Thread.start().")
 
     def test_finalize_runnning_thread(self):
         # Issue 1402: the PyGILState_Ensure / _Release functions may be called
@@ -448,6 +460,8 @@ class ThreadTests(unittest.TestCase):
 @skipDueToHang
 class ThreadJoinOnShutdown(unittest.TestCase):
 
+    maxDiff = None
+
     def _run_and_join(self, script):
         script = """if 1:
 %s
@@ -463,9 +477,10 @@ class ThreadJoinOnShutdown(unittest.TestCase):
         rc = p.wait()
         data = p.stdout.read().replace(b'\r', b'')
         p.stdout.close()
-        self.assertEqual(data, b"end of main\nend of thread\n")
-        self.assertNotEqual(rc, 2, b"interpreter was blocked")
-        self.assertEqual(rc, 0, b"Unexpected error")
+        data = data.decode('utf-8')
+        self.assertEqual(data, "end of main\nend of thread\n")
+        self.assertNotEqual(rc, 2, "interpreter was blocked")
+        self.assertEqual(rc, 0, "Unexpected error")
 
     @greentest.skipOnLibuvOnPyPyOnWin("hangs")
     def test_1_join_on_shutdown(self):
@@ -528,7 +543,6 @@ class ThreadJoinOnShutdown(unittest.TestCase):
         script = """if 1:
             main_thread = threading.current_thread()
             def worker():
-                threading._after_fork = lambda: None
                 childpid = os.fork()
                 if childpid != 0:
                     os.waitpid(childpid, 0)

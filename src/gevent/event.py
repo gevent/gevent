@@ -83,7 +83,8 @@ class Event(AbstractLinkable): # pylint:disable=undefined-variable
         self._flag = False
 
     def __str__(self):
-        return '<%s %s _links[%s]>' % (
+        return '<%s.%s %s _links[%s]>' % (
+            self.__class__.__module__,
             self.__class__.__name__,
             'set' if self._flag else 'clear',
             self.linkcount()

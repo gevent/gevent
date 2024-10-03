@@ -31,15 +31,15 @@ class TestMonkey(SubscriberCleanupMixin, unittest.TestCase):
         self.assertIs(time.sleep, gtime.sleep)
 
     def test_thread(self):
-        try:
-            import thread
-        except ImportError:
-            import _thread as thread
+        import _thread as thread
         import threading
 
         from gevent import thread as gthread
         self.assertIs(thread.start_new_thread, gthread.start_new_thread)
-        self.assertIs(threading._start_new_thread, gthread.start_new_thread)
+        if sys.version_info[:2] < (3, 13):
+            self.assertIs(threading._start_new_thread, gthread.start_new_thread)
+        else:
+            self.assertIs(threading._start_joinable_thread, gthread.start_joinable_thread)
 
         # Event patched by default
         self.assertTrue(monkey.is_object_patched('threading', 'Event'))

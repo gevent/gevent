@@ -127,6 +127,9 @@ def notify_and_call_entry_points(event):
         __traceback_info__ = ep_dict
         # On Python 3.8, we can get duplicate EntryPoint objects; it is unclear
         # why. Drop them into a set to make sure we only get one.
+        #
+        # Running a more recent pylint flags the non-existence of ``get``
+        # pylint:disable=no-member
         entry_points = set(
             ep
             for ep

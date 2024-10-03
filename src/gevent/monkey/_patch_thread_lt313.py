@@ -77,6 +77,8 @@ def _make_existing_non_main_thread_join_func(thread, thread_greenlet, threading_
     from time import time
 
     def join(timeout=None):
+        # TODO: This is almost the algorithm that the 3.13 _ThreadHandle class
+        # employs. UNIFY them.
         end = None
         if threading_mod.current_thread() is thread:
             raise RuntimeError("Cannot join current thread")
