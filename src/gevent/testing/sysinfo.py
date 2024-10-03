@@ -172,32 +172,78 @@ def get_python_version():
 
     return version
 
-# XXX: In Python 3.10, distutils is deprecated and slated for removal in
-# 3.12. The suggestion is to use setuptools, but it only has LooseVersion
-# in an internal package and suggests using the new dependency of 'packaging'.
-# However, we depend on zope packages that depend on setuptools, and setuptools
-# bundles distutils now.
+def _parse_version(ver_str):
+    try:
+        from packaging.version import Version
+        # InvalidVersion is a type of ValueError
+    except ImportError:
+        import warnings
+        warnings.warn('packaging.version not available; assuming no advanced Linux backends')
+        raise ValueError
+
+    try:
+        return Version(ver_str)
+    except ValueError:
+        import warnings
+        warnings.warn('Unable to parse version %s' % (ver_str,))
+        raise
+
+def _check_linux_version_at_least(major, minor, error_kind):
+    # pylint:disable=too-many-return-statements
+    # ^ Yeah, but this is the most linear and simple way to
+    # write this.
+    from platform import system
+    if system() != 'Linux':
+        return  False
+
+    from platform import release as _release
+    release = _release()
+    try:
+        # Linux versions like '6.8.0-1014-azure' cannot be parsed
+        # by packaging.version.Version, and distutils.LooseVersion, which
+        # did handle that, is deprecated. Neither module is guaranteed to be available
+        # anyway, so do the best we can manually.
+        ver_strings = (release or '0').split('.', 2)
+
+        if not ver_strings or int(ver_strings[0]) < major: # no way.
+            return False
+
+        if int(ver_strings[0]) > major: # Way newer!
+            return True
+
+        assert major == int(ver_strings[0]) # Exactly the major
+
+        if len(ver_strings) < 2: # no minor version, assume no
+            return False
+
+        if int(ver_strings[1]) < minor:
+            return False
+
+        assert int(ver_strings[1]) >= minor, (ver_strings[1], minor)
+        return True
+    except AssertionError:
+        raise
+    except Exception: # pylint:disable=broad-exception-caught
+        import warnings
+        warnings.warn('Unable to parse version %r; assuming no %s support' % (
+            release, error_kind
+        ))
+        return False
 
 def libev_supports_linux_aio():
     # libev requires kernel 4.19 or above to be able to support
     # linux AIO. It can still be compiled in, but will fail to create
     # the loop at runtime.
-    from distutils.version import LooseVersion # pylint:disable=deprecated-module,import-error
-    from platform import system
-    from platform import release
+    return _check_linux_version_at_least(4, 19, 'aio')
 
-    return system() == 'Linux' and LooseVersion(release() or '0') >= LooseVersion('4.19')
 
 def libev_supports_linux_iouring():
     # libev requires kernel XXX to be able to support linux io_uring.
     # It fails with the kernel in fedora rawhide (4.19.76) but
     # works (doesn't fail catastrophically when asked to create one)
     # with kernel 5.3.0 (Ubuntu Bionic)
-    from distutils.version import LooseVersion # pylint:disable=deprecated-module
-    from platform import system
-    from platform import release
+    return _check_linux_version_at_least(5, 3, 'iouring')
 
-    return system() == 'Linux' and LooseVersion(release() or '0') >= LooseVersion('5.3')
 
 def resolver_dnspython_available():
     # Try hard not to leave around junk we don't have to.
