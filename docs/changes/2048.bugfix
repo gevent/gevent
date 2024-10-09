@@ -1,0 +1,2 @@
+For platforms that don't have ``socketpair``, upgrade our fallback
+code to avoid a security issue.

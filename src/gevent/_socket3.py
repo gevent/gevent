@@ -529,6 +529,77 @@ if hasattr(_socket.socket, "share"):
     __implements__.append('fromshare')
 
 
+def _fallback_socketpair(family=AF_INET, type=SOCK_STREAM, proto=0):
+    # We originally used https://gist.github.com/4325783, by Geert Jansen. (Public domain.)
+    # We took it from 3.6 release, confirmed unchanged in 3.7 and
+    # 3.8a1. Expected to be used only on Win. Added to Win/3.5.
+    # It is always available as `socket._fallback_socketpair` from at least 3.9,
+    # We would like to stop carrying around our own implementation, but
+    # using _fallback_socketpair directly would only work if we are monkey patched.
+
+    # Current version taken from 3.13rc2
+
+    # PyPy doesn't name its fallback `_fallback_socketpair`, it uses
+    # an older copy of socket.py.
+    _LOCALHOST = '127.0.0.1'
+    _LOCALHOST_V6 = '::1'
+
+    if family == AF_INET:
+        host = _LOCALHOST
+    elif family == AF_INET6:
+        host = _LOCALHOST_V6
+    else:
+        raise ValueError("Only AF_INET and AF_INET6 socket address families "
+                         "are supported")
+    if type != SOCK_STREAM:
+        raise ValueError("Only SOCK_STREAM socket type is supported")
+    if proto != 0:
+        raise ValueError("Only protocol zero is supported")
+
+    # We create a connected TCP socket. Note the trick with
+    # setblocking(False) that prevents us from having to create a thread.
+    lsock = socket(family, type, proto)
+    try:
+        lsock.bind((host, 0))
+        lsock.listen()
+        # On IPv6, ignore flow_info and scope_id
+        addr, port = lsock.getsockname()[:2]
+        csock = socket(family, type, proto)
+        try:
+            csock.setblocking(False)
+            try:
+                csock.connect((addr, port))
+            except (BlockingIOError, InterruptedError):
+                pass
+            csock.setblocking(True)
+            ssock, _ = lsock.accept()
+        except:
+            csock.close()
+            raise
+    finally:
+        lsock.close()
+
+    # Authenticating avoids using a connection from something else
+    # able to connect to {host}:{port} instead of us.
+    # We expect only AF_INET and AF_INET6 families.
+    try:
+        if (
+            ssock.getsockname() != csock.getpeername()
+            or csock.getsockname() != ssock.getpeername()
+        ):
+            raise ConnectionError("Unexpected peer connection")
+    except:
+        # getsockname() and getpeername() can fail
+        # if either socket isn't connected.
+        ssock.close()
+        csock.close()
+        raise
+
+    return (ssock, csock)
+
+if hasattr(__socket__, _fallback_socketpair.__name__):
+    __implements__.append(_fallback_socketpair.__name__)
+
 if hasattr(_socket, "socketpair"):
 
     def socketpair(family=None, type=SOCK_STREAM, proto=0):
@@ -554,53 +625,14 @@ if hasattr(_socket, "socketpair"):
         return a, b
 
 else: # pragma: no cover
-    # Origin: https://gist.github.com/4325783, by Geert Jansen.  Public domain.
+    socketpair = _fallback_socketpair
 
-    # gevent: taken from 3.6 release, confirmed unchanged in 3.7 and
-    # 3.8a1. Expected to be used only on Win. Added to Win/3.5
-
-    _LOCALHOST = '127.0.0.1'
-    _LOCALHOST_V6 = '::1'
-
-    def socketpair(family=AF_INET, type=SOCK_STREAM, proto=0):
-        if family == AF_INET:
-            host = _LOCALHOST
-        elif family == AF_INET6:
-            host = _LOCALHOST_V6
-        else:
-            raise ValueError("Only AF_INET and AF_INET6 socket address families "
-                             "are supported")
-        if type != SOCK_STREAM:
-            raise ValueError("Only SOCK_STREAM socket type is supported")
-        if proto != 0:
-            raise ValueError("Only protocol zero is supported")
-
-        # We create a connected TCP socket. Note the trick with
-        # setblocking(False) that prevents us from having to create a thread.
-        lsock = socket(family, type, proto)
-        try:
-            lsock.bind((host, 0))
-            lsock.listen()
-            # On IPv6, ignore flow_info and scope_id
-            addr, port = lsock.getsockname()[:2]
-            csock = socket(family, type, proto)
-            try:
-                csock.setblocking(False)
-                try:
-                    csock.connect((addr, port))
-                except (BlockingIOError, InterruptedError):
-                    pass
-                csock.setblocking(True)
-                ssock, _ = lsock.accept()
-            except:
-                csock.close()
-                raise
-        finally:
-            lsock.close()
-        return (ssock, csock)
 
 
 __all__ = __implements__ + __extensions__ + __imports__
+if _fallback_socketpair.__name__ in __all__:
+    __all__.remove(_fallback_socketpair.__name__)
+
 __version_specific__ = (
     # Python 3.7b1+
     'close',

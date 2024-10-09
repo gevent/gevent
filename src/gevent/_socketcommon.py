@@ -63,7 +63,6 @@ __imports__ = [
     'sethostname',
     'create_server',
     'has_dualstack_ipv6',
-    '_fallback_socketpair',
 ]
 
 
