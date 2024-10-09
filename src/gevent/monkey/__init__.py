@@ -350,12 +350,12 @@ def patch_thread(threading=True, _threading_local=True, Event=True, logging=True
         ``Event`` defaults to True.
     """
     if sys.version_info[:2] < (3, 13):
-        from ._patch_thread_lt313 import patch
+        from ._patch_thread_lt313 import Patcher
     else:
-        from ._patch_thread_gte313 import patch
-
-    patch(threading=threading, _threading_local=_threading_local, Event=Event,
-          logging=logging, existing_locks=existing_locks, _warnings=_warnings)
+        from ._patch_thread_gte313 import Patcher
+    patch = Patcher(threading=threading, _threading_local=_threading_local, Event=Event,
+                    logging=logging, existing_locks=existing_locks, _warnings=_warnings)
+    patch()
 
 
 @_ignores_DoNotPatch

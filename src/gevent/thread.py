@@ -145,6 +145,9 @@ class _ThreadHandle:
         )
 
     def join(self, timeout):
+        # TODO: This is what we patch Thread.join to do on all versions,
+        # so there's another implementation in gevent.monkey._patch_thread_common.
+        # UNIFY THEM.
         glet = self._get_greenlet()
         if glet is not None:
             if glet is getcurrent():

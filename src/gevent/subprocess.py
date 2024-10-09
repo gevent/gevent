@@ -62,6 +62,8 @@ from gevent._compat import integer_types, string_types, xrange
 
 from gevent._compat import PY311
 from gevent._compat import PYPY
+from gevent._compat import PY313
+from gevent._compat import WIN
 
 from gevent._compat import fsdecode
 from gevent._compat import fsencode
@@ -175,6 +177,12 @@ __imports__.extend([
     'CREATE_BREAKAWAY_FROM_JOB'
 ])
 
+if PY313 and WIN:
+    __imports__.extend([
+        'STARTF_FORCEONFEEDBACK',
+        'STARTF_FORCEOFFFEEDBACK'
+    ])
+
 
 # Using os.posix_spawn() to start subprocesses
 # bypasses our child watchers on certain operating systems,
@@ -258,7 +266,7 @@ for _x in ('run', 'CompletedProcess', 'TimeoutExpired'):
 
 
 
-mswindows = sys.platform == 'win32'
+mswindows = WIN
 if mswindows:
     import msvcrt # pylint: disable=import-error
     class Handle(int):
@@ -533,7 +541,7 @@ class _CommunicatingGreenlets(object):
                 if hasattr(fobj, 'flush'):
                     # 3.6 started expecting flush to be called.
                     fobj.flush()
-        except (OSError, BrokenPipeError) as ex:
+        except OSError as ex:
             # Test cases from the stdlib can raise BrokenPipeError
             # without setting an errno value. This matters because
             # Python 2 doesn't have a BrokenPipeError.

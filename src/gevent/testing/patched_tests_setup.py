@@ -1085,6 +1085,14 @@ if APPVEYOR:
         # This sometimes produces ``self.assertEqual(1, len(s.select(0))): 1 != 0``.
         # Probably needs to spin the loop once.
         'test_selectors.BaseSelectorTestCase.test_timeout',
+        # AssertionError: OSError not raised
+        'test_socket.PurePythonSocketPairTest.test_injected_authentication_failure',
+        # subprocess.TimeoutExpired: Command '('C:\\Program Files\\Git\\usr\\bin\\true.EXE',)'
+        #    timed out after -1 seconds
+        # Seen on 3.12.5 and 3.13.0rc1
+        # Perhaps they changed handling of negative timeouts? Doesn't
+        # affect any other platforms though.
+        'test_subprocess.ProcessTestCase.test_wait_negative_timeout',
     ]
 
 
@@ -1363,6 +1371,10 @@ if PY313:
         # parent process continue running in each child process.
         'test_threading.ThreadJoinOnShutdown.test_reinit_tls_after_fork',
     ]
+
+    if APPVEYOR:
+        disabled_tests += [
+        ]
 
 if TRAVIS:
     disabled_tests += [
