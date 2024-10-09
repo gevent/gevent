@@ -1208,6 +1208,17 @@ if  PY39_EXACTLY:
         disabled_tests += [
         ]
 
+    if APPVEYOR:
+        disabled_tests += [
+            # On 3.9.13, this has been seen to cause
+            #
+            # SystemError: <built-in function if_indextoname> returned
+            # NULL without setting an error
+            #
+            # But this isn't even our code! That's a CPython function. Must be flaky.
+            'test_socket.GeneralModuleTests.testInvalidInterfaceIndexToName',
+        ]
+
 if PY310:
     disabled_tests += [
         # They arbitrarily made some types so that they can't be created;
