@@ -262,15 +262,17 @@ def patch_os():
 @_ignores_DoNotPatch
 def patch_queue():
     """
-    On Python 3.7 and above, replace :class:`queue.SimpleQueue` (implemented
-    in C) with its Python counterpart.
+    Patch objects in :mod:`queue`.
+
+
+    Currently, this just replaces :class:`queue.SimpleQueue` (implemented
+    in C) with its Python counterpart, but the details may change at any time.
 
     .. versionadded:: 1.3.5
     """
-
-    import gevent.queue
-    if 'SimpleQueue' in gevent.queue.__all__:
-        _patch_module('queue', items=['SimpleQueue'])
+    _patch_module('queue', items=[
+        'SimpleQueue',
+    ])
 
 
 @_ignores_DoNotPatch

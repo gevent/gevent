@@ -90,6 +90,18 @@ else:
     threading_helper.threading_setup = threading_setup
     threading_helper.threading_cleanup = threading_cleanup
 
+
+try:
+    from test.support import import_helper
+except ImportError:
+    pass
+else:
+    # Importing fresh modules breaks our monkey patches. we can't allow that.
+    def import_fresh_module(name, *_args, **_kwargs):
+        import importlib
+        return importlib.import_module(name)
+    import_helper.import_fresh_module = import_fresh_module
+
 # So we don't have to patch test_threading to use our
 # version of lock_tests, we patch
 from gevent.tests import lock_tests

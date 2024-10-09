@@ -51,11 +51,12 @@ __implements__ = ['Queue', 'PriorityQueue', 'LifoQueue']
 __extensions__ = ['JoinableQueue', 'Channel']
 __imports__ = ['Empty', 'Full']
 
-if hasattr(__queue__, 'SimpleQueue'):
-    __all__.append('SimpleQueue') # New in 3.7
-    # SimpleQueue is implemented in C and directly allocates locks
-    # unaffected by monkey patching. We need the Python version.
-    SimpleQueue = __queue__._PySimpleQueue # pylint:disable=no-member
+
+__all__.append('SimpleQueue')
+# SimpleQueue is implemented in C and directly allocates locks
+# unaffected by monkey patching. We need the Python version.
+SimpleQueue = __queue__._PySimpleQueue # pylint:disable=no-member
+
 if hasattr(__queue__, 'ShutDown'): # New in 3.13
     ShutDown = __queue__.ShutDown
     __imports__.append('ShutDown')
@@ -65,6 +66,7 @@ else:
         gevent extension for Python versions less than 3.13
         """
     __extensions__.append('ShutDown')
+
 
 __all__ += (__implements__ + __extensions__ + __imports__)
 
@@ -122,6 +124,8 @@ class Queue(object):
        an empty queue will now receive items in the order in which they blocked. An
        implementation quirk under CPython *usually* ensured this was roughly the case
        previously anyway, but that wasn't the case for PyPy.
+    .. versionchanged:: NEXT
+       Implement the ``shutdown`` methods from Python 3.13.
     """
 
     __slots__ = (
@@ -132,6 +136,7 @@ class Queue(object):
         '_event_unlock',
         'queue',
         '__weakref__',
+        'is_shutdown', # 3.13
     )
 
 
@@ -163,6 +168,7 @@ class Queue(object):
         self.hub = get_hub()
         self._event_unlock = None
         self.queue = self._create_queue(items)
+        self.is_shutdown = False
 
     @property
     def maxsize(self):
@@ -255,7 +261,8 @@ class Queue(object):
         return self._maxsize > 0 and self.qsize() >= self._maxsize
 
     def put(self, item, block=True, timeout=None):
-        """Put an item into the queue.
+        """
+        Put an item into the queue.
 
         If optional arg *block* is true and *timeout* is ``None`` (the default),
         block if necessary until a free slot is available. If *timeout* is
@@ -264,13 +271,24 @@ class Queue(object):
         Otherwise (*block* is false), put an item on the queue if a free slot
         is immediately available, else raise the :class:`Full` exception (*timeout*
         is ignored in that case).
+
+        ..  versionchanged:: NEXT
+           Now raises a ``ValueError`` for a negative *timeout* in the cases
+           that CPython does.
         """
+        if self.is_shutdown:
+            raise ShutDown
         if self._maxsize == -1 or self.qsize() < self._maxsize:
-            # there's a free slot, put an item right away
+            # there's a free slot, put an item right away.
+            # For compatibility with CPython, verify that the timeout is non-negative.
+            if block and timeout is not None and timeout < 0:
+                raise ValueError("'timeout' must be a non-negative number")
             self._put(item)
             if self.getters:
                 self._schedule_unlock()
-        elif self.hub is getcurrent(): # pylint:disable=undefined-variable
+            return
+
+        if self.hub is getcurrent(): # pylint:disable=undefined-variable
             # We're in the mainloop, so we cannot wait; we can switch to other greenlets though.
             # Check if possible to get a free slot in the queue.
             while self.getters and self.qsize() and self.qsize() >= self._maxsize:
@@ -280,7 +298,8 @@ class Queue(object):
                 self._put(item)
                 return
             raise Full
-        elif block:
+
+        if block:
             waiter = ItemWaiter(item, self)
             self.putters.append(waiter)
             timeout = Timeout._start_new_or_dummy(timeout, Full)
@@ -293,8 +312,9 @@ class Queue(object):
             finally:
                 timeout.cancel()
                 _safe_remove(self.putters, waiter)
-        else:
-            raise Full
+            return
+
+        raise Full
 
     def put_nowait(self, item):
         """Put an item into the queue without blocking.
@@ -304,13 +324,17 @@ class Queue(object):
         """
         self.put(item, False)
 
-
     def __get_or_peek(self, method, block, timeout):
         # Internal helper method. The `method` should be either
         # self._get when called from self.get() or self._peek when
         # called from self.peek(). Call this after the initial check
         # to see if there are items in the queue.
 
+        if self.is_shutdown:
+            raise ShutDown
+
+        if block and timeout is not None and timeout < 0:
+            raise ValueError("'timeout' must be a non-negative number")
         if self.hub is getcurrent(): # pylint:disable=undefined-variable
             # special case to make get_nowait() or peek_nowait() runnable in the mainloop greenlet
             # there are no items in the queue; try to fix the situation by unlocking putters
@@ -324,7 +348,14 @@ class Queue(object):
 
         if not block:
             # We can't block, we're not the hub, and we have nothing
-            # to return. No choice...
+            # to return. No choice but to raise the Empty exception.
+            #
+            # CAUTION: Calling ``q.get(False)`` in a tight loop won't
+            # work like it does in CPython where it should eventually
+            # let another thread make progress, because there's never
+            # a chance to switch greenlets here. We don't sleep()
+            # to enforce that, as that would be a significant behaviour
+            # change.
             raise Empty
 
         waiter = Waiter() # pylint:disable=undefined-variable
@@ -342,7 +373,8 @@ class Queue(object):
             _safe_remove(self.getters, waiter)
 
     def get(self, block=True, timeout=None):
-        """Remove and return an item from the queue.
+        """
+        Remove and return an item from the queue.
 
         If optional args *block* is true and *timeout* is ``None`` (the default),
         block if necessary until an item is available. If *timeout* is a positive number,
@@ -424,8 +456,32 @@ class Queue(object):
         return result
 
     def shutdown(self, immediate=False):
-        raise AttributeError('_shutdown is new on 3.13; not yet implemented')
+        """
+        "Shut-down the queue, making queue gets and puts raise
+        `ShutDown`.
 
+        By default, gets will only raise once the queue is empty. Set
+        *immediate* to True to make gets raise immediately instead.
+
+        All blocked callers of `put` and `get` will be unblocked.
+
+        In joinable queues, if *immediate*, a task is marked as done
+        for each item remaining in the queue, which may unblock
+        callers of `join`.
+        """
+        self.is_shutdown = True
+        if immediate:
+            self._drain_for_immediate_shutdown()
+        getters = list(self.getters)
+        putters = list(self.putters)
+        self.getters.clear()
+        self.putters.clear()
+        for waiter in getters + putters:
+            self.hub.loop.run_callback(waiter.throw, ShutDown)
+
+    def _drain_for_immediate_shutdown(self):
+        while self.qsize():
+            self.get()
 
 class UnboundQueue(Queue):
     # A specialization of Queue that knows it can never
@@ -468,24 +524,6 @@ class PriorityQueue(Queue):
 
     def _get(self):
         return _heappop(self.queue)
-
-
-class LifoQueue(Queue):
-    '''A subclass of :class:`Queue` that retrieves most recently added entries first.'''
-
-    __slots__ = ()
-
-    def _create_queue(self, items=()):
-        return list(items)
-
-    def _put(self, item):
-        self.queue.append(item)
-
-    def _get(self):
-        return self.queue.pop()
-
-    def _peek(self):
-        return self.queue[-1]
 
 
 class JoinableQueue(Queue):
@@ -534,6 +572,9 @@ class JoinableQueue(Queue):
 
     def _put(self, item):
         Queue._put(self, item)
+        self._did_put_task()
+
+    def _did_put_task(self):
         self.unfinished_tasks += 1
         self._cond.clear()
 
@@ -572,6 +613,35 @@ class JoinableQueue(Queue):
            Add the *timeout* parameter.
         '''
         return self._cond.wait(timeout=timeout)
+
+    def _drain_for_immediate_shutdown(self):
+        while self.qsize():
+            self.get()
+            self.task_done()
+
+
+class LifoQueue(JoinableQueue):
+    """
+    A subclass of :class:`JoinableQueue` that retrieves most recently added entries first.
+
+    .. versionchanged:: NEXT
+       Now extends :class:`JoinableQueue` instead of just :class:`Queue`.
+
+    """
+    __slots__ = ()
+
+    def _create_queue(self, items=()):
+        return list(items)
+
+    def _put(self, item):
+        self.queue.append(item)
+        self._did_put_task()
+
+    def _get(self):
+        return self.queue.pop()
+
+    def _peek(self):
+        return self.queue[-1]
 
 
 class Channel(object):

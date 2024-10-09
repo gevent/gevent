@@ -103,7 +103,11 @@ def patch_module(target_module, source_module, items=None,
     from ._util import _notify_patch
 
     if items is None:
-        items = getattr(source_module, '__implements__', None)
+        try:
+            items = source_module.__implements__
+        except AttributeError as e:
+            raise _BadImplements(source_module) from e
+
         if items is None:
             raise _BadImplements(source_module)
 
@@ -156,6 +160,15 @@ class _GeventDoPatchRequest(object):
         self.source_module = source_module
         self.items = items
         self.patch_kwargs = patch_kwargs or {}
+
+    def __repr__(self):
+        return '<%s target=%r source=%r items=%r kwargs=%r>' % (
+            self.__class__.__name__,
+            self.target_module,
+            self.source_module,
+            self.items,
+            self.patch_kwargs
+        )
 
     def default_patch_items(self):
         for attr in self.items:

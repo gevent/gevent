@@ -262,6 +262,21 @@ disabled_tests = [
     # because it would now fail.
     'test_context.ContextTest.test_context_var_new_2',
 
+
+    # The C queue objects are immune to monkey  patching, disable them
+    'test_queue.CLifoQueueTest',
+    'test_queue.CPriorityQueueTest',
+    'test_queue.CQueueTest',
+    'test_queue.CSimpleQueueTest',
+    'test_queue.CFailingQueueTest',
+
+    # (These will actually catch tests for many different queue types.)
+    # They needs to be disabled because it uses tight loops in "threads"
+    # calling ``q.get(False)`` which doesn't allow any other greenlet to
+    # make progress, so the shutdown request never gets through.
+    'test_queue.PyLifoQueueTest.test_shutdown_all_methods_in_many_threads',
+    'test_queue.PyLifoQueueTest.test_shutdown_immediate_all_methods_in_many_threads',
+
 ]
 
 
@@ -1380,7 +1395,7 @@ def _build_test_structure(sequence_of_tests):
 
     disabled_tests_by_file = collections.defaultdict(set)
     for file_case_meth in _disabled_tests:
-        file_name, _case, _meth = file_case_meth.split('.')
+        file_name, _rest = file_case_meth.split('.', 1)
 
         by_file = disabled_tests_by_file[file_name]
 
@@ -1419,7 +1434,8 @@ def disable_tests_in_source(source, filename):
         replacement = r'from gevent.testing import patched_tests_setup as _GEVENT_PTS;'
         replacement += r'import unittest as _GEVENT_UTS;'
         replacement += r'\g<0>'
-        source, n = re.subn(pattern, replacement, source, 1, re.MULTILINE)
+        source, n = re.subn(pattern, replacement, source,
+                            count=1, flags=re.MULTILINE)
 
         print("Added imports", n)
 
@@ -1429,17 +1445,39 @@ def disable_tests_in_source(source, filename):
     # newlines even in MULTILINE mode so it would still match that.
     my_disabled_testcases = set()
     for test in my_disabled_tests:
-        testcase = test.split('.')[-1]
-        my_disabled_testcases.add(testcase)
-        # def foo_bar(self)
-        # ->
-        # @_GEVENT_UTS.skip('Removed by patched_tests_setup')
-        # def foo_bar(self)
-        pattern = r"^([ \t]+)def " + testcase
-        replacement = r"\1@_GEVENT_UTS.skip('Removed by patched_tests_setup: %s')\n" % (test,)
-        replacement += r"\g<0>"
-        source, n = re.subn(pattern, replacement, source, 0, re.MULTILINE)
-        print('Skipped %s (%d)' % (testcase, n), file=sys.stderr)
+        # test will be:
+        # test_module.TestClass.test_method
+        # or
+        # test_module.TestClass
+        if test.count('.') == 1:
+            _module, class_name = test.split('.')
+            # disabling a class.
+            #
+            # class CLifoTest(BaseCLass):
+            # ->
+            # class _GEVENT_DISABLE_ClifoTest:
+            #
+            # Unittest discover finds subclasses of TestCase,
+            # so make that not be true. This will fail if the definition
+            # crosses multiple lines...
+            pattern = r"class " + class_name + '.*\):'
+            no_test_class_name = class_name.replace("Test", "")
+            replacement = 'class _GEVENT_DISABLE_' + no_test_class_name + ":"
+            source, n = re.subn(pattern, replacement, source,
+                                flags=re.MULTILINE)
+        else:
+            testcase = test.split('.')[-1]
+            my_disabled_testcases.add(testcase)
+            # def foo_bar(self)
+            # ->
+            # @_GEVENT_UTS.skip('Removed by patched_tests_setup')
+            # def foo_bar(self)
+            pattern = r"^([ \t]+)def " + testcase
+            replacement = r"\1@_GEVENT_UTS.skip('Removed by patched_tests_setup: %s')\n" % (test,)
+            replacement += r"\g<0>"
+        source, n = re.subn(pattern, replacement, source,
+                            flags=re.MULTILINE)
+        print('Skipped %s (%d)' % (test, n), file=sys.stderr)
 
 
     for test in my_wrapped_tests:

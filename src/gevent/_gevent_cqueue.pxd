@@ -40,6 +40,7 @@ cdef class Queue:
     cdef __weakref__
     cdef readonly hub
     cdef readonly queue
+    cdef readonly bint is_shutdown
 
     cdef getters
     cdef putters
@@ -68,6 +69,8 @@ cdef class Queue:
     cpdef shutdown(self, immediate=*)
 
     cdef _schedule_unlock(self)
+    cdef _drain_for_immediate_shutdown(self)
+
 
 @cython.final
 @cython.internal
@@ -83,13 +86,15 @@ cdef class UnboundQueue(Queue):
 cdef class PriorityQueue(Queue):
     pass
 
-cdef class LifoQueue(Queue):
-    pass
 
 cdef class JoinableQueue(Queue):
     cdef Event _cond
     cdef readonly int unfinished_tasks
+    cdef _did_put_task(self)
 
+
+cdef class LifoQueue(JoinableQueue):
+    pass
 
 cdef class Channel:
     cdef __weakref__
