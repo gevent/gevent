@@ -349,6 +349,7 @@ def run_setup(ext_modules):
             'Bug Tracker': 'https://github.com/gevent/gevent/issues',
             'Source Code': 'https://github.com/gevent/gevent/',
             'Documentation': 'http://www.gevent.org',
+            'Changes': 'https://www.gevent.org/changelog.html',
         },
         package_dir={'': 'src'},
         packages=find_packages('src'),
