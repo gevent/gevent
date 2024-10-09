@@ -6,6 +6,51 @@
 
 .. towncrier release notes start
 
+24.10.1 (2024-10-09)
+====================
+
+
+Features
+--------
+
+- Update the bundled c-ares to 1.33.1.
+
+- Add support for Python 3.13.
+
+  - The functions and classes in ``gevent.subprocess`` no longer accept
+    ``stdout=STDOUT`` and raise a ``ValueError``.
+
+  Several additions and changes to the ``queue`` module, including:
+
+  - ``Queue.shutdown`` is available on all versions of Python.
+  - ``LifoQueue`` is now a joinable queue.
+
+- gevent.monkey changed from a module to a package. The public API
+  remains the same.
+
+  For this release, private APIs (undocumented, marked internal, or
+  beginning with an underscore) are also preserved. However, these may
+  be changed or removed at any time in the future. If you are using one
+  of these APIs and cannot replace it, please contact the gevent team.
+
+
+
+Bugfixes
+--------
+
+- For platforms that don't have ``socketpair``, upgrade our fallback
+  code to avoid a security issue.
+  See :issue:`2048`.
+
+
+Deprecations and Removals
+-------------------------
+
+- Remove support for Python 3.8, which has reached the end of its
+  support lifecycle.
+  See :issue:`remove_py38`.
+
+
 24.2.1 (2024-02-14)
 ===================
 

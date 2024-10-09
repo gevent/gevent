@@ -214,7 +214,7 @@ class LockType(BoundedSemaphore):
     """
     The basic lock type.
 
-    .. versionchanged:: NEXT
+    .. versionchanged:: 24.10.1
        Subclassing this object is no longer allowed. This matches the
        Python 3 API.
     """
@@ -230,7 +230,7 @@ class LockType(BoundedSemaphore):
 
     def __init__(self):
         """
-        .. versionchanged:: NEXT
+        .. versionchanged:: 24.10.1
            No longer accepts arguments to pass to the super class. If you
            want a semaphore with a different count, use a semaphore class directly.
            This matches the Lock API of Python 3

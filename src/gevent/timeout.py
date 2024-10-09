@@ -192,7 +192,7 @@ class Timeout(BaseException):
         used to properly clean up native resources.
         The ``with`` statement does this automatically.
 
-    .. versionchanged:: NEXT
+    .. versionchanged:: 24.10.1
 
           Timeout values can be compared to be less than an integer value,
           or to be less than other timeouts, e.g., ``Timeout(0) < 1`` is true.

@@ -124,7 +124,7 @@ class Queue(object):
        an empty queue will now receive items in the order in which they blocked. An
        implementation quirk under CPython *usually* ensured this was roughly the case
        previously anyway, but that wasn't the case for PyPy.
-    .. versionchanged:: NEXT
+    .. versionchanged:: 24.10.1
        Implement the ``shutdown`` methods from Python 3.13.
     """
 
@@ -272,7 +272,7 @@ class Queue(object):
         is immediately available, else raise the :class:`Full` exception (*timeout*
         is ignored in that case).
 
-        ..  versionchanged:: NEXT
+        ... versionchanged:: 24.10.1
            Now raises a ``ValueError`` for a negative *timeout* in the cases
            that CPython does.
         """
@@ -624,7 +624,7 @@ class LifoQueue(JoinableQueue):
     """
     A subclass of :class:`JoinableQueue` that retrieves most recently added entries first.
 
-    .. versionchanged:: NEXT
+    .. versionchanged:: 24.10.1
        Now extends :class:`JoinableQueue` instead of just :class:`Queue`.
 
     """

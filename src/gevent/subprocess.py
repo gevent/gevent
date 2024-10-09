@@ -644,7 +644,7 @@ class Popen(object):
        Added the ``process_group`` and ``check`` arguments for compatibility with
        Python 3.11.
 
-    .. versionchanged:: NEXT
+    .. versionchanged:: 24.10.1
        To match Python 3.13, ``stdout=STDOUT`` now raises a :exc:`ValueError`.
     """
 
