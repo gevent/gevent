@@ -1460,7 +1460,7 @@ def disable_tests_in_source(source, filename):
             # Unittest discover finds subclasses of TestCase,
             # so make that not be true. This will fail if the definition
             # crosses multiple lines...
-            pattern = r"class " + class_name + '.*\):'
+            pattern = r"class " + class_name + r'.*\):'
             no_test_class_name = class_name.replace("Test", "")
             replacement = 'class _GEVENT_DISABLE_' + no_test_class_name + ":"
             source, n = re.subn(pattern, replacement, source,

@@ -80,6 +80,7 @@ else:
     ts.threading_setup = threading_setup
     ts.threading_cleanup = threading_cleanup
     ts.wait_threads_exit = wait_threads_exit
+    ts.print_warning = lambda msg: msg
 
 try:
     from test.support import threading_helper

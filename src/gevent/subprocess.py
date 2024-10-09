@@ -639,6 +639,9 @@ class Popen(object):
     .. versionchanged:: 22.08.0
        Added the ``process_group`` and ``check`` arguments for compatibility with
        Python 3.11.
+
+    .. versionchanged:: NEXT
+       To match Python 3.13, ``stdout=STDOUT`` now raises a :exc:`ValueError`.
     """
 
     if GenericAlias is not None:
@@ -684,6 +687,9 @@ class Popen(object):
             bufsize = -1
         if not isinstance(bufsize, integer_types):
             raise TypeError("bufsize must be an integer")
+
+        if stdout is STDOUT:
+            raise ValueError("STDOUT can only be used for stderr")
 
         if mswindows:
             if preexec_fn is not None:
