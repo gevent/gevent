@@ -92,6 +92,7 @@ class _contextawaresock(socket._gevent_sock_class):
         super().__init__(family, type, proto, fileno)
         self._sslsock = sslsocket_wref
 
+
 class _Callback(object):
 
     __slots__ = ('user_function',)
@@ -830,6 +831,24 @@ class SSLSocket(socket):
         if self._sslobj:
             return self._sslobj.verify_client_post_handshake()
         raise ValueError("No SSL wrapper around " + str(self))
+
+    if hasattr(__ssl__.SSLSocket, 'get_verified_chain'):
+        # Added in 3.13
+        def get_verified_chain(self):
+            chain = self._sslobj.get_verified_chain()
+
+            if chain is None:
+                return []
+
+            return [cert.public_bytes(_ssl.ENCODING_DER) for cert in chain]
+
+        def get_unverified_chain(self):
+            chain = self._sslobj.get_unverified_chain()
+
+            if chain is None:
+                return []
+
+            return [cert.public_bytes(_ssl.ENCODING_DER) for cert in chain]
 
 # Python does not support forward declaration of types
 SSLContext.sslsocket_class = SSLSocket

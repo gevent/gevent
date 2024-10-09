@@ -287,11 +287,7 @@ else:
     fork = monkey.get_original('os', 'fork')
     from gevent.os import fork_and_watch
 
-try:
-    BrokenPipeError # pylint:disable=used-before-assignment
-except NameError: # Python 2
-    class BrokenPipeError(Exception):
-        "Never raised, never caught."
+STDOUT = __subprocess__.STDOUT # static analysis
 
 
 def call(*popenargs, **kwargs):
