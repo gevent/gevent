@@ -192,6 +192,13 @@ class Timeout(BaseException):
         used to properly clean up native resources.
         The ``with`` statement does this automatically.
 
+    .. versionchanged:: NEXT
+
+          Timeout values can be compared to be less than an integer value,
+          or to be less than other timeouts, e.g., ``Timeout(0) < 1`` is true.
+          Timeouts are not absolutely ordered and support no other comparisons; this
+          is purely for convenience and may be removed or altered in the future.
+
     """
 
     # We inherit a __dict__ from BaseException, so __slots__ actually
@@ -359,6 +366,18 @@ class Timeout(BaseException):
         if value is self and self.exception is False:
             return True # Suppress the exception
 
+    def __lt__(self, other):
+        """
+        For convenience, timeouts can be compared to integers (numbers)
+        based on their seconds value.
+        """
+        try:
+            return self.seconds < other.seconds
+        except AttributeError:
+            try:
+                return self.seconds < other
+            except TypeError:
+                return NotImplemented
 
 def with_timeout(seconds, function, *args, **kwds):
     """Wrap a call to *function* with a timeout; if the called
