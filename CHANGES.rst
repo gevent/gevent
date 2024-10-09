@@ -6,33 +6,7 @@
 
 .. towncrier release notes start
 
-24.2.2.dev0 (2024-09-26)
-========================
-
-
-Features
---------
-
-- Update the bundled c-ares to 1.33.1.
-  See :issue:`cares`.
-
-
-Deprecations and Removals
--------------------------
-
-- Remove support for Python 3.8, which has reached the end of its
-  support lifecycle.
-  See :issue:`remove_py38`.
-
-
-----24.2.2.dev0 (2024-09-23)
-========================
-
-
-No significant changes.
-
-
-----24.2.1 (2024-02-14)
+24.2.1 (2024-02-14)
 ===================
 
 
