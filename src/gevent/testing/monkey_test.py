@@ -5,16 +5,12 @@ import os
 test_filename = sys.argv[1]
 del sys.argv[1]
 
-if test_filename == 'test_urllib2_localnet.py' and os.environ.get('APPVEYOR'):
-    os.environ['GEVENT_DEBUG'] = 'TRACE'
 
-print('Running with patch_all(): %s' % (test_filename,))
 
 from gevent import monkey
 # Only test the default set of patch arguments.
 monkey.patch_all()
 
-from .sysinfo import PY3
 from .patched_tests_setup import disable_tests_in_source
 from . import support
 from . import resources
@@ -26,13 +22,16 @@ from . import util
 # This uses the internal built-in function ``_thread._count()``,
 # which we don't/can't monkey-patch, so it returns inaccurate information.
 def threading_setup():
-    if PY3:
-        return (1, ())
-    return (1,)
+    return (1, ())
+
 # This then tries to wait for that value to return to its original value;
 # but if we started worker threads that can never happen.
 def threading_cleanup(*_args):
     return
+
+assert support.threading_setup
+assert support.threading_cleanup
+
 support.threading_setup = threading_setup
 support.threading_cleanup = threading_cleanup
 
@@ -48,7 +47,10 @@ support.threading_cleanup = threading_cleanup
 import contextlib
 @contextlib.contextmanager
 def wait_threads_exit(timeout=None): # pylint:disable=unused-argument
+    # On <  3.10, this is support.wait_threads_exit;
+    # on >= 3.10, this is threading_helper.wait_threads_exit
     yield
+
 support.wait_threads_exit = wait_threads_exit
 
 # On Python 3.11, they changed the way that they deal with this,
@@ -111,20 +113,12 @@ if not os.path.exists(test_filename) and os.sep not in test_filename:
             os.chdir(d)
             break
 
-__file__ = os.path.join(os.getcwd(), test_filename)
+__file__ = os.path.abspath(test_filename) #os.path.join(os.getcwd(), test_filename)
+test_name = os.path.splitext(os.path.basename(test_filename))[0]
 
-test_name = os.path.splitext(test_filename)[0]
+print('Running with patch_all(): %s' % (__file__,))
 
-# It's important that the `module_source` be a native
-# string. Passing unicode to `compile` on Python 2 can
-# do bad things: it conflicts with a 'coding:' directive,
-# and it can cause some TypeError with string literals
-# We do use with; just not on the same line!
-if sys.version_info[0] >= 3:
-    module_file = open(test_filename, encoding='utf-8') # pylint:disable=consider-using-with
-else:
-    module_file = open(test_filename) # pylint:disable=consider-using-with,unspecified-encoding
-with module_file:
+with open(test_filename, encoding='utf-8') as module_file:
     module_source = module_file.read()
 module_source = disable_tests_in_source(module_source, test_name)
 
@@ -135,16 +129,18 @@ module_source = disable_tests_in_source(module_source, test_name)
 # See https://github.com/gevent/gevent/issues/1306
 import tempfile
 temp_handle, temp_path = tempfile.mkstemp(prefix=test_name, suffix='.py', text=True)
-os.write(temp_handle,
-         module_source.encode('utf-8') if not isinstance(module_source, bytes) else module_source)
+os.write(temp_handle, module_source.encode('utf-8'))
 os.close(temp_handle)
+remove_file = not os.environ.get('GEVENT_DEBUG')
 try:
     module_code = compile(module_source,
                           temp_path,
                           'exec',
                           dont_inherit=True)
     exec(module_code, globals())
+    remove_file = True
 except SkipTest as e:
+    remove_file = True
     # Some tests can raise test.support.ResourceDenied
     # in their main method before the testrunner takes over.
     # That's a kind of SkipTest. we can't get a true skip count because it
@@ -154,7 +150,8 @@ except SkipTest as e:
     print("Ran 0 tests in 0.0s")
     print('OK (skipped=0)')
 finally:
-    try:
-        os.remove(temp_path)
-    except OSError:
-        pass
+    if remove_file:
+        try:
+            os.remove(temp_path)
+        except OSError:
+            pass

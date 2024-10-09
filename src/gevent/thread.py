@@ -208,6 +208,13 @@ def _make_thread_handle(*_args):
     return handle
 
 class LockType(BoundedSemaphore):
+    """
+    The basic lock type.
+
+    .. versionchanged:: NEXT
+       Subclassing this object is no longer allowed. This matches the
+       Python 3 API.
+    """
     # Change the ValueError into the appropriate thread error
     # and any other API changes we need to make to match behaviour
     _OVER_RELEASE_ERROR = __thread__.error
@@ -217,6 +224,19 @@ class LockType(BoundedSemaphore):
 
 
     _TIMEOUT_MAX = __thread__.TIMEOUT_MAX # pylint:disable=no-member
+
+    def __init__(self):
+        """
+        .. versionchanged:: NEXT
+           No longer accepts arguments to pass to the super class. If you
+           want a semaphore with a different count, use a semaphore class directly.
+           This matches the Lock API of Python 3
+        """
+        super().__init__()
+
+    @classmethod
+    def __init_subclass__(cls):
+        raise TypeError
 
     def acquire(self, blocking=True, timeout=-1):
         # This is the Python 3 signature.

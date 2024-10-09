@@ -46,19 +46,14 @@ class _ModuleProxy(object):
 
     def __init__(self):
         self._this_mod = sys.modules[__name__]
-        self._stdlib_support = None
+        self._stdlib_support = self
 
     def __get_stdlib_support(self):
-        if self._stdlib_support is None:
+        if self._stdlib_support is self:
             try:
-                # Renamed from test_support in Python 3,
-                # *and* in 2.7.14 (but with a BWC module)
                 from test import support as stdlib_support
             except ImportError:
-                try:
-                    from test import test_support as stdlib_support
-                except ImportError:
-                    stdlib_support = None
+                stdlib_support = None
             self._stdlib_support = stdlib_support
 
         return self._stdlib_support

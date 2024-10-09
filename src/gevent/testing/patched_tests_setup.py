@@ -32,6 +32,7 @@ from .sysinfo import PY39_EXACTLY
 from .sysinfo import PY310
 from .sysinfo import PY311
 from .sysinfo import PY312
+from .sysinfo import PY313
 
 from .sysinfo import WIN
 from .sysinfo import OSX
@@ -1339,6 +1340,14 @@ if PY312:
             # c-ares doesn't like the IPv6 syntax it uses here.
             'test_socket.GeneralModuleTests.test_getaddrinfo_ipv6_scopeid_symbolic',
         ]
+
+
+if PY313:
+    disabled_tests += [
+        # Creates a fork bomb because all the threads that have been created in the
+        # parent process continue running in each child process.
+        'test_threading.ThreadJoinOnShutdown.test_reinit_tls_after_fork',
+    ]
 
 if TRAVIS:
     disabled_tests += [

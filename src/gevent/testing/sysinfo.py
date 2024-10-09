@@ -70,6 +70,7 @@ PY39_EXACTLY = None
 PY310 = None
 PY311 = None
 PY312 = None
+PY313 = None
 
 NON_APPLICABLE_SUFFIXES = ()
 if sys.version_info[0] == 3:
@@ -95,6 +96,8 @@ if sys.version_info[0] == 3:
         PY311 = True
     if sys.version_info[1] >= 12:
         PY312 = True
+    if sys.version_info[1] >= 13:
+        PY313 = True
 
 
 else: # pragma: no cover
