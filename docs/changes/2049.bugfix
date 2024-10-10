@@ -1,0 +1,1 @@
+Workaround a Cython bug compiling on GCC14.
