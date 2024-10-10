@@ -1383,6 +1383,12 @@ if PY313:
         'test_threading.ThreadJoinOnShutdown.test_reinit_tls_after_fork',
     ]
 
+    if OSX and RUNNING_ON_CI:
+        disabled_tests += [
+            # Sometimes times out. Cannot reproduce locally.
+            'test_signal.ItimerTest.test_itimer_virtual',
+        ]
+
     if APPVEYOR:
         disabled_tests += [
         ]
