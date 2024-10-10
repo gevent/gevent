@@ -78,8 +78,13 @@ cdef class ItemWaiter(Waiter):
     cdef readonly item
     cdef readonly Queue queue
 
-
-@cython.final
+###
+# XXX: Disabling Cython.final here pending a release > Cython 3.0.11
+# because it breaks on GCC. See https://github.com/gevent/gevent/issues/2049#issuecomment-2404700280
+# Restore when new cython is released.
+#
+# @cython.final
+###
 cdef class UnboundQueue(Queue):
     pass
 
