@@ -1,0 +1,1 @@
+Stop switching to the hub in the after fork hook in a child process. This could lead to strange behaviour, and is different than what all other versions of Python do.
