@@ -6,7 +6,18 @@
 
 .. towncrier release notes start
 
-24.10.1 (2024-10-09)
+24.10.2 (2024-10-11)
+====================
+
+
+Bugfixes
+--------
+
+- Workaround a Cython bug compiling on GCC14.
+  See :issue:`2049`.
+
+
+----24.10.1 (2024-10-09)
 ====================
 
 
