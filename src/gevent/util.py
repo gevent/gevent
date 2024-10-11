@@ -658,5 +658,10 @@ def clear_stack_frames(frame):
             frame.clear()
         except (RuntimeError, AttributeError):
             pass
-        frame.f_locals.clear()
+        try:
+            frame.f_locals.clear()
+        except AttributeError:
+            # Python 3.13 removed clear();
+            # f_locals is now a FrameLocalsProxy.
+            pass
         frame = frame.f_back

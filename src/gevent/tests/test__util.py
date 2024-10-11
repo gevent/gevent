@@ -301,5 +301,20 @@ class TestAssertSwitches(unittest.TestCase):
 
             self.assertEqual(gettrace(), outer.tracer)
 
+
+class TestFuncs(greentest.TestCase):
+
+    def test_clear_stack_frames(self):
+        import inspect
+        import threading
+        completed = []
+        def do_it():
+            util.clear_stack_frames(inspect.currentframe())
+            completed.append(1)
+        t = threading.Thread(target=do_it)
+        t.start()
+        t.join(10)
+        self.assertEqual(completed, [1])
+
 if __name__ == '__main__':
     greentest.main()
