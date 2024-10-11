@@ -183,12 +183,22 @@ class _ThreadHandle:
 
         return glet.dead
 
-    def _set_done(self):
+    def _set_done(self, enter_hub=True):
+        """
+        Mark the thread as complete.
+
+        This releases our reference (if any) to our greenlet.
+
+        By default, this will bounce back to the hub so that waiters
+        in ``join`` can get notified. Set *enter_hub* to false not to
+        do this.
+        """
         self._greenlet_ref = None
         # Let the loop go around so that anyone waiting in
         # join() gets to know about it. This is particularly
         # important during threading/interpreter shutdown.
-        sleep(0.001)
+        if enter_hub:
+            sleep(0.001)
 
 
     def __repr__(self):

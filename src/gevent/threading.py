@@ -379,45 +379,12 @@ class _ForkHooks:
                     assert sys.version_info[:2] < (3, 13)
                     assert not thread.is_alive()
                 else:
-                    handle._set_done()
+                    # We DO NOT want to bounce to the hub. We're running
+                    # at a very sensitive time and it's best to keep tight control
+                    # over what gets to run.
+                    handle._set_done(enter_hub=False)
 
-        # running_native_thread = self._before_fork_current_thread
-        # # Only greenlets that were on the same native thread as this one
-        # # continue running.
-        # # The native id tends to change in the subprocess, but the attribute
-        # # of the thread object hasn't. So also an identity comparison.
-        # running_native_ident = __threading__.get_native_id()
 
-        # print('Current thread', running_native_thread, type(running_native_thread))
-        # print('Looking for items with id', running_native_ident, 'or', running_native_thread,
-        #       'nid', running_native_thread.native_id, 'ident', running_native_thread.ident)
-        # for green_ident, thread in self._before_fork_active.items():
-        #     if (
-        #         thread.native_id == running_native_ident
-        #         or thread is running_native_thread
-        #         or thread.native_id == running_native_thread.native_id
-        #     ):
-        #         print('Found running thread/greenlet', thread, getattr(thread, '_handle', None))
-        #         print('\tnative id', thread.native_id)
-        #         __threading__._active[thread.ident] = thread
-        #     else:
-        #         print('Found non-running thread/greenlet', thread, getattr(thread, '_handle', None))
-        #         print('\tnative id', thread.native_id)
-        #         try:
-        #             handle = thread._handle
-        #         except AttributeError:
-        #             assert sys.version_info[:2] < (3, 13)
-        #             lock = thread._tstate_lock
-        #             if lock is not None:
-        #                 lock.release()
-        #             thread._stop()
-        #         else:
-        #             handle._set_done()
-        # print('After stopping', __threading__._active)
-        # __threading__._active.update(_before_fork_active)
-        # __threading__._main_thread = _before_fork_main_thread
-        # # XXX Something about what if we fork from a background thread, which
-        # # now becomes the main thread.
         main = __threading__._MainThread()
         main._ident = get_ident() # 3.13: reset to the greenlet version.
         __threading__._active[__threading__.get_ident()] = main
