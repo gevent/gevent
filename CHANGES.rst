@@ -6,7 +6,23 @@
 
 .. towncrier release notes start
 
-24.10.2 (2024-10-11)
+24.10.3 (2024-10-18)
+====================
+
+
+Bugfixes
+--------
+
+- Fix clearing stack frames on Python 3.13. This is invoked when you
+  fork after having used the thread pool.
+  See :issue:`2067`.
+- Distribute manylinux2014 wheels for x86_64.
+  See :issue:`2068`.
+- Stop switching to the hub in the after fork hook in a child process. This could lead to strange behaviour, and is different than what all other versions of Python do.
+  
+
+
+----24.10.2 (2024-10-11)
 ====================
 
 
