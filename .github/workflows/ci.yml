@@ -503,10 +503,13 @@ jobs:
       matrix:
         python-version: [3.9]
         image:
+          # 2014 is EOL as of June 2024. But
+          # it is "still widely used" and has extended (for-pay)
+          # support hrough 2028...
           - manylinux2014_aarch64
           - manylinux2014_ppc64le
           - manylinux2014_s390x
-          - manylinux_2_28_x86_64
+          - manylinux2014_x86_64
           - musllinux_1_1_x86_64
           - musllinux_1_1_aarch64
     name: ${{ matrix.image }}
