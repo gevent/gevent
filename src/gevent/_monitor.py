@@ -238,14 +238,26 @@ class PeriodicMonitoringThread(object):
             hub, active_greenlet,
             dict(greenlet_stacks=False, current_thread_ident=self.monitor_thread_ident))
 
+        # Notify the event first. ``report`` is a mutable list, so the event listeners
+        # may mutate it to add or remove information.
+        notify(EventLoopBlocked(active_greenlet,
+                                GEVENT_CONFIG.max_blocking_time, report,
+                                hub=hub))
+
+        # Do the actual reporting in a separate function so that
+        # it can be overridden at runtime, for example, to use a dedicated
+        # file. If you find this useful enough that the interface should be formalized,
+        # please file an issue.
+        return self._show_blocking_report(hub, report, active_greenlet)
+
+
+    def _show_blocking_report(self, hub, report, active_greenlet):
         stream = hub.exception_stream
         for line in report:
             # Printing line by line may interleave with other things,
             # but it should also prevent a "reentrant call to print"
             # when the report is large.
             print(line, file=stream)
-
-        notify(EventLoopBlocked(active_greenlet, GEVENT_CONFIG.max_blocking_time, report))
         return (active_greenlet, report)
 
     def ignore_current_greenlet_blocking(self):

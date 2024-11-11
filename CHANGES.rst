@@ -19,10 +19,10 @@ Bugfixes
 - Distribute manylinux2014 wheels for x86_64.
   See :issue:`2068`.
 - Stop switching to the hub in the after fork hook in a child process. This could lead to strange behaviour, and is different than what all other versions of Python do.
-  
 
 
-----24.10.2 (2024-10-11)
+
+24.10.2 (2024-10-11)
 ====================
 
 
@@ -33,7 +33,7 @@ Bugfixes
   See :issue:`2049`.
 
 
-----24.10.1 (2024-10-09)
+24.10.1 (2024-10-09)
 ====================
 
 
