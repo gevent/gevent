@@ -162,7 +162,11 @@ _flags = tuple([
 ])
 
 
-_flags_str2int = dict((string, flag) for (flag, string) in _flags)
+_flags_str2int = {
+    string: flag
+    for flag, string
+    in _flags
+}
 
 
 _events = tuple([
@@ -198,22 +202,26 @@ cpdef _flags_to_list(unsigned int flags):
     return result
 
 
-cpdef unsigned int _flags_to_int(object flags) except? -1:
+cpdef unsigned int _flags_to_int(object flags) except *:
     # Note, that order does not matter, libev has its own predefined order
     if not flags:
         return 0
     if isinstance(flags, int):
         return flags
     cdef unsigned int result = 0
+
+    if isinstance(flags, str):
+        flags = flags.split(',')
     try:
-        if isinstance(flags, str):
-            flags = flags.split(',')
         for value in flags:
             value = value.strip().lower()
             if value:
                 result |= _flags_str2int[value]
     except KeyError as ex:
-        raise ValueError('Invalid backend or flag: %s\nPossible values: %s' % (ex, ', '.join(sorted(_flags_str2int.keys()))))
+        # XXX: Cython 3.1a1 crashes on handling exceptions. It's trying to
+        # decref a value it previously set to NULL.
+        raise ValueError('Invalid backend or flag: %s\nPossible values: %s' % (
+            ex, ', '.join(sorted(_flags_str2int.keys()))))
     return result
 
 
