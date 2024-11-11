@@ -378,14 +378,8 @@ class Greenlet(greenlet):
         hub = get_my_hub(self) # pylint:disable=undefined-variable
         return hub.loop
 
-    def __nonzero__(self): # pylint:disable=bad-dunder-name
+    def __bool__(self): # pylint:disable=bad-dunder-name
         return self._start_event is not None and self._exc_info is None
-    try:
-        __bool__ = __nonzero__ # Python 3
-    except NameError: # pragma: no cover
-        # When we're compiled with Cython, the __nonzero__ function
-        # goes directly into the slot and can't be accessed by name.
-        pass
 
     ### Lifecycle
 

@@ -1,4 +1,8 @@
 /* copied from Python-2.7.2/Modules/posixmodule.c */
+/* XXX: So obviously this is very outdated.
+   See if CPython itself now has
+   the support we need, or update this to a current copy. */
+#include "Python.h"
 #include "structseq.h"
 
 #define STRUCT_STAT struct stat
@@ -74,7 +78,7 @@ fill_time(PyObject *v, int index, time_t sec, unsigned long nsec)
 #if SIZEOF_TIME_T > SIZEOF_LONG
     ival = PyLong_FromLongLong((PY_LONG_LONG)sec);
 #else
-    ival = PyInt_FromLong((long)sec);
+    ival = PyLong_FromLong((long)sec);
 #endif
     if (!ival)
         return;
@@ -100,27 +104,27 @@ _pystat_fromstructstat(STRUCT_STAT *st)
     if (v == NULL)
         return NULL;
 
-    PyStructSequence_SET_ITEM(v, 0, PyInt_FromLong((long)st->st_mode));
+    PyStructSequence_SET_ITEM(v, 0, PyLong_FromLong((long)st->st_mode));
 #ifdef HAVE_LARGEFILE_SUPPORT
     PyStructSequence_SET_ITEM(v, 1,
                               PyLong_FromLongLong((PY_LONG_LONG)st->st_ino));
 #else
-    PyStructSequence_SET_ITEM(v, 1, PyInt_FromLong((long)st->st_ino));
+    PyStructSequence_SET_ITEM(v, 1, PyLong_FromLong((long)st->st_ino));
 #endif
 #if defined(HAVE_LONG_LONG) && !defined(MS_WINDOWS)
     PyStructSequence_SET_ITEM(v, 2,
                               PyLong_FromLongLong((PY_LONG_LONG)st->st_dev));
 #else
-    PyStructSequence_SET_ITEM(v, 2, PyInt_FromLong((long)st->st_dev));
+    PyStructSequence_SET_ITEM(v, 2, PyLong_FromLong((long)st->st_dev));
 #endif
-    PyStructSequence_SET_ITEM(v, 3, PyInt_FromLong((long)st->st_nlink));
-    PyStructSequence_SET_ITEM(v, 4, PyInt_FromLong((long)st->st_uid));
-    PyStructSequence_SET_ITEM(v, 5, PyInt_FromLong((long)st->st_gid));
+    PyStructSequence_SET_ITEM(v, 3, PyLong_FromLong((long)st->st_nlink));
+    PyStructSequence_SET_ITEM(v, 4, PyLong_FromLong((long)st->st_uid));
+    PyStructSequence_SET_ITEM(v, 5, PyLong_FromLong((long)st->st_gid));
 #ifdef HAVE_LARGEFILE_SUPPORT
     PyStructSequence_SET_ITEM(v, 6,
                               PyLong_FromLongLong((PY_LONG_LONG)st->st_size));
 #else
-    PyStructSequence_SET_ITEM(v, 6, PyInt_FromLong(st->st_size));
+    PyStructSequence_SET_ITEM(v, 6, PyLong_FromLong(st->st_size));
 #endif
 
 #if defined(HAVE_STAT_TV_NSEC)
@@ -144,19 +148,19 @@ _pystat_fromstructstat(STRUCT_STAT *st)
 
 #ifdef HAVE_STRUCT_STAT_ST_BLKSIZE
     PyStructSequence_SET_ITEM(v, ST_BLKSIZE_IDX,
-                              PyInt_FromLong((long)st->st_blksize));
+                              PyLong_FromLong((long)st->st_blksize));
 #endif
 #ifdef HAVE_STRUCT_STAT_ST_BLOCKS
     PyStructSequence_SET_ITEM(v, ST_BLOCKS_IDX,
-                              PyInt_FromLong((long)st->st_blocks));
+                              PyLong_FromLong((long)st->st_blocks));
 #endif
 #ifdef HAVE_STRUCT_STAT_ST_RDEV
     PyStructSequence_SET_ITEM(v, ST_RDEV_IDX,
-                              PyInt_FromLong((long)st->st_rdev));
+                              PyLong_FromLong((long)st->st_rdev));
 #endif
 #ifdef HAVE_STRUCT_STAT_ST_GEN
     PyStructSequence_SET_ITEM(v, ST_GEN_IDX,
-                              PyInt_FromLong((long)st->st_gen));
+                              PyLong_FromLong((long)st->st_gen));
 #endif
 #ifdef HAVE_STRUCT_STAT_ST_BIRTHTIME
     {
@@ -175,7 +179,7 @@ _pystat_fromstructstat(STRUCT_STAT *st)
 #endif
 #ifdef HAVE_STRUCT_STAT_ST_FLAGS
     PyStructSequence_SET_ITEM(v, ST_FLAGS_IDX,
-                              PyInt_FromLong((long)st->st_flags));
+                              PyLong_FromLong((long)st->st_flags));
 #endif
 
     if (PyErr_Occurred()) {

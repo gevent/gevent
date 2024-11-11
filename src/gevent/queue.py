@@ -243,12 +243,6 @@ class Queue(object):
         """
         return True
 
-    def __nonzero__(self): # pylint:disable=bad-dunder-name
-        # Py2.
-        # For Cython; __bool__ becomes a special method that we can't
-        # get by name.
-        return True
-
     def empty(self):
         """Return ``True`` if the queue is empty, ``False`` otherwise."""
         return not self.qsize()

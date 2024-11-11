@@ -61,13 +61,6 @@ __all__ = ['get_version',
            'time',
            'loop']
 
-cdef tuple integer_types
-
-if sys.version_info[0] >= 3:
-    integer_types = int,
-else:
-    integer_types = (int, long)
-
 
 cdef extern from "callbacks.h":
     void gevent_callback_io(libev.ev_loop, void*, int)
@@ -151,7 +144,7 @@ def get_header_version():
 
 # This list backends in the order they are actually tried by libev,
 # as defined in loop_init. The names must be lower case.
-_flags = [
+_flags = tuple([
     # IOCP
     (libev.EVBACKEND_PORT, 'port'),
     (libev.EVBACKEND_KQUEUE, 'kqueue'),
@@ -166,28 +159,34 @@ _flags = [
     (libev.EVFLAG_NOINOTIFY, 'noinotify'),
     (libev.EVFLAG_SIGNALFD, 'signalfd'),
     (libev.EVFLAG_NOSIGMASK, 'nosigmask')
-]
+])
 
 
-_flags_str2int = dict((string, flag) for (flag, string) in _flags)
+_flags_str2int = {
+    string: flag
+    for flag, string
+    in _flags
+}
 
 
-_events = [(libev.EV_READ,     'READ'),
-           (libev.EV_WRITE,    'WRITE'),
-           (libev.EV__IOFDSET, '_IOFDSET'),
-           (libev.EV_PERIODIC, 'PERIODIC'),
-           (libev.EV_SIGNAL,   'SIGNAL'),
-           (libev.EV_CHILD,    'CHILD'),
-           (libev.EV_STAT,     'STAT'),
-           (libev.EV_IDLE,     'IDLE'),
-           (libev.EV_PREPARE,  'PREPARE'),
-           (libev.EV_CHECK,    'CHECK'),
-           (libev.EV_EMBED,    'EMBED'),
-           (libev.EV_FORK,     'FORK'),
-           (libev.EV_CLEANUP,  'CLEANUP'),
-           (libev.EV_ASYNC,    'ASYNC'),
-           (libev.EV_CUSTOM,   'CUSTOM'),
-           (libev.EV_ERROR,    'ERROR')]
+_events = tuple([
+    (libev.EV_READ,     'READ'),
+    (libev.EV_WRITE,    'WRITE'),
+    (libev.EV__IOFDSET, '_IOFDSET'),
+    (libev.EV_PERIODIC, 'PERIODIC'),
+    (libev.EV_SIGNAL,   'SIGNAL'),
+    (libev.EV_CHILD,    'CHILD'),
+    (libev.EV_STAT,     'STAT'),
+    (libev.EV_IDLE,     'IDLE'),
+    (libev.EV_PREPARE,  'PREPARE'),
+    (libev.EV_CHECK,    'CHECK'),
+    (libev.EV_EMBED,    'EMBED'),
+    (libev.EV_FORK,     'FORK'),
+    (libev.EV_CLEANUP,  'CLEANUP'),
+    (libev.EV_ASYNC,    'ASYNC'),
+    (libev.EV_CUSTOM,   'CUSTOM'),
+    (libev.EV_ERROR,    'ERROR')
+])
 
 
 cpdef _flags_to_list(unsigned int flags):
@@ -203,32 +202,31 @@ cpdef _flags_to_list(unsigned int flags):
     return result
 
 
-
-basestring = (bytes, str)
-
-
-
-cpdef unsigned int _flags_to_int(object flags) except? -1:
+cpdef unsigned int _flags_to_int(object flags) except *:
     # Note, that order does not matter, libev has its own predefined order
     if not flags:
         return 0
-    if isinstance(flags, integer_types):
+    if isinstance(flags, int):
         return flags
     cdef unsigned int result = 0
+
+    if isinstance(flags, str):
+        flags = flags.split(',')
     try:
-        if isinstance(flags, basestring):
-            flags = flags.split(',')
         for value in flags:
             value = value.strip().lower()
             if value:
                 result |= _flags_str2int[value]
     except KeyError as ex:
-        raise ValueError('Invalid backend or flag: %s\nPossible values: %s' % (ex, ', '.join(sorted(_flags_str2int.keys()))))
+        # XXX: Cython 3.1a1 crashes on handling exceptions. It's trying to
+        # decref a value it previously set to NULL.
+        raise ValueError('Invalid backend or flag: %s\nPossible values: %s' % (
+            ex, ', '.join(sorted(_flags_str2int.keys()))))
     return result
 
 
 cdef str _str_hex(object flag):
-    if isinstance(flag, integer_types):
+    if isinstance(flag, int):
         return hex(flag)
     return str(flag)
 
@@ -297,13 +295,13 @@ cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback
 
     close = stop
 
-    # Note, that __nonzero__ and pending are different
-    # nonzero is used in contexts where we need to know whether to schedule another callback,
+    # Note, that __bool__ and pending are different
+    # bool is used in contexts where we need to know whether to schedule another callback,
     # so it's true if it's pending or currently running
     # 'pending' has the same meaning as libev watchers: it is cleared before entering callback
 
-    def __nonzero__(self):
-        # it's nonzero if it's pending or currently executing
+    def __bool__(self):
+        # it's bool if it's pending or currently executing
         return self.args is not None
 
     @property
@@ -376,7 +374,7 @@ cdef class CallbackFIFO(object):
         old_tail.next = new_tail
         self.tail = new_tail
 
-    def __nonzero__(self):
+    def __bool__(self):
         return self.head is not None
 
     def __len__(self):
