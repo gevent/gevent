@@ -1,0 +1,2 @@
+Remove some legacy code that supported Python 2 for compatibility with
+the upcoming releases of Cython 3.1.
