@@ -177,7 +177,7 @@ class PeriodicMonitorThreadStartedEvent(object):
     """
     The implementation of :class:`IPeriodicMonitorThreadStartedEvent`.
 
-    .. versionchanged:: NEXT
+    .. versionchanged:: 24.11.1
        Now actually implements the promised interface.
     """
 
@@ -194,7 +194,7 @@ class IEventLoopBlocked(Interface):
 
     This event is emitted in the monitor thread.
 
-    .. versionchanged:: NEXT
+    .. versionchanged:: 24.11.1
        Add the *hub* attribute.
     """
 

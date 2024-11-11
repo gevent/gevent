@@ -6,6 +6,24 @@
 
 .. towncrier release notes start
 
+24.11.1 (2024-11-11)
+====================
+
+
+Bugfixes
+--------
+
+- Remove some legacy code that supported Python 2 for compatibility with
+  the upcoming releases of Cython 3.1.
+
+  Also, the ``PeriodicMonitorThreadStartedEvent`` now properly
+  implements the ``IPeriodicMonitorThreadStartedEvent`` interface.
+  The ``EventLoopBlocked`` event includes the hub which was blocked,
+  and it is notified before the report is printed so that event
+  listeners can modify the report.
+  See :issue:`2076`.
+
+
 24.10.3 (2024-10-18)
 ====================
 
