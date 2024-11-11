@@ -3,8 +3,6 @@ A small selection of primitives that always work with
 native threads. This has very limited utility and is
 targeted only for the use of gevent's threadpool.
 """
-from __future__ import absolute_import
-
 from collections import deque
 
 from gevent import monkey

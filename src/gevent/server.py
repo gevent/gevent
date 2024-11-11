@@ -1,8 +1,5 @@
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
 """TCP/SSL server"""
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import division
 
 import sys
 

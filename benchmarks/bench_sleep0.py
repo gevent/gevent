@@ -1,8 +1,6 @@
 """
 Benchmarking sleep(0) performance.
 """
-from __future__ import print_function
-
 import perf
 
 try:

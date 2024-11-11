@@ -2,7 +2,6 @@
 # Copyright (c) 2009 Denis Bilenko. See LICENSE for details.
 # gevent-test-requires-resource: network
 """Spawn multiple workers and wait for them to complete"""
-from __future__ import print_function
 import gevent
 from gevent import monkey
 

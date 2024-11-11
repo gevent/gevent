@@ -3,7 +3,7 @@
 # resets signal handlers to SIG_DFL. If we then fork and watch *again*,
 # we shouldn't hang. (Note that we carefully handle this so as not to break
 # os.popen)
-from __future__ import print_function
+
 # Patch in the parent process.
 import gevent.monkey
 gevent.monkey.patch_all()

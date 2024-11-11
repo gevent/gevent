@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """gevent build & installation script"""
-from __future__ import print_function
 import sys
 import os
 import os.path

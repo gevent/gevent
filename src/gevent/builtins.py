@@ -1,7 +1,5 @@
 # Copyright (c) 2015 gevent contributors. See LICENSE for details.
 """gevent friendly implementations of builtin functions."""
-from __future__ import absolute_import
-
 import weakref
 
 from gevent.lock import RLock

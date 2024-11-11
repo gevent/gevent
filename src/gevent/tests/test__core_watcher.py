@@ -1,5 +1,3 @@
-from __future__ import absolute_import, print_function
-
 import gevent.testing as greentest
 from gevent import config
 from gevent.testing.sysinfo import CFFI_BACKEND

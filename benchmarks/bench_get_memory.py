@@ -3,7 +3,6 @@ Benchmarking for getting the memoryview of an object.
 
 https://github.com/gevent/gevent/issues/1318
 """
-from __future__ import print_function
 
 # pylint:disable=unidiomatic-typecheck
 

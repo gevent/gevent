@@ -6,7 +6,6 @@ Python 3 socket module.
 # pylint: disable=undefined-variable
 # pylint: disable=too-many-statements,too-many-branches
 # pylint: disable=too-many-public-methods,unused-argument
-from __future__ import absolute_import
 import io
 import os
 

@@ -6,7 +6,6 @@
 # However, because we are using "out-of-line" mode, it is necessary to examine
 # this file to know what functions are created and available on the generated
 # module.
-from __future__ import absolute_import, print_function
 import sys
 import os
 import os.path # pylint:disable=no-name-in-module

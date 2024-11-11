@@ -4,9 +4,6 @@ Test for issue #1526:
 - dnspython is imported first;
 - no monkey-patching is done.
 """
-from __future__ import print_function
-from __future__ import absolute_import
-
 import dns # pylint:disable=import-error
 assert dns
 import gevent.socket as socket # pylint:disable=consider-using-from-import

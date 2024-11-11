@@ -7,7 +7,6 @@ Make sure you're running a UDP server on port 9001 (see udp_server.py).
 
 There's nothing gevent-specific here.
 """
-from __future__ import print_function
 import sys
 from gevent import socket
 

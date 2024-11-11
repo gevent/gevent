@@ -2,7 +2,6 @@
 # gevent-test-requires-resource: webpy
 """A web.py application powered by gevent"""
 
-from __future__ import print_function
 from gevent import monkey; monkey.patch_all()
 from gevent.pywsgi import WSGIServer
 import time

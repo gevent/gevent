@@ -1,6 +1,3 @@
-from __future__ import print_function
-from __future__ import absolute_import
-
 from gevent import monkey
 # This line can be commented out so that most tests run with the
 # system socket for comparison.

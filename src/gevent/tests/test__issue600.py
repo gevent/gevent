@@ -1,7 +1,6 @@
 # Make sure that libev child watchers, implicitly installed through the use
 # of subprocess, do not cause waitpid() to fail to poll for processes.
 # NOTE: This was only reproducible under python 2.
-from __future__ import print_function
 import gevent
 from gevent import monkey
 monkey.patch_all()

@@ -1,4 +1,3 @@
-from __future__ import print_function
 import signal
 import gevent.testing as greentest
 import gevent

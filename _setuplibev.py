@@ -5,9 +5,6 @@ setup helpers for libev.
 Importing this module should have no side-effects; in particular,
 it shouldn't attempt to cythonize anything.
 """
-
-from __future__ import print_function, absolute_import, division
-
 import os.path
 
 from _setuputils import Extension

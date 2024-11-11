@@ -5,10 +5,6 @@
 Low-level waiting primitives.
 
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import sys
 
 from gevent._hub_local import get_hub_noargs as get_hub

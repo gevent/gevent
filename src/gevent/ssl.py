@@ -7,7 +7,6 @@ For the documentation, refer to :mod:`ssl` module manual.
 This module implements cooperative SSL socket wrappers.
 """
 
-from __future__ import absolute_import
 import ssl as __ssl__
 
 _ssl = __ssl__._ssl

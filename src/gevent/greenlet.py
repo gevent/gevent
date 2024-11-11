@@ -1,7 +1,6 @@
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
 # cython: auto_pickle=False,embedsignature=True,always_allow_keywords=False
 # pylint:disable=too-many-lines
-from __future__ import absolute_import, print_function, division
 
 from sys import _getframe as sys_getframe
 from sys import exc_info as sys_exc_info

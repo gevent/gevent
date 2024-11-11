@@ -10,7 +10,6 @@ To start the server on some other interface/port, use
   python -m gevent.wsgi -p 8000 -i 0.0.0.0 webproxy.py
 
 """
-from __future__ import print_function
 from gevent import monkey; monkey.patch_all()
 import sys
 import re

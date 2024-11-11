@@ -1,5 +1,3 @@
-from __future__ import absolute_import, print_function, division
-
 # Best run with dnsmasq configured as a caching nameserver
 # with no timeouts and configured to point there via
 # /etc/resolv.conf and GEVENT_RESOLVER_NAMESERVERS

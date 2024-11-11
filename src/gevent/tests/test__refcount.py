@@ -22,7 +22,6 @@
 """This test checks that underlying socket instances (gevent.socket.socket._sock)
 are not leaked by the hub.
 """
-from __future__ import print_function
 
 from _socket import socket as c_socket
 import sys

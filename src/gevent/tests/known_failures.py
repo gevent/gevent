@@ -1,7 +1,6 @@
 # This is a list of known failures (=bugs).
 # The tests listed there must fail (or testrunner.py will report error) unless they are prefixed with FLAKY
 # in which cases the result of them is simply ignored
-from __future__ import print_function
 
 import sys
 import struct

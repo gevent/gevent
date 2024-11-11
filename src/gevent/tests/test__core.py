@@ -1,6 +1,3 @@
-
-from __future__ import absolute_import, print_function, division
-
 # Important: This file should have no dependencies that are part of the
 # ``test`` extra, because it is sometimes run for quick checks without those
 # installed.

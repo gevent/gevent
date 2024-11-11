@@ -2,7 +2,6 @@
 # cython: auto_pickle=False,embedsignature=True,always_allow_keywords=False,infer_types=True
 
 """Basic synchronization primitives: Event and AsyncResult"""
-from __future__ import print_function
 
 from gevent._util import _NONE
 from gevent._compat import reraise

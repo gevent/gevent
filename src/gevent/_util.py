@@ -6,8 +6,6 @@ internal gevent utilities, not for external use.
 # Be very careful not to import anything that would cause issues with
 # monkey-patching.
 
-from __future__ import print_function, absolute_import, division
-
 from gevent._compat import iteritems
 
 

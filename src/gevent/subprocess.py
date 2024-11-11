@@ -23,7 +23,6 @@ Cooperative ``subprocess`` module.
 
 .. _is not defined: http://www.linuxprogrammingblog.com/all-about-linux-signals?page=11
 """
-from __future__ import absolute_import, print_function
 # Can we split this up to make it cleaner? See https://github.com/gevent/gevent/issues/748
 # pylint: disable=too-many-lines
 # Most of this we inherit from the standard lib

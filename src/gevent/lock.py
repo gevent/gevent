@@ -7,9 +7,6 @@ its safer subclass :class:`BoundedSemaphore`) and a semaphore with
 infinite bounds (:class:`DummySemaphore`), along with a reentrant lock
 (:class:`RLock`) with the same API as :class:`threading.RLock`.
 """
-from __future__ import absolute_import
-from __future__ import print_function
-
 from gevent.hub import getcurrent
 from gevent._compat import PURE_PYTHON
 

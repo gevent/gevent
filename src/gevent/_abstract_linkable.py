@@ -4,10 +4,6 @@
 Internal module, support for the linkable protocol for "event" like objects.
 
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import sys
 from gc import get_objects
 

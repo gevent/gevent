@@ -1,9 +1,5 @@
 # Check __all__, __implements__, __extensions__, __imports__ of the modules
 
-from __future__ import print_function
-from __future__ import absolute_import
-
-
 import functools
 import sys
 import unittest

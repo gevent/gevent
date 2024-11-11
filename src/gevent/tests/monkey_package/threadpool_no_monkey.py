@@ -6,10 +6,6 @@ It is intended to be used by ``python -m gevent.monkey <this file>``
 to prove that the threadpool and getting the original value of things
 works.
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import sys
 from gevent import monkey
 from gevent import get_hub

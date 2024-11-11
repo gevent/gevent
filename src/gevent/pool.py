@@ -13,7 +13,6 @@ provides a way to limit concurrency: its :meth:`spawn <Pool.spawn>`
 method blocks if the number of greenlets in the pool has already
 reached the limit, until there is a free slot.
 """
-from __future__ import print_function, absolute_import, division
 
 
 from gevent.hub import GreenletExit, getcurrent, kill as _kill

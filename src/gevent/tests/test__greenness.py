@@ -23,9 +23,6 @@
 Trivial test that a single process (and single thread) can both read
 and write from green sockets (when monkey patched).
 """
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import division
 
 from gevent import monkey
 monkey.patch_all()

@@ -3,8 +3,6 @@
 gevent build utilities.
 """
 
-from __future__ import print_function, absolute_import, division
-
 import re
 import os
 import os.path

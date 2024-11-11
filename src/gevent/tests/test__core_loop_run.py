@@ -1,4 +1,3 @@
-from __future__ import print_function
 import sys
 from gevent import core
 from gevent import signal_handler as signal

@@ -7,7 +7,6 @@
 # C code; the PURE_PYTHON things that have to happen and which are
 # handled in ``gevent.lock``, do not apply to them.
 ###
-from __future__ import print_function, absolute_import, division
 
 __all__ = [
     'Semaphore',

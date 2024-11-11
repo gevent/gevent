@@ -10,9 +10,6 @@ On Python 2, this module is only available if the `selectors2
 
 .. versionadded:: 20.6.0
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 from collections import defaultdict
 

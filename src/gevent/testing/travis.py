@@ -2,10 +2,6 @@
 # Support functions for travis
 # See https://github.com/travis-ci/travis-rubies/blob/9f7962a881c55d32da7c76baefc58b89e3941d91/build.sh
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import sys
 
 

@@ -4,8 +4,6 @@ Test for issue #1526:
 - dnspython is imported first;
 - monkey-patching happens early
 """
-from __future__ import print_function, absolute_import
-
 from gevent import monkey
 monkey.patch_all()
 # pylint:disable=import-error

@@ -1,4 +1,3 @@
-from __future__ import print_function
 import os
 from gevent import monkey; monkey.patch_all()
 import socket

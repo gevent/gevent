@@ -36,10 +36,6 @@ context values isn't constant time.
    backporting code. It is also available if you wish to use the contextvar API
    in a strictly greenlet-local manner.
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 
 __all__ = [
     'ContextVar',

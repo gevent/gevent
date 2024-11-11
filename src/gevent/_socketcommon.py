@@ -1,5 +1,4 @@
 # Copyright (c) 2009-2014 Denis Bilenko and gevent contributors. See LICENSE for details.
-from __future__ import absolute_import
 
 # standard functions and classes that this module re-implements in a gevent-aware way:
 _implements = [

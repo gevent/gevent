@@ -6,9 +6,6 @@ A collection of primitives used by the hub, and suitable for
 compilation with Cython because of their frequency of use.
 
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 from weakref import ref as wref
 from gc import get_objects

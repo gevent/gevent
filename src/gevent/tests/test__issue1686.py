@@ -4,9 +4,6 @@ Tests for https://github.com/gevent/gevent/issues/1686
 which is about destroying a hub when there are active
 callbacks or IO in operation.
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 import os
 import unittest

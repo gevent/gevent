@@ -21,7 +21,6 @@
 # See https://github.com/gevent/gevent/issues/1076
 # We compile in 3str mode, which should mean we get absolute import
 # by default.
-from __future__ import absolute_import
 
 cimport cython
 cimport libev

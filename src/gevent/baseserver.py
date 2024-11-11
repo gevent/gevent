@@ -1,8 +1,5 @@
 """Base class for implementing servers"""
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import division
 
 import sys
 import _socket

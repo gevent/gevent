@@ -3,8 +3,6 @@
 internal gevent python 2/python 3 bridges. Not for external use.
 """
 
-from __future__ import print_function, absolute_import, division
-
 ## Important: This module should generally not have any other gevent
 ## imports (the exception is _util_py2)
 

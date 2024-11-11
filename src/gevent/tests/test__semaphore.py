@@ -4,8 +4,6 @@
 # and the *only* correct place to import Semaphore --- even in tests ---
 # is ``gevent.lock``, never ``gevent._semaphore``.
 ##
-from __future__ import print_function
-from __future__ import absolute_import
 
 import weakref
 

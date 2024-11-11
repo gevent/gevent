@@ -2,9 +2,6 @@
 """
 Low-level utilities.
 """
-
-from __future__ import absolute_import, print_function, division
-
 import functools
 import pprint
 import sys

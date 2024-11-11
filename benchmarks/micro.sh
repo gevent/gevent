@@ -2,7 +2,7 @@
 set -e -x
 PYTHON=${PYTHON:=python}
 
-$PYTHON -c 'from __future__ import print_function; import gevent.core; print(gevent.__version__, gevent.core.get_version(), getattr(gevent.core, "get_method", lambda: "n/a")(), getattr(gevent, "get_hub", lambda: "n/a")())'
+$PYTHON -c 'import gevent.core; print(gevent.__version__, gevent.core.get_version(), getattr(gevent.core, "get_method", lambda: "n/a")(), getattr(gevent, "get_hub", lambda: "n/a")())'
 $PYTHON -mperf timeit  -s'obj = Exception(); obj.x=5' 'obj.x'
 $PYTHON -mperf timeit  -s'from gevent import get_hub; get_hub()' 'get_hub()'
 $PYTHON -mperf timeit  -s'from gevent import getcurrent' 'getcurrent()'

@@ -1,6 +1,3 @@
-from __future__ import print_function
-from __future__ import absolute_import
-
 from gevent.thread import allocate_lock
 
 import gevent.testing as greentest

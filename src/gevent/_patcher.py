@@ -7,8 +7,6 @@
 
 # Added in gevent 1.3a2. Not public in that release.
 
-from __future__ import absolute_import, print_function
-
 import importlib
 import sys
 

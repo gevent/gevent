@@ -40,9 +40,6 @@ to manage child processes.
    remain scheduled in the child; compare this to how normal threads operate. (This behaviour
    may change is a subsequent major release.)
 """
-
-from __future__ import absolute_import
-
 import os
 
 from gevent.hub import _get_hub_noargs as get_hub

@@ -6,7 +6,6 @@ and its interface varies.
 .. versionchanged:: 1.3a2
     Deprecated.
 """
-from __future__ import absolute_import
 
 import sys
 

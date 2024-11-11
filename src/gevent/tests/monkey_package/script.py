@@ -2,10 +2,6 @@
 """
 Test script file, to be used directly as a file.
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 
 # We need some global imports
 from textwrap import dedent

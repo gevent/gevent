@@ -2,7 +2,6 @@
 """
 Event-loop hub.
 """
-from __future__ import absolute_import, print_function
 # XXX: FIXME: Refactor to make this smaller
 # pylint:disable=too-many-lines
 from functools import partial as _functools_partial

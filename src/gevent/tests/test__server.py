@@ -1,4 +1,3 @@
-from __future__ import print_function, division
 from contextlib import contextmanager
 import unittest
 import errno

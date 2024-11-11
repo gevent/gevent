@@ -13,7 +13,6 @@ module add timeouts to arbitrary code.
     If a blocking function is called or an intense calculation is ongoing during
     which no switches occur, :class:`Timeout` is powerless.
 """
-from __future__ import absolute_import, print_function, division
 
 from gevent._compat import string_types
 from gevent._util import _NONE

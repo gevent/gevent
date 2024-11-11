@@ -19,8 +19,6 @@ information on configuring this not to be the case for advanced uses.
    has been removed. (See `gevent.signal_handler`.)
 """
 
-from __future__ import absolute_import
-
 from gevent._util import _NONE as _INITIAL
 from gevent._util import copy_globals
 

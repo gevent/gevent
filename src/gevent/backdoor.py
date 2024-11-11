@@ -9,7 +9,6 @@ with other elements of the process.
 
 .. seealso:: :class:`code.InteractiveConsole`
 """
-from __future__ import print_function, absolute_import
 import sys
 import socket
 from code import InteractiveConsole

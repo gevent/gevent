@@ -1,7 +1,5 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-from __future__ import print_function, absolute_import, division
-
 import socket
 import unittest
 

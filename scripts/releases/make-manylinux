@@ -195,15 +195,15 @@ if [ -d /gevent -a -d /opt/python ]; then
         time python -mpip install -U --no-compile $(ls dist/gevent*whl)
         # Basic sanity checks
         echo "$variant: Installation details"
-        python -c 'from __future__ import print_function; import gevent; print(gevent, gevent.__version__)'
-        python -c 'from __future__ import print_function; from gevent._compat import get_clock_info; print("clock info", get_clock_info("perf_counter"))'
-        python -c 'from __future__ import print_function; import greenlet; print(greenlet, greenlet.__version__)'
-        python -c 'from __future__ import print_function; import gevent.core; print("default loop", gevent.core.loop)'
+        python -c 'import gevent; print(gevent, gevent.__version__)'
+        python -c 'from gevent._compat import get_clock_info; print("clock info", get_clock_info("perf_counter"))'
+        python -c 'import greenlet; print(greenlet, greenlet.__version__)'
+        python -c 'import gevent.core; print("default loop", gevent.core.loop)'
         # Other loops we should have
-        GEVENT_LOOP=libuv python -c 'from __future__ import print_function; import gevent.core; print("libuv loop", gevent.core.loop)'
-        GEVENT_LOOP=libev-cffi python -c 'from __future__ import print_function; import gevent.core; print("libev-cffi loop", gevent.core.loop)'
+        GEVENT_LOOP=libuv python -c 'import gevent.core; print("libuv loop", gevent.core.loop)'
+        GEVENT_LOOP=libev-cffi python -c 'import gevent.core; print("libev-cffi loop", gevent.core.loop)'
         if [ -z "$GEVENTSETUP_DISABLE_ARES" ]; then
-            python -c 'from __future__ import print_function; import gevent.ares; print("ares", gevent.ares)'
+            python -c 'import gevent.ares; print("ares", gevent.ares)'
         fi
 
         if [ -z "$GEVENTTEST_SKIP_ALL" ]; then

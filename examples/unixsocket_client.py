@@ -1,4 +1,3 @@
-from __future__ import print_function
 # gevent-test-requires-resource: unixsocket_server
 import socket
 

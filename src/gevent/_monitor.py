@@ -1,6 +1,4 @@
 # Copyright (c) 2018 gevent. See LICENSE for details.
-from __future__ import print_function, absolute_import, division
-
 import os
 import sys
 

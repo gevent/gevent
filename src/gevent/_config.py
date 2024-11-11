@@ -13,7 +13,6 @@ is an object of :class:`Config`.
    This is handy to quickly look for environment variables.
 """
 
-from __future__ import print_function, absolute_import, division
 
 import importlib
 import os

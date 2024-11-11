@@ -5,7 +5,6 @@ For every message received, it sends a reply back.
 
 You can use udp_client.py to send a message.
 """
-from __future__ import print_function
 from gevent.server import DatagramServer
 
 

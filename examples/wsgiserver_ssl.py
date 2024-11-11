@@ -1,7 +1,6 @@
 #!/usr/bin/python
 """Secure WSGI server example based on gevent.pywsgi"""
 
-from __future__ import print_function
 from gevent import pywsgi
 
 

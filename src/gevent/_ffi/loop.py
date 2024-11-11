@@ -2,7 +2,6 @@
 Basic loop implementation for ffi-based cores.
 """
 # pylint: disable=too-many-lines, protected-access, redefined-outer-name, not-callable
-from __future__ import absolute_import, print_function
 
 from collections import deque
 import sys

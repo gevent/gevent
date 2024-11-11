@@ -25,9 +25,6 @@ systems, you generally will not want to directly modify `subscribers`.
    Now uses :mod:`importlib.metadata` instead of :mod:`pkg_resources`
    to locate entry points.
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 
 __all__ = [

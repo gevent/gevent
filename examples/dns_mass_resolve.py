@@ -10,7 +10,6 @@ variable. To enable threading resolver:
 
     GEVENT_RESOLVER=thread python dns_mass_resolve.py
 """
-from __future__ import print_function
 import gevent
 from gevent import socket
 from gevent.pool import Pool

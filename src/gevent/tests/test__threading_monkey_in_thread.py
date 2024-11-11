@@ -1,6 +1,4 @@
 # We can monkey-patch in a thread, but things don't work as expected.
-from __future__ import print_function
-
 import threading
 from gevent import monkey
 import gevent.testing as greentest

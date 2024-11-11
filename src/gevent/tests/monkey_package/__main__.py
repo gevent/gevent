@@ -1,4 +1,3 @@
-from __future__ import print_function
 # This file makes this directory into a runnable package.
 # it exists to test 'python -m gevent.monkey monkey_package'
 # Note that the __file__ may differ slightly; starting with

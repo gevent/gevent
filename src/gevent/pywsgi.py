@@ -28,7 +28,6 @@ different subclasses of :class:`WSGIHandler`.
    WSGI application.
 
 """
-from __future__ import absolute_import
 
 # FIXME: Can we refactor to make smallor?
 # pylint:disable=too-many-lines

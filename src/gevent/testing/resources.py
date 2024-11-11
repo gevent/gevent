@@ -26,7 +26,6 @@ This establishes the resources that are available for use,
 which are tested with `support.is_resource_enabled`.
 
 """
-from __future__ import absolute_import, division, print_function
 
 # This file may be imported early, so it should take care not to import
 # things it doesn't need, which means deferred imports.

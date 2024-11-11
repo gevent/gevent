@@ -6,8 +6,6 @@ gevent-aware.
 .. versionadded:: 1.3a2
 """
 
-from __future__ import absolute_import
-
 __implements__ = [
     'sleep',
 ]

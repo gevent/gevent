@@ -1,7 +1,5 @@
 # Copyright (c) 2018 gevent. See LICENSE for details.
 # cython: auto_pickle=False,embedsignature=True,always_allow_keywords=False
-from __future__ import print_function, absolute_import, division
-
 import sys
 import traceback
 

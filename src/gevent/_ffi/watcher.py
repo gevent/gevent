@@ -3,7 +3,6 @@ Useful base classes for watchers. The available
 watchers will depend on the specific event loop.
 """
 # pylint:disable=not-callable
-from __future__ import absolute_import, print_function
 
 import signal as signalmodule
 import functools

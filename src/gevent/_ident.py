@@ -2,11 +2,6 @@
 # Copyright 2018 gevent contributors. See LICENSE for details.
 # cython: auto_pickle=False,embedsignature=True,always_allow_keywords=False
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-
 from weakref import WeakKeyDictionary
 from weakref import ref
 

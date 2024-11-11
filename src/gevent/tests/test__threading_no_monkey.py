@@ -4,10 +4,6 @@ Tests for ``gevent.threading`` that DO NOT monkey patch. This
 allows easy comparison with the standard module.
 
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import threading
 
 from gevent import threading as gthreading

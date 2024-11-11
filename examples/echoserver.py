@@ -6,7 +6,6 @@ Connect to it with:
 
 Terminate the connection by terminating telnet (typically Ctrl-] and then 'quit').
 """
-from __future__ import print_function
 from gevent.server import StreamServer
 
 

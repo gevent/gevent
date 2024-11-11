@@ -1,4 +1,3 @@
-from __future__ import print_function, division, absolute_import
 import time
 import gevent.testing as greentest
 
