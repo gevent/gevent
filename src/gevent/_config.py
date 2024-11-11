@@ -546,6 +546,19 @@ class MaxBlockingTime(FloatSettingMixin, Setting):
     .. versionadded:: 1.3b1
     """
 
+class PrintReports(BoolSettingMixin, Setting):
+    name = 'print_reports'
+    # This environment key doesn't follow the convention because it's
+    # meant to match a key used by existing projects
+    environment_key = 'GEVENT_PRINT_REPORTS'
+    default = True
+
+    desc = """\
+    If the `monitor_thread` is enabled, this is
+    whether to print reports when the event loop is blocked.
+    .. versionadded:: 24.10.4
+    """
+
 class MonitorMemoryPeriod(FloatSettingMixin, Setting):
     name = 'memory_monitor_period'
 
