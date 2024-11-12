@@ -1575,11 +1575,24 @@ class Expect100ContinueTests(TestCase):
 
     def test_continue(self):
         with self.makefile() as fd:
-            fd.write('PUT / HTTP/1.1\r\nHost: localhost\r\nContent-length: 1025\r\nExpect: 100-continue\r\n\r\n')
+            padding = 'a'*1025
+            fd.write('PUT / HTTP/1.1\r\nHost: localhost\r\nContent-length: 1025\r\nExpect: 100-continue\r\n\r\n' + padding)
             read_http(fd, code=417, body="failure")
 
             fd.write('PUT / HTTP/1.1\r\nHost: localhost\r\nContent-length: 7\r\nExpect: 100-continue\r\n\r\ntesting')
             read_http(fd, code=100)
+            read_http(fd, body="testing")
+
+        with self.makefile() as fd:
+            padding = 'a'*947
+            body = 'PUT / HTTP/1.1\r\nHost: localhost\r\nContent-length: {}\r\nExpect: 100-continue\r\n\r\n{}'.format(len(padding), padding)
+            # The following content should be regarded as one request.
+            fd.write('PUT / HTTP/1.1\r\nHost: localhost\r\nContent-length: {}\r\nExpect: 100-continue\r\n\r\n{}'.format(len(body), body))
+            read_http(fd, code=417, body="failure")
+            
+            fd.write('PUT / HTTP/1.1\r\nHost: localhost\r\nContent-length: 7\r\nExpect: 100-continue\r\n\r\ntesting')
+            read_http(fd, code=100)
+            # If there was a smuggling issue beforehand, what is obtained here will be aaa..aaa
             read_http(fd, body="testing")
 
 
