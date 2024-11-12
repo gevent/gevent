@@ -151,7 +151,7 @@ class _InvalidClientRequest(ValueError):
 class Input(object):
 
     __slots__ = ('rfile', 'content_length', 'socket', 'position',
-                 'chunked_input', 'chunk_length', '_chunked_input_error')
+                 'chunked_input', 'chunk_length', '_chunked_input_error', 'send_100_continue_enabled')
 
     def __init__(self, rfile, content_length, socket=None, chunked_input=False):
         # pylint:disable=redefined-outer-name
@@ -162,6 +162,7 @@ class Input(object):
         self.chunked_input = chunked_input
         self.chunk_length = -1
         self._chunked_input_error = False
+        self.send_100_continue_enabled = True
 
     def _discard(self):
         if self._chunked_input_error:
@@ -172,15 +173,17 @@ class Input(object):
             # is going to close the socket, so we don't have to discard
             return
 
-        if self.socket is None and (self.position < (self.content_length or 0) or self.chunked_input):
+        if self.position < (self.content_length or 0) or self.chunked_input:
+            self.send_100_continue_enabled = False
             # ## Read and discard body
             while 1:
                 d = self.read(16384)
                 if not d:
                     break
+            self.send_100_continue_enabled = True
 
     def _send_100_continue(self):
-        if self.socket is not None:
+        if self.send_100_continue_enabled and self.socket is not None:
             self.socket.sendall(_CONTINUE_RESPONSE)
             self.socket = None
 
