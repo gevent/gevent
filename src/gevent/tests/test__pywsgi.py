@@ -1589,7 +1589,7 @@ class Expect100ContinueTests(TestCase):
             # The following content should be regarded as one request.
             fd.write('PUT / HTTP/1.1\r\nHost: localhost\r\nContent-length: {}\r\nExpect: 100-continue\r\n\r\n{}'.format(len(body), body))
             read_http(fd, code=417, body="failure")
-            
+
             fd.write('PUT / HTTP/1.1\r\nHost: localhost\r\nContent-length: 7\r\nExpect: 100-continue\r\n\r\ntesting')
             read_http(fd, code=100)
             # If there was a smuggling issue beforehand, what is obtained here will be aaa..aaa
