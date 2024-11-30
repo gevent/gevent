@@ -151,7 +151,8 @@ class _InvalidClientRequest(ValueError):
 class Input(object):
 
     __slots__ = ('rfile', 'content_length', 'socket', 'position',
-                 'chunked_input', 'chunk_length', '_chunked_input_error', 'send_100_continue_enabled')
+                 'chunked_input', 'chunk_length', '_chunked_input_error',
+                 'send_100_continue_enabled')
 
     def __init__(self, rfile, content_length, socket=None, chunked_input=False):
         # pylint:disable=redefined-outer-name
