@@ -1,0 +1,2 @@
+Do not assume that ``threading.get_native_id`` exists. This improves
+support for untested platforms.

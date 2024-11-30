@@ -156,8 +156,12 @@ class _DummyThread(_DummyThread_):
         # _handle is only needed for 3.13; keeps a weak reference
         # to the greenlet.
         self._handle = _make_thread_handle(self._ident)
-        # ``_native_id`` backs the ``native_id`` property.
-        self._native_id = __threading__.get_native_id()
+        # ``_native_id`` backs the ``native_id`` property,
+        # when available.
+        try:
+            self._native_id = __threading__.get_native_id()
+        except AttributeError: # pragma: no cover
+            pass
 
         g = getcurrent()
         gid = _get_ident(g)
