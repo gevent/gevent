@@ -164,8 +164,10 @@ class BackdoorServer(StreamServer):
             ``locals`` dictionary. Previously they were shared in a
             potentially unsafe manner.
         """
-        if conn.family == socket.AF_INET or conn.family == socket.AF_INET6:
+        try:
             conn.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
+        except (OSError, AttributeError):
+            pass
 
         raw_file = conn.makefile(mode="r")
         getcurrent().stdin = _StdIn(conn, raw_file)
