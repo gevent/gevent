@@ -164,12 +164,8 @@ class BackdoorServer(StreamServer):
             ``locals`` dictionary. Previously they were shared in a
             potentially unsafe manner.
         """
-        try:
-            conn.getsockopt(socket.SO_DOMAIN, socket.SO_TYPE)
-            conn.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY) # pylint:disable=no-member
-        except OSError:
-            # unix socket type do not support conn.getsockopt(socket.SO_DOMAIN ...
-            pass
+        if conn.family == socket.AF_INET or conn.family == socket.AF_INET6:
+            conn.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
 
         raw_file = conn.makefile(mode="r")
         getcurrent().stdin = _StdIn(conn, raw_file)
