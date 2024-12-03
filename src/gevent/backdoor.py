@@ -165,8 +165,8 @@ class BackdoorServer(StreamServer):
             potentially unsafe manner.
         """
         try:
-            conn.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
-        except (OSError, AttributeError):
+            conn.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, True)
+        except OSError:
             pass
 
         raw_file = conn.makefile(mode="r")
