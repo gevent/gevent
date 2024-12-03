@@ -1,6 +1,10 @@
 from __future__ import print_function
 from __future__ import absolute_import
 
+import os
+import stat
+import tempfile
+
 import gevent
 from gevent import socket
 from gevent import backdoor
@@ -162,6 +166,58 @@ class Test(greentest.TestCase):
         self.assertEqual(
             'switching out, then throwing in\nGot Empty\nswitching out\nswitched in\n>>> ',
             response)
+
+
+class UnixSocketBackdoorServer(backdoor.BackdoorServer):
+    def __init__(self, unix_socket_path, *args, **kwargs):
+        # Create a Unix domain socket
+        self.unix_socket_path = unix_socket_path
+        listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        try:
+            listener.bind(self.unix_socket_path)
+            listener.listen(socket.SOMAXCONN)
+        except Exception as ex:
+            listener.close()
+            raise RuntimeError(f"Failed to bind Unix socket at {unix_socket_path}: {ex}")
+
+        super().__init__(listener, *args, **kwargs)
+
+    def close(self):
+        super().close()
+        if os.path.exists(self.unix_socket_path):
+            os.unlink(self.unix_socket_path)
+
+
+class TestUnixSocket(Test):
+    def setUp(self):
+        super(TestUnixSocket, self).setUp()
+        # Create a temporary file for the Unix socket
+        self.unix_socket_path = tempfile.mktemp()
+    def tearDown(self):
+        # Clean up the Unix socket file
+        if os.path.exists(self.unix_socket_path):
+            os.unlink(self.unix_socket_path)
+        super(TestUnixSocket, self).tearDown()
+
+    def _make_and_start_server(self, *args, **kwargs):
+        # Use the Unix socket for the BackdoorServer
+        server = UnixSocketBackdoorServer(self.unix_socket_path, *args, **kwargs)
+        server.start()
+        gevent.sleep(0.5)
+        return server
+
+    def _create_connection(self, server):
+        # Connect to the Unix socket
+        conn = SocketWithBanner(socket.AF_UNIX, socket.SOCK_STREAM)
+        conn.connect(self.unix_socket_path)
+        try:
+            banner = self._wait_for_prompt(conn)
+        except:
+            conn.close()
+            raise
+
+        conn.banner = banner
+        return conn
 
 
 if __name__ == '__main__':
