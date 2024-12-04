@@ -168,31 +168,12 @@ class Test(greentest.TestCase):
             response)
 
 
-class UnixSocketBackdoorServer(backdoor.BackdoorServer):
-    def __init__(self, unix_socket_path, *args, **kwargs):
-        # Create a Unix domain socket
-        self.unix_socket_path = unix_socket_path
-        listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        try:
-            listener.bind(self.unix_socket_path)
-            listener.listen(socket.SOMAXCONN)
-        except Exception as ex:
-            listener.close()
-            raise RuntimeError(f"Failed to bind Unix socket at {unix_socket_path}: {ex}")
-
-        super().__init__(listener, *args, **kwargs)
-
-    def close(self):
-        super().close()
-        if os.path.exists(self.unix_socket_path):
-            os.unlink(self.unix_socket_path)
-
-
 class TestUnixSocket(Test):
     def setUp(self):
         super(TestUnixSocket, self).setUp()
         # Create a temporary file for the Unix socket
         self.unix_socket_path = tempfile.mktemp()
+
     def tearDown(self):
         # Clean up the Unix socket file
         if os.path.exists(self.unix_socket_path):
@@ -201,7 +182,14 @@ class TestUnixSocket(Test):
 
     def _make_and_start_server(self, *args, **kwargs):
         # Use the Unix socket for the BackdoorServer
-        server = UnixSocketBackdoorServer(self.unix_socket_path, *args, **kwargs)
+        listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        try:
+            listener.bind(self.unix_socket_path)
+            listener.listen(socket.SOMAXCONN)
+        except Exception as ex:
+            listener.close()
+            raise RuntimeError(f"Failed to bind Unix socket at {self.unix_socket_path}: {ex}")
+        server = backdoor.BackdoorServer(listener, *args, **kwargs)
         server.start()
         gevent.sleep(0.5)
         return server
