@@ -97,6 +97,8 @@ class AbstractDatabaseConnectionPool(object):
                 if isolation_level is not None:
                     conn.set_isolation_level(isolation_level)
                 self.put(conn)
+            else:
+                self.size -= 1
 
     @contextlib.contextmanager
     def cursor(self, *args, **kwargs):
