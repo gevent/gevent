@@ -70,6 +70,11 @@ if hasattr(__thread__, 'RLock'):
     __imports__.append("RLock")
 
 
+if hasattr(__thread__, 'set_name'):
+    # Added in Python 3.14
+    __imports__.append('set_name')
+
+
 
 def get_ident(gr=None):
     if gr is None:
