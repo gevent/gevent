@@ -103,7 +103,7 @@ jobs:
         # for example to force a specific patch release, don't forget to change conditions!
         # XXX: We could probably make this easier on ourself by adding a specific
         # key to the matrix in the version we care about and checking for that matrix key.
-        python-version: ["3.14.0-alpha.7", "3.12", "pypy-3.10-v7.3.17", '3.9', '3.10', '3.11', "3.13"]
+        python-version: ["3.14.0-alpha.7", "3.12", "pypy-3.10-v7.3.17", '3.9', '3.10', '3.11', "3.13.3"]
         os: [macos-latest, ubuntu-latest]
         exclude:
           # The bulk of the testing is on Linux and Windows (appveyor).
