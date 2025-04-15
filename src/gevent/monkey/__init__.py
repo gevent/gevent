@@ -271,9 +271,12 @@ def patch_queue():
     implementation, but the details may change at any time.
 
     .. versionadded:: 1.3.5
+
+    .. versionchanged:: NEXT
+       Patch :class:`queue.LifoQueue` to work around https://github.com/gevent/gevent/issues/1957
     """
     _patch_module('queue', items=[
-        'LifoQueue',  # https://github.com/gevent/gevent/issues/1957
+        'LifoQueue',
         'SimpleQueue',
     ])
 
