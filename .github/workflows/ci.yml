@@ -374,6 +374,7 @@ jobs:
           flag-name: run-${{ join(matrix.*, '-') }}
           parallel: true
           format: cobertura
+          fail-on-error: false
 
       - name: Lint
         if: matrix.python-version == '3.12' && startsWith(runner.os, 'Linux')
