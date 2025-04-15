@@ -534,6 +534,14 @@ def patch_subprocess():
        On Windows under Python 3, the API support may not completely match
        the standard library.
 
+    .. note::
+       On macOS, this changes the :mod:`multiprocessing` start method to 'fork'.
+       It defaults to 'spawn'.
+
+    .. note::
+       On Python 3.14+ and platforms other than macOS and Windows, this
+       changes the :mod:`multiprocessing` start method to 'fork'.
+       It defaults to 'forkserver'.
     """
     _patch_module('subprocess')
 
