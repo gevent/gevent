@@ -1394,6 +1394,27 @@ if PY313:
         disabled_tests += [
         ]
 
+    if sys.version_info[:3] < (3, 13, 3):
+        disabled_tests += [
+            # 3.13.3 changed the way linecache works when non-file strings are being
+            # evaluated (backport from 3.14), which means this test won't run on anything
+            # older. It gets 2 lines when it expects 4.
+            # https://github.com/python/cpython/pull/117500
+            'test_subprocess.RunFuncTestCase.test_encoding_warning',
+            # This was a fix for a crash in the interpreter.
+            # https://github.com/python/cpython/issues/132002
+            'test_context.ContextTest.test_context_new_unhashable_str_subclass',
+            # This was modified in 3.13.3 for apparently a bugfix
+            # and won't run on older versions.
+            # https://github.com/python/cpython/commit/bf6c256a643b7066e922fb3a7e44aa3e006a29f3
+            'test_httplib.BasicTest.test_chunked',
+        ]
+
+        if APPVEYOR:
+            disabled_tests += [
+
+            ]
+
 if PY314:
     disabled_tests += [
         # Creates a pipe using ``os.pipe``, spawns a thread to write to it, and expects to
