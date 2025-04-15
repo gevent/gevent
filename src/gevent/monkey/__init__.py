@@ -265,12 +265,15 @@ def patch_queue():
     Patch objects in :mod:`queue`.
 
 
-    Currently, this just replaces :class:`queue.SimpleQueue` (implemented
-    in C) with its Python counterpart, but the details may change at any time.
+    Currently, this replaces :class:`queue.SimpleQueue` (implemented
+    in C) with its Python counterpart as well as :class:`queue.LifoQueue`
+    (which triggers deadlocks in some cases) with a gevent-specific
+    implementation, but the details may change at any time.
 
     .. versionadded:: 1.3.5
     """
     _patch_module('queue', items=[
+        'LifoQueue',  # https://github.com/gevent/gevent/issues/1957
         'SimpleQueue',
     ])
 
