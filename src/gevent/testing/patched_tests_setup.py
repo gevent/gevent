@@ -33,6 +33,7 @@ from .sysinfo import PY310
 from .sysinfo import PY311
 from .sysinfo import PY312
 from .sysinfo import PY313
+from .sysinfo import PY314
 
 from .sysinfo import WIN
 from .sysinfo import OSX
@@ -1392,6 +1393,19 @@ if PY313:
     if APPVEYOR:
         disabled_tests += [
         ]
+
+if PY314:
+    disabled_tests += [
+        # Creates a pipe using ``os.pipe``, spawns a thread to write to it, and expects to
+        # be able to read from it using a standard file wrapped around the descriptor with
+        # ``open(fileno)``. The reading code gets run first because Reasons. The thread
+        # is monkey-patched to be a greenlet, but pipe and open are not patched, so
+        # we block forever attempting to read. This would be a potential problem for
+        # anything using the ``_running`` context manager.
+        'test__interpreters.DestroyTests.test_still_running',
+        # Same.
+        'test__interpreters.RunStringTests.test_already_running',
+    ]
 
 if TRAVIS:
     disabled_tests += [
