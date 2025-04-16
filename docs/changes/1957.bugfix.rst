@@ -1,0 +1,14 @@
+Monkey-patching the ``queue`` module (done by default in
+``patch_all``) now patches ``Queue``, ``PriorityQueue``, and
+``LifoQueue``. In addition to the general benefits of making all those
+classes cooperative, this is known to solve a non-deterministic
+deadlock with ``urllib3``.
+
+In addition, ``Queue`` was renamed to ``SimpleQueue``; previously
+``SimpleQueue`` was an alias for the undocumented
+``queue._PySimpleQueue``. This makes ``SimpleQueue`` cooperative even
+without monkey-patching.
+
+Likewise, ``JoinableQueue`` was renamed to ``Queue``, providing the
+``join`` method to all ``Queue`` objects, thus matching the standard
+library. The old name remains for backwards compatibility.

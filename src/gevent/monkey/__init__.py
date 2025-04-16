@@ -265,14 +265,20 @@ def patch_queue():
     """
     Patch objects in :mod:`queue`.
 
-
-    Currently, this just replaces :class:`queue.SimpleQueue` (implemented
-    in C) with its Python counterpart, but the details may change at any time.
+    This replaces ``SimpleQueue``, ``PriorityQueue``, ``Queue``
+    and ``LifoQueue`` with their gevent equivalents.
 
     .. versionadded:: 1.3.5
+
+    .. versionchanged:: NEXT
+       In addition to ``SimpleQueue``, now also patches
+       ``Queue``, ``PriorityQueue`` and ``LifoQueue``.`
     """
     _patch_module('queue', items=[
         'SimpleQueue',
+        'PriorityQueue',
+        'LifoQueue',
+        'Queue',
     ])
 
 

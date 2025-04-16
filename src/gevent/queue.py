@@ -26,6 +26,15 @@ class, not an instance or subclass).
 .. versionchanged:: 1.0
        ``Queue(0)`` now means queue of infinite size, not a channel. A :exc:`DeprecationWarning`
        will be issued with this argument.
+
+.. versionchanged:: NEXT
+   :class:`Queue` was renamed to :class:`SimpleQueue`, while :class:`JoinableQueue` was
+   renamed to :class:`Queue` (`JoinableQueue` remains a backwards compatible alias).
+   This adds the ability to ``join()`` all queues, like the standard library.
+
+   Previously ``SimpleQueue`` was an alias for the undocumented Python
+   implementation ``queue._PySimpleQueue``; now it is gevent's own implementation.
+   This ensures that it is cooperative even without monkey-patching.
 """
 
 
@@ -47,15 +56,9 @@ from gevent._hub_local import get_hub_noargs as get_hub
 from gevent.exceptions import InvalidSwitchError
 
 __all__ = []
-__implements__ = ['Queue', 'PriorityQueue', 'LifoQueue']
+__implements__ = ['Queue', 'PriorityQueue', 'LifoQueue', 'SimpleQueue']
 __extensions__ = ['JoinableQueue', 'Channel']
 __imports__ = ['Empty', 'Full']
-
-
-__all__.append('SimpleQueue')
-# SimpleQueue is implemented in C and directly allocates locks
-# unaffected by monkey patching. We need the Python version.
-SimpleQueue = __queue__._PySimpleQueue # pylint:disable=no-member
 
 if hasattr(__queue__, 'ShutDown'): # New in 3.13
     ShutDown = __queue__.ShutDown
@@ -105,7 +108,7 @@ class ItemWaiter(Waiter): # pylint:disable=undefined-variable
         self.item = None
         return self.switch(self)
 
-class Queue(object):
+class SimpleQueue(object):
     """
     Create a queue object with a given maximum size.
 
@@ -126,6 +129,10 @@ class Queue(object):
        previously anyway, but that wasn't the case for PyPy.
     .. versionchanged:: 24.10.1
        Implement the ``shutdown`` methods from Python 3.13.
+    .. versionchanged:: NEXT
+       Renamed from ``Queue`` to ``SimpleQueue`` to better match the standard library.
+       While this class no longer has a ``shutdown`` method, the new ``Queue`` class
+       (previously ``JoinableQueue``) continues to have it.
     """
 
     __slots__ = (
@@ -449,6 +456,99 @@ class Queue(object):
             raise result
         return result
 
+
+class Queue(SimpleQueue):
+    """
+    A subclass of :class:`SimpleQueue` that additionally has
+    :meth:`task_done` and :meth:`join` methods.
+
+    .. versionchanged:: NEXT
+       Renamed from ``JoinablQueue`` to simply ``Queue`` to better
+       match the capability of the standard library :class:`queue.Queue`.
+    """
+
+    __slots__ = (
+        '_cond',
+        'unfinished_tasks',
+    )
+
+    def __init__(self, maxsize=None, items=(), unfinished_tasks=None):
+        """
+
+        .. versionchanged:: 1.1a1
+           If *unfinished_tasks* is not given, then all the given *items*
+           (if any) will be considered unfinished.
+
+        """
+        SimpleQueue.__init__(self, maxsize, items, _warn_depth=3)
+
+        from gevent.event import Event
+        self._cond = Event()
+        self._cond.set()
+
+        if unfinished_tasks:
+            self.unfinished_tasks = unfinished_tasks
+        elif items:
+            self.unfinished_tasks = len(items)
+        else:
+            self.unfinished_tasks = 0
+
+        if self.unfinished_tasks:
+            self._cond.clear()
+
+    def copy(self):
+        return type(self)(self.maxsize, self.queue, self.unfinished_tasks)
+
+    def _format(self):
+        result = SimpleQueue._format(self)
+        if self.unfinished_tasks:
+            result += ' tasks=%s _cond=%s' % (self.unfinished_tasks, self._cond)
+        return result
+
+    def _put(self, item):
+        SimpleQueue._put(self, item)
+        self._did_put_task()
+
+    def _did_put_task(self):
+        self.unfinished_tasks += 1
+        self._cond.clear()
+
+    def task_done(self):
+        '''Indicate that a formerly enqueued task is complete. Used by queue consumer threads.
+        For each :meth:`get <Queue.get>` used to fetch a task, a subsequent call to
+        :meth:`task_done` tells the queue that the processing on the task is complete.
+
+        If a :meth:`join` is currently blocking, it will resume when all items have been processed
+        (meaning that a :meth:`task_done` call was received for every item that had been
+        :meth:`put <Queue.put>` into the queue).
+
+        Raises a :exc:`ValueError` if called more times than there were items placed in the queue.
+        '''
+        if self.unfinished_tasks <= 0:
+            raise ValueError('task_done() called too many times')
+        self.unfinished_tasks -= 1
+        if self.unfinished_tasks == 0:
+            self._cond.set()
+
+    def join(self, timeout=None):
+        '''
+        Block until all items in the queue have been gotten and processed.
+
+        The count of unfinished tasks goes up whenever an item is added to the queue.
+        The count goes down whenever a consumer thread calls :meth:`task_done` to indicate
+        that the item was retrieved and all work on it is complete. When the count of
+        unfinished tasks drops to zero, :meth:`join` unblocks.
+
+        :param float timeout: If not ``None``, then wait no more than this time in seconds
+            for all tasks to finish.
+        :return: ``True`` if all tasks have finished; if ``timeout`` was given and expired before
+            all tasks finished, ``False``.
+
+        .. versionchanged:: 1.1a1
+           Add the *timeout* parameter.
+        '''
+        return self._cond.wait(timeout=timeout)
+
     def shutdown(self, immediate=False):
         """
         "Shut-down the queue, making queue gets and puts raise
@@ -476,6 +576,11 @@ class Queue(object):
     def _drain_for_immediate_shutdown(self):
         while self.qsize():
             self.get()
+            self.task_done()
+
+# .. versionchanged:: NEXT
+#  Now a BWC alias
+JoinableQueue = Queue
 
 class UnboundQueue(Queue):
     # A specialization of Queue that knows it can never
@@ -515,106 +620,13 @@ class PriorityQueue(Queue):
 
     def _put(self, item):
         _heappush(self.queue, item)
+        self._did_put_task()
 
     def _get(self):
         return _heappop(self.queue)
 
 
-class JoinableQueue(Queue):
-    """
-    A subclass of :class:`Queue` that additionally has
-    :meth:`task_done` and :meth:`join` methods.
-    """
-
-    __slots__ = (
-        '_cond',
-        'unfinished_tasks',
-    )
-
-    def __init__(self, maxsize=None, items=(), unfinished_tasks=None):
-        """
-
-        .. versionchanged:: 1.1a1
-           If *unfinished_tasks* is not given, then all the given *items*
-           (if any) will be considered unfinished.
-
-        """
-        Queue.__init__(self, maxsize, items, _warn_depth=3)
-
-        from gevent.event import Event
-        self._cond = Event()
-        self._cond.set()
-
-        if unfinished_tasks:
-            self.unfinished_tasks = unfinished_tasks
-        elif items:
-            self.unfinished_tasks = len(items)
-        else:
-            self.unfinished_tasks = 0
-
-        if self.unfinished_tasks:
-            self._cond.clear()
-
-    def copy(self):
-        return type(self)(self.maxsize, self.queue, self.unfinished_tasks)
-
-    def _format(self):
-        result = Queue._format(self)
-        if self.unfinished_tasks:
-            result += ' tasks=%s _cond=%s' % (self.unfinished_tasks, self._cond)
-        return result
-
-    def _put(self, item):
-        Queue._put(self, item)
-        self._did_put_task()
-
-    def _did_put_task(self):
-        self.unfinished_tasks += 1
-        self._cond.clear()
-
-    def task_done(self):
-        '''Indicate that a formerly enqueued task is complete. Used by queue consumer threads.
-        For each :meth:`get <Queue.get>` used to fetch a task, a subsequent call to :meth:`task_done` tells the queue
-        that the processing on the task is complete.
-
-        If a :meth:`join` is currently blocking, it will resume when all items have been processed
-        (meaning that a :meth:`task_done` call was received for every item that had been
-        :meth:`put <Queue.put>` into the queue).
-
-        Raises a :exc:`ValueError` if called more times than there were items placed in the queue.
-        '''
-        if self.unfinished_tasks <= 0:
-            raise ValueError('task_done() called too many times')
-        self.unfinished_tasks -= 1
-        if self.unfinished_tasks == 0:
-            self._cond.set()
-
-    def join(self, timeout=None):
-        '''
-        Block until all items in the queue have been gotten and processed.
-
-        The count of unfinished tasks goes up whenever an item is added to the queue.
-        The count goes down whenever a consumer thread calls :meth:`task_done` to indicate
-        that the item was retrieved and all work on it is complete. When the count of
-        unfinished tasks drops to zero, :meth:`join` unblocks.
-
-        :param float timeout: If not ``None``, then wait no more than this time in seconds
-            for all tasks to finish.
-        :return: ``True`` if all tasks have finished; if ``timeout`` was given and expired before
-            all tasks finished, ``False``.
-
-        .. versionchanged:: 1.1a1
-           Add the *timeout* parameter.
-        '''
-        return self._cond.wait(timeout=timeout)
-
-    def _drain_for_immediate_shutdown(self):
-        while self.qsize():
-            self.get()
-            self.task_done()
-
-
-class LifoQueue(JoinableQueue):
+class LifoQueue(Queue):
     """
     A subclass of :class:`JoinableQueue` that retrieves most recently added entries first.
 
