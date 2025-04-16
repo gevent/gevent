@@ -47,9 +47,6 @@ env:
   PYTHONUNBUFFERED: 1
   PYTHONDONTWRITEBYTECODE: 1
   PIP_UPGRADE_STRATEGY: eager
-  # Don't get warnings about Python 2 support being deprecated. We
-  # know. The env var works for pip 20.
-  PIP_NO_PYTHON_VERSION_WARNING: 1
   PIP_NO_WARN_SCRIPT_LOCATION: 1
   GEVENTSETUP_EV_VERIFY: 1
   # Disable some warnings produced by libev especially and also some Cython generated code.
