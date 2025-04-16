@@ -1,0 +1,2 @@
+Add initial support for Python 3.14a7. Earlier and later versions of
+Python 3.14 may or may not work as expected.
