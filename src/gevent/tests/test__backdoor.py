@@ -1,13 +1,13 @@
-from __future__ import print_function
-from __future__ import absolute_import
+import os
+import tempfile
 
 import gevent
-from gevent import socket
-from gevent import backdoor
-
 import gevent.testing as greentest
+from gevent import backdoor
+from gevent import socket
 from gevent.testing.params import DEFAULT_BIND_ADDR_TUPLE
 from gevent.testing.params import DEFAULT_CONNECT
+
 
 def read_until(conn, postfix):
     read = b''
@@ -60,15 +60,25 @@ class Test(greentest.TestCase):
         gevent.sleep() # let spawned greenlets die
         super(Test, self).tearDown()
 
+    def _server_listen_argument(self):
+        return DEFAULT_BIND_ADDR_TUPLE
+
     def _make_and_start_server(self, *args, **kwargs):
-        server = backdoor.BackdoorServer(DEFAULT_BIND_ADDR_TUPLE, *args, **kwargs)
+        server = backdoor.BackdoorServer(self._server_listen_argument(), *args, **kwargs)
         server.start()
         return server
 
+    def _connection_arguments(self, server):
+        return ((DEFAULT_CONNECT, server.server_port),)
+
+    def _socket_arguments(self):
+        return ()
+
     def _create_connection(self, server):
-        conn = SocketWithBanner()
-        conn.connect((DEFAULT_CONNECT, server.server_port)) # pylint:disable=not-callable
+        conn = SocketWithBanner(*self._socket_arguments())
+
         try:
+            conn.connect(*self._connection_arguments(server)) # pylint:disable=not-callable
             banner = self._wait_for_prompt(conn)
         except:
             conn.close()
@@ -139,7 +149,8 @@ class Test(greentest.TestCase):
             msg="locals() unusable: %s..." % response)
 
     def test_switch_exc(self):
-        from gevent.queue import Queue, Empty
+        from gevent.queue import Empty
+        from gevent.queue import Queue
 
         def bad():
             q = Queue()
@@ -163,6 +174,38 @@ class Test(greentest.TestCase):
             'switching out, then throwing in\nGot Empty\nswitching out\nswitched in\n>>> ',
             response)
 
+@greentest.skipUnless(
+    hasattr(socket, 'AF_UNIX'),
+    "Needs AF_UNIX support"
+)
+class TestUnixSocket(Test):
+    def setUp(self):
+        super().setUp()
+        # Create a temporary file for the Unix socket
+        self.unix_socket_path = tempfile.mktemp()
+
+    def tearDown(self):
+        # Clean up the Unix socket file
+        if os.path.exists(self.unix_socket_path):
+            os.unlink(self.unix_socket_path)
+        super().tearDown()
+
+    def _server_listen_argument(self):
+        # Use the Unix socket for the BackdoorServer
+        listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        try:
+            listener.bind(self.unix_socket_path)
+            listener.listen(socket.SOMAXCONN)
+        except Exception as ex:
+            listener.close()
+            raise RuntimeError(f"Failed to bind Unix socket at {self.unix_socket_path}: {ex}")
+        return listener
+
+    def _connection_arguments(self, server):
+        return (self.unix_socket_path,)
+
+    def _socket_arguments(self):
+        return (socket.AF_UNIX, socket.SOCK_STREAM)
 
 if __name__ == '__main__':
     greentest.main() # pragma: testrunner-no-combine
