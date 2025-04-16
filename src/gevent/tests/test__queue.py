@@ -11,40 +11,65 @@ from gevent.event import AsyncResult
 from gevent.testing.timing import AbstractGenericGetTestCase
 
 # pylint:disable=too-many-ancestors
+class UsesOnlyOneItemMixin:
+    # These tests only place one item at a time in
+    # the queue, so they can work for Queue, SimpleQueue, LifoQueue,
+    # and Channel
 
-class TestQueue(TestCase):
+    SUPPORTS_PUTTING_WITHOUT_GETTING = True
 
-    def test_send_first(self):
-        self.switch_expected = False
-        q = queue.Queue()
-        q.put('hi')
-        self.assertEqual(q.peek(), 'hi')
-        self.assertEqual(q.get(), 'hi')
+    def test_put_nowait_simple(self):
+        result = []
+        q = self._makeOne(1)
 
-    def test_peek_empty(self):
-        q = queue.Queue()
-        # No putters waiting, in the main loop: LoopExit
-        with self.assertRaises(LoopExit):
-            q.peek()
+        def store_result(func, *args):
+            result.append(func(*args))
 
-        def waiter(q):
-            self.assertRaises(Empty, q.peek, timeout=0.01)
-        g = gevent.spawn(waiter, q)
-        gevent.sleep(0.1)
-        g.join()
+        run_callback = get_hub().loop.run_callback
 
-    def test_peek_multi_greenlet(self):
-        q = queue.Queue()
-        g = gevent.spawn(q.peek)
-        g.start()
+        run_callback(store_result, util.wrap_errors(Full, q.put_nowait), 2)
+        run_callback(store_result, util.wrap_errors(Full, q.put_nowait), 3)
         gevent.sleep(0)
-        q.put(1)
-        g.join()
-        self.assertTrue(g.exception is None)
-        self.assertEqual(q.peek(), 1)
+        self.assertEqual(len(result), 2)
+        if self.SUPPORTS_PUTTING_WITHOUT_GETTING:
+            self.assertIsNone(result[0], result)
+        else:
+            self.assertIsInstance(result[0], queue.Full, result)
+        self.assertIsInstance(result[1], queue.Full, result)
+
+    # put_nowait must work from the mainloop
+    def test_put_nowait_unlock(self):
+        result = []
+        q = self._makeOne()
+        p = gevent.spawn(q.get)
+
+        def store_result(func, *args):
+            result.append(func(*args))
+
+        self.assertTrue(q.empty(), q)
+        if self.SUPPORTS_PUTTING_WITHOUT_GETTING:
+            assertFull = self.assertFalse
+        else:
+            assertFull = self.assertTrue
+
+        assertFull(q.full(), q)
+        gevent.sleep(0.001)
+
+        self.assertTrue(q.empty(), q)
+        assertFull(q.full(), q)
+
+        get_hub().loop.run_callback(store_result, q.put_nowait, 10)
+
+        self.assertFalse(p.ready(), p)
+        gevent.sleep(0.001)
+
+        self.assertEqual(result, [None])
+        self.assertTrue(p.ready(), p)
+        assertFull(q.full(), q)
+        self.assertTrue(q.empty(), q)
 
     def test_send_last(self):
-        q = queue.Queue()
+        q = self._makeOne()
 
         def waiter(q):
             with gevent.Timeout(0.1 if not greentest.RUNNING_ON_APPVEYOR else 0.5):
@@ -57,8 +82,79 @@ class TestQueue(TestCase):
         gevent.sleep(0.01)
         assert p.get(timeout=0) == "OK"
 
+class TestQueue(UsesOnlyOneItemMixin, TestCase):
+
+    def _makeOne(self, *args, **kwargs):
+        return queue.Queue(*args, **kwargs)
+
+    def test_get_nowait_simple(self):
+        result = []
+        q = self._makeOne(1)
+        q.put(4)
+
+        def store_result(func, *args):
+            result.append(func(*args))
+
+        run_callback = get_hub().loop.run_callback
+
+        run_callback(store_result, util.wrap_errors(Empty, q.get_nowait))
+        run_callback(store_result, util.wrap_errors(Empty, q.get_nowait))
+        gevent.sleep(0)
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0], 4)
+        self.assertIsInstance(result[1], Empty)
+
+   # get_nowait must work from the mainloop
+    def test_get_nowait_unlock(self):
+        result = []
+        q = self._makeOne(1)
+        p = gevent.spawn(q.put, 5)
+
+        def store_result(func, *args):
+            result.append(func(*args))
+
+        assert q.empty(), q
+        gevent.sleep(0)
+        assert q.full(), q
+        get_hub().loop.run_callback(store_result, q.get_nowait)
+        gevent.sleep(0)
+        assert q.empty(), q
+        assert result == [5], result
+        assert p.ready(), p
+        assert p.dead, p
+        assert q.empty(), q
+
+    def test_send_first(self):
+        self.switch_expected = False
+        q = self._makeOne()
+        q.put('hi')
+        self.assertEqual(q.peek(), 'hi')
+        self.assertEqual(q.get(), 'hi')
+
+    def test_peek_empty(self):
+        q = self._makeOne()
+        # No putters waiting, in the main loop: LoopExit
+        with self.assertRaises(LoopExit):
+            q.peek()
+
+        def waiter(q):
+            self.assertRaises(Empty, q.peek, timeout=0.01)
+        g = gevent.spawn(waiter, q)
+        gevent.sleep(0.1)
+        g.join()
+
+    def test_peek_multi_greenlet(self):
+        q = self._makeOne()
+        g = gevent.spawn(q.peek)
+        g.start()
+        gevent.sleep(0)
+        q.put(1)
+        g.join()
+        self.assertTrue(g.exception is None)
+        self.assertEqual(q.peek(), 1)
+
     def test_max_size(self):
-        q = queue.Queue(2)
+        q = self._makeOne(2)
         results = []
 
         def putter(q):
@@ -80,32 +176,9 @@ class TestQueue(TestCase):
         self.assertEqual(q.get(), 'c')
         assert p.get(timeout=0) == "OK"
 
-    def test_zero_max_size(self):
-        q = queue.Channel()
-
-        def sender(evt, q):
-            q.put('hi')
-            evt.set('done')
-
-        def receiver(evt, q):
-            x = q.get()
-            evt.set(x)
-
-        e1 = AsyncResult()
-        e2 = AsyncResult()
-
-        p1 = gevent.spawn(sender, e1, q)
-        gevent.sleep(0.001)
-        self.assertTrue(not e1.ready())
-        p2 = gevent.spawn(receiver, e2, q)
-        self.assertEqual(e2.get(), 'hi')
-        self.assertEqual(e1.get(), 'done')
-        with gevent.Timeout(0):
-            gevent.joinall([p1, p2])
-
     def test_multiple_waiters(self):
         # tests that multiple waiters get their results back
-        q = queue.Queue()
+        q = self._makeOne()
 
         def waiter(q, evt):
             evt.set(q.get())
@@ -135,7 +208,7 @@ class TestQueue(TestCase):
         self.assertEqual(collect_pending_results(), 4)
 
     def test_waiters_that_cancel(self):
-        q = queue.Queue()
+        q = self._makeOne()
 
         def do_receive(q, evt):
             with gevent.Timeout(0, RuntimeError()):
@@ -153,7 +226,7 @@ class TestQueue(TestCase):
         self.assertEqual(q.get(), 'hi')
 
     def test_senders_that_die(self):
-        q = queue.Queue()
+        q = self._makeOne()
 
         def do_send(q):
             q.put('sent')
@@ -174,7 +247,7 @@ class TestQueue(TestCase):
                 except RuntimeError:
                     evt.set('timed out')
 
-        q = queue.Queue()
+        q = self._makeOne()
         dying_evt = AsyncResult()
         waiting_evt = AsyncResult()
         gevent.spawn(do_receive, q, dying_evt)
@@ -193,7 +266,7 @@ class TestQueue(TestCase):
                 except RuntimeError:
                     evt.set('timed out')
 
-        q = queue.Queue()
+        q = self._makeOne()
         e1 = AsyncResult()
         e2 = AsyncResult()
         gevent.spawn(do_receive, q, e1)
@@ -205,129 +278,19 @@ class TestQueue(TestCase):
         self.assertEqual(q.get(), 'sent')
 
 
-class TestChannel(TestCase):
 
-    def test_send(self):
-        channel = queue.Channel()
+class TestChannel(UsesOnlyOneItemMixin, TestCase):
 
-        events = []
+    SUPPORTS_PUTTING_WITHOUT_GETTING = False
 
-        def another_greenlet():
-            events.append(channel.get())
-            events.append(channel.get())
-
-        g = gevent.spawn(another_greenlet)
-
-        events.append('sending')
-        channel.put('hello')
-        events.append('sent hello')
-        channel.put('world')
-        events.append('sent world')
-
-        self.assertEqual(['sending', 'hello', 'sent hello', 'world', 'sent world'], events)
-        g.get()
-
-    def test_wait(self):
-        channel = queue.Channel()
-        events = []
-
-        def another_greenlet():
-            events.append('sending hello')
-            channel.put('hello')
-            events.append('sending world')
-            channel.put('world')
-            events.append('sent world')
-
-        g = gevent.spawn(another_greenlet)
-
-        events.append('waiting')
-        events.append(channel.get())
-        events.append(channel.get())
-
-        self.assertEqual(['waiting', 'sending hello', 'hello', 'sending world', 'world'], events)
-        gevent.sleep(0)
-        self.assertEqual(['waiting', 'sending hello', 'hello', 'sending world', 'world', 'sent world'], events)
-        g.get()
-
-    def test_iterable(self):
-        channel = queue.Channel()
-        gevent.spawn(channel.put, StopIteration)
-        r = list(channel)
-        self.assertEqual(r, [])
-
-class TestJoinableQueue(TestCase):
-
-    def test_task_done(self):
-        channel = queue.JoinableQueue()
-        X = object()
-        gevent.spawn(channel.put, X)
-        result = channel.get()
-        self.assertIs(result, X)
-        self.assertEqual(1, channel.unfinished_tasks)
-        channel.task_done()
-        self.assertEqual(0, channel.unfinished_tasks)
-
-
-class TestNoWait(TestCase):
-
-    def test_put_nowait_simple(self):
-        result = []
-        q = queue.Queue(1)
-
-        def store_result(func, *args):
-            result.append(func(*args))
-
-        run_callback = get_hub().loop.run_callback
-
-        run_callback(store_result, util.wrap_errors(Full, q.put_nowait), 2)
-        run_callback(store_result, util.wrap_errors(Full, q.put_nowait), 3)
-        gevent.sleep(0)
-        assert len(result) == 2, result
-        assert result[0] is None, result
-        assert isinstance(result[1], queue.Full), result
-
-    def test_get_nowait_simple(self):
-        result = []
-        q = queue.Queue(1)
-        q.put(4)
-
-        def store_result(func, *args):
-            result.append(func(*args))
-
-        run_callback = get_hub().loop.run_callback
-
-        run_callback(store_result, util.wrap_errors(Empty, q.get_nowait))
-        run_callback(store_result, util.wrap_errors(Empty, q.get_nowait))
-        gevent.sleep(0)
-        assert len(result) == 2, result
-        assert result[0] == 4, result
-        assert isinstance(result[1], queue.Empty), result
-
-    # get_nowait must work from the mainloop
-    def test_get_nowait_unlock(self):
-        result = []
-        q = queue.Queue(1)
-        p = gevent.spawn(q.put, 5)
-
-        def store_result(func, *args):
-            result.append(func(*args))
-
-        assert q.empty(), q
-        gevent.sleep(0)
-        assert q.full(), q
-        get_hub().loop.run_callback(store_result, q.get_nowait)
-        gevent.sleep(0)
-        assert q.empty(), q
-        assert result == [5], result
-        assert p.ready(), p
-        assert p.dead, p
-        assert q.empty(), q
+    def _makeOne(self, *args, **kwargs):
+        return queue.Channel(*args, **kwargs)
 
     def test_get_nowait_unlock_channel(self):
         # get_nowait runs fine in the hub, and
         # it switches to a waiting putter if needed.
         result = []
-        q = queue.Channel()
+        q = self._makeOne()
         p = gevent.spawn(q.put, 5)
 
         def store_result(func, *args):
@@ -349,34 +312,137 @@ class TestNoWait(TestCase):
         self.assertTrue(p.dead)
         self.assertTrue(q.empty())
 
-    # put_nowait must work from the mainloop
-    def test_put_nowait_unlock(self):
-        result = []
-        q = queue.Queue()
-        p = gevent.spawn(q.get)
+    def test_zero_max_size(self):
+        q = self._makeOne()
 
-        def store_result(func, *args):
-            result.append(func(*args))
+        def sender(evt, q):
+            q.put('hi')
+            evt.set('done')
 
-        self.assertTrue(q.empty(), q)
-        self.assertFalse(q.full(), q)
+        def receiver(evt, q):
+            x = q.get()
+            evt.set(x)
+
+        e1 = AsyncResult()
+        e2 = AsyncResult()
+
+        p1 = gevent.spawn(sender, e1, q)
         gevent.sleep(0.001)
+        self.assertTrue(not e1.ready())
+        p2 = gevent.spawn(receiver, e2, q)
+        self.assertEqual(e2.get(), 'hi')
+        self.assertEqual(e1.get(), 'done')
+        with gevent.Timeout(0):
+            gevent.joinall([p1, p2])
 
-        self.assertTrue(q.empty(), q)
-        self.assertFalse(q.full(), q)
+    def test_send(self):
+        channel = self._makeOne()
 
-        get_hub().loop.run_callback(store_result, q.put_nowait, 10)
+        events = []
 
-        self.assertFalse(p.ready(), p)
-        gevent.sleep(0.001)
+        def another_greenlet():
+            events.append(channel.get())
+            events.append(channel.get())
 
-        self.assertEqual(result, [None])
-        self.assertTrue(p.ready(), p)
-        self.assertFalse(q.full(), q)
-        self.assertTrue(q.empty(), q)
+        g = gevent.spawn(another_greenlet)
+
+        events.append('sending')
+        channel.put('hello')
+        events.append('sent hello')
+        channel.put('world')
+        events.append('sent world')
+
+        self.assertEqual(['sending', 'hello', 'sent hello', 'world', 'sent world'], events)
+        g.get()
+
+    def test_wait(self):
+        channel = self._makeOne()
+        events = []
+
+        def another_greenlet():
+            events.append('sending hello')
+            channel.put('hello')
+            events.append('sending world')
+            channel.put('world')
+            events.append('sent world')
+
+        g = gevent.spawn(another_greenlet)
+
+        events.append('waiting')
+        events.append(channel.get())
+        events.append(channel.get())
+
+        self.assertEqual(['waiting', 'sending hello', 'hello', 'sending world', 'world'], events)
+        gevent.sleep(0)
+        self.assertEqual(['waiting', 'sending hello', 'hello', 'sending world', 'world', 'sent world'], events)
+        g.get()
+
+    def test_iterable(self):
+        channel = self._makeOne()
+        gevent.spawn(channel.put, StopIteration)
+        r = list(channel)
+        self.assertEqual(r, [])
 
 
-class TestJoinEmpty(TestCase):
+
+
+class TestJoinableQueue(TestQueue):
+
+    queue = queue
+
+    def _makeOne(self, *args, **kwargs):
+        return queue.JoinableQueue(*args, **kwargs)
+
+    def test_task_done(self):
+        channel = self._makeOne()
+        X = object()
+        gevent.spawn(channel.put, X)
+        result = channel.get()
+        self.assertIs(result, X)
+        self.assertEqual(1, channel.unfinished_tasks)
+        channel.task_done()
+        self.assertEqual(0, channel.unfinished_tasks)
+
+
+    def _shutdown_all_methods_in_one_thread(self, immediate):
+        q = self._makeOne()
+        q.put("L")
+        q.put_nowait("O")
+        q.shutdown(immediate)
+
+        with self.assertRaises(self.queue.ShutDown):
+            q.put("E")
+        with self.assertRaises(self.queue.ShutDown):
+            q.put_nowait("W")
+        if immediate:
+            with self.assertRaises(self.queue.ShutDown):
+                q.get()
+            with self.assertRaises(self.queue.ShutDown):
+                q.get_nowait()
+            with self.assertRaises(ValueError):
+                q.task_done()
+            q.join()
+        else:
+            self.assertIn(q.get(), "LO")
+            q.task_done()
+            self.assertIn(q.get(), "LO")
+            q.task_done()
+            q.join()
+            # on shutdown(immediate=False)
+            # when queue is empty, should raise ShutDown Exception
+            with self.assertRaises(self.queue.ShutDown):
+                q.get() # p.get(True)
+            with self.assertRaises(self.queue.ShutDown):
+                q.get_nowait() # p.get(False)
+            with self.assertRaises(self.queue.ShutDown):
+                q.get(True, 1.0)
+
+    def test_shutdown_all_methods_in_one_thread(self):
+        return self._shutdown_all_methods_in_one_thread(False)
+
+    def test_shutdown_immediate_all_methods_in_one_thread(self):
+        return self._shutdown_all_methods_in_one_thread(True)
+
 
     def test_issue_45(self):
         """Test that join() exits immediately if not jobs were put into the queue"""

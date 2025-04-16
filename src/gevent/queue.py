@@ -26,6 +26,15 @@ class, not an instance or subclass).
 .. versionchanged:: 1.0
        ``Queue(0)`` now means queue of infinite size, not a channel. A :exc:`DeprecationWarning`
        will be issued with this argument.
+
+.. versionchanged:: NEXT
+   :class:`Queue` was renamed to :class:`SimpleQueue`, while :class:`JoinableQueue` was
+   renamed to :class:`Queue` (`JoinableQueue` remains a backwards compatible alias).
+   This adds the ability to ``join()`` all queues, like the standard library.
+
+   Previously ``SimpleQueue`` was an alias for the undocumented Python
+   implementation ``queue._PySimpleQueue``; now it is gevent's own implementation.
+   This ensures that it is cooperative even without monkey-patching.
 """
 
 
@@ -47,15 +56,9 @@ from gevent._hub_local import get_hub_noargs as get_hub
 from gevent.exceptions import InvalidSwitchError
 
 __all__ = []
-__implements__ = ['Queue', 'PriorityQueue', 'LifoQueue']
+__implements__ = ['Queue', 'PriorityQueue', 'LifoQueue', 'SimpleQueue']
 __extensions__ = ['JoinableQueue', 'Channel']
 __imports__ = ['Empty', 'Full']
-
-
-__all__.append('SimpleQueue')
-# SimpleQueue is implemented in C and directly allocates locks
-# unaffected by monkey patching. We need the Python version.
-SimpleQueue = __queue__._PySimpleQueue # pylint:disable=no-member
 
 if hasattr(__queue__, 'ShutDown'): # New in 3.13
     ShutDown = __queue__.ShutDown
@@ -105,7 +108,7 @@ class ItemWaiter(Waiter): # pylint:disable=undefined-variable
         self.item = None
         return self.switch(self)
 
-class Queue(object):
+class SimpleQueue(object):
     """
     Create a queue object with a given maximum size.
 
@@ -126,6 +129,10 @@ class Queue(object):
        previously anyway, but that wasn't the case for PyPy.
     .. versionchanged:: 24.10.1
        Implement the ``shutdown`` methods from Python 3.13.
+    .. versionchanged:: NEXT
+       Renamed from ``Queue`` to ``SimpleQueue`` to better match the standard library.
+       While this class no longer has a ``shutdown`` method, the new ``Queue`` class
+       (previously ``JoinableQueue``) continues to have it.
     """
 
     __slots__ = (
@@ -449,81 +456,15 @@ class Queue(object):
             raise result
         return result
 
-    def shutdown(self, immediate=False):
-        """
-        "Shut-down the queue, making queue gets and puts raise
-        `ShutDown`.
 
-        By default, gets will only raise once the queue is empty. Set
-        *immediate* to True to make gets raise immediately instead.
-
-        All blocked callers of `put` and `get` will be unblocked.
-
-        In joinable queues, if *immediate*, a task is marked as done
-        for each item remaining in the queue, which may unblock
-        callers of `join`.
-        """
-        self.is_shutdown = True
-        if immediate:
-            self._drain_for_immediate_shutdown()
-        getters = list(self.getters)
-        putters = list(self.putters)
-        self.getters.clear()
-        self.putters.clear()
-        for waiter in getters + putters:
-            self.hub.loop.run_callback(waiter.throw, ShutDown)
-
-    def _drain_for_immediate_shutdown(self):
-        while self.qsize():
-            self.get()
-
-class UnboundQueue(Queue):
-    # A specialization of Queue that knows it can never
-    # be bound. Changing its maxsize has no effect.
-
-    __slots__ = ()
-
-    def __init__(self, maxsize=None, items=()):
-        if maxsize is not None:
-            raise ValueError("UnboundQueue has no maxsize")
-        Queue.__init__(self, maxsize, items)
-        self.putters = None # Will never be used.
-
-    def put(self, item, block=True, timeout=None):
-        self._put(item)
-        if self.getters:
-            self._schedule_unlock()
-
-
-class PriorityQueue(Queue):
-    '''A subclass of :class:`Queue` that retrieves entries in priority order (lowest first).
-
-    Entries are typically tuples of the form: ``(priority number, data)``.
-
-    .. versionchanged:: 1.2a1
-       Any *items* given to the constructor will now be passed through
-       :func:`heapq.heapify` to ensure the invariants of this class hold.
-       Previously it was just assumed that they were already a heap.
-    '''
-
-    __slots__ = ()
-
-    def _create_queue(self, items=()):
-        q = list(items)
-        _heapify(q)
-        return q
-
-    def _put(self, item):
-        _heappush(self.queue, item)
-
-    def _get(self):
-        return _heappop(self.queue)
-
-
-class JoinableQueue(Queue):
+class Queue(SimpleQueue):
     """
-    A subclass of :class:`Queue` that additionally has
+    A subclass of :class:`SimpleQueue` that additionally has
     :meth:`task_done` and :meth:`join` methods.
+
+    .. versionchanged:: NEXT
+       Renamed from ``JoinablQueue`` to simply ``Queue`` to better
+       match the capability of the standard library :class:`queue.Queue`.
     """
 
     __slots__ = (
@@ -539,7 +480,7 @@ class JoinableQueue(Queue):
            (if any) will be considered unfinished.
 
         """
-        Queue.__init__(self, maxsize, items, _warn_depth=3)
+        SimpleQueue.__init__(self, maxsize, items, _warn_depth=3)
 
         from gevent.event import Event
         self._cond = Event()
@@ -559,13 +500,13 @@ class JoinableQueue(Queue):
         return type(self)(self.maxsize, self.queue, self.unfinished_tasks)
 
     def _format(self):
-        result = Queue._format(self)
+        result = SimpleQueue._format(self)
         if self.unfinished_tasks:
             result += ' tasks=%s _cond=%s' % (self.unfinished_tasks, self._cond)
         return result
 
     def _put(self, item):
-        Queue._put(self, item)
+        SimpleQueue._put(self, item)
         self._did_put_task()
 
     def _did_put_task(self):
@@ -608,13 +549,84 @@ class JoinableQueue(Queue):
         '''
         return self._cond.wait(timeout=timeout)
 
+    def shutdown(self, immediate=False):
+        """
+        "Shut-down the queue, making queue gets and puts raise
+        `ShutDown`.
+
+        By default, gets will only raise once the queue is empty. Set
+        *immediate* to True to make gets raise immediately instead.
+
+        All blocked callers of `put` and `get` will be unblocked.
+
+        In joinable queues, if *immediate*, a task is marked as done
+        for each item remaining in the queue, which may unblock
+        callers of `join`.
+        """
+        self.is_shutdown = True
+        if immediate:
+            self._drain_for_immediate_shutdown()
+        getters = list(self.getters)
+        putters = list(self.putters)
+        self.getters.clear()
+        self.putters.clear()
+        for waiter in getters + putters:
+            self.hub.loop.run_callback(waiter.throw, ShutDown)
+
     def _drain_for_immediate_shutdown(self):
         while self.qsize():
             self.get()
             self.task_done()
 
+# .. versionchanged:: NEXT
+#  Now a BWC alias
+JoinableQueue = Queue
 
-class LifoQueue(JoinableQueue):
+class UnboundQueue(Queue):
+    # A specialization of Queue that knows it can never
+    # be bound. Changing its maxsize has no effect.
+
+    __slots__ = ()
+
+    def __init__(self, maxsize=None, items=()):
+        if maxsize is not None:
+            raise ValueError("UnboundQueue has no maxsize")
+        Queue.__init__(self, maxsize, items)
+        self.putters = None # Will never be used.
+
+    def put(self, item, block=True, timeout=None):
+        self._put(item)
+        if self.getters:
+            self._schedule_unlock()
+
+
+class PriorityQueue(Queue):
+    '''A subclass of :class:`Queue` that retrieves entries in priority order (lowest first).
+
+    Entries are typically tuples of the form: ``(priority number, data)``.
+
+    .. versionchanged:: 1.2a1
+       Any *items* given to the constructor will now be passed through
+       :func:`heapq.heapify` to ensure the invariants of this class hold.
+       Previously it was just assumed that they were already a heap.
+    '''
+
+    __slots__ = ()
+
+    def _create_queue(self, items=()):
+        q = list(items)
+        _heapify(q)
+        return q
+
+    def _put(self, item):
+        _heappush(self.queue, item)
+        self._did_put_task()
+
+    def _get(self):
+        return _heappop(self.queue)
+
+
+class LifoQueue(Queue):
     """
     A subclass of :class:`JoinableQueue` that retrieves most recently added entries first.
 
