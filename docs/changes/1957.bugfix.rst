@@ -1,0 +1,5 @@
+Monkey-patching the ``queue`` module (done by default in
+``patch_all``) now patches ``Queue``, ``PriorityQueue``, and
+``LifoQueue``. In addition to the general benefits of making all those
+classes cooperative, this is known to solve a non-deterministic
+deadlock with ``urllib3``.

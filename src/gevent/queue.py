@@ -574,8 +574,8 @@ class JoinableQueue(Queue):
 
     def task_done(self):
         '''Indicate that a formerly enqueued task is complete. Used by queue consumer threads.
-        For each :meth:`get <Queue.get>` used to fetch a task, a subsequent call to :meth:`task_done` tells the queue
-        that the processing on the task is complete.
+        For each :meth:`get <Queue.get>` used to fetch a task, a subsequent call to
+        :meth:`task_done` tells the queue that the processing on the task is complete.
 
         If a :meth:`join` is currently blocking, it will resume when all items have been processed
         (meaning that a :meth:`task_done` call was received for every item that had been
