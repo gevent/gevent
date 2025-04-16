@@ -13,8 +13,6 @@ is an object of :class:`Config`.
    This is handy to quickly look for environment variables.
 """
 
-from __future__ import print_function, absolute_import, division
-
 import importlib
 import os
 import textwrap
@@ -116,7 +114,7 @@ def validate_anything(value):
 
 convert_str_value_as_is = validate_anything
 
-class Setting(object):
+class Setting(metaclass=SettingType):
     name = None
     value = None
     validate = staticmethod(validate_invalid)
@@ -155,7 +153,6 @@ class Setting(object):
         self.value = self.validate(self._convert(val))
 
 
-Setting = SettingType('Setting', (Setting,), dict(Setting.__dict__))
 
 def make_settings():
     """
@@ -176,7 +173,8 @@ class Config(object):
     There is one instance of this object at ``gevent.config``. If you
     are going to make changes in code, instead of using the documented
     environment variables, you need to make the changes before using
-    any parts of gevent that might need those settings. For example::
+    any parts of gevent that might need those settings (unless otherwise
+    documented). For example::
 
         >>> from gevent import config
         >>> config.fileobject = 'thread'
@@ -350,6 +348,7 @@ class Threadpool(ImportableSetting, Setting):
     """
 
     default = 'gevent.threadpool.ThreadPool'
+
 
 class ThreadpoolIdleTaskTimeout(FloatSettingMixin, Setting):
     document = True
@@ -545,6 +544,24 @@ class MaxBlockingTime(FloatSettingMixin, Setting):
 
     .. versionadded:: 1.3b1
     """
+
+
+class PrintBlockingReports(BoolSettingMixin, Setting):
+    name = 'print_blocking_reports'
+    default = True
+
+    environment_key = 'GEVENT_MONITOR_PRINT_BLOCKING_REPORTS'
+    desc = """\
+    If `monitor_thread` is enabled, and gevent detects a hub blocked
+    for more than `max_blocking_time`, should gevent print a detailed
+    report about the block?
+
+    The report is generated and notifications are broadcast whether
+    or not the report is printed.
+
+    .. versionadded:: NEXT
+    """
+
 
 class MonitorMemoryPeriod(FloatSettingMixin, Setting):
     name = 'memory_monitor_period'
