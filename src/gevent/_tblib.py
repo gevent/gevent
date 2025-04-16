@@ -359,9 +359,16 @@ def install(*exc_classes_or_instances):
 
 # gevent API
 _installed = False
+# 2025-04-14 On Python 3.14a7, attempting to do *anything* (get its type, print it,...)
+# with a traceback object that has been reconstituted from one that tblib pickled will
+# crash the interpreter. The current HEAD of upstream _tblib can't pass its tests on 3.14
+# and also crashes the interpreter. Our temporary fix is to disable this functionality on
+# 3.14. While we're in early testing, limit it to exact versions known to be broken, just
+# in case we find that it gets fixed in CPython itself.
+_broken_tblib_pickle = sys.version_info == (3, 14, 0, 'alpha', 7)
 def dump_traceback(tb):
     from pickle import dumps
-    if tb is None:
+    if tb is None or _broken_tblib_pickle:
         return dumps(None)
     tb = Traceback(tb)
     return dumps(tb.to_dict())

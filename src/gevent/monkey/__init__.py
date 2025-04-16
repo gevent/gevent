@@ -163,6 +163,7 @@ __all__ = [
 ]
 
 WIN = sys.platform.startswith("win")
+PY314 = sys.version_info[:2] >= (3, 14)
 
 # Unused imports may be removed in a major release after 2024-10.
 # Used private imports may be renamed or removed or changed
@@ -533,6 +534,14 @@ def patch_subprocess():
        On Windows under Python 3, the API support may not completely match
        the standard library.
 
+    .. note::
+       On macOS, this changes the :mod:`multiprocessing` start method to 'fork'.
+       It defaults to 'spawn'.
+
+    .. note::
+       On Python 3.14+ and platforms other than macOS and Windows, this
+       changes the :mod:`multiprocessing` start method to 'fork'.
+       It defaults to 'forkserver'.
     """
     _patch_module('subprocess')
 
@@ -676,8 +685,19 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
     if socket:
         patch_socket(dns=dns, aggressive=aggressive)
     if select:
-        patch_select(aggressive=aggressive)
-        patch_selectors(aggressive=aggressive)
+        if not PY314:
+            patch_select(aggressive=aggressive)
+            patch_selectors(aggressive=aggressive)
+        else:
+            # 3.14 changes the selector module to actually try to _use_
+            # each selector to figure out which one to use by default.
+            # If we patch ``select`` before patching ``selectors``,
+            # that results in using ``gevent.select`` as the implementation,
+            # and that results in creating the hub. Monkey-patching isn't supposed to
+            # create the hub, so reverse order here. This _should_ be safe for all
+            # versions, but just to be sure, don't swap it on old versions.
+            patch_selectors(aggressive=aggressive)
+            patch_select(aggressive=aggressive)
     if ssl:
         patch_ssl(_warnings=_warnings, _first_time=first_time)
     if subprocess:

@@ -210,7 +210,8 @@ greenlet_requires = [
     # won't break again.
     # 3.0 is ABI compatible and adds support for Python 3.12 (but right
     # now it's RC pending additional testing, so we only require it on 3.12)
-    'greenlet >= 3.1.1 ; platform_python_implementation=="CPython"',
+    # 3.2 is the first to support Python 3.14a7
+    'greenlet >= 3.2.0 ; platform_python_implementation=="CPython"',
 ]
 
 # Note that we don't add cffi to install_requires, it's
@@ -338,13 +339,16 @@ def run_setup(ext_modules):
         version=__version__,
         description='Coroutine-based network library',
         long_description=make_long_description(),
-        license='MIT',
         keywords='greenlet coroutine cooperative multitasking light threads monkey',
         author='Denis Bilenko',
         author_email='denis.bilenko@gmail.com',
         maintainer='Jason Madden',
-        maintainer_email='jason@nextthought.com',
+        maintainer_email='jason@seecoresoftware.com',
         url='http://www.gevent.org/',
+        license='MIT', # pep 639, use SPDX license identifiers
+        license_files=[
+            'LICENSE',
+        ],
         project_urls={
             'Bug Tracker': 'https://github.com/gevent/gevent/issues',
             'Source Code': 'https://github.com/gevent/gevent/',
@@ -426,7 +430,6 @@ def run_setup(ext_modules):
         zip_safe=False,
         test_suite="greentest.testrunner",
         classifiers=[
-            "License :: OSI Approved :: MIT License",
             "Programming Language :: Python :: 3 :: Only",
             "Programming Language :: Python :: 3.9",
             "Programming Language :: Python :: 3.10",

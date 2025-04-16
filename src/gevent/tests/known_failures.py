@@ -203,9 +203,9 @@ except AttributeError:
 else:
     raise AssertionError("SetOnceMapping is broken")
 
-DefinitionsBase = DefinitionsMeta('DefinitionsBase', (object,), {})
 
-class Definitions(DefinitionsBase):
+
+class Definitions(metaclass=DefinitionsMeta):
 
     test__util = RunAlone(
         """

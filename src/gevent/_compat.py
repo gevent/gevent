@@ -16,13 +16,14 @@ PY39 = sys.version_info[:2] >= (3, 9)
 PY311 = sys.version_info[:2] >= (3, 11)
 PY312 = sys.version_info[:2] >= (3, 12)
 PY313 = sys.version_info[:2] >= (3, 13)
+PY314 = sys.version_info[:2] >= (3, 14)
 PYPY = hasattr(sys, 'pypy_version_info')
 WIN = sys.platform.startswith("win")
 LINUX = sys.platform.startswith('linux')
 OSX = MAC = sys.platform == 'darwin'
 
 
-PURE_PYTHON = PYPY or os.getenv('PURE_PYTHON')
+PURE_PYTHON = PYPY or os.getenv('PURE_PYTHON') or os.getenv('GEVENT_PURE_PYTHON')
 
 ## Types
 

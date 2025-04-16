@@ -352,6 +352,14 @@ class RLock(object):
     def __exit__(self, typ, value, tb):
         self.release()
 
+    def locked(self):
+        """
+        Return a boolean indicating whether this object is locked right now.
+
+        .. versionadded:: NEXT
+        """
+        return self._count > 0
+
     # Internal methods used by condition variables
 
     def _acquire_restore(self, count_owner):

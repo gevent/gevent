@@ -22,6 +22,8 @@ Cooperative ``subprocess`` module.
    standard library or the source code.
 
 .. _is not defined: http://www.linuxprogrammingblog.com/all-about-linux-signals?page=11
+
+Be sure to see important notes in :func:`gevent.monkey.patch_subprocess`.
 """
 from __future__ import absolute_import, print_function
 # Can we split this up to make it cleaner? See https://github.com/gevent/gevent/issues/748
@@ -63,7 +65,9 @@ from gevent._compat import integer_types, string_types, xrange
 from gevent._compat import PY311
 from gevent._compat import PYPY
 from gevent._compat import PY313
+from gevent._compat import PY314
 from gevent._compat import WIN
+from gevent._compat import MAC
 
 from gevent._compat import fsdecode
 from gevent._compat import fsencode
@@ -2028,14 +2032,56 @@ def run(*popenargs, **kwargs):
     return CompletedProcess(process.args, retcode, stdout, stderr)
 
 def _gevent_did_monkey_patch(target_module, *_args, **_kwargs):
-    # Beginning on 3.8 on Mac, the 'spawn' method became the default
-    # start method. That doesn't fire fork watchers and we can't
-    # easily patch to make it do so: multiprocessing uses the private
-    # c accelerated _subprocess module to implement this. Instead we revert
-    # back to using fork.
-    from gevent._compat import MAC
+    # This is documented in the docstring for :func:`gevent.monkey.patch_subprocess`.
 
     if MAC:
+        # Beginning on 3.8 on Mac, the 'spawn' method became the default
+        # start method. That doesn't fire fork watchers and we can't
+        # easily patch to make it do so: multiprocessing uses the private
+        # c accelerated _subprocess module to implement this. Instead we revert
+        # back to using fork.
         import multiprocessing
         if hasattr(multiprocessing, 'set_start_method'):
             multiprocessing.set_start_method('fork', force=True)
+    elif not WIN and PY314:
+        import multiprocessing
+        # The default switched to forkserver everywhere except mac and windows. This
+        # produces stack traces when monkey patched:
+        # XXX: Why is the socket not blocking correctly?
+        #   File
+        #   "/opt/hostedtoolcache/Python/3.14.0-alpha.7/x64/lib/python3.14/site-packages
+        #                        /gevent/tests/test__issue600.py", line 38, in test_process
+        #     p.start()
+        #     ~~~~~~~^^
+        #   File "///multiprocessing/process.py", line 121, in start
+        #     self._popen = self._Popen(self)
+        #                   ~~~~~~~~~~~^^^^^^
+        #   File "///multiprocessing/context.py", line 224, in _Popen
+        #     return _default_context.get_context().Process._Popen(process_obj)
+        #            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+        #   File "///multiprocessing/context.py", line 300, in _Popen
+        #     return Popen(process_obj)
+        #   File "///multiprocessing/popen_forkserver.py", line 35, in __init__
+        #     super().__init__(process_obj)
+        #     ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+        #   File "///multiprocessing/popen_fork.py", line 20, in __init__
+        #     self._launch(process_obj)
+        #     ~~~~~~~~~~~~^^^^^^^^^^^^^
+        #   File "///multiprocessing/popen_forkserver.py", line 51, in _launch
+        #     self.sentinel, w = forkserver.connect_to_new_process(self._fds)
+        #                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+        #   File "///multiprocessing/forkserver.py", line 106, in connect_to_new_process
+        #     connection.answer_challenge(
+        #     ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        #             wrapped_client, self._forkserver_authkey)
+        #             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        #   File "///multiprocessing/connection.py", line 970, in answer_challenge
+        #     message = connection.recv_bytes(256)         # reject large message
+        #   File "///multiprocessing/connection.py", line 222, in recv_bytes
+        #     buf = self._recv_bytes(maxlength)
+        #   File "///multiprocessing/connection.py", line 447, in _recv_bytes
+        #     buf = self._recv(4)
+        #   File "///multiprocessing/connection.py", line 412, in _recv
+        #     chunk = read(handle, to_read)
+        # BlockingIOError: [Errno 11] Resource temporarily unavailable
+        multiprocessing.set_start_method('fork', force=True)

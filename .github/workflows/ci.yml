@@ -103,7 +103,7 @@ jobs:
         # for example to force a specific patch release, don't forget to change conditions!
         # XXX: We could probably make this easier on ourself by adding a specific
         # key to the matrix in the version we care about and checking for that matrix key.
-        python-version: ["3.12", "pypy-3.10-v7.3.17", '3.9', '3.10', '3.11', "3.13"]
+        python-version: ["3.14.0-alpha.7", "3.12", "pypy-3.10-v7.3.17", '3.9', '3.10', '3.11', "3.13.3"]
         os: [macos-latest, ubuntu-latest]
         exclude:
           # The bulk of the testing is on Linux and Windows (appveyor).
@@ -151,11 +151,9 @@ jobs:
       - name: Set coverage status
         # coverage is too slow on PyPy. We can't submit it from macOS (see that action),
         # so don't bother taking the speed hit there either.
-        # Coverage can't run the test_interpreters.py tests because greenlet can't
-        # run there and that's how coverage is configured. Right now, we only have that
-        # on Python 3.12, so take the quick way out and nix that version too.
+        # 3.14a7 doesn't yet have the binary tracer that's needed to trace greenlets.
         # Remember this condition needs to be synced with the coveralls/report step.
-        if: ${{ !startsWith(matrix.python-version, 'pypy') && !startsWith(matrix.python-version, '3.12') && startsWith(runner.os, 'Linux') }}
+        if: ${{ !startsWith(matrix.python-version, 'pypy') && !startsWith(matrix.python-version, '3.14.0-alpha.7') && startsWith(runner.os, 'Linux') }}
         run: |
           echo G_USE_COV=--coverage >> $GITHUB_ENV
 
@@ -190,7 +188,7 @@ jobs:
           # without that setting here. The whole thing is being
           # matched even without the CFLAGS matching. Perhaps the - is
           # a generic search separator?
-          key: ${{ runner.os }}-${{ matrix.os }}-configcache3-${{ matrix.python-version }}-${{ env.CFLAGS }}
+          key: ${{ runner.os }}-${{ matrix.os }}-configcache4-${{ matrix.python-version }}-${{ env.CFLAGS }}
 
       # Install gevent. Yes, this will create different files each time,
       # leading to a fresh cache. But because of CCache stats, we had already been doing
@@ -211,8 +209,7 @@ jobs:
           pip install -q -U 'cffi;platform_python_implementation=="CPython"'
           pip install -q -U 'cython>=3.0.2'
           # Use a debug version of greenlet to help catch any errors earlier.
-          CFLAGS="$CFLAGS -Og -g -UNDEBUG" pip install -v --no-binary :all: 'greenlet>=2.0.0;platform_python_implementation=="CPython" and python_version < "3.11"'
-          CFLAGS="$CFLAGS -Og -g -UNDEBUG" pip install -v --no-binary :all: 'greenlet>=3.0rc3;platform_python_implementation=="CPython" and python_version >= "3.11"'
+          CFLAGS="$CFLAGS -Og -g -UNDEBUG" pip install -v --no-binary :all: 'greenlet>=3.2.0;platform_python_implementation=="CPython" '
 
       - name: Build gevent (non-Mac)
         if: ${{ ! startsWith(runner.os, 'Mac') }}
@@ -305,7 +302,7 @@ jobs:
       # it's sufficient to run the full suite on the current version
       # and oldest version.
       - name: "Tests: subproccess and FileObjectThread"
-        if: startsWith(runner.os, 'Linux') || (startsWith(runner.os, 'Mac') && matrix.python-version == '3.12.2')
+        if: startsWith(runner.os, 'Linux') || (startsWith(runner.os, 'Mac') && matrix.python-version == '3.12')
         # Now, the non-default threaded file object.
         # In the past, we included all test files that had a reference to 'subprocess'' somewhere in their
         # text. The monkey-patched stdlib tests were specifically included here.
@@ -335,7 +332,7 @@ jobs:
         # Run the leaktests;
         # This is incredibly important and we MUST have an environment that successfully passes
         # these tests.
-        if: (startsWith(matrix.python-version, '3.11.8')) && startsWith(runner.os, 'Linux')
+        if: (startsWith(matrix.python-version, '3.12')) && startsWith(runner.os, 'Linux')
         env:
           GEVENTTEST_LEAKCHECK: 1
         run: |
@@ -343,19 +340,19 @@ jobs:
       - name: "Tests: PURE_PYTHON"
         # No compiled cython modules on CPython, using the default backend. Get coverage here.
         # We should only need to run this for a single version.
-        if: (matrix.python-version == '3.11.8') && startsWith(runner.os, 'Linux')
+        if: (matrix.python-version == '3.11') && startsWith(runner.os, 'Linux')
         env:
           PURE_PYTHON: 1
         run: |
           python -mgevent.tests --second-chance --coverage
       - name: "Tests: libuv"
-        if: (startsWith(matrix.python-version, '3.11.8'))
+        if: (startsWith(matrix.python-version, '3.11'))
         env:
           GEVENT_LOOP: libuv
         run: |
           python -m gevent.tests --second-chance $G_USE_COV
       - name: "Tests: libev-cffi"
-        if: (matrix.python-version == '3.11.8') && startsWith(runner.os, 'Linux')
+        if: (matrix.python-version == '3.11') && startsWith(runner.os, 'Linux')
         env:
           GEVENT_LOOP: libev-cffi
         run: |
@@ -372,14 +369,15 @@ jobs:
         # It then runs ``coveralls report``. But that is producing
         # a usage error from ``coveralls`` (report is not recognized) Presumably the
         # brew and action versions are out of sync?
-        if: ${{ !startsWith(matrix.python-version, 'pypy') && !startsWith(matrix.python-version, '3.12') && startsWith(runner.os, 'Linux') }}
+        if: ${{ !startsWith(matrix.python-version, 'pypy') && !startsWith(matrix.python-version, '3.14.0-alpha.7') && startsWith(runner.os, 'Linux') }}
         with:
           flag-name: run-${{ join(matrix.*, '-') }}
           parallel: true
           format: cobertura
+          fail-on-error: false
 
       - name: Lint
-        if: matrix.python-version == '3.10' && startsWith(runner.os, 'Linux')
+        if: matrix.python-version == '3.12' && startsWith(runner.os, 'Linux')
         # We only need to do this on one version.
         # We do this here rather than a separate job to avoid the compilation overhead.
         # 20230707: Python 3.11 crashes inside pylint/astroid on _ssl3.py;
