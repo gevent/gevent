@@ -356,7 +356,7 @@ class RLock(object):
         """
         Return a boolean indicating whether this object is locked right now.
 
-        .. versionadded:: NEXT
+        .. versionadded:: 25.4.1
         """
         return self._count > 0
 

@@ -1,2 +1,0 @@
-Add a new environment variable and configuration setting to control
-whether blocking reports are printed by the monitor thread.

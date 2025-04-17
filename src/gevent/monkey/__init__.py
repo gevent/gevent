@@ -270,7 +270,7 @@ def patch_queue():
 
     .. versionadded:: 1.3.5
 
-    .. versionchanged:: NEXT
+    .. versionchanged:: 25.4.1
        In addition to ``SimpleQueue``, now also patches
        ``Queue``, ``PriorityQueue`` and ``LifoQueue``.`
     """
