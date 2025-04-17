@@ -1,3 +1,0 @@
-Do not use pywsgi in a security-conscious environment.
-
-Fix one security issue related to HTTP 100 Continue handling.

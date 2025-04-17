@@ -6,7 +6,51 @@
 
 .. towncrier release notes start
 
-24.11.1 (2024-11-11)
+25.4.1 (2025-04-17)
+===================
+
+
+Features
+--------
+
+- Add a new environment variable and configuration setting to control
+  whether blocking reports are printed by the monitor thread.
+  See :issue:`2070`.
+- Add initial support for Python 3.14a7. Earlier and later versions of
+  Python 3.14 may or may not work as expected.
+  
+
+
+Bugfixes
+--------
+
+- Fix using gevent's BackdoorServer with Unix sockets.
+  See :issue:`1769`.
+- Monkey-patching the ``queue`` module (done by default in
+  ``patch_all``) now patches ``Queue``, ``PriorityQueue``, and
+  ``LifoQueue``. In addition to the general benefits of making all those
+  classes cooperative, this is known to solve a non-deterministic
+  deadlock with ``urllib3``.
+
+  In addition, ``Queue`` was renamed to ``SimpleQueue``; previously
+  ``SimpleQueue`` was an alias for the undocumented
+  ``queue._PySimpleQueue``. This makes ``SimpleQueue`` cooperative even
+  without monkey-patching.
+
+  Likewise, ``JoinableQueue`` was renamed to ``Queue``, providing the
+  ``join`` method to all ``Queue`` objects, thus matching the standard
+  library. The old name remains for backwards compatibility.
+  See :issue:`1957`.
+- Do not assume that ``threading.get_native_id`` exists. This improves
+  support for untested platforms.
+  See :issue:`2053`.
+- Do not use pywsgi in a security-conscious environment.
+
+  Fix one security issue related to HTTP 100 Continue handling.
+  See :issue:`2075`.
+
+
+----24.11.1 (2024-11-11)
 ====================
 
 

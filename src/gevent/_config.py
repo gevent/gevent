@@ -559,7 +559,7 @@ class PrintBlockingReports(BoolSettingMixin, Setting):
     The report is generated and notifications are broadcast whether
     or not the report is printed.
 
-    .. versionadded:: NEXT
+    .. versionadded:: 25.4.1
     """
 
 

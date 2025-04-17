@@ -27,7 +27,7 @@ class, not an instance or subclass).
        ``Queue(0)`` now means queue of infinite size, not a channel. A :exc:`DeprecationWarning`
        will be issued with this argument.
 
-.. versionchanged:: NEXT
+.. versionchanged:: 25.4.1
    :class:`Queue` was renamed to :class:`SimpleQueue`, while :class:`JoinableQueue` was
    renamed to :class:`Queue` (`JoinableQueue` remains a backwards compatible alias).
    This adds the ability to ``join()`` all queues, like the standard library.
@@ -129,7 +129,7 @@ class SimpleQueue(object):
        previously anyway, but that wasn't the case for PyPy.
     .. versionchanged:: 24.10.1
        Implement the ``shutdown`` methods from Python 3.13.
-    .. versionchanged:: NEXT
+    .. versionchanged:: 25.4.1
        Renamed from ``Queue`` to ``SimpleQueue`` to better match the standard library.
        While this class no longer has a ``shutdown`` method, the new ``Queue`` class
        (previously ``JoinableQueue``) continues to have it.
@@ -462,7 +462,7 @@ class Queue(SimpleQueue):
     A subclass of :class:`SimpleQueue` that additionally has
     :meth:`task_done` and :meth:`join` methods.
 
-    .. versionchanged:: NEXT
+    .. versionchanged:: 25.4.1
        Renamed from ``JoinablQueue`` to simply ``Queue`` to better
        match the capability of the standard library :class:`queue.Queue`.
     """
@@ -578,7 +578,7 @@ class Queue(SimpleQueue):
             self.get()
             self.task_done()
 
-# .. versionchanged:: NEXT
+# .. versionchanged:: 25.4.1
 #  Now a BWC alias
 JoinableQueue = Queue
 
