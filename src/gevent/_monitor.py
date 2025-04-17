@@ -252,12 +252,13 @@ class PeriodicMonitoringThread(object):
 
 
     def _show_blocking_report(self, hub, report, active_greenlet):
-        stream = hub.exception_stream
-        for line in report:
-            # Printing line by line may interleave with other things,
-            # but it should also prevent a "reentrant call to print"
-            # when the report is large.
-            print(line, file=stream)
+        if GEVENT_CONFIG.print_blocking_reports:
+            stream = hub.exception_stream
+            for line in report:
+                # Printing line by line may interleave with other things,
+                # but it should also prevent a "reentrant call to print"
+                # when the report is large.
+                print(line, file=stream)
         return (active_greenlet, report)
 
     def ignore_current_greenlet_blocking(self):
