@@ -162,7 +162,7 @@ class Timeout(BaseException):
 
     When catching timeouts, keep in mind that the one you catch may
     not be the one you have set (a calling function may have set its
-    own timeout); if you going to silence a timeout, always check that
+    own timeout); if you are going to silence a timeout, always check that
     it's the instance you need::
 
         timeout = Timeout(1)
