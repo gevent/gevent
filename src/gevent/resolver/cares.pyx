@@ -25,15 +25,6 @@ from _socket import herror
 
 __all__ = ['channel']
 
-cdef tuple string_types
-cdef type text_type
-
-if PY_MAJOR_VERSION >= 3:
-    string_types = str,
-    text_type = str
-else:
-    string_types = __builtins__.basestring,
-    text_type = __builtins__.unicode
 
 # These three constants used to be DEF, but the DEF construct
 # is deprecated in Cython. Using a cdef extern, the generated
@@ -87,7 +78,12 @@ cdef extern from *:
     #ifndef EAI_SYSTEM
     #define EAI_SYSTEM
     #endif
-
+#if defined(WIN32) || defined(_WIN32)
+    static const char * hstrerror(int err)
+    {
+        return NULL;
+    }
+#endif
     """
 
 cdef extern from "ares.h":
@@ -320,9 +316,6 @@ cdef list _parse_h_addr_list(hostent* host):
 cdef object _as_str(const char* val):
     if not val:
         return None
-
-    if PY_MAJOR_VERSION < 3:
-        return <bytes>val
     return val.decode('utf-8')
 
 
@@ -444,7 +437,7 @@ cdef class channel:
             raise gaierror(cares.ARES_EDESTRUCTION, 'this ares channel has been destroyed')
         if not servers:
             servers = []
-        if isinstance(servers, string_types):
+        if isinstance(servers, str):
             servers = servers.split(',')
         cdef int length = len(servers)
         cdef int result, index

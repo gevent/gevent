@@ -19,15 +19,8 @@ environment:
     # too often we get failures to resolve DNS names or failures
     # to connect on AppVeyor.
     GEVENTTEST_USE_RESOURCES: "-network"
-    # Don't get warnings about Python 2 support being deprecated. We
-    # know.
-    PIP_NO_PYTHON_VERSION_WARNING: 1
+    PIP_NO_WARN_SCRIPT_LOCATION: 1
     PIP_UPGRADE_STRATEGY: eager
-    # Stay on the legacy implementation of editable installs.
-    # Recent versions of setuptools has changed how editable installs work,
-    # which broke Appveyor builds.
-    # For a relevant upstream issue, see https://github.com/pypa/setuptools/issues/3557
-    SETUPTOOLS_ENABLE_FEATURES: "legacy-editable"
     # Enable this if debugging a resource leak. Otherwise
     # it slows things down.
     # PYTHONTRACEMALLOC: 10
@@ -49,7 +42,7 @@ environment:
       PYTHON_EXE: python
 
     - PYTHON: "C:\\Python312-x64"
-      PYTHON_VERSION: "3.12.0b"
+      PYTHON_VERSION: "3.12.0"
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
 
@@ -114,6 +107,9 @@ install:
   - ECHO "Installed SDKs:"
   - ps: "if(Test-Path(\"C:/Program Files/Microsoft SDKs/Windows\")) {ls \"C:/Program Files/Microsoft SDKs/Windows\";}"
 
+  - ECHO "Installed Kits:"
+  - ps: "if(Test-Path(\"C:/Program Files (x86)/Windows Kits\")) {ls \"C:/Program Files (x86)/Windows Kits\";}"
+
   # Install Python (from the official .msi of http://python.org) and pip when
   # not already installed.
   # PyPy portion based on https://github.com/wbond/asn1crypto/blob/master/appveyor.yml
@@ -164,7 +160,7 @@ cache:
 
 build_script:
   # Build the compiled extension
-  - "%CMD_IN_ENV% %PYEXE% -m pip install -U wheel"
+  - "%CMD_IN_ENV% %PYEXE% -m pip install -U pip wheel"
   - "%CMD_IN_ENV% %PYEXE% -m pip install -U setuptools"
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -m pip install -U -e .[test]
 
