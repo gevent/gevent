@@ -43,6 +43,7 @@ from heapq import heappush as _heappush
 from heapq import heappop as _heappop
 from heapq import heapify as _heapify
 import collections
+import types
 
 import queue as __queue__
 # We re-export these exceptions to client modules.
@@ -108,6 +109,7 @@ class ItemWaiter(Waiter): # pylint:disable=undefined-variable
         self.item = None
         return self.switch(self)
 
+
 class SimpleQueue(object):
     """
     Create a queue object with a given maximum size.
@@ -133,6 +135,8 @@ class SimpleQueue(object):
        Renamed from ``Queue`` to ``SimpleQueue`` to better match the standard library.
        While this class no longer has a ``shutdown`` method, the new ``Queue`` class
        (previously ``JoinableQueue``) continues to have it.
+    .. versionchanged:: NEXT
+       Make this class subscriptable.
     """
 
     __slots__ = (
@@ -146,6 +150,7 @@ class SimpleQueue(object):
         'is_shutdown', # 3.13
     )
 
+    __class_getitem__ = classmethod(types.GenericAlias)
 
     def __init__(self, maxsize=None, items=(), _warn_depth=2):
         if maxsize is not None and maxsize <= 0:
@@ -650,7 +655,17 @@ class LifoQueue(Queue):
         return self.queue[-1]
 
 
-class Channel(object):
+class Channel:
+    """
+    A queue-like object that can only hold one item at a
+    time.
+
+    This is commonly used as a synchronization primitive,
+    and is implemented efficiently for this use-case.
+
+    .. versionchanged:: NEXT
+       Make this class subscriptable.
+    """
 
     __slots__ = (
         'getters',
@@ -659,6 +674,8 @@ class Channel(object):
         '_event_unlock',
         '__weakref__',
     )
+
+    __class_getitem__ = classmethod(types.GenericAlias)
 
     def __init__(self, maxsize=1):
         # We take maxsize to simplify certain kinds of code
