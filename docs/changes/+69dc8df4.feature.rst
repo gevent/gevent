@@ -1,0 +1,1 @@
+Make the c-ares resolver build on Windows.
