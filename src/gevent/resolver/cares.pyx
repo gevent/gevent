@@ -87,7 +87,12 @@ cdef extern from *:
     #ifndef EAI_SYSTEM
     #define EAI_SYSTEM
     #endif
-
+#if defined(WIN32) || defined(_WIN32)
+    static const char * hstrerror(int err)
+    {
+        return NULL;
+    }
+#endif
     """
 
 cdef extern from "ares.h":
