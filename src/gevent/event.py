@@ -170,6 +170,7 @@ class Event(AbstractLinkable): # pylint:disable=undefined-variable
         pass
 
 
+
 class AsyncResult(AbstractLinkable): # pylint:disable=undefined-variable
     """
     A one-time event that stores a value or an exception.

@@ -583,8 +583,8 @@ class Queue(SimpleQueue):
             self.get()
             self.task_done()
 
-# .. versionchanged:: 25.4.1
-#  Now a BWC alias
+#: .. versionchanged:: 25.4.1
+#:  Now a BWC alias
 JoinableQueue = Queue
 
 class UnboundQueue(Queue):
