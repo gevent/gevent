@@ -82,10 +82,33 @@ class UsesOnlyOneItemMixin:
         gevent.sleep(0.01)
         assert p.get(timeout=0) == "OK"
 
-class TestQueue(UsesOnlyOneItemMixin, TestCase):
+
+
+class SubscriptMixin:
+    def _getFUT(self):
+        raise NotImplementedError
 
     def _makeOne(self, *args, **kwargs):
-        return queue.Queue(*args, **kwargs)
+        return self._getFUT()(*args, **kwargs)
+
+    def test_subscript(self):
+        import queue as stdlib_queue
+        kind = self._getFUT()
+        try:
+            stdlib_kind = getattr(stdlib_queue, kind.__name__)
+        except AttributeError:
+            assert kind.__name__ == 'Channel'
+            import types
+            self.assertIsInstance(kind[int], types.GenericAlias)
+        else:
+            self.assertIsNot(kind, stdlib_kind)
+            self.assertIsInstance(kind[int], type(stdlib_kind[int]))
+
+
+class TestQueue(SubscriptMixin, UsesOnlyOneItemMixin, TestCase):
+
+    def _getFUT(self):
+        return queue.Queue
 
     def test_get_nowait_simple(self):
         result = []
@@ -279,12 +302,11 @@ class TestQueue(UsesOnlyOneItemMixin, TestCase):
 
 
 
-class TestChannel(UsesOnlyOneItemMixin, TestCase):
+class TestChannel(SubscriptMixin, UsesOnlyOneItemMixin, TestCase):
 
     SUPPORTS_PUTTING_WITHOUT_GETTING = False
-
-    def _makeOne(self, *args, **kwargs):
-        return queue.Channel(*args, **kwargs)
+    def _getFUT(self):
+        return queue.Channel
 
     def test_get_nowait_unlock_channel(self):
         # get_nowait runs fine in the hub, and
@@ -384,14 +406,11 @@ class TestChannel(UsesOnlyOneItemMixin, TestCase):
         self.assertEqual(r, [])
 
 
-
-
 class TestJoinableQueue(TestQueue):
-
     queue = queue
 
-    def _makeOne(self, *args, **kwargs):
-        return queue.JoinableQueue(*args, **kwargs)
+    def _getFUT(self):
+        return queue.JoinableQueue
 
     def test_task_done(self):
         channel = self._makeOne()
@@ -447,8 +466,19 @@ class TestJoinableQueue(TestQueue):
     def test_issue_45(self):
         """Test that join() exits immediately if not jobs were put into the queue"""
         self.switch_expected = False
-        q = queue.JoinableQueue()
+        q = self._makeOne()
         q.join()
+
+
+class TestLifoQueue(SubscriptMixin, TestCase):
+    def _getFUT(self):
+        return queue.LifoQueue
+
+
+class TestPriorityQueue(SubscriptMixin, TestCase):
+    def _getFUT(self):
+        return queue.PriorityQueue
+
 
 class AbstractTestWeakRefMixin(object):
 
@@ -517,16 +547,16 @@ class TestPutInterruptChannel(TestPutInterrupt):
         return self.kind()
 
 
-if hasattr(queue, 'SimpleQueue'):
 
-    class TestGetInterruptSimpleQueue(TestGetInterrupt):
-        kind = queue.SimpleQueue
 
-        def test_raises_timeout_Timeout(self):
-            raise unittest.SkipTest("Not supported")
+class TestGetInterruptSimpleQueue(TestGetInterrupt):
+    kind = queue.SimpleQueue
 
-        test_raises_timeout_Timeout_exc_customized = test_raises_timeout_Timeout
-        test_outer_timeout_is_not_lost = test_raises_timeout_Timeout
+    def test_raises_timeout_Timeout(self):
+        raise unittest.SkipTest("Not supported")
+
+    test_raises_timeout_Timeout_exc_customized = test_raises_timeout_Timeout
+    test_outer_timeout_is_not_lost = test_raises_timeout_Timeout
 
 
 del AbstractGenericGetTestCase

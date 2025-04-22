@@ -1,0 +1,1 @@
+Make gevent's ``queue`` classes subscriptable to match the standard library.
