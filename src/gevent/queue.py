@@ -135,7 +135,7 @@ class SimpleQueue(object):
        Renamed from ``Queue`` to ``SimpleQueue`` to better match the standard library.
        While this class no longer has a ``shutdown`` method, the new ``Queue`` class
        (previously ``JoinableQueue``) continues to have it.
-    .. versionchanged:: NEXT
+    .. versionchanged:: 25.4.2
        Make this class subscriptable.
     """
 
@@ -663,7 +663,7 @@ class Channel:
     This is commonly used as a synchronization primitive,
     and is implemented efficiently for this use-case.
 
-    .. versionchanged:: NEXT
+    .. versionchanged:: 25.4.2
        Make this class subscriptable.
     """
 

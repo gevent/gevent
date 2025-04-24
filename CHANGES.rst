@@ -6,7 +6,20 @@
 
 .. towncrier release notes start
 
-25.4.1 (2025-04-17)
+25.4.2 (2025-04-24)
+===================
+
+
+Features
+--------
+
+- Make gevent's ``queue`` classes subscriptable to match the standard library.
+  See :issue:`2102`.
+- Make the c-ares resolver build on Windows.
+  
+
+
+----25.4.1 (2025-04-17)
 ===================
 
 
