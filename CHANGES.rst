@@ -18,7 +18,7 @@ Features
   See :issue:`2070`.
 - Add initial support for Python 3.14a7. Earlier and later versions of
   Python 3.14 may or may not work as expected.
-  
+
 
 
 Bugfixes
@@ -41,6 +41,20 @@ Bugfixes
   ``join`` method to all ``Queue`` objects, thus matching the standard
   library. The old name remains for backwards compatibility.
   See :issue:`1957`.
+
+  .. caution::
+     Only the documented, tested (by the standard library), attributes are identical between
+     the standard library and gevent ``Queue`` implementations.
+     Internal implementation details are very different, and using
+     undocumented, untested details such as the internal ``Condition``
+     object ``all_tasks_done`` instead of the documented, tested
+     ``join`` method will fail with this change.
+
+     If you have code that relies on undocumented implementation
+     details that cannot bo ported to the documented interface, please
+     file an issue.
+
+
 - Do not assume that ``threading.get_native_id`` exists. This improves
   support for untested platforms.
   See :issue:`2053`.
@@ -50,7 +64,7 @@ Bugfixes
   See :issue:`2075`.
 
 
-----24.11.1 (2024-11-11)
+24.11.1 (2024-11-11)
 ====================
 
 

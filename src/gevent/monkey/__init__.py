@@ -273,13 +273,25 @@ def patch_queue():
     .. versionchanged:: 25.4.1
        In addition to ``SimpleQueue``, now also patches
        ``Queue``, ``PriorityQueue`` and ``LifoQueue``.`
+
+       Note that only documented attributes are the same between
+       gevent and the standard library. Internal implementation details
+       are very different.
     """
+    from gevent._config import validate_bool
+    import os
+
+    # IMPORTANT: If you use this, please file an issue!
+    # This may be removed after October 2025.
+    DISABLE_QUEUE_PATCH = os.environ.get('GEVENT_MONKEY_DISABLE_QUEUE_QUEUE', 'false')
+    DISABLE_QUEUE_PATCH = validate_bool(DISABLE_QUEUE_PATCH)
+
     _patch_module('queue', items=[
         'SimpleQueue',
         'PriorityQueue',
         'LifoQueue',
-        'Queue',
-    ])
+    ] + (['Queue',] if not DISABLE_QUEUE_PATCH else [])
+    )
 
 
 @_ignores_DoNotPatch
