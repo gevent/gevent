@@ -1426,7 +1426,24 @@ if PY314:
         'test__interpreters.DestroyTests.test_still_running',
         # Same.
         'test__interpreters.RunStringTests.test_already_running',
+        # Attempts to use ``signal.pthread_kill`` to send a signal to the
+        # main thread to interrupt it, but not kill it. Currently there is
+        # no way to emulate this behaviour with greenlets.
+        'test_socketserver.SocketWriterTest.test_write',
+        # Tries to use ``sys.unraisablehook`` to catch exceptions
+        # from a background thread. We have no way to intercept that.
+        'test_thread.ThreadRunningTests.test_unraisable_exception',
     ]
+
+    if ARES:
+        disabled_tests += [
+            # ends up in ``urlib.request._is_local_authority`` for a local
+            # file URL. That passes it to ``gethostbyname`` and expects it to
+            # raise a ``socket.gaierror`` on invalid names. But the ares resolver
+            # raises a ``socket.herror``. I can't fix this without breaking other tests
+            # (I *think*)
+            'test_urllib2.HandlerTests.test_file',
+        ]
 
 if TRAVIS:
     disabled_tests += [

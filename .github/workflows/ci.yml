@@ -100,7 +100,7 @@ jobs:
         # for example to force a specific patch release, don't forget to change conditions!
         # XXX: We could probably make this easier on ourself by adding a specific
         # key to the matrix in the version we care about and checking for that matrix key.
-        python-version: ["3.14.0-alpha.7", "3.12", "pypy-3.10-v7.3.17", '3.9', '3.10', '3.11', "3.13.3"]
+        python-version: ["3.14.0-beta.1", "3.12", "pypy-3.10-v7.3.17", '3.9', '3.10', '3.11', "3.13.3"]
         os: [macos-latest, ubuntu-latest]
         exclude:
           # The bulk of the testing is on Linux and Windows (appveyor).
@@ -148,9 +148,9 @@ jobs:
       - name: Set coverage status
         # coverage is too slow on PyPy. We can't submit it from macOS (see that action),
         # so don't bother taking the speed hit there either.
-        # 3.14a7 doesn't yet have the binary tracer that's needed to trace greenlets.
+        # 3.14b1 doesn't yet have the binary tracer that's needed to trace greenlets.
         # Remember this condition needs to be synced with the coveralls/report step.
-        if: ${{ !startsWith(matrix.python-version, 'pypy') && !startsWith(matrix.python-version, '3.14.0-alpha.7') && startsWith(runner.os, 'Linux') }}
+        if: ${{ !startsWith(matrix.python-version, 'pypy') && !startsWith(matrix.python-version, '3.14.0-beta.1') && startsWith(runner.os, 'Linux') }}
         run: |
           echo G_USE_COV=--coverage >> $GITHUB_ENV
 
@@ -366,7 +366,7 @@ jobs:
         # It then runs ``coveralls report``. But that is producing
         # a usage error from ``coveralls`` (report is not recognized) Presumably the
         # brew and action versions are out of sync?
-        if: ${{ !startsWith(matrix.python-version, 'pypy') && !startsWith(matrix.python-version, '3.14.0-alpha.7') && startsWith(runner.os, 'Linux') }}
+        if: ${{ !startsWith(matrix.python-version, 'pypy') && !startsWith(matrix.python-version, '3.14.0-beta.1') && startsWith(runner.os, 'Linux') }}
         with:
           flag-name: run-${{ join(matrix.*, '-') }}
           parallel: true

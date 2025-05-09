@@ -21,10 +21,14 @@ class Patcher(BasePatcher):
                 from greenlet import getcurrent
                 from gevent.thread import _ThreadHandle
                 thread._after_fork = lambda new_ident=None: new_ident
-                thread._handle = _ThreadHandle()
-                thread._handle._set_greenlet(getcurrent())
-                thread._ident = thread._handle.ident
-                assert thread.ident == thread._handle.ident
+                handle = _ThreadHandle()
+                handle._set_greenlet(getcurrent())
+                handle_attr = '_handle'
+                if hasattr(thread, '_os_thread_handle'):
+                    handle_attr = '_os_thread_handle'
+                setattr(thread, handle_attr, handle)
+                thread._ident = handle.ident
+                assert thread.ident == getattr(thread, handle_attr).ident
                 continue
             thread.join = self._make_existing_non_main_thread_join_func(thread,
                                                                         None,
@@ -38,11 +42,13 @@ class Patcher(BasePatcher):
         threading_mod = self.threading_mod
         orig_shutdown = self.orig_shutdown
         _greenlet = main_thread._greenlet = greenlet.getcurrent()
-
+        handle_attr = '_handle'
+        if hasattr(main_thread, '_os_thread_handle'):
+            handle_attr = '_os_thread_handle'
         def _shutdown():
             # Release anyone trying to join() me,
             # and let us switch to them.
-            main_thread._handle._set_done()
+            getattr(main_thread, handle_attr)._set_done()
             from gevent import sleep
             try:
                 sleep()
@@ -64,7 +70,7 @@ class Patcher(BasePatcher):
                     return
                 def join(self):
                     return
-            main_thread._handle = FakeHandle()
+            setattr(main_thread, handle_attr, FakeHandle())
             assert main_thread.is_alive()
             # main_thread._is_stopped = False
             # main_thread._tstate_lock = main_thread.__real_tstate_lock
@@ -78,11 +84,13 @@ class Patcher(BasePatcher):
                 if t.daemon or t is main_thread:
                     continue
                 while t.is_alive():
+                    # 3.13.3 and >= 3.13.4 name this different
+                    handle = getattr(t, handle_attr)
                     try:
-                        t._handle.join(0.001)
+                        handle.join(0.001)
                     except RuntimeError:
                         # Joining ourself.
-                        t._handle._set_done()
+                        handle._set_done()
                         break
 
             orig_shutdown()
