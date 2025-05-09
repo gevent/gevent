@@ -96,6 +96,7 @@ LIBUV_SOURCES = [
     # Added between 1.42.0 and 1.44.2; only used
     # on unix in that release, but generic
     _libuv_source('strtok.c'),
+    _libuv_source('thread-common.c'),
 ]
 
 if WIN:
@@ -160,13 +161,10 @@ else:
 
 if sys.platform.startswith('linux'):
     LIBUV_SOURCES += [
-        _libuv_source('unix/linux-core.c'),
-        _libuv_source('unix/linux-inotify.c'),
-        _libuv_source('unix/linux-syscalls.c'),
         _libuv_source('unix/procfs-exepath.c'),
         _libuv_source('unix/proctitle.c'),
         _libuv_source('unix/random-sysctl-linux.c'),
-        _libuv_source('unix/epoll.c'),
+        _libuv_source('unix/linux.c'),
     ]
 elif sys.platform == 'darwin':
     LIBUV_SOURCES += [
@@ -298,19 +296,11 @@ elif WIN:
     _define_macro('_CRT_SECURE_NO_WARNINGS', 1)
     _define_macro('_WIN32_WINNT', '0x0602')
     _define_macro('WIN32_LEAN_AND_MEAN', 1)
-    # This value isn't available on the platform that we build and
-    # test Python 2.7 on. It's used for getting power management
-    # suspend/resume notifications, maybe for keeping timers accurate?
-    #
-    # TODO: This should be a more targeted check based on the platform
-    # version, but that's complicated because it depends on having a
-    # particular patch installed to the OS, and I don't know how to
-    # check for that...but we're dropping Python 2 support soon, so
-    # I suspect it really doesn't matter.
-    if PY2:
-        _define_macro('LOAD_LIBRARY_SEARCH_SYSTEM32', 0)
+
     _add_library('advapi32')
+    _add_library('dbghelp')
     _add_library('iphlpapi')
+    _add_library('ole32')
     _add_library('psapi')
     _add_library('shell32')
     _add_library('user32')

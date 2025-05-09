@@ -428,7 +428,6 @@ def run_setup(ext_modules):
         # cffi is not installed: it's just ignored in that case.
         cffi_modules=cffi_modules,
         zip_safe=False,
-        test_suite="greentest.testrunner",
         classifiers=[
             "Programming Language :: Python :: 3 :: Only",
             "Programming Language :: Python :: 3.9",

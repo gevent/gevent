@@ -113,8 +113,7 @@ static int vfd_open_(vfd_socket_t handle, int pyexc)
 	/* check if it's already in the dict */
 	value = PyDict_GetItem(vfd_map, key);
 	if (value != NULL) {
-		/* is it safe to use PyInt_AS_LONG(value) here? */
-		fd = PyInt_AsLong(value);
+		fd = PyLong_AsLong(value);
 		if (fd >= 0) {
 			++vfd_entries[fd].count;
 			goto done;
@@ -154,7 +153,7 @@ allocated:
 	vfd_entries[fd].handle = handle;
 	vfd_entries[fd].count = 1;
 	VFD_LOCK_LEAVE;
-	value = PyInt_FromLong(fd);
+	value = PyLong_FromLong(fd);
 	PyDict_SetItem(vfd_map, key, value);
 	Py_DECREF(value);
 done:

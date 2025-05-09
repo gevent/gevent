@@ -25,7 +25,7 @@ files::
 Check if 'config.guess' and/or 'config.sub' went backwards in time
 (the 'timestamp' and 'copyright' dates). If so, revert it (or update
 from the latest source
-http://git.savannah.gnu.org/gitweb/?p=config.git;a=tree )
+https://git.savannah.gnu.org/gitweb/?p=config.git;a=tree )
 
 Updating c-ares
 ===============
@@ -94,6 +94,7 @@ Updating libuv
     rm -rf libuv/tools
     rm -f libuv/android-configure*
     rm -f libuv/uv_win_longpath.manifest
+    rm -rf libuv/cmake-toolchains/
 
 At this point there might be new files in libuv that need added to git
 and the build process. Evaluate those and add them to git and to
@@ -108,3 +109,10 @@ accounted for in our build file.
    https://github.com/libuv/libuv/issues/2862
 
 - Follow the same 'config.guess' and 'config.sub' steps as libev.
+- Beginning with libuv 1.49, you must edit ``src/unix/kqueue.c``. In
+  the function ``uv__io_check_fd``, there should be two blocks that
+  check the file descriptor type on FreeBSD and Apple platforms,
+  returning EINVAL for regular files and pipes. ``#if 0`` out those
+  blocks. If you don't do this, ``test__fileobject.py`` will fail
+  (obviously our tested use cases don't involve the supposed issues
+  being fixed by those blocks).

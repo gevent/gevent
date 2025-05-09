@@ -131,11 +131,12 @@ int uv__io_check_fd(uv_loop_t* loop, int fd) {
 
 
 void uv__io_poll(uv_loop_t* loop, int timeout) {
+  uv__loop_internal_fields_t* lfields;
   struct pollfd events[1024];
   struct pollfd pqry;
   struct pollfd* pe;
   struct poll_ctl pc;
-  QUEUE* q;
+  struct uv__queue* q;
   uv__io_t* w;
   uint64_t base;
   uint64_t diff;
@@ -150,16 +151,18 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
   int reset_timeout;
 
   if (loop->nfds == 0) {
-    assert(QUEUE_EMPTY(&loop->watcher_queue));
+    assert(uv__queue_empty(&loop->watcher_queue));
     return;
   }
 
-  while (!QUEUE_EMPTY(&loop->watcher_queue)) {
-    q = QUEUE_HEAD(&loop->watcher_queue);
-    QUEUE_REMOVE(q);
-    QUEUE_INIT(q);
+  lfields = uv__get_internal_fields(loop);
 
-    w = QUEUE_DATA(q, uv__io_t, watcher_queue);
+  while (!uv__queue_empty(&loop->watcher_queue)) {
+    q = uv__queue_head(&loop->watcher_queue);
+    uv__queue_remove(q);
+    uv__queue_init(q);
+
+    w = uv__queue_data(q, uv__io_t, watcher_queue);
     assert(w->pevents != 0);
     assert(w->fd >= 0);
     assert(w->fd < (int) loop->nwatchers);
@@ -217,7 +220,7 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
   base = loop->time;
   count = 48; /* Benchmarks suggest this gives the best throughput. */
 
-  if (uv__get_internal_fields(loop)->flags & UV_METRICS_IDLE_TIME) {
+  if (lfields->flags & UV_METRICS_IDLE_TIME) {
     reset_timeout = 1;
     user_timeout = timeout;
     timeout = 0;
@@ -231,6 +234,12 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
      */
     if (timeout != 0)
       uv__metrics_set_provider_entry_time(loop);
+
+    /* Store the current timeout in a location that's globally accessible so
+     * other locations like uv__work_done() can determine whether the queue
+     * of events in the callback were waiting when poll was called.
+     */
+    lfields->current_timeout = timeout;
 
     nfds = pollset_poll(loop->backend_fd,
                         events,
@@ -321,9 +330,11 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
       nevents++;
     }
 
+    uv__metrics_inc_events(loop, nevents);
     if (reset_timeout != 0) {
       timeout = user_timeout;
       reset_timeout = 0;
+      uv__metrics_inc_events_waiting(loop, nevents);
     }
 
     if (have_signals != 0) {
@@ -389,6 +400,11 @@ uint64_t uv_get_constrained_memory(void) {
 }
 
 
+uint64_t uv_get_available_memory(void) {
+  return uv_get_free_memory();
+}
+
+
 void uv_loadavg(double avg[3]) {
   perfstat_cpu_total_t ps_total;
   int result = perfstat_cpu_total(NULL, &ps_total, sizeof(ps_total), 1);
@@ -425,7 +441,7 @@ static char* uv__rawname(const char* cp, char (*dst)[FILENAME_MAX+1]) {
 static int uv__path_is_a_directory(char* filename) {
   struct stat statbuf;
 
-  if (stat(filename, &statbuf) < 0)
+  if (uv__stat(filename, &statbuf) < 0)
     return -1;  /* failed: not a directory, assume it is a file */
 
   if (statbuf.st_type == VDIR)
@@ -1104,6 +1120,8 @@ int uv_interface_addresses(uv_interface_address_t** addresses, int* count) {
   struct ifreq *ifr, *p, flg;
   struct in6_ifreq if6;
   struct sockaddr_dl* sa_addr;
+  size_t namelen;
+  char* name;
 
   ifc.ifc_req = NULL;
   sock6fd = -1;
@@ -1140,6 +1158,7 @@ int uv_interface_addresses(uv_interface_address_t** addresses, int* count) {
 #define ADDR_SIZE(p) MAX((p).sa_len, sizeof(p))
 
   /* Count all up and running ipv4/ipv6 addresses */
+  namelen = 0;
   ifr = ifc.ifc_req;
   while ((char*)ifr < (char*)ifc.ifc_req + ifc.ifc_len) {
     p = ifr;
@@ -1159,6 +1178,7 @@ int uv_interface_addresses(uv_interface_address_t** addresses, int* count) {
     if (!(flg.ifr_flags & IFF_UP && flg.ifr_flags & IFF_RUNNING))
       continue;
 
+    namelen += strlen(p->ifr_name) + 1;
     (*count)++;
   }
 
@@ -1166,11 +1186,12 @@ int uv_interface_addresses(uv_interface_address_t** addresses, int* count) {
     goto cleanup;
 
   /* Alloc the return interface structs */
-  *addresses = uv__calloc(*count, sizeof(**addresses));
-  if (!(*addresses)) {
+  *addresses = uv__calloc(1, *count * sizeof(**addresses) + namelen);
+  if (*addresses == NULL) {
     r = UV_ENOMEM;
     goto cleanup;
   }
+  name = (char*) &(*addresses)[*count];
   address = *addresses;
 
   ifr = ifc.ifc_req;
@@ -1194,7 +1215,9 @@ int uv_interface_addresses(uv_interface_address_t** addresses, int* count) {
 
     /* All conditions above must match count loop */
 
-    address->name = uv__strdup(p->ifr_name);
+    namelen = strlen(p->ifr_name) + 1;
+    address->name = memcpy(name, p->ifr_name, namelen);
+    name += namelen;
 
     if (inet6)
       address->address.address6 = *((struct sockaddr_in6*) &p->ifr_addr);
@@ -1266,13 +1289,7 @@ cleanup:
 
 
 void uv_free_interface_addresses(uv_interface_address_t* addresses,
-  int count) {
-  int i;
-
-  for (i = 0; i < count; ++i) {
-    uv__free(addresses[i].name);
-  }
-
+                                 int count) {
   uv__free(addresses);
 }
 
