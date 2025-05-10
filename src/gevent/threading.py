@@ -27,6 +27,8 @@ Implementation of the standard :mod:`threading` using greenlets.
 import os
 import sys
 
+PY313 = sys.version_info[:2] >= (3, 13)
+
 __implements__ = [
     'local',
     '_allocate_lock',
@@ -41,7 +43,7 @@ __implements__ = [
     #'RLock',
 ] + ([
     '_start_new_thread',
-] if sys.version_info[:2] < (3, 13) else [
+] if not PY313 else [
     '_start_joinable_thread',
     '_ThreadHandle',
     '_make_thread_handle',
@@ -96,6 +98,11 @@ def _make_cleanup_id(gid):
 
 _weakref = None
 
+# 3.14 renamed Thread._handle to Thread._os_handle to avoid
+# conflicts with subclasses. This was backported to 3.13.4.
+# https://github.com/python/cpython/issues/132578
+# https://github.com/python/cpython/pull/132696
+_needs_os_thread_handle = sys.version_info[:3] > (3, 13, 4)
 
 class _DummyThread(_DummyThread_):
     # We avoid calling the superclass constructor. This makes us about
@@ -142,7 +149,10 @@ class _DummyThread(_DummyThread_):
     _Thread__started = _started = __threading__.Event()
     _Thread__started.set()
     _tstate_lock = None
-    _handle = None # 3.13
+    if _needs_os_thread_handle:
+        _os_thread_handle = None
+    elif sys.version_info[:2] == (3, 13):
+        _handle = None # 3.13
 
     def __init__(self): # pylint:disable=super-init-not-called
         #_DummyThread_.__init__(self)
@@ -154,8 +164,11 @@ class _DummyThread(_DummyThread_):
         # (that of the native thread), unless we're monkey-patched.
         self._set_ident()
         # _handle is only needed for 3.13; keeps a weak reference
-        # to the greenlet.
-        self._handle = _make_thread_handle(self._ident)
+        # to the greenlet. 3.14 renamed it.
+        if _needs_os_thread_handle:
+            self._os_thread_handle = _make_thread_handle(self._ident)
+        elif PY313:
+            self._handle = _make_thread_handle(self._ident)
         # ``_native_id`` backs the ``native_id`` property,
         # when available.
         try:
@@ -378,7 +391,8 @@ class _ForkHooks:
         for green_ident, thread in self._before_fork_active.items():
             if green_ident != current_ident:
                 try:
-                    handle = thread._handle
+                    h = '_os_thread_handle' if _needs_os_thread_handle else '_handle'
+                    handle = getattr(thread, h)
                 except AttributeError:
                     assert sys.version_info[:2] < (3, 13)
                     assert not thread.is_alive()

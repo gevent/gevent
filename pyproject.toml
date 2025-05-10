@@ -31,7 +31,8 @@ requires = [
      # forth between 2 and 3 without recompiling. 3.0 is required for
      # Python 3.12, and it fixes some serious bugs in Python 3.11.
      # 3.2 is the first to support Python 3.14a7.
-     "greenlet >= 3.2.0 ; platform_python_implementation == 'CPython'",
+     # 3.2.2 is needed for Python 3.14b1.
+     "greenlet >= 3.2.2 ; platform_python_implementation == 'CPython'",
 ]
 
 [tool.towncrier]

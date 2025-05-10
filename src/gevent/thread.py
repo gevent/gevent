@@ -119,9 +119,15 @@ def start_joinable_thread(function, handle=None, daemon=True): # pylint:disable=
     # by C code directly accessing internal structure members).
     greenlet = _start_new_greenlet(function) # XXX: Daemon is ignored
 
-    if handle is not None:
-        assert isinstance(handle, _ThreadHandle)
-        handle._set_greenlet(greenlet)
+    # 3.14 tests require always returning a handle object.
+    if handle is None:
+        handle = _ThreadHandle()
+    elif not isinstance(handle, _ThreadHandle):
+        raise AssertionError('Must be a gevent thread handle')
+    elif handle._had_greenlet:
+        raise RuntimeError('thread already started')
+
+    handle._set_greenlet(greenlet)
 
     return handle
 
@@ -136,11 +142,16 @@ class _ThreadHandle:
     # threads, which can sometimes rely on garbage collection.
     # Also, this breaks a cycle.
     _greenlet_ref = None
+    # We also need to keep track of whether we were ever
+    # actually bound to a greenlet so that our
+    # behaviour in 'join' is correct.
+    _had_greenlet = False
 
     def _set_greenlet(self, glet):
         from weakref import ref
         assert glet is not None
         self._greenlet_ref = ref(glet)
+        self._had_greenlet = True
 
     def _get_greenlet(self):
         return (
@@ -149,14 +160,21 @@ class _ThreadHandle:
             else None
         )
 
-    def join(self, timeout):
+    def join(self, timeout=-1):
         # TODO: This is what we patch Thread.join to do on all versions,
         # so there's another implementation in gevent.monkey._patch_thread_common.
         # UNIFY THEM.
+
+        # Python 3.14 makes timeout optional, defaulting to -1;
+        # we need that to be None
+        timeout = None if timeout == -1 else timeout
+
+        if not self._had_greenlet:
+            raise RuntimeError('thread not started')
         glet = self._get_greenlet()
         if glet is not None:
             if glet is getcurrent():
-                raise RuntimeError('Cannot joint current thread')
+                raise RuntimeError('Cannot join current thread')
             if hasattr(glet, 'join'):
                 return glet.join(timeout)
             # working with a raw greenlet. That
@@ -198,6 +216,8 @@ class _ThreadHandle:
         in ``join`` can get notified. Set *enter_hub* to false not to
         do this.
         """
+        if not self._had_greenlet:
+            raise RuntimeError('thread not started')
         self._greenlet_ref = None
         # Let the loop go around so that anyone waiting in
         # join() gets to know about it. This is particularly
