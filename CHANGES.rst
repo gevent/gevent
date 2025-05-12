@@ -6,6 +6,32 @@
 
 .. towncrier release notes start
 
+25.5.1 (2025-05-12)
+===================
+
+
+Features
+--------
+
+- Update the bundled libuv to 1.51 from 1.44.2.
+
+  Note that this changes the minimum supported versions of various
+  operating systems. Linux now requires kernel 3.10 and glibc 2.17, up
+  from 2.6.32 and glibc 2.12; macOS now requires version 11, up from
+  version 10.15; Windows now requires Windows 10 and Visual Studio 2017,
+  up from Windows 8 and VS 2015; finally, FreeBSD now requires version
+  12, up from version 10.
+
+  The musl Linux wheels are now built with muslinux_1_2 instead of
+  musllinux_1_1.
+  See :issue:`2108`.
+- Add support for Cython 3.1 on Windows.
+
+- Add support for Python 3.14b1 and significantly expand the set of
+  standard library tests we run with monkey-patching.
+
+
+
 25.4.2 (2025-04-24)
 ===================
 
@@ -16,10 +42,10 @@ Features
 - Make gevent's ``queue`` classes subscriptable to match the standard library.
   See :issue:`2102`.
 - Make the c-ares resolver build on Windows.
-  
 
 
-----25.4.1 (2025-04-17)
+
+25.4.1 (2025-04-17)
 ===================
 
 
