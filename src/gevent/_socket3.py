@@ -277,11 +277,15 @@ class socket(_socketcommon.SocketMixin):
         # so that (hopefully) they can be closed before we destroy
         # the FD and invalidate them. We may be in the hub running pending
         # callbacks now, or this may take until the next iteration.
-        scheduled_new = self.hub.loop.closing_fd(sock.fileno())
+        loop = self.hub.loop
+        if loop is None:
+            sock.close()
+            return
+        scheduled_new = loop.closing_fd(sock.fileno())
         # Schedule the actual close to happen after that, but only if needed.
         # (If we always defer, we wind up closing things much later than expected.)
         if scheduled_new:
-            self.hub.loop.run_callback(sock.close)
+            loop.run_callback(sock.close)
         else:
             sock.close()
 
