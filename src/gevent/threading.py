@@ -395,7 +395,6 @@ class _ForkHooks:
                     handle = getattr(thread, h)
                 except AttributeError:
                     assert sys.version_info[:2] < (3, 13)
-                    assert not thread.is_alive()
                 else:
                     # We DO NOT want to bounce to the hub. We're running
                     # at a very sensitive time and it's best to keep tight control
