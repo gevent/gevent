@@ -80,10 +80,13 @@ class BaseServer(object):
     """
     # pylint: disable=too-many-instance-attributes,bare-except,broad-except
 
-    #: the number of seconds to sleep in case there was an error in accept() call
-    #: for consecutive errors the delay will double until it reaches max_delay
-    #: when accept() finally succeeds the delay will be reset to min_delay again
+    #: The number of seconds to sleep in case there was an error in accept() call.
+    #: For consecutive errors the delay will double until it reaches max_delay.
+    #: When accept() finally succeeds the delay will be reset to min_delay again.
     min_delay = 0.01
+
+    #: The maximum number of seconds to sleep in case there was an error in
+    #: accept() call.
     max_delay = 1
 
     #: Sets the maximum number of consecutive accepts that a process may perform on
