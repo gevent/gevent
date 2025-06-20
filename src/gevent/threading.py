@@ -151,7 +151,7 @@ class _DummyThread(_DummyThread_):
     _tstate_lock = None
     if _needs_os_thread_handle:
         _os_thread_handle = None
-    elif sys.version_info[:2] == (3, 13):
+    elif sys.version_info[:2] <= (3, 13):
         _handle = None # 3.13
 
     def __init__(self): # pylint:disable=super-init-not-called
