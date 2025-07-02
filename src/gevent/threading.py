@@ -195,6 +195,21 @@ class _DummyThread(_DummyThread_):
     def _Thread__stop(self):
         pass
 
+    # gh-2111: CPython's _DummyThread expects that `_is_stopped` is never set to True
+    # which leads to some logical inconsistencies if you try to call
+    # _DummyThread.is_alive() after fork.  This is normally not a problem because there
+    # should never be any _DummyThread remaining in the active thread dict after a fork.
+    # However, gevent's after-fork handler still asserts the is_alive status of threads
+    # that existing prior to forking, under the assumption that CPython's
+    # threading._after_fork callback called ._stop() on each of them.  This is fine
+    # for normal threads, but for _DummyThread it triggers this inconsistency.
+    # Instead, allow _DummyThreads to actually return False for is_alive() if it's been
+    # cleaned up after a fork.
+    def isAlive(self):
+        return not self._is_stopped
+
+    is_alive = isAlive  # py3
+
     _stop = _Thread__stop # py3
 
     def _wait_for_tstate_lock(self, *args, **kwargs): # pylint:disable=signature-differs
