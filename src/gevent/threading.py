@@ -99,10 +99,12 @@ def _make_cleanup_id(gid):
 _weakref = None
 
 # 3.14 renamed Thread._handle to Thread._os_handle to avoid
-# conflicts with subclasses. This was backported to 3.13.4.
+# conflicts with subclasses. This is proposed to be backported to 3.13.x
+# release branch, but has proven controversial and has *not* yet been
+# backported:
 # https://github.com/python/cpython/issues/132578
 # https://github.com/python/cpython/pull/132696
-_needs_os_thread_handle = sys.version_info[:3] > (3, 13, 4)
+_needs_os_thread_handle = sys.version_info[:2] >= (3, 14)
 
 class _DummyThread(_DummyThread_):
     # We avoid calling the superclass constructor. This makes us about
@@ -395,7 +397,8 @@ class _ForkHooks:
                     handle = getattr(thread, h)
                 except AttributeError:
                     assert sys.version_info[:2] < (3, 13)
-                    assert not thread.is_alive()
+                    # gh-2111: _DummyThread can never not be alive so skip this assertion
+                    assert isinstance(thread, _DummyThread) or not thread.is_alive()
                 else:
                     # We DO NOT want to bounce to the hub. We're running
                     # at a very sensitive time and it's best to keep tight control
