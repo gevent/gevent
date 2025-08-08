@@ -98,11 +98,6 @@ def _make_cleanup_id(gid):
 
 _weakref = None
 
-# 3.14 renamed Thread._handle to Thread._os_handle to avoid
-# conflicts with subclasses. This was backported to 3.13.4.
-# https://github.com/python/cpython/issues/132578
-# https://github.com/python/cpython/pull/132696
-_needs_os_thread_handle = sys.version_info[:3] > (3, 13, 4)
 
 class _DummyThread(_DummyThread_):
     # We avoid calling the superclass constructor. This makes us about
@@ -149,10 +144,7 @@ class _DummyThread(_DummyThread_):
     _Thread__started = _started = __threading__.Event()
     _Thread__started.set()
     _tstate_lock = None
-    if _needs_os_thread_handle:
-        _os_thread_handle = None
-    elif sys.version_info[:2] == (3, 13):
-        _handle = None # 3.13
+
 
     def __init__(self): # pylint:disable=super-init-not-called
         #_DummyThread_.__init__(self)
@@ -163,12 +155,24 @@ class _DummyThread(_DummyThread_):
         # All dummy threads in the same native thread share the same ident
         # (that of the native thread), unless we're monkey-patched.
         self._set_ident()
-        # _handle is only needed for 3.13; keeps a weak reference
-        # to the greenlet. 3.14 renamed it.
-        if _needs_os_thread_handle:
-            self._os_thread_handle = _make_thread_handle(self._ident)
-        elif PY313:
-            self._handle = _make_thread_handle(self._ident)
+        # 3.13 introduced ``Thread._handle``;
+        # 3.14 renamed ``Thread._handle`` to ``Thread._os_thread_handle`` to avoid
+        # conflicts with subclasses. This was intended to be  backported to 3.13.4,
+        # but was controversial and didn't wind up in the final release.
+        # To avoid issues should the coredevs change their mind again,
+        # we'll use a private attribute along with a dynamic __getattr__;
+        # since that isn't invoked if the attribute can otherwise be found, this
+        # should be safe for subclassers.
+        # There's no need for this to be available as a class attribute;
+        # it isn't in the stdlib.
+        #
+        # Always set this, no matter the version, for consistency and to
+        # be able to rely on this attribute distinguishing our objects.
+        # Note that the name is tightly coupled to our ForkHooks.
+        # See:
+        # https://github.com/python/cpython/issues/132578
+        # https://github.com/python/cpython/pull/132696
+        self.__ghandle = _make_thread_handle(self._ident)
         # ``_native_id`` backs the ``native_id`` property,
         # when available.
         try:
@@ -191,6 +195,31 @@ class _DummyThread(_DummyThread_):
             ref = ref(g, _make_cleanup_id(gid)) # pylint:disable=too-many-function-args
             self.__raw_ref = ref
             assert self.__raw_ref is ref # prevent pylint thinking its unused
+
+
+    __ghandle_prop = property(
+        lambda self: self.__ghandle,
+        # Ugh, allowing assignment to this is a foot gun,
+        # but the stdlib allows it, so...
+        lambda self, new_value: setattr(self, '_DummyThread__ghandle', new_value),
+        # Likewise.
+        lambda self: delattr(self, '_DummyThread__ghandle')
+    )
+
+    # Dynamically determine what the public name should be. We've already imported
+    # stdlib threading and initialized its data structures, so accessing
+    # ``main_thread()`` doesn't introduce any new thread object creation or
+    # data structure manipulation; in short, it's safe.
+    if hasattr(__threading__.main_thread(), '_handle'):
+        _handle = __ghandle_prop
+        _G_HANDLE_NAME = '_handle'
+    elif hasattr(__threading__.main_thread(), '_os_thread_handle'):
+        _os_thread_handle = __ghandle_prop
+        _G_HANDLE_NAME = '_os_thread_handle'
+    else:
+        assert not PY313
+        _G_HANDLE_NAME = None
+    del __ghandle_prop
 
     def _Thread__stop(self):
         pass
@@ -360,21 +389,14 @@ class _ForkHooks:
 
     _before_fork_current_thread = None
     _before_fork_active = None
-
+    _before_fork_ident = None
 
     def before_fork_in_parent(self):
         self._before_fork_active = dict(__threading__._active)
         self._before_fork_current_thread = __threading__.current_thread()
+        self._before_fork_ident = get_ident()
 
-    def after_fork_in_child(self):
-        # We've already imported threading, which installed its "after" hook,
-        # so we're going to be called after that hook.
-        # Note that this is only installed when monkey-patching.
-        # TODO: Is there any point to checking to see if the current thread is
-        # our dummy thread before doing this?
-        active = __threading__._active
-        assert len(active) == 1
-
+    def _stop_running_greenlets_in_child(self):
         # We cannot actually kill the greenlets via throw():
         # - If it was the main greenlet, the process will exit
         # - In any case, that would unwind the stack and execute
@@ -382,26 +404,47 @@ class _ForkHooks:
         #
         # But we can take them out of the map and make them appear
         # stopped; if they truly are no longer referenced, GC will
-        # kick in a nd delete the greenlet. If gevent is still waiting
+        # kick in and delete the greenlet. If gevent is still waiting
         # to switch to them, that will still happen...
         #
         # This happens automatically on <= 3.12 which hardcodes the call to
         # ``Thread._stop``; for 3.13, we need to go through the handle.
+        if not _DummyThread._G_HANDLE_NAME:
+            return
         current_ident = get_ident()
         for green_ident, thread in self._before_fork_active.items():
-            if green_ident != current_ident:
-                try:
-                    h = '_os_thread_handle' if _needs_os_thread_handle else '_handle'
-                    handle = getattr(thread, h)
-                except AttributeError:
-                    assert sys.version_info[:2] < (3, 13)
-                    assert not thread.is_alive()
-                else:
-                    # We DO NOT want to bounce to the hub. We're running
-                    # at a very sensitive time and it's best to keep tight control
-                    # over what gets to run.
-                    handle._set_done(enter_hub=False)
+            if green_ident == current_ident:
+                continue
 
+            try:
+                # Either a _DummyThread from above, or a "real" ``threading.Thread``, using
+                # our ThreadHandle object
+                handle = getattr(
+                    thread, '_DummyThread__ghandle',
+                    getattr(thread, _DummyThread._G_HANDLE_NAME)
+                )
+            except AttributeError: # pragma: no cover
+                # We really shouldn't get here; on this platform,
+                # _G_HANDLE_NAME should be none.
+                assert sys.version_info[:2] < (3, 13)
+                assert not thread.is_alive()
+            else:
+                # We DO NOT want to bounce to the hub. We're running
+                # at a very sensitive time and it's best to keep tight control
+                # over what gets to run.
+                handle._set_done(enter_hub=False)
+
+
+    def after_fork_in_child(self):
+        # We've already imported threading, which installed its "after" hook,
+        # so we're going to be called after that hook.
+        # Note that this is only installed when monkey-patching.
+        active = __threading__._active
+        assert len(active) == 1
+        assert __threading__.current_thread() is self._before_fork_current_thread
+        assert get_ident() == self._before_fork_ident
+
+        self._stop_running_greenlets_in_child()
 
         main = __threading__._MainThread()
         main._ident = get_ident() # 3.13: reset to the greenlet version.
@@ -409,9 +452,7 @@ class _ForkHooks:
         __threading__._main_thread = main
 
         main = __threading__.main_thread()
-        # XXX: Not the case. Maybe don't save main.
         assert main.ident == __threading__.get_ident()
-
 
 _fork_hooks = _ForkHooks()
 

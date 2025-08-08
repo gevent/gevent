@@ -251,6 +251,7 @@ class TestSocket(Test):
 @greentest.skipOnAppVeyor("This sometimes times out for no apparent reason.")
 class TestSSL(Test):
 
+
     def _ssl_connect_task(self, connector, port, accepted_event):
         connector.connect((DEFAULT_CONNECT, port))
 
@@ -420,6 +421,7 @@ class TestSSL(Test):
         listener = self._wrap_socket(raw_listener, keyfile=CERTFILE, certfile=CERTFILE)
 
         accepted_event = threading.Event()
+        read_event = threading.Event()
         def connect(connector=socket.socket()):
             try:
                 connector.connect((DEFAULT_CONNECT, port))
@@ -427,6 +429,7 @@ class TestSSL(Test):
                 accepted_event.wait()
                 s.sendall(b'test_serverssl_makefile2')
                 s.shutdown(socket.SHUT_RDWR)
+                read_event.wait()
                 s.close()
             finally:
                 connector.close()
@@ -442,6 +445,12 @@ class TestSSL(Test):
             f = client_socket.makefile()
             self.assert_open(client_socket, fileno)
             self.assertEqual(f.read(), 'test_serverssl_makefile2')
+            # Closing the other end of the socket
+            # before we finish reading can result in us
+            # getting EPIPE from OpenSSL 3.5 on certain
+            # systems, notably the manylinux images on Github
+            # actions. This hasn't shown up anywhere else.
+            read_event.set()
             self.assertEqual(f.read(), '')
             # Closing file object does not close the socket.
             f.close()

@@ -214,7 +214,8 @@ class _ThreadHandle:
 
         By default, this will bounce back to the hub so that waiters
         in ``join`` can get notified. Set *enter_hub* to false not to
-        do this.
+        do this. This private API is tightly coupled to our ``threading``
+        implementation.
         """
         if not self._had_greenlet:
             raise RuntimeError('thread not started')

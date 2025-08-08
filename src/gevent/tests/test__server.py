@@ -163,6 +163,13 @@ class TestCase(greentest.TestCase):
         # which is not one of the errors we get anywhere else.
         # Not sure which errno constant this is?
         LOCAL_CONN_REFUSED_ERRORS = (10049,)
+    elif greentest.RUNNING_ON_MANYLINUX:
+        # In https://github.com/pypa/manylinux/pull/1785 the manylinux images updated to
+        # OpenSSL 3.5. While that has been tested to work before without producing this
+        # error (https://github.com/gevent/gevent/pull/2103), it _is_ doing so in github
+        # actions.
+        # XXX: Not sure this is really the right way to handle this.
+        LOCAL_CONN_REFUSED_ERRORS += (errno.EPIPE,)
 
     def assertConnectionRefused(self, in_proc_server=True):
         try:

@@ -5,11 +5,27 @@ import coverage
 import coverage.exceptions
 try:
     coverage.process_startup()
+except AttributeError as e:
+    if 'coverage' in str(e) and 'CTracer' in str(e):
+        # AttributeError: module 'coverage.tracer' has no attribute 'CTracer'
+        # on github actions. Leads to warnings later:
+        #    "Couldn't import C tracer: module coverage.tracer "
+        #    "does not support loading in subinterpreters (no-ctracer)"
+        # Seen in test_interpreters.py
+        #
+        # HOWEVER: Now coverage also emits a warning (CoverageWarning: Couldn't import C
+        # tracer: module coverage.tracer does not support loading in subinterpreters
+        # (no-ctracer)) that gets printed to stderr by default. This is unexpected
+        # and breaks the test. So we ignore that in testrunner.py
+        pass
+    else:
+        raise
 except (coverage.CoverageException,
         # As of Coverage 7, the ConfigError seems to be the one raised.
         # Not sure when that changed, it used to be CoverageException. Go
         # ahead and keep both for safety.
-        coverage.exceptions.ConfigError) as e:
+        coverage.exceptions.ConfigError,
+        ) as e:
 
     if str(e) in (
         "Can't support concurrency=greenlet with PyTracer, only threads are supported",

@@ -81,6 +81,9 @@ from .sysinfo import SHARED_OBJECT_EXTENSION
 from .sysinfo import RUNNING_ON_TRAVIS
 from .sysinfo import RUNNING_ON_APPVEYOR
 from .sysinfo import RUNNING_ON_CI
+from .sysinfo import RUNNING_ON_MANYLINUX
+from .sysinfo import RUNNING_ON_MUSLLINUX
+from .sysinfo import RUNNING_ON_GITHUB_ACTIONS
 
 from .sysinfo import RESOLVER_NOT_SYSTEM
 from .sysinfo import RESOLVER_DNSPYTHON

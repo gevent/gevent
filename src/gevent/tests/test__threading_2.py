@@ -474,7 +474,7 @@ class ThreadJoinOnShutdown(unittest.TestCase):
 
         import subprocess
         p = subprocess.Popen([sys.executable, "-W", "ignore", "-c", script], stdout=subprocess.PIPE)
-        rc = p.wait()
+        rc = p.wait(60)
         data = p.stdout.read().replace(b'\r', b'')
         p.stdout.close()
         data = data.decode('utf-8')
@@ -552,13 +552,19 @@ class ThreadJoinOnShutdown(unittest.TestCase):
                                      args=(main_thread,))
                 print('end of main')
                 t.start()
-                t.join() # Should not block: main_thread is already stopped
+                # Should not block: main_thread object is already stopped
+                # because we're running in a non-main thread of
+                # the child process
+                t.join(30)
+                assert not t.is_alive()
 
             w = threading.Thread(target=worker)
             w.start()
             import sys
             if sys.version_info[:2] >= (3, 7) or (sys.version_info[:2] >= (3, 5) and hasattr(sys, 'pypy_version_info') and sys.platform != 'darwin'):
-                w.join()
+                w.join(45)
+                if w.is_alive():
+                     print('OH NO, failed to join worker')
             """
         # In PyPy3 5.8.0, if we don't wait on this top-level "thread", 'w',
         # we never see "end of thread". It's not clear why, since that's being
