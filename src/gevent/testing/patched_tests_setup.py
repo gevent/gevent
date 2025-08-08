@@ -1333,6 +1333,15 @@ if PY312:
             'test_threading.MiscTestCase.test_gh112826_missing__thread__is_main_interpreter',
         ]
 
+    if sys.version_info[:3] < (3, 12, 11):
+        disabled_tests += [
+            # This new tests crashes the interpreter on older versions
+            'test_context.ContextTest.test_context_new_unhashable_str_subclass',
+
+            # This is a new test that fails.
+            'test_httplib.BasicTest.test_chunked',
+        ]
+
     if RUN_COVERAGE:
         disabled_tests += [
             # This test wants to look for installed tracing functions, and

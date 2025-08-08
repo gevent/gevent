@@ -132,7 +132,7 @@ function InstallPython ($python_version, $architecture, $python_home) {
 
 
 function InstallPythonEXE ($exepath, $python_home, $install_log) {
-    $install_args = "/quiet TargetDir=$python_home"
+    $install_args = "/quiet InstallAllUsers=1 TargetDir=$python_home"
     RunCommand $exepath $install_args
 }
 

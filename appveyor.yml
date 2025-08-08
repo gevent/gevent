@@ -44,9 +44,7 @@ environment:
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
 
-    - PYTHON: "C:\\projects\\python3.13.5"
-
-      #PYTHON: "C:\\Python313-x64"
+    - PYTHON: "C:\\Python313-x64"
       PYTHON_VERSION: "3.13.5"
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
@@ -181,7 +179,7 @@ test_script:
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -c "import gevent; print(gevent.config.settings['resolver'].get_options())"
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -c "from gevent._compat import get_clock_info; print(get_clock_info('perf_counter'))"
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -mgevent.tests.known_failures
-  - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -mgevent.tests --second-chance --config known_failures.py --no-combine
+  - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -mgevent.tests --second-chance --config known_failures.py
 
 after_test:
   # pycparser can't be built correctly in an isolated environment.

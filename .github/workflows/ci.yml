@@ -102,6 +102,9 @@ jobs:
         # key to the matrix in the version we care about and checking for that matrix key.
         python-version: ["3.14.0-rc.1", "3.12", "pypy-3.10-v7.3.17", '3.9', '3.10', '3.11', "3.13.5"]
         os: [macos-latest, ubuntu-latest]
+        include:
+          - os: windows-latest
+            python-version: "3.13"
         exclude:
           # The bulk of the testing is on Linux and Windows (appveyor).
           # Experience shows that it's sufficient to only test the latest
