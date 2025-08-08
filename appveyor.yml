@@ -41,7 +41,7 @@ environment:
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
 
-    - PYTHON: "C:\projects\python3.13.5"
+    - PYTHON: "C:\\projects\\python3.13.5"
 
       #PYTHON: "C:\\Python313-x64"
       PYTHON_VERSION: "3.13.5"
