@@ -5,6 +5,11 @@
 # statements, so we use greenlet instead. See https://github.com/gevent/gevent/pull/655#issuecomment-141198002
 # See also .coveragerc-pypy
 concurrency = greenlet
+# In 7.9.1, the default trace engine changed to ``sys.monitoring``
+# for Python 3.14rc1+, but that breaks us:
+#   ConfigError: Can't support concurrency=greenlet with SysMonitor, only threads
+# so force it to always be ctrace.
+core = ctrace
 parallel = True
 source = gevent
 omit =
