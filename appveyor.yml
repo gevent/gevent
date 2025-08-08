@@ -8,6 +8,9 @@ image: Visual Studio 2022
 
 environment:
   global:
+    # We default to four on CI, but only have two cores available.
+    # Try to reduce the chances of timeout.
+    NWORKERS: 2
     APPVEYOR_SAVE_CACHE_ON_ERROR: "true"
     # SDK v7.0 MSVC Express 2008's SetEnv.cmd script will fail if the
     # /E:ON and /V:ON options are not enabled in the batch script interpreter
@@ -178,7 +181,7 @@ test_script:
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -c "import gevent; print(gevent.config.settings['resolver'].get_options())"
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -c "from gevent._compat import get_clock_info; print(get_clock_info('perf_counter'))"
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -mgevent.tests.known_failures
-  - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -mgevent.tests --second-chance --config known_failures.py
+  - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -mgevent.tests --second-chance --config known_failures.py --no-combine
 
 after_test:
   # pycparser can't be built correctly in an isolated environment.
