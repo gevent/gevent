@@ -22,8 +22,7 @@ import textwrap
 import traceback
 
 from unittest import mock
-from gevent.tests import lock_tests # gevent: use our local copy
-#from test import lock_tests
+from test import lock_tests
 from test import support
 
 

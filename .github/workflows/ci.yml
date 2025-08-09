@@ -100,7 +100,7 @@ jobs:
         # for example to force a specific patch release, don't forget to change conditions!
         # XXX: We could probably make this easier on ourself by adding a specific
         # key to the matrix in the version we care about and checking for that matrix key.
-        python-version: ["3.14.0-beta.1", "3.12", "pypy-3.10-v7.3.17", '3.9', '3.10', '3.11', "3.13.3"]
+        python-version: ["3.14.0-rc.1", "3.12", "pypy-3.10-v7.3.17", '3.9', '3.10.18', '3.11.13', "3.13.5"]
         os: [macos-latest, ubuntu-latest]
         exclude:
           # The bulk of the testing is on Linux and Windows (appveyor).
@@ -122,6 +122,10 @@ jobs:
             # ancient to run the tests we need.
           - os: macos-latest
             python-version: "3.9"
+          - os: macos-latest # Likewise.
+            python-version: "3.11.13"
+          - os: macos-latest # Same again
+            python-version: "3.10.18"
 
     steps:
       - name: checkout
@@ -337,19 +341,19 @@ jobs:
       - name: "Tests: PURE_PYTHON"
         # No compiled cython modules on CPython, using the default backend. Get coverage here.
         # We should only need to run this for a single version.
-        if: (matrix.python-version == '3.11') && startsWith(runner.os, 'Linux')
+        if: (matrix.python-version == '3.11.13') && startsWith(runner.os, 'Linux')
         env:
           PURE_PYTHON: 1
         run: |
           python -mgevent.tests --second-chance --coverage
       - name: "Tests: libuv"
-        if: (startsWith(matrix.python-version, '3.11'))
+        if: (startsWith(matrix.python-version, '3.11.13'))
         env:
           GEVENT_LOOP: libuv
         run: |
           python -m gevent.tests --second-chance $G_USE_COV
       - name: "Tests: libev-cffi"
-        if: (matrix.python-version == '3.11') && startsWith(runner.os, 'Linux')
+        if: (matrix.python-version == '3.11.13') && startsWith(runner.os, 'Linux')
         env:
           GEVENT_LOOP: libev-cffi
         run: |

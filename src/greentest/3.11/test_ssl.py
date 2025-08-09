@@ -350,6 +350,15 @@ class BasicSocketTests(unittest.TestCase):
         ssl.OP_NO_TLSv1_2
         self.assertEqual(ssl.PROTOCOL_TLS, ssl.PROTOCOL_SSLv23)
 
+    def test_options(self):
+        # gh-106687: SSL options values are unsigned integer (uint64_t)
+        for name in dir(ssl):
+            if not name.startswith('OP_'):
+                continue
+            with self.subTest(option=name):
+                value = getattr(ssl, name)
+                self.assertGreaterEqual(value, 0, f"ssl.{name}")
+
     def test_ssl_types(self):
         ssl_types = [
             _ssl._SSLContext,
@@ -1197,6 +1206,7 @@ class ContextTests(unittest.TestCase):
         )
 
     def test_options(self):
+        # Test default SSLContext options
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         # OP_ALL | OP_NO_SSLv2 | OP_NO_SSLv3 is the default value
         default = (ssl.OP_ALL | ssl.OP_NO_SSLv2 | ssl.OP_NO_SSLv3)
@@ -1205,15 +1215,29 @@ class ContextTests(unittest.TestCase):
                     OP_SINGLE_DH_USE | OP_SINGLE_ECDH_USE |
                     OP_ENABLE_MIDDLEBOX_COMPAT)
         self.assertEqual(default, ctx.options)
+
+        # disallow TLSv1
         with warnings_helper.check_warnings():
             ctx.options |= ssl.OP_NO_TLSv1
         self.assertEqual(default | ssl.OP_NO_TLSv1, ctx.options)
+
+        # allow TLSv1
         with warnings_helper.check_warnings():
             ctx.options = (ctx.options & ~ssl.OP_NO_TLSv1)
         self.assertEqual(default, ctx.options)
+
+        # clear all options
         ctx.options = 0
         # Ubuntu has OP_NO_SSLv3 forced on by default
         self.assertEqual(0, ctx.options & ~ssl.OP_NO_SSLv3)
+
+        # invalid options
+        with self.assertRaises(OverflowError):
+            ctx.options = -1
+        with self.assertRaises(OverflowError):
+            ctx.options = 2 ** 100
+        with self.assertRaises(TypeError):
+            ctx.options = "abc"
 
     def test_verify_mode_protocol(self):
         with warnings_helper.check_warnings():
@@ -2492,7 +2516,6 @@ class ThreadedEchoServer(threading.Thread):
                 # See also http://erickt.github.io/blog/2014/11/19/adventures-in-debugging-a-potential-osx-kernel-bug/
                 if e.errno != errno.EPROTOTYPE and sys.platform != "darwin":
                     self.running = False
-                    self.server.stop()
                     self.close()
                 return False
             else:
@@ -2627,10 +2650,6 @@ class ThreadedEchoServer(threading.Thread):
                     self.close()
                     self.running = False
 
-                    # normally, we'd just stop here, but for the test
-                    # harness, we want to stop the server
-                    self.server.stop()
-
     def __init__(self, certificate=None, ssl_version=None,
                  certreqs=None, cacerts=None,
                  chatty=True, connectionchatty=False, starttls_server=False,
@@ -2664,21 +2683,33 @@ class ThreadedEchoServer(threading.Thread):
         self.conn_errors = []
         threading.Thread.__init__(self)
         self.daemon = True
+        self._in_context = False
 
     def __enter__(self):
+        if self._in_context:
+            raise ValueError('Re-entering ThreadedEchoServer context')
+        self._in_context = True
         self.start(threading.Event())
         self.flag.wait()
         return self
 
     def __exit__(self, *args):
+        assert self._in_context
+        self._in_context = False
         self.stop()
         self.join()
 
     def start(self, flag=None):
+        if not self._in_context:
+            raise ValueError(
+                'ThreadedEchoServer must be used as a context manager')
         self.flag = flag
         threading.Thread.start(self)
 
     def run(self):
+        if not self._in_context:
+            raise ValueError(
+                'ThreadedEchoServer must be used as a context manager')
         self.sock.settimeout(1.0)
         self.sock.listen(5)
         self.active = True

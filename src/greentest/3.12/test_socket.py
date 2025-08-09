@@ -486,6 +486,8 @@ class ThreadedRDSSocketTest(SocketRDSTest, ThreadableTest):
 @unittest.skipIf(WSL, 'VSOCK does not work on Microsoft WSL')
 @unittest.skipUnless(HAVE_SOCKET_VSOCK,
           'VSOCK sockets required for this test.')
+@unittest.skipUnless(get_cid() != 2,  # VMADDR_CID_HOST
+                     "This test can only be run on a virtual guest.")
 class ThreadedVSOCKSocketStreamTest(unittest.TestCase, ThreadableTest):
 
     def __init__(self, methodName='runTest'):
@@ -513,7 +515,10 @@ class ThreadedVSOCKSocketStreamTest(unittest.TestCase, ThreadableTest):
         self.cli.connect((cid, VSOCKPORT))
 
     def testStream(self):
-        msg = self.conn.recv(1024)
+        try:
+            msg = self.conn.recv(1024)
+        except PermissionError as exc:
+            self.skipTest(repr(exc))
         self.assertEqual(msg, MSG)
 
     def _testStream(self):
@@ -1631,7 +1636,7 @@ class GeneralModuleTests(unittest.TestCase):
         try:
             socket.getaddrinfo(None, ULONG_MAX + 1, type=socket.SOCK_STREAM)
         except OverflowError:
-            # Platforms differ as to what values consitute a getaddrinfo() error
+            # Platforms differ as to what values constitute a getaddrinfo() error
             # return. Some fail for LONG_MAX+1, others ULONG_MAX+1, and Windows
             # silently accepts such huge "port" aka "service" numeric values.
             self.fail("Either no error or socket.gaierror expected.")
@@ -5059,6 +5064,36 @@ class NonBlockingTCPTests(ThreadedTCPSocketTest):
         # send data: recv() will no longer block
         self.cli.sendall(MSG)
 
+    @support.cpython_only
+    def testLargeTimeout(self):
+        # gh-126876: Check that a timeout larger than INT_MAX is replaced with
+        # INT_MAX in the poll() code path. The following assertion must not
+        # fail: assert(INT_MIN <= ms && ms <= INT_MAX).
+        import _testcapi
+        large_timeout = _testcapi.INT_MAX + 1
+
+        # test recv() with large timeout
+        conn, addr = self.serv.accept()
+        self.addCleanup(conn.close)
+        try:
+            conn.settimeout(large_timeout)
+        except OverflowError:
+            # On Windows, settimeout() fails with OverflowError, whereas
+            # we want to test recv(). Just give up silently.
+            return
+        msg = conn.recv(len(MSG))
+
+    def _testLargeTimeout(self):
+        # test sendall() with large timeout
+        import _testcapi
+        large_timeout = _testcapi.INT_MAX + 1
+        self.cli.connect((HOST, self.port))
+        try:
+            self.cli.settimeout(large_timeout)
+        except OverflowError:
+            return
+        self.cli.sendall(MSG)
+
 
 class FileObjectClassTestCase(SocketConnectedTest):
     """Unit tests for the object returned by socket.makefile()
@@ -5261,6 +5296,8 @@ class UnbufferedFileObjectClassTestCase(FileObjectClassTestCase):
         self.write_file.write(self.write_msg)
         self.write_file.flush()
 
+    @unittest.skipUnless(hasattr(sys, 'getrefcount'),
+                         'test needs sys.getrefcount()')
     def testMakefileCloseSocketDestroy(self):
         refcount_before = sys.getrefcount(self.cli_conn)
         self.read_file.close()
