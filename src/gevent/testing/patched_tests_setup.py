@@ -30,6 +30,7 @@ from .sysinfo import PY38
 from .sysinfo import PY39
 from .sysinfo import PY39_EXACTLY
 from .sysinfo import PY310
+from .sysinfo import PY310_EXACTLY
 from .sysinfo import PY311
 from .sysinfo import PY312
 from .sysinfo import PY313
@@ -1204,21 +1205,6 @@ if PY39:
             'test_ftplib.TestTLS_FTPClassMixin.test_retrlines_too_long',
         ]
 
-if  PY39_EXACTLY:
-    if OSX:
-        disabled_tests += [
-        ]
-
-    if APPVEYOR:
-        disabled_tests += [
-            # On 3.9.13, this has been seen to cause
-            #
-            # SystemError: <built-in function if_indextoname> returned
-            # NULL without setting an error
-            #
-            # But this isn't even our code! That's a CPython function. Must be flaky.
-            'test_socket.GeneralModuleTests.testInvalidInterfaceIndexToName',
-        ]
 
 if PY310:
     disabled_tests += [
@@ -1245,6 +1231,19 @@ if PY310:
             'test_threading.SubinterpThreadingTests.test_threads_join',
             'test_threading.SubinterpThreadingTests.test_threads_join_2',
         ]
+
+if (PY310_EXACTLY or PY39_EXACTLY) and APPVEYOR:
+    disabled_tests += [
+        # On 3.9.13, this has been seen to cause
+        #
+        # SystemError: <built-in function if_indextoname> returned
+        # NULL without setting an error
+        #
+        # But this isn't even our code! That's a CPython function. Must be flaky.
+        #
+        # Also observed on 3.10.11.
+        'test_socket.GeneralModuleTests.testInvalidInterfaceIndexToName',
+    ]
 
 if PY311:
     disabled_tests += [

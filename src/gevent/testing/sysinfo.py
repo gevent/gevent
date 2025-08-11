@@ -68,6 +68,7 @@ PY38 = None
 PY39 = None
 PY39_EXACTLY = None
 PY310 = None
+PY310_EXACTLY = None
 PY311 = None
 PY312 = None
 PY313 = None
@@ -93,6 +94,8 @@ if sys.version_info[0] == 3:
             PY39_EXACTLY = True
     if sys.version_info[1] >= 10:
         PY310 = True
+        if sys.version_info[:2] == (3, 10):
+            PY310_EXACTLY = True
     if sys.version_info[1] >= 11:
         PY311 = True
     if sys.version_info[1] >= 12:
