@@ -93,6 +93,10 @@ BIT_64 = ConstantCondition(struct.calcsize('P') * 8 == 64, 'BIT_64')
 PY380_EXACTLY = ConstantCondition(sys.version_info[:3] == (3, 8, 0), 'PY380_EXACTLY')
 PY312B3_EXACTLY = ConstantCondition(sys.version_info == (3, 12, 0, 'beta', 3))
 PY312B4_EXACTLY = ConstantCondition(sys.version_info == (3, 12, 0, 'beta', 4))
+PY313LT5 = ConstantCondition(
+    sys.version_info[:2] == (3, 13)
+    and sys.version_info[2] < 5
+)
 
 class _Definition(object):
     __slots__ = (
@@ -476,6 +480,14 @@ class Definitions(metaclass=DefinitionsMeta):
     test__doctests = Ignored(
         "Sometimes times out during/after gevent._config.Config",
         when=CI & OSX
+    )
+
+    test_httplib = Ignored(
+        """
+        Imports ``test.support.testcase.ExtraAssertions``
+        which doesn't exist yet.
+        """,
+        when=PY313LT5,
     )
 
 

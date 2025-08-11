@@ -56,7 +56,7 @@ DEFAULT_RUN_OPTIONS = {
 
 if RUNNING_ON_CI:
     # Too many and we get spurious timeouts
-    DEFAULT_NWORKERS = 4 if not OSX else 2
+    DEFAULT_NWORKERS = min(4 if not OSX else 2, DEFAULT_NWORKERS)
 
 
 def _package_relative_filename(filename, package):

@@ -8,6 +8,9 @@ image: Visual Studio 2022
 
 environment:
   global:
+    # We default to four on CI, but only have two cores available.
+    # Try to reduce the chances of timeout.
+    NWORKERS: 2
     APPVEYOR_SAVE_CACHE_ON_ERROR: "true"
     # SDK v7.0 MSVC Express 2008's SetEnv.cmd script will fail if the
     # /E:ON and /V:ON options are not enabled in the batch script interpreter
@@ -36,8 +39,13 @@ environment:
 
     # Fully supported 64-bit versions, with testing. This should be
     # all the current (non EOL) versions.
+    - PYTHON: "C:\\Python314-x64"
+      PYTHON_VERSION: "3.14.0rc1"
+      PYTHON_ARCH: "64"
+      PYTHON_EXE: python
+
     - PYTHON: "C:\\Python313-x64"
-      PYTHON_VERSION: "3.13.0"
+      PYTHON_VERSION: "3.13.5"
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
 
