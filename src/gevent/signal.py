@@ -21,16 +21,20 @@ information on configuring this not to be the case for advanced uses.
 
 from __future__ import absolute_import
 
+import signal as _signal
+import sys
+
 from gevent._util import _NONE as _INITIAL
 from gevent._util import copy_globals
-
-import signal as _signal
 
 __implements__ = []
 __extensions__ = []
 
-
+# pylint:disable=no-member
 _child_handler = _INITIAL
+_child_wakeup_fd = -1
+_child_wakeup_fd_warn_on_full_buffer = None
+_child_wakeup_fd_data = bytes((_signal.SIGCHLD.value,)) if hasattr(_signal, 'SIGCHLD') else bytes()
 
 _signal_signal = _signal.signal
 _signal_getsignal = _signal.getsignal
@@ -105,7 +109,7 @@ def signal(signalnum, handler):
         # Note that this conflicts with gevent.subprocess and other users
         # of child watchers, until the next time gevent.subprocess/loop.install_sigchld()
         # is called.
-        from gevent.hub import get_hub # Are we always safe to import here?
+        from gevent.hub import get_hub  # Are we always safe to import here?
         _signal_signal(signalnum, handler)
         get_hub().loop.reset_sigchld()
     return old_handler
@@ -118,23 +122,51 @@ def _on_child_hook():
     if callable(_child_handler):
         # None is a valid value for the frame argument
         from gevent import Greenlet
+        if _child_wakeup_fd >= 0:
+            greenlet = Greenlet(_write_child_signal_fd,
+                                _child_wakeup_fd,
+                                _child_wakeup_fd_warn_on_full_buffer)
+            greenlet.switch()
         greenlet = Greenlet(_child_handler, _signal.SIGCHLD, None)
         greenlet.switch()
 
 
 import gevent.os
+import os
 
-# pylint:disable=no-member
+
+def _write_child_signal_fd(fd, warn_on_full_buffer):
+    # Along the lines of
+    # https://github.com/python/cpython/blob/3663b2ad54c9e15775a605facf69da8f5ee8d335/Modules/signalmodule.c#L274
+    # Unclear if it'll work on Windows due to sockets used for pipes
+
+    try:
+        os.write(fd, _child_wakeup_fd_data)
+    except OSError as e:
+        if warn_on_full_buffer or e.errno not in gevent.os.ignored_errors:
+            from gevent.hub import get_hub  # Are we always safe to import here?
+            get_hub().handle_error("set_wakeup_fd", *sys.exc_info())
+
+
+def set_wakeup_fd(fd, /, *, warn_on_full_buffer=True):
+    old_fd = _signal.set_wakeup_fd(fd, warn_on_full_buffer=warn_on_full_buffer)
+    global _child_wakeup_fd, _child_wakeup_fd_warn_on_full_buffer
+    _child_wakeup_fd = fd
+    _child_wakeup_fd_warn_on_full_buffer = warn_on_full_buffer
+    return old_fd
+
 if 'waitpid' in gevent.os.__implements__ and hasattr(_signal, 'SIGCHLD'):
     # Tightly coupled here to gevent.os and its waitpid implementation; only use these
     # if necessary.
     gevent.os._on_child_hook = _on_child_hook
     __implements__.append("signal")
     __implements__.append("getsignal")
+    __implements__.append("set_wakeup_fd")
 else:
     # XXX: This breaks test__all__ on windows
     __extensions__.append("signal")
     __extensions__.append("getsignal")
+    __extensions__.append("set_wakeup_fd")
 
 __imports__ = copy_globals(_signal, globals(),
                            names_to_ignore=__implements__ + __extensions__,
