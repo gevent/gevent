@@ -1,0 +1,3 @@
+Provide ``gevent.signal.set_wakeup_fd`` (monkey-patched by default) to
+allow waking up on ``SIGCHLD``. Previously, gevent's internal handling
+of ``SIGCHLD`` prevented this from working.
