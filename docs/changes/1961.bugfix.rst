@@ -1,0 +1,2 @@
+Avoid a rare ``AttributeError`` that could occur during circular
+garbage collection.
