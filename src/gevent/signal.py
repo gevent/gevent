@@ -18,9 +18,6 @@ information on configuring this not to be the case for advanced uses.
    module, confusing humans and static analysis tools alike. That alias
    has been removed. (See `gevent.signal_handler`.)
 """
-
-from __future__ import absolute_import
-
 from gevent._util import _NONE as _INITIAL
 from gevent._util import copy_globals
 
@@ -29,8 +26,10 @@ import signal as _signal
 __implements__ = []
 __extensions__ = []
 
-
 _child_handler = _INITIAL
+_child_wakeup_fd = -1
+_child_wakeup_fd_warn_on_full_buffer = None
+
 
 _signal_signal = _signal.signal
 _signal_getsignal = _signal.getsignal
@@ -118,23 +117,57 @@ def _on_child_hook():
     if callable(_child_handler):
         # None is a valid value for the frame argument
         from gevent import Greenlet
+        if _child_wakeup_fd >= 0:
+            greenlet = Greenlet(_write_child_signal_fd,
+                                _child_wakeup_fd,
+                                _child_wakeup_fd_warn_on_full_buffer)
+            greenlet.switch()
         greenlet = Greenlet(_child_handler, _signal.SIGCHLD, None)
         greenlet.switch()
 
 
 import gevent.os
 
-# pylint:disable=no-member
-if 'waitpid' in gevent.os.__implements__ and hasattr(_signal, 'SIGCHLD'):
+
+def _write_child_signal_fd(fd, warn_on_full_buffer):
+    # Along the lines of
+    # https://github.com/python/cpython/blob/3663b2ad54c9e15775a605facf69da8f5ee8d335/Modules/signalmodule.c#L274
+    # Unclear if it'll work on Windows due to sockets used for pipes
+
+    try:
+        gevent.os._write(fd, bytes((_signal.SIGCHLD,))) # pylint: disable=no-member
+    except OSError as e:
+        if warn_on_full_buffer or e.errno not in gevent.os.ignored_errors: # pylint: disable=no-member
+            from gevent.hub import get_hub # Are we always safe to import here?
+            get_hub().handle_error("set_wakeup_fd", None, None, None)
+
+
+def set_wakeup_fd(fd, /, *, warn_on_full_buffer=True):
+    """
+    Set the wakeup file descriptor to *fd*. When a signal is received, the signal number is
+    written as a single byte into the *fd*. This can be used by a library to wakeup a poll
+    or select call, allowing the signal to be fully processed.
+
+    .. versionadded:: NEXT
+    """
+    old_fd = _signal.set_wakeup_fd(fd, warn_on_full_buffer=warn_on_full_buffer)
+    global _child_wakeup_fd, _child_wakeup_fd_warn_on_full_buffer
+    _child_wakeup_fd = fd
+    _child_wakeup_fd_warn_on_full_buffer = warn_on_full_buffer
+    return old_fd
+
+if 'waitpid' in gevent.os.__implements__ and hasattr(_signal, 'SIGCHLD'): # pylint: disable=no-member
     # Tightly coupled here to gevent.os and its waitpid implementation; only use these
     # if necessary.
-    gevent.os._on_child_hook = _on_child_hook
+    gevent.os._on_child_hook = _on_child_hook # pylint: disable=no-member
     __implements__.append("signal")
     __implements__.append("getsignal")
+    __implements__.append("set_wakeup_fd")
 else:
     # XXX: This breaks test__all__ on windows
     __extensions__.append("signal")
     __extensions__.append("getsignal")
+    __extensions__.append("set_wakeup_fd")
 
 __imports__ = copy_globals(_signal, globals(),
                            names_to_ignore=__implements__ + __extensions__,
