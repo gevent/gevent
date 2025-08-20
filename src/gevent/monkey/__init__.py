@@ -450,6 +450,9 @@ def patch_ssl(_warnings=None, _first_time=True):
     :mod:`ssl` with cooperative versions.
 
     This is only useful if :func:`patch_socket` has been called.
+
+    It is important to call this function before :mod:`ssl` has been imported.
+    For more information, see :mod:`gevent.ssl`.
     """
     may_need_warning = (
         _first_time

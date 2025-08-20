@@ -10,10 +10,6 @@ items in the standard :mod:`ssl` module exactly, but the
 synchronous functions in this module only block the current greenlet
 and let the others run.
 
-The exact API exposed by this module varies depending on what version
-of Python you are using. The documents below describe the API for
-Python 3.
-
 .. tip::
 
     As an implementation note, gevent's exact behaviour will differ
@@ -29,11 +25,25 @@ Python 3.
     assumptions about the order in which multiple greenlets run. As
     TLS 1.3 gets deployed, those assumptions are likely to break.
 
-.. warning:: All the described APIs should be imported from
+.. warning::
+
+   All the described APIs should be imported from
    ``gevent.ssl``, and *not* from their implementation modules.
    Their organization is an implementation detail that may change at
    any time.
 
+.. warning::
+
+   If you will be monkey-patching, it is best to monkey-patch
+   *before* the stdlib :mod:`ssl` module has been imported. If you
+   patch afterwards, a warning will be emitted. Depending on the exact
+   usage of SSL, it is possible that SSL may not work if
+   monkey-patching occurs after the import.
+
+   The ``pip_system_certs`` (`source
+   <https://gitlab.com/alelec/pip-system-certs/>`_) package uses a
+   ``.pth`` file to cause SSL to be imported when Python is started,
+   which will result in this warning. See :issue:`2121`.
 
 
 .. automodule:: gevent.ssl
