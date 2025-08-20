@@ -1,0 +1,2 @@
+Make the classes in ``gevent.queue`` more compatible with classes that
+expect to subclass the standard library queue classes.
