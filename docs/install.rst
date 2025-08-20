@@ -19,7 +19,7 @@
 Supported Platforms
 ===================
 
-This version of gevent runs on Python 3.8 and up, (for exact details
+This version of gevent runs on Python 3.9 and up, (for exact details
 of tested versions, see the classifiers on the PyPI page or in
 ``setup.py``). gevent requires the `greenlet
 <https://greenlet.readthedocs.io>`_ library and will install the
@@ -44,6 +44,22 @@ other Unix-like operating systems (e.g., FreeBSD, Solaris, etc.)
    limited to a maximum of 1024 open sockets due to
    `limitations in libev`_. This limitation should not exist
    with the default libuv backend.
+
+
+.. admonition:: Free-Threading is not Supported
+
+   Beginning with 3.14 (and experimental in 3.13), CPython may be
+   built in a free-threaded mode where the GIL is not used by default.
+   gevent does not support this mode (although it will build with it),
+   and using gevent in such an interpreter will cause the GIL to be
+   enabled.
+
+   The underlying greenlet library `also has this limitation
+   <https://greenlet.readthedocs.io/en/latest/caveats.html#free-threading-is-not-supported>`_.
+
+   In addition, other limitations in greenlet maen that attempting to
+   use gevent in a free-threaded interpreter is not recommended at
+   this time. It is likely to work, but may have resource leaks.
 
 Older Versions of Python
 ------------------------
@@ -83,6 +99,8 @@ supported.
 |3.6,   |       |
 |3.7    |       |
 |       |       |
++-------+-------+
+|3.8    | 24.2.1|
 +-------+-------+
 
 Installation
