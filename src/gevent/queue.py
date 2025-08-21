@@ -179,8 +179,45 @@ class SimpleQueue(object):
         self.putters = collections.deque()
         self.hub = get_hub()
         self._event_unlock = None
-        self.queue = self._create_queue(items)
         self.is_shutdown = False
+
+        self.queue = None
+        if items:
+            # The *items* argument is unique to gevent, not in the
+            # stdlib. So when we monkey-patch ourself in, we won't
+            # expect to get called with that argument. To be compatible with
+            # stdlib subclasses that define ``def _init(self, maxsize)``
+            # detect this case and call with the same signature.
+            self._init(maxsize, items)
+        else:
+            self._init(maxsize)
+
+    # The stdlib queue class defines four bottleneck methods that
+    # subclasses override, we want to try to support them as
+    # best we can:
+    #
+    # * _init to initialize the queue attribute
+    # * _qsize to count the elements
+    # *_put to add an item
+    # *_get to remove and return an item.
+
+    def _init(self, maxsize, items=()): # pylint: disable=unused-argument
+        self.queue = self._create_queue(items)
+
+    def _qsize(self):
+        return len(self.queue)
+
+    def _get(self):
+        return self.queue.popleft()
+
+    def _put(self, item):
+        self.queue.append(item)
+
+    def _create_queue(self, items=()):
+        return collections.deque(items)
+
+    def _peek(self):
+        return self.queue[0]
 
     @property
     def maxsize(self):
@@ -196,18 +233,6 @@ class SimpleQueue(object):
 
     def copy(self):
         return type(self)(self.maxsize, self.queue)
-
-    def _create_queue(self, items=()):
-        return collections.deque(items)
-
-    def _get(self):
-        return self.queue.popleft()
-
-    def _peek(self):
-        return self.queue[0]
-
-    def _put(self, item):
-        self.queue.append(item)
 
     def __repr__(self):
         return '<%s at %s%s>' % (type(self).__name__, hex(id(self)), self._format())
@@ -231,7 +256,7 @@ class SimpleQueue(object):
 
     def qsize(self):
         """Return the size of the queue."""
-        return len(self.queue)
+        return self._qsize()
 
     def __len__(self):
         """

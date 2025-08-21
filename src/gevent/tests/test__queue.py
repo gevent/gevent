@@ -83,6 +83,35 @@ class UsesOnlyOneItemMixin:
         assert p.get(timeout=0) == "OK"
 
 
+    def test_init_and_bottleneck_methods(self):
+        if not self.SUPPORTS_PUTTING_WITHOUT_GETTING:
+            self.skipTest('Needs to be able to put and get')
+
+        # subclasses of stdlib queues.
+        class X(self._getFUT()):
+            initted = None
+            get_count = 0
+            put_count = 0
+
+            def _init(self, maxsize):
+                super()._init(maxsize)
+                self.initted = True
+
+            def _get(self):
+                self.get_count += 1
+                return super()._get()
+
+            def _put(self, item):
+                self.put_count += 1
+                return super()._put(item)
+
+        x = X()
+        x.put('hi')
+        self.assertEqual(x.get(), 'hi')
+        self.assertEqual(x.put_count, 1)
+        self.assertEqual(x.get_count, 1)
+        self.assertTrue(x.initted)
+
 
 class SubscriptMixin:
     def _getFUT(self):
