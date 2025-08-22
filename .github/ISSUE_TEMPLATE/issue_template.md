@@ -1,6 +1,9 @@
 ---
 name: Issue
 about: Use this template for all issues.
+title: ''
+labels: ''
+assignees: ''
 ---
 * gevent version: Please note how you installed it: From source, from
                   PyPI, from your operating system's package, etc.
