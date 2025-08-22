@@ -280,9 +280,21 @@ class socket(_socketcommon.SocketMixin):
         scheduled_new = self.hub.loop.closing_fd(sock.fileno())
         # Schedule the actual close to happen after that, but only if needed.
         # (If we always defer, we wind up closing things much later than expected.)
+        # Note that if we're in the middle of running callbacks, this can be
+        # called IMMEDIATELY, which completely defeats the point.
         if scheduled_new:
-            self.hub.loop.run_callback(sock.close)
+            check = self.hub.loop.check()
+            def cb(s):
+                try:
+                    s.close()
+                finally:
+                    check.stop()
+                    check.close()
+            check.start(cb, sock)
         else:
+            # Note that if the file descriptor got closed (``os.close``)
+            # closing the socket will now raise OSError: EBADF. The
+            # stdlib does the same.
             sock.close()
 
 

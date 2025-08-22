@@ -58,14 +58,52 @@ try:
 except ImportError:
     fcntl = None
 
-__implements__ = ['fork']
+__implements__ = ['fork', 'close']
 __extensions__ = ['tp_read', 'tp_write']
 
 _read = os.read
 _write = os.write
+_close = os.close
+_fstat = os.fstat
 
 
 ignored_errors = [EAGAIN, errno.EINTR]
+
+
+def close(fd):
+    """
+    Close a file descriptor.
+
+    This function cooperates with gevent to avoid crashing
+    the process if you (accidentally) call it while you're
+    still performing IO on it; for example, if you have it
+    registered with a ``Selector`` implementation, which documents
+    that you *must* unregister FDs before closing them.
+
+    .. versionadded:: NEXT
+    """
+    # First, check to see if it's invalid already, because
+    # the stdlib throws OSError in this case; fstat does
+    # the same
+    _fstat(fd)
+    loop = get_hub().loop
+    check = loop.check()
+    # Unlike closing sockets, we don't check the return value,
+    # and always defer it. This is because this case doesn't
+    # necessarily have access to any active watchers (yet)
+    def cb(fd):
+        # If they closed the FD through some other mechanism,
+        # such as a socket.close, it will be invalid now.
+        try:
+            _close(fd)
+        except OSError:
+            pass
+        finally:
+            check.stop()
+            check.close()
+
+    check.start(cb, fd)
+
 
 
 if fcntl:

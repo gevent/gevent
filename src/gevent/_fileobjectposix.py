@@ -19,6 +19,7 @@ from gevent._hub_primitives import wait_on_watcher
 from gevent.hub import get_hub
 from gevent.os import _read
 from gevent.os import _write
+from gevent.os import _close
 from gevent.os import ignored_errors
 from gevent.os import make_nonblocking
 
@@ -136,7 +137,7 @@ class GreenFileDescriptorIO(RawIOBase):
     def __finish_close(closefd, fileno, keep_alive):
         try:
             if closefd:
-                os.close(fileno)
+                _close(fileno)
         finally:
             if hasattr(keep_alive, 'close'):
                 keep_alive.close()

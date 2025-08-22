@@ -79,11 +79,15 @@ class libuv_error_wrapper(object):
                 args = args[1:]
             res = libuv_func(*args, **kwargs)
             if res is not None and res < 0:
-                raise UVFuncallError(
+                kind = UVFuncallError
+                if res == libuv.UV_EBADF:
+                    kind = lambda msg: OSError(abs(res), msg)
+                raise kind(
                     str(ffi.string(libuv.uv_err_name(res)).decode('ascii')
                         + ' '
                         + ffi.string(libuv.uv_strerror(res)).decode('ascii'))
                     + " Args: " + repr(args) + " KWARGS: " + repr(kwargs)
+                    + " UVError: " + str(res)
                 )
             return res
 

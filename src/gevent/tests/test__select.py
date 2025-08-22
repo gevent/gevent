@@ -1,13 +1,15 @@
-from gevent.testing import six
-import sys
-import os
 import errno
-from gevent import select, socket
+import sys
+import unittest
+from unittest.mock import patch as Patch
+
 import gevent.core
 import gevent.testing as greentest
-import gevent.testing.timing
-import unittest
 
+from gevent import os
+from gevent import select
+from gevent import socket
+from gevent.testing import timing
 
 class TestSelect(gevent.testing.timing.AbstractGenericWaitTestCase):
 
@@ -40,9 +42,6 @@ class TestSelectRead(gevent.testing.timing.AbstractGenericWaitTestCase):
             except OSError as err:
                 # Python 3
                 self.assertEqual(err.errno, errno.EBADF)
-            except select.error as err: # pylint:disable=duplicate-except
-                # Python 2 (select.error is OSError on py3)
-                self.assertEqual(err.args[0], errno.EBADF)
             else:
                 self.fail("exception not raised")
 
@@ -97,15 +96,6 @@ class TestSelectTypes(greentest.TestCase):
         finally:
             sock.close()
 
-    if hasattr(six.builtins, 'long'):
-        def test_long(self):
-            sock = socket.socket()
-            try:
-                select.select(
-                    [six.builtins.long(sock.fileno())], [], [], 0.001)
-            finally:
-                sock.close()
-
     def test_iterable(self):
         sock = socket.socket()
 
@@ -121,6 +111,128 @@ class TestSelectTypes(greentest.TestCase):
         self.switch_expected = False
         self.assertRaises(TypeError, select.select, ['hello'], [], [], 0.001)
 
+
+
+class TestPossibleCrashes(greentest.TestCase):
+    """
+    Tests for the crashes and unexpected exceptions
+    that happen when we try to use or create (depending on
+    loop implementation) a IO watcher for a closed/invalid file descriptor.
+
+    See https://github.com/gevent/gevent/issues/2100
+    """
+
+    def test_closing_object_while_selecting(self):
+        # This one crashed libuv on Linux, at least, with
+        #   libuv/src/unix/linux.c:1430: uv__io_poll: Assertion `errno == EEXIST' failed.
+        #
+        # The expected sequence here is that
+        # ``select.select`` creates the watcher objects and starts them.
+        # Then, it goes back to the hub, which spawns and runs the greenlet
+        # that closes the socket. The hub then goes into the IO waiting loop,
+        # at which point libuv calls ``epoll_ctl``, gets EBADF instead of
+        # EEXIST, and aborts.
+        #
+        # Why did this happen? We weren't actually *in* libuv yet when
+        # the call to ``socket.close`` happened.
+        # I think we deferred the callbacks that *actually* close the socket
+        # because a watcher was active. Those run first, then the IO polling
+        # begins.
+        # Unlike libev, which calls ``epoll_ctl`` at watcher init time,
+        # libuv defers this part.
+        #
+        # We were trying to defer the close of the socket to the next iteration fo
+        # the event loop, but:
+        # (1) we were using run_callback(), and because we are in a greenlet spawn,
+        #     we were already running callbacks; in that situation, a new callback
+        #     can run immediately. Which it did, and closed the FD, breaking the loops.
+        #     The fix is to use a check watcher instead.
+        # (2) libuv doesn't implement the function that lets us determine that we
+        #     need to defer the check.
+        sock = socket.socket()
+        self.addCleanup(sock.close)
+        gevent.spawn(sock.close)
+
+
+        # This call needs to be blocking so we get all the way
+        # to having an open, started IO watcher when the
+        # socket gets closed.
+        with Patch.object(select, '_original_select', return_value=((), (), ())):
+            select.select([sock], (), (), timing.SMALLEST_RELIABLE_DELAY)
+
+    def _close_invalid_sock(self, sock):
+        # Because we closed the FD already (which raises EBADF when done again), but we
+        # still need to take care of the gevent-resources
+        try:
+            sock.close()
+        except OSError:
+            pass
+
+
+    def test_closing_fd_while_selecting(self):
+        # As above, this causes libuv to crash for the same reasons.
+        # On linux/libev with -UNDEBUG to enable assertions, this
+        # crashes with:
+        #   ev_epoll.c:134: epoll_modify: Assertion
+        #   `("libev: I/O watcher with invalid fd found in epoll_ctl",
+        #    errno != EBADF && errno != ELOOP && errno != EINVAL)
+        #
+        # called from ev_run:ev.c:4075 via ev.c:4021
+        sock = socket.socket()
+        self.addCleanup(self._close_invalid_sock, sock)
+        gevent.spawn(os.close, sock.fileno())
+        with Patch.object(select, '_original_select', return_value=((), (), ())):
+            select.select([sock], (), (), timing.SMALLEST_RELIABLE_DELAY)
+
+    def test_closing_fd_before_selecting(self):
+        # As above, this crashes libuv/linux at:
+        #     libuv/src/unix/linux.c:1434
+        #
+        # if (!epoll_ctl(epollfd, op, fd, &e))
+        #   continue;
+        #
+        # assert(op == EPOLL_CTL_ADD);
+        # assert(errno == EEXIST);
+        #
+        # /* File descriptor that's been watched before, update event mask. */
+        # if (epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &e))
+        #   abort(); // <--- 1434
+        #
+        # Which is UV calling epoll_ctl because it thinks
+        # Fatal Python error: Aborted
+        # Current thread 0x00007ffffe8450c0 (most recent call first):
+        #   File "/project/src/gevent/libuv/loop.py", line 557 in run
+        #   File "/project/src/gevent/hub.py", line 647 in run
+        sock = socket.socket()
+        self.addCleanup(self._close_invalid_sock, sock)
+        os.close(sock.fileno())
+        with Patch.object(select, '_original_select', return_value=((), (), ())):
+            select.select([sock], (), (), timing.SMALLEST_RELIABLE_DELAY)
+
+
+    def test_closing_object_while_polling(self):
+        # Polling is different because registering is when we
+        # create the IO watcher; we just don't start it until
+        # we poll.
+        sock = socket.socket()
+        self.addCleanup(sock.close)
+        orig_fileno = sock.fileno()
+        gevent.spawn(sock.close)
+        # This call needs to be blocking so we get all the way
+        # to having an open, started IO watcher when the
+        # socket gets closed.
+        poller = select.poll()
+        poller.register(sock, select.POLLIN)
+
+        with Patch.object(select, '_original_select', return_value=((), (), ())):
+            # pylint:disable=unbalanced-tuple-unpacking
+            [(fd, event)] = poller.poll(timing.SMALLEST_RELIABLE_DELAY) # fine on the first one
+            self.assertEqual(fd, orig_fileno)
+            self.assertEqual(event, select.POLLIN)
+
+            [(fd, event)] = poller.poll(timing.SMALLEST_RELIABLE_DELAY) # this one crashes the process
+            self.assertEqual(fd, orig_fileno)
+            self.assertEqual(event, select.POLLNVAL)
 
 if __name__ == '__main__':
     greentest.main()
