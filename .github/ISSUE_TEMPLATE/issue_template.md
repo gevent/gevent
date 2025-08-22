@@ -1,3 +1,7 @@
+---
+name: Issue
+about: Use this template for all issues.
+---
 * gevent version: Please note how you installed it: From source, from
                   PyPI, from your operating system's package, etc.
 * Python version: Please be as specific as possible. For example,
