@@ -287,6 +287,8 @@ class socket(_socketcommon.SocketMixin):
             def cb(s):
                 try:
                     s.close()
+                except OSError:
+                    pass
                 finally:
                     check.stop()
                     check.close()

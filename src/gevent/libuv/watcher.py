@@ -1,9 +1,9 @@
 # pylint: disable=too-many-lines, protected-access, redefined-outer-name, not-callable
 # pylint: disable=no-member
-from __future__ import absolute_import, print_function
 
 import functools
 import sys
+import os
 
 from gevent.libuv import _corecffi # pylint:disable=no-name-in-module,import-error
 
@@ -400,6 +400,10 @@ class io(_base.IoMixin, watcher):
 
 
     def multiplex(self, events):
+        # libuv validates the FD when a watcher is originally
+        # created, but it may have gone invalid. Re-do the validation
+        # check here so we can raise the proper OSError.
+        os.fstat(self._fd)
         watcher = self._multiplexwatcher(events, self)
         self._multiplex_watchers.append(watcher)
         self._calc_and_update_events()

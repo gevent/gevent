@@ -120,6 +120,7 @@ class TestPossibleCrashes(greentest.TestCase):
     loop implementation) a IO watcher for a closed/invalid file descriptor.
 
     See https://github.com/gevent/gevent/issues/2100
+    See test__selectors.py
     """
 
     def test_closing_object_while_selecting(self):
@@ -148,7 +149,7 @@ class TestPossibleCrashes(greentest.TestCase):
         #     can run immediately. Which it did, and closed the FD, breaking the loops.
         #     The fix is to use a check watcher instead.
         # (2) libuv doesn't implement the function that lets us determine that we
-        #     need to defer the check.
+        #     need to defer the check. (fixing this involved rolling our own.)
         sock = socket.socket()
         self.addCleanup(sock.close)
         gevent.spawn(sock.close)
