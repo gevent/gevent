@@ -679,6 +679,12 @@ class loop(AbstractLoop):
 
         return io_watcher.multiplex(events)
 
+    def closing_fd(self, fd): # pylint:disable=unused-argument
+        # XXX: libev feeds an event here. DO THAT
+        if fd in self._io_watchers and self._io_watchers[fd]._multiplex_watchers:
+            return True
+        return False
+
     def prepare(self, ref=True, priority=None):
         # We run arbitrary code in python_prepare_callback. That could switch
         # greenlets. If it does that while also manipulating the active prepare

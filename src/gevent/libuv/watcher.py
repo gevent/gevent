@@ -1,6 +1,5 @@
 # pylint: disable=too-many-lines, protected-access, redefined-outer-name, not-callable
 # pylint: disable=no-member
-from __future__ import absolute_import, print_function
 
 import functools
 import sys
@@ -15,6 +14,7 @@ libuv = _corecffi.lib
 
 from gevent._ffi import watcher as _base
 from gevent._ffi import _dbg
+from gevent.os import _check_fd_valid
 
 # A set of uv_handle_t* CFFI objects. Kept around
 # to keep the memory alive until libuv is done with them.
@@ -56,6 +56,8 @@ _events = [(libuv.UV_READABLE, "READ"),
 def _events_to_str(events): # export
     return _base.events_to_str(events, _events)
 
+
+
 class UVFuncallError(ValueError):
     pass
 
@@ -79,11 +81,15 @@ class libuv_error_wrapper(object):
                 args = args[1:]
             res = libuv_func(*args, **kwargs)
             if res is not None and res < 0:
-                raise UVFuncallError(
+                kind = UVFuncallError
+                if res == libuv.UV_EBADF:
+                    kind = lambda msg: OSError(abs(res), msg)
+                raise kind(
                     str(ffi.string(libuv.uv_err_name(res)).decode('ascii')
                         + ' '
                         + ffi.string(libuv.uv_strerror(res)).decode('ascii'))
                     + " Args: " + repr(args) + " KWARGS: " + repr(kwargs)
+                    + " UVError: " + str(res)
                 )
             return res
 
@@ -396,6 +402,10 @@ class io(_base.IoMixin, watcher):
 
 
     def multiplex(self, events):
+        # libuv validates the FD when a watcher is originally
+        # created, but it may have gone invalid. Re-do the validation
+        # check here so we can raise the proper OSError.
+        _check_fd_valid(self._fd)
         watcher = self._multiplexwatcher(events, self)
         self._multiplex_watchers.append(watcher)
         self._calc_and_update_events()

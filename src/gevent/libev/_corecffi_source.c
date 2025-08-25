@@ -81,6 +81,10 @@ static void gevent_set_ev_alloc()
     ev_set_allocator(ptr);
 }
 
+#define GEVENT_CFFI 1
+#include "check_valid_fd.c"
+#undef GEVENT_CFFI
+
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunreachable-code"

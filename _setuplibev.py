@@ -107,6 +107,10 @@ def build_extension():
         ]
         CORE.configure = configure_libev
         if os.environ.get('GEVENTSETUP_EV_VERIFY') is not None:
+            # Numeric values from 0 to 3. 2 and above enable some pedantic
+            # checks that can very easily cause undesired failures;
+            # for example, it will abort the process if you try to close a
+            # watcher whose FD is now invalid.
             CORE.define_macros.append(
                 ('EV_VERIFY', os.environ['GEVENTSETUP_EV_VERIFY']))
             # EV_VERIFY is implemented using assert(), which only works if

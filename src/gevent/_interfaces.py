@@ -136,6 +136,9 @@ class ILoop(Interface):
 
         *events* is a bitmask specifying which events to watch
         for. 1 means read, and 2 means write.
+
+        *fd* should be valid. If it is not, this method _should_
+        throw an OSError EBADF.
         """
 
     def closing_fd(fd):
@@ -148,7 +151,9 @@ class ILoop(Interface):
 
         :return: A boolean value that's true if active IO watchers were
            queued to run. Closing the FD should be deferred until the next
-           run of the eventloop with a callback.
+           run of the eventloop with a check watcher (callbacks may be
+           run immediately if we were already running callbacks when this was
+           added, and it needs to come after the loop).
         """
 
     def timer(after, repeat=0.0, ref=True, priority=None):

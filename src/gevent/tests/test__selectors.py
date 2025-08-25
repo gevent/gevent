@@ -6,6 +6,7 @@ from gevent import socket
 from gevent import selectors
 
 import gevent.testing as greentest
+from gevent.testing import timing
 
 class SelectorTestMixin(object):
 
@@ -104,6 +105,65 @@ class GeventSelectorTest(SelectorTestMixin,
             for pair in pairs:
                 for s in pair:
                     s.close()
+
+
+@greentest.skipOnWindows("Things like os.close don't work on Windows")
+class TestPossibleCrashes(greentest.TestCase):
+    """
+    Tests for the crashes and unexpected exceptions
+    that happen when we try to use or create (depending on
+    loop implementation) a IO watcher for a closed/invalid file descriptor.
+
+    See https://github.com/gevent/gevent/issues/2100
+    See test__select.py
+    """
+
+    def test_closing_object_while_selecting(self):
+        sock = socket.socket()
+        self.addCleanup(sock.close)
+        gevent.spawn(sock.close)
+
+        sel = selectors.GeventSelector()
+        sel.register(sock, selectors.EVENT_READ)
+        # This call needs to be blocking so we get all the way
+        # to having an open, started IO watcher when the
+        # socket gets closed.
+        with sel:
+            sel.select(timeout=timing.SMALLEST_RELIABLE_DELAY)
+
+
+    def _close_invalid_sock(self, sock):
+        # Because we closed the FD already (which raises EBADF when done again), but we
+        # still need to take care of the gevent-resources
+        try:
+            sock.close()
+        except OSError:
+            pass
+
+    def test_closing_fd_while_selecting(self):
+        # using regular os.close will
+        # crash under libuv
+        from gevent import os
+
+        sock = socket.socket()
+        self.addCleanup(self._close_invalid_sock, sock)
+        gevent.spawn(os.close, sock.fileno())
+
+        sel = selectors.GeventSelector()
+        sel.register(sock, selectors.EVENT_READ)
+
+        with sel:
+            sel.select(timeout=timing.SMALLEST_RELIABLE_DELAY)
+
+    def test_closing_fd_before_selecting(self):
+        import os
+        sock = socket.socket()
+        self.addCleanup(self._close_invalid_sock, sock)
+        os.close(sock.fileno())
+
+        sel = selectors.GeventSelector()
+        with self.assertRaisesRegex(ValueError, 'Invalid file'):
+            sel.register(sock, selectors.EVENT_READ)
 
 
 

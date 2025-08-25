@@ -1,0 +1,11 @@
+Fix several possible interpreter crashes when there are race
+conditions or programmers don't follow the documented rules and close
+open files while they are still in use by other components.
+
+For example, :meth:`selectors.BaseSelector.unregister` says "A file
+object shall be unregistered prior to being closed." Failure to do so
+is implementation dependent; in gevent, with libev compiled with
+debugging enabled, this would crash the process.
+
+This also means that gevent now monkey-patches :func:`os.close` to
+help handle these cases.

@@ -316,7 +316,7 @@ class TestFDs(unittest.TestCase):
 
     @mock.patch('os.closerange')
     @mock.patch('gevent.subprocess._set_inheritable')
-    @mock.patch('os.close')
+    @mock.patch('gevent.subprocess.os_close')
     def test_close_fds_brute_force(self, close, set_inheritable, closerange):
         keep = (
             4, 5,
@@ -349,7 +349,7 @@ class TestFDs(unittest.TestCase):
     @mock.patch('os.listdir')
     @mock.patch('os.closerange')
     @mock.patch('gevent.subprocess._set_inheritable')
-    @mock.patch('os.close')
+    @mock.patch('gevent.subprocess.os_close')
     def test_close_fds_from_path(self, close, set_inheritable, closerange, listdir):
         keep = (
             4, 5,

@@ -75,7 +75,7 @@ support.wait_threads_exit = wait_threads_exit
 try:
     from test import support as ts
 except ImportError:
-    pass
+    ts = None
 else:
     ts.threading_setup = threading_setup
     ts.threading_cleanup = threading_cleanup
@@ -145,6 +145,13 @@ temp_handle, temp_path = tempfile.mkstemp(prefix=test_name, suffix='.py', text=T
 os.write(temp_handle, module_source.encode('utf-8'))
 os.close(temp_handle)
 remove_file = not os.environ.get('GEVENT_DEBUG')
+if remove_file and ts is not None:
+    # Some of the stdlib tests spew a lot of data to stdout. This
+    # makes it hard to read results of a whole run of all the monkey
+    # stdlib tests. The main CPython regression runner, the equivalent
+    # of ``gevent.tests`` sets this to false and that stops some of it.
+    ts.verbose = 0
+    print('Disabling verbose stdlib tests')
 try:
     module_code = compile(module_source,
                           temp_path,

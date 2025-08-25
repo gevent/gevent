@@ -10,12 +10,13 @@ import select as __select__
 from gevent.event import Event
 from gevent.hub import _get_hub_noargs as get_hub
 from gevent.hub import sleep as _g_sleep
-from gevent._compat import integer_types
+
 from gevent._compat import iteritems
 from gevent._util import copy_globals
 from gevent._util import _NONE
 
-from errno import EINTR
+from errno import EBADF
+
 _real_original_select = __select__.select
 if sys.platform.startswith('win32'):
     def _original_select(r, w, x, t):
@@ -54,6 +55,9 @@ else:
 
 __all__ = ['error'] + __implements__
 
+# This is now a plain OSError, we should never try to
+# recatch and throw these. But the constant needs to
+# remain for BWC.
 error = __select__.error
 
 __imports__ = copy_globals(__select__, globals(),
@@ -63,14 +67,18 @@ __imports__ = copy_globals(__select__, globals(),
 _EV_READ = 1
 _EV_WRITE = 2
 
-def get_fileno(obj):
-    try:
-        fileno_f = obj.fileno
-    except AttributeError:
-        if not isinstance(obj, integer_types):
-            raise TypeError('argument must be an int, or have a fileno() method: %r' % (obj,))
-        return obj
-    return fileno_f()
+def get_fileno(fileobj):
+    if isinstance(fileobj, int):
+        fd = fileobj
+    else:
+        try:
+            fd = int(fileobj.fileno())
+        except (AttributeError, TypeError, ValueError):
+            raise ValueError("Invalid file object: "
+                             "{!r}".format(fileobj)) from None
+    if fd < 0:
+        raise ValueError("Invalid file descriptor: {}".format(fd))
+    return fd
 
 
 class SelectResult(object):
@@ -92,14 +100,11 @@ class SelectResult(object):
         MAXPRI = loop.MAXPRI
 
         for fdlist, callback in fd_cb:
-            try:
-                for fd in fdlist:
-                    watcher = io(get_fileno(fd), callback.mask)
-                    watcher.priority = MAXPRI
-                    watchers.append(watcher)
-                    watcher.start(callback, fd, watcher)
-            except IOError as ex:
-                raise error(*ex.args)
+            for fd in fdlist:
+                watcher = io(get_fileno(fd), callback.mask)
+                watcher.priority = MAXPRI
+                watchers.append(watcher)
+                watcher.start(callback, fd, watcher)
 
     @staticmethod
     def _closeall(watchers):
@@ -176,14 +181,8 @@ def select(rlist, wlist, xlist, timeout=None): # pylint:disable=unused-argument
     #
     # We accept the *xlist* here even though we can't
     # below because this is all about error handling.
-    sel_results = ((), (), ())
-    try:
-        sel_results = _original_select(rlist, wlist, xlist, 0)
-    except error as e:
-        enumber = getattr(e, 'errno', None) or e.args[0]
-        if enumber != EINTR:
-            # Ignore interrupted syscalls
-            raise
+    # Since Python 3.5, we don't need to worry about EINTR handling.
+    sel_results = _original_select(rlist, wlist, xlist, 0)
 
     if sel_results[0] or sel_results[1] or sel_results[2] or (timeout is not None and timeout == 0):
         # If we actually had stuff ready, go ahead and return it. No need
@@ -225,6 +224,10 @@ class PollResult(object):
 
         self.events.add((fd, result_flags))
         self.event.set()
+
+    def add_error_before_io(self, fd):
+        # This is before we do any IO, don't set the event
+        self.events.add((fd, POLLNVAL))
 
 class poll(object):
     """
@@ -283,14 +286,21 @@ class poll(object):
         """
         self.register(fd, eventmask)
 
-    def _get_started_watchers(self, watcher_cb):
+    def _get_started_watchers(self, poll_result):
         watchers = []
         io = self.loop.io
         MAXPRI = self.loop.MAXPRI
-
+        watcher_cb = poll_result.add_event
         try:
             for fd, flags in iteritems(self.fds):
-                watcher = io(fd, flags)
+                try:
+                    watcher = io(fd, flags)
+                except OSError as ex:
+                    if ex.errno != EBADF:
+                        raise
+                    poll_result.add_error_before_io(fd)
+                    continue
+
                 watchers.append(watcher)
                 watcher.priority = MAXPRI
                 watcher.start(watcher_cb, fd, pass_events=True)
@@ -314,7 +324,7 @@ class poll(object):
            i.e., block. This was always the case with libev.
         """
         result = PollResult()
-        watchers = self._get_started_watchers(result.add_event)
+        watchers = self._get_started_watchers(result)
         try:
             if timeout is not None:
                 if timeout < 0:
