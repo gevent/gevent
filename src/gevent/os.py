@@ -60,7 +60,7 @@ try:
 except ImportError:
     fcntl = None
 
-__implements__ = ['fork', 'close']
+__implements__ = ['fork',]
 __extensions__ = ['tp_read', 'tp_write']
 
 _read = os.read
@@ -71,112 +71,131 @@ _fstat = os.fstat
 
 ignored_errors = [EAGAIN, errno.EINTR]
 
-_closing_fd_to_event = {}
 
 # An escape hatch (set to False) if you have problems with
 # close on regular files because you are trying to poll on it. If you
 # need this please let the maintainers know!
 _NO_DEFER_REG_FILE = True
 
-def close(fd):
-    """
-    Close a file descriptor.
-
-    This function cooperates with gevent to avoid crashing
-    the process if you (accidentally) call it while you're
-    still performing IO on it; for example, if you have it
-    registered with a ``Selector`` implementation, which documents
-    that you *must* unregister FDs before closing them.
-
-    If the *fd* refers to a regular file, this cooperation is *not*
-    used. This is because trying to use gevent to poll on regular
-    files doesn't work and shouldn't be done. We assume that everyone
-    is following the rules.
-
-    .. versionadded:: NEXT
-    """
-    # TODO: Should we limit this method (after the _fstat) to
-    # just...sockets, fifo, pipe,...and actually I think the list goes
-    # on. But at any rate, even though it usually doesn't make any
-    # sense, you CAN create IO watchers for regular files, so in
-    # theory you could run into the problems we're fixing (issue 2100)
-    # even with a regular file. I consider that very unlikely though.
-    # Temp escape hatch if needed.
-
-    # First, check to see if it's invalid already, because
-    # the stdlib throws OSError in this case; fstat does
-    # the same.
-    stats = _fstat(fd)
-    if S_ISREG(stats.st_mode) and _NO_DEFER_REG_FILE:
-        return _close(fd)
-
-    hub = get_hub()
-    loop = hub.loop
-
-    if fd in _closing_fd_to_event:
-        # If this is the second time we're closing the same
-        # FD number, and the fd is still in our map, it means our
-        # check watcher hasn't run yet, which means if we return
-        # immediately and anyone tries to do something with that
-        # fd (read, stat, whatever), it might STILL BE VALID. That's
-        # bad, and breaks some tests. So wait for it to really be
-        # closed.
-        event = _closing_fd_to_event.pop(fd, None)
-        if event is not None:
-            # Wake the loop up, let it know we've got
-            # stuff to do. This is necessary on libev,
-            # because if the *fd* didn't actually have any active
-            # watchers, then when we call ``closing_fd``,
-            # the call it makes to ``ev_feed_fd_event`` silently
-            # does nothing. This should actually be needed only
-            # rarely (e.g., when there are no other greenlets and no
-            # scheduled timers, etc, i.e. hub is idle).
-            # This showed up in ``test_asyncore.py:
-            # FileWrapperTest.test_close_twice``
-            # Without this, we would just hang.
-            with loop.idle() as watcher:
-                hub.wait(watcher)
-
-            # Now our event SHOULD be set, because the check watcher
-            # SHOULD have run. But don't do an unbounded wait, just in
-            # case. Getting a weird error with a FD (most likely an
-            # OSError because it will be closed) is better than
-            # hanging the process forever.
-            event.wait(0.001) # arbitrary amount of time
-
-        # Closing twice should raise OSError
-        raise OSError(errno.EBADF)
-
-    # Ok, first time we're closing this FD. (If it was the
-    # second, EVEN IF the fd had already come out of the
-    # map so we failed that check, the _fstat call should
-    # have raised a OSError.
-
-    loop.closing_fd(fd)
-    check = loop.check()
-    event = Event()
-    _closing_fd_to_event[fd] = event
-    # Unlike closing sockets, we don't check the return value,
-    # and always defer it. This is because this case doesn't
-    # necessarily have access to any active watchers (yet)
-    def cb(fd):
-        # If they closed the FD through some other mechanism,
-        # such as a socket.close, it will be invalid now.
-        try:
-            _close(fd)
-        except OSError:
-            pass
-        finally:
-            event.set()
-            _closing_fd_to_event.pop(fd, None)
-            check.stop()
-            check.close()
-    check.start(cb, fd)
-
+if fcntl:
+    def _check_fd_valid(fd):
+        return fcntl.fcntl(fd, fcntl.F_GETFD)
+else:
+    def _check_fd_valid(fd): # pylint: disable=unused-argument
+        # Windows. Nothing we can reliably use here across
+        # all event loops. We need to write some code and make it part
+        # of the
+        pass
 
 if fcntl:
+    _closing_fd_to_event = {}
+    __implements__ += ['close',]
 
-    __extensions__ += ['make_nonblocking', 'nb_read', 'nb_write']
+    def close(fd):
+        """
+        Close a file descriptor.
+
+        This function cooperates with gevent to avoid crashing
+        the process if you (accidentally) call it while you're
+        still performing IO on the file descriptor; for example, if you have it
+        registered with a ``Selector`` implementation, which documents
+        that you *must* unregister FDs before closing them.
+
+        If the *fd* refers to a regular file, this cooperation is *not*
+        used. This is because trying to use gevent to poll on regular
+        files doesn't work and shouldn't be done. We assume that everyone
+        is following the rules.
+
+        .. caution::
+           This function is not intended for use on Windows.
+
+        .. versionadded:: NEXT
+        """
+        # TODO: Should we limit this method (after the _fstat) to
+        # just...sockets, fifo, pipe,...and actually I think the list goes
+        # on. But at any rate, even though it usually doesn't make any
+        # sense, you CAN create IO watchers for regular files, so in
+        # theory you could run into the problems we're fixing (issue 2100)
+        # even with a regular file. I consider that very unlikely though.
+        # Temp escape hatch if needed.
+
+        # First, check to see if it's invalid already, because
+        # the stdlib throws OSError in this case; fstat does
+        # the same.
+        #
+        # Our C code uses ``fcntl(F_GETFD)``, use that.
+        # But we also want to know if the file is regular, so
+        # we stat it as well.
+        _check_fd_valid(fd)
+        stats = _fstat(fd)
+        if S_ISREG(stats.st_mode) and _NO_DEFER_REG_FILE:
+            return _close(fd)
+
+        hub = get_hub()
+        loop = hub.loop
+
+        if fd in _closing_fd_to_event:
+            # If this is the second time we're closing the same
+            # FD number, and the fd is still in our map, it means our
+            # check watcher hasn't run yet, which means if we return
+            # immediately and anyone tries to do something with that
+            # fd (read, stat, whatever), it might STILL BE VALID. That's
+            # bad, and breaks some tests. So wait for it to really be
+            # closed.
+            event = _closing_fd_to_event.pop(fd, None)
+            if event is not None:
+                # Wake the loop up, let it know we've got
+                # stuff to do. This is necessary on libev,
+                # because if the *fd* didn't actually have any active
+                # watchers, then when we call ``closing_fd``,
+                # the call it makes to ``ev_feed_fd_event`` silently
+                # does nothing. This should actually be needed only
+                # rarely (e.g., when there are no other greenlets and no
+                # scheduled timers, etc, i.e. hub is idle).
+                # This showed up in ``test_asyncore.py:
+                # FileWrapperTest.test_close_twice``
+                # Without this, we would just hang.
+                with loop.idle() as watcher:
+                    hub.wait(watcher)
+
+                # Now our event SHOULD be set, because the check watcher
+                # SHOULD have run. But don't do an unbounded wait, just in
+                # case. Getting a weird error with a FD (most likely an
+                # OSError because it will be closed) is better than
+                # hanging the process forever.
+                event.wait(0.001) # arbitrary amount of time
+
+            # Closing twice should raise OSError
+            raise OSError(errno.EBADF)
+
+        # Ok, first time we're closing this FD. (If it was the
+        # second, EVEN IF the fd had already come out of the
+        # map so we failed that check, the _fstat call should
+        # have raised a OSError.
+
+        loop.closing_fd(fd)
+        check = loop.check()
+        event = Event()
+        _closing_fd_to_event[fd] = event
+        # Unlike closing sockets, we don't check the return value,
+        # and always defer it. This is because this case doesn't
+        # necessarily have access to any active watchers (yet)
+        def cb(fd):
+            # If they closed the FD through some other mechanism,
+            # such as a socket.close, it will be invalid now.
+            try:
+                _close(fd)
+            except OSError:
+                pass
+            finally:
+                event.set()
+                _closing_fd_to_event.pop(fd, None)
+                check.stop()
+                check.close()
+        check.start(cb, fd)
+
+
+    __extensions__ += ['make_nonblocking', 'nb_read', 'nb_write',]
 
     def make_nonblocking(fd):
         """Put the file descriptor *fd* into non-blocking mode if

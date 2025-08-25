@@ -16,6 +16,8 @@
 */
 int gevent_check_fd_valid(int fd)
 {
+// See also gevent.os._check_fd_valid
+
 // TODO: libuv uses syscalls like poll(), epoll(), and kqueue.
 // the poll one we could do because it doesn't require an
 // extra file descriptor like the rest do, and which is buried in the

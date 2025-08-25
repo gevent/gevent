@@ -107,7 +107,7 @@ class GeventSelectorTest(SelectorTestMixin,
                     s.close()
 
 
-
+@greentest.skipOnWindows("Things like os.close don't work on Windows")
 class TestPossibleCrashes(greentest.TestCase):
     """
     Tests for the crashes and unexpected exceptions

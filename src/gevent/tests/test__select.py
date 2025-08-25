@@ -112,7 +112,7 @@ class TestSelectTypes(greentest.TestCase):
         self.assertRaises(TypeError, select.select, ['hello'], [], [], 0.001)
 
 
-
+@greentest.skipOnWindows("Things like os.close don't work on Windows")
 class TestPossibleCrashes(greentest.TestCase):
     """
     Tests for the crashes and unexpected exceptions

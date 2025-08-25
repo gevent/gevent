@@ -14,6 +14,7 @@ libuv = _corecffi.lib
 
 from gevent._ffi import watcher as _base
 from gevent._ffi import _dbg
+from gevent.os import _check_fd_valid
 
 # A set of uv_handle_t* CFFI objects. Kept around
 # to keep the memory alive until libuv is done with them.
@@ -56,14 +57,6 @@ def _events_to_str(events): # export
     return _base.events_to_str(events, _events)
 
 
-if sys.platform.startswith('win32'):
-    # fstat doesn't work with sockets on windows.
-    # TODO: Figure out what libuv uses for its open verification and
-    # call that.
-    def _check_fd_valid(_fd):
-        return True
-else:
-    from os import fstat as _check_fd_valid
 
 class UVFuncallError(ValueError):
     pass
