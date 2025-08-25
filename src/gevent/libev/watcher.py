@@ -1,7 +1,7 @@
 # pylint: disable=too-many-lines, protected-access, redefined-outer-name, not-callable
 # pylint: disable=no-member
-from __future__ import absolute_import, print_function
 import sys
+import errno
 
 from gevent.libev import _corecffi # pylint:disable=no-name-in-module,import-error
 
@@ -152,11 +152,18 @@ class io(_base.IoMixin, watcher):
 
     EVENT_MASK = libev.EV__IOFDSET | libev.EV_READ | libev.EV_WRITE
 
+    @classmethod
+    def _validate_fd(cls, fd):
+        super()._validate_fd(fd)
+        if libev.gevent_check_fd_valid(fd) == -1:
+            raise OSError(errno.EBADF, "Invalid file descriptor %r" % (fd,))
+
     def _get_fd(self):
         return vfd_get(self._watcher.fd)
 
     @_base.not_while_active
     def _set_fd(self, fd):
+        self._validate_fd(fd)
         vfd = vfd_open(fd)
         vfd_free(self._watcher.fd)
         self._watcher_init(self._watcher, self._watcher_callback, vfd, self._watcher.events)

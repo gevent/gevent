@@ -3,7 +3,6 @@
 
 import functools
 import sys
-import os
 
 from gevent.libuv import _corecffi # pylint:disable=no-name-in-module,import-error
 
@@ -55,6 +54,16 @@ _events = [(libuv.UV_READABLE, "READ"),
 
 def _events_to_str(events): # export
     return _base.events_to_str(events, _events)
+
+
+if sys.platform.startswith('win32'):
+    # fstat doesn't work with sockets on windows.
+    # TODO: Figure out what libuv uses for its open verification and
+    # call that.
+    def _check_fd_valid(_fd):
+        return True
+else:
+    from os import fstat as _check_fd_valid
 
 class UVFuncallError(ValueError):
     pass
@@ -403,7 +412,7 @@ class io(_base.IoMixin, watcher):
         # libuv validates the FD when a watcher is originally
         # created, but it may have gone invalid. Re-do the validation
         # check here so we can raise the proper OSError.
-        os.fstat(self._fd)
+        _check_fd_valid(self._fd)
         watcher = self._multiplexwatcher(events, self)
         self._multiplex_watchers.append(watcher)
         self._calc_and_update_events()

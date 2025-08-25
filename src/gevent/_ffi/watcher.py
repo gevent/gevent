@@ -469,13 +469,18 @@ class IoMixin(object):
     def __init__(self, loop, fd, events, ref=True, priority=None, _args=None):
         # Win32 only works with sockets, and only when we use libuv, because
         # we don't use _open_osfhandle. See libuv/watchers.py:io for a description.
-        if fd < 0:
-            raise ValueError('fd must be non-negative: %r' % fd)
+        self._validate_fd(fd)
+
         if events & ~self.EVENT_MASK:
             raise ValueError('illegal event mask: %r' % events)
         self._fd = fd
         super(IoMixin, self).__init__(loop, ref=ref, priority=priority,
                                       args=_args or (fd, events))
+
+    @classmethod
+    def _validate_fd(cls, fd):
+        if fd < 0:
+            raise ValueError('fd must be non-negative: %r' % fd)
 
     def start(self, callback, *args, **kwargs):
         args = args or _NOARGS
