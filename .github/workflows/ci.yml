@@ -291,11 +291,11 @@ jobs:
       - name: Report environment details
         run: |
           python --version
-          python -c 'import greenlet; print(greenlet, greenlet.__version__)'
-          python -c 'import gevent; print(gevent.__version__)'
-          python -c 'from gevent._compat import get_clock_info; print(get_clock_info("perf_counter"))'
-          python -c 'import gevent.core; print(gevent.core.loop)'
-          python -c 'import gevent.ares; print(gevent.ares)'
+          echo "Greenlet:"; python -c 'import greenlet; print(greenlet, greenlet.__version__)'
+          echo "Gevent:"; python -c 'import gevent; print(gevent.__version__)'
+          echo "Clock info", ""python -c 'from gevent._compat import get_clock_info; print(get_clock_info("perf_counter"))'
+          echo "gevent.core"; python -c 'import gevent.core; print(gevent.core.loop)'
+          echo "gevent.resolver.cares"; python -c 'import gevent.resolver.cares; print(gevent.resolver.cares)'
           echo CCache stats
           ccache --version
           ccache -s -v
