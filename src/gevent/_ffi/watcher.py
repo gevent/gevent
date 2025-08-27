@@ -202,7 +202,7 @@ class AbstractWatcherType(type):
     def new(cls, kind):
         return cls._FFI.new(kind)
 
-class watcher(object):
+class watcher(metaclass=AbstractWatcherType):
 
     _callback = None
     _args = None
@@ -460,7 +460,7 @@ class watcher(object):
     def pending(self):
         return False
 
-watcher = AbstractWatcherType('watcher', (object,), dict(watcher.__dict__))
+
 
 class IoMixin(object):
 

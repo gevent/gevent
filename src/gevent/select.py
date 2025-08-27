@@ -11,7 +11,6 @@ from gevent.event import Event
 from gevent.hub import _get_hub_noargs as get_hub
 from gevent.hub import sleep as _g_sleep
 
-from gevent._compat import iteritems
 from gevent._util import copy_globals
 from gevent._util import _NONE
 
@@ -292,7 +291,7 @@ class poll(object):
         MAXPRI = self.loop.MAXPRI
         watcher_cb = poll_result.add_event
         try:
-            for fd, flags in iteritems(self.fds):
+            for fd, flags in self.fds.items():
                 try:
                     watcher = io(fd, flags)
                 except OSError as ex:

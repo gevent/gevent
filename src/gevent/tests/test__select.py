@@ -1,15 +1,17 @@
 import errno
 import sys
 import unittest
+from contextlib import contextmanager
 from unittest.mock import patch as Patch
 
 import gevent.core
 import gevent.testing as greentest
-
+from gevent import get_hub
 from gevent import os
 from gevent import select
 from gevent import socket
 from gevent.testing import timing
+
 
 class TestSelect(gevent.testing.timing.AbstractGenericWaitTestCase):
 
@@ -169,6 +171,11 @@ class TestPossibleCrashes(greentest.TestCase):
         except OSError:
             pass
 
+    def _close_invalid_fd(self, fd):
+        try:
+            os.close(fd)
+        except OSError:
+            pass
 
     def test_closing_fd_while_selecting(self):
         # As above, this causes libuv to crash for the same reasons.
@@ -181,7 +188,7 @@ class TestPossibleCrashes(greentest.TestCase):
         # called from ev_run:ev.c:4075 via ev.c:4021
         sock = socket.socket()
         self.addCleanup(self._close_invalid_sock, sock)
-        gevent.spawn(os.close, sock.fileno())
+        gevent.spawn(self._close_invalid_fd, sock.fileno())
         with Patch.object(select, '_original_select', return_value=((), (), ())):
             select.select([sock], (), (), timing.SMALLEST_RELIABLE_DELAY)
 
@@ -204,11 +211,21 @@ class TestPossibleCrashes(greentest.TestCase):
         # Current thread 0x00007ffffe8450c0 (most recent call first):
         #   File "/project/src/gevent/libuv/loop.py", line 557 in run
         #   File "/project/src/gevent/hub.py", line 647 in run
+
         sock = socket.socket()
         self.addCleanup(self._close_invalid_sock, sock)
         os.close(sock.fileno())
         with Patch.object(select, '_original_select', return_value=((), (), ())):
-            select.select([sock], (), (), timing.SMALLEST_RELIABLE_DELAY)
+            with self._check_os_error_on_libuv():
+                select.select([sock], (), (), timing.SMALLEST_RELIABLE_DELAY)
+
+
+    @contextmanager
+    def _check_os_error_on_libuv(self):
+        try:
+            yield
+        except OSError:
+            self.assertIn('gevent.libuv', type(get_hub().loop).__module__ )
 
 
     def test_closing_object_while_polling(self):
@@ -226,14 +243,25 @@ class TestPossibleCrashes(greentest.TestCase):
         poller.register(sock, select.POLLIN)
 
         with Patch.object(select, '_original_select', return_value=((), (), ())):
+            fds_and_events = None
             # pylint:disable=unbalanced-tuple-unpacking
-            [(fd, event)] = poller.poll(timing.SMALLEST_RELIABLE_DELAY) # fine on the first one
-            self.assertEqual(fd, orig_fileno)
-            self.assertEqual(event, select.POLLIN)
+            with self._check_os_error_on_libuv():
+                # libuv gives us POLLIN and POLLNVAL
+                fds_and_events = poller.poll(timing.SMALLEST_RELIABLE_DELAY)
+            if fds_and_events is not None:
+                self.assertTrue(len(fds_and_events) >= 1)
+                [(fd, event)] = [x for x in fds_and_events if x[1] == select.POLLIN]
+                self.assertEqual(fd, orig_fileno)
+                self.assertEqual(event, select.POLLIN)
 
-            [(fd, event)] = poller.poll(timing.SMALLEST_RELIABLE_DELAY) # this one crashes the process
-            self.assertEqual(fd, orig_fileno)
-            self.assertEqual(event, select.POLLNVAL)
+            fds_and_events = None
+            with self._check_os_error_on_libuv():
+                fds_and_events = poller.poll(timing.SMALLEST_RELIABLE_DELAY) # this one
+                # crashes # the process
+            if fds_and_events is not None:
+                [(fd, event)] = fds_and_events
+                self.assertEqual(fd, orig_fileno)
+                self.assertEqual(event, select.POLLNVAL)
 
 if __name__ == '__main__':
     greentest.main()

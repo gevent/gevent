@@ -2,25 +2,24 @@
 libuv loop implementation
 """
 # pylint: disable=no-member
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import
+from __future__ import print_function
 
+import errno
 import os
+import signal
 from collections import defaultdict
 from collections import namedtuple
-from operator import delitem
-import signal
 
 from zope.interface import implementer
 
 from gevent import getcurrent
-from gevent.exceptions import LoopExit
-
-from gevent._ffi import _dbg # pylint: disable=unused-import
+from gevent._ffi.loop import AbstractCallbacks
 from gevent._ffi.loop import AbstractLoop
 from gevent._ffi.loop import assign_standard_callbacks
-from gevent._ffi.loop import AbstractCallbacks
 from gevent._interfaces import ILoop
-from gevent.libuv import _corecffi # pylint:disable=no-name-in-module,import-error
+from gevent.exceptions import LoopExit
+from gevent.libuv import _corecffi  # pylint:disable=no-name-in-module,import-error
 
 ffi = _corecffi.ffi
 libuv = _corecffi.lib
@@ -58,9 +57,10 @@ _callbacks = assign_standard_callbacks(
 )
 
 from gevent._ffi.loop import EVENTS
+
 GEVENT_CORE_EVENTS = EVENTS # export
 
-from gevent.libuv import watcher as _watchers # pylint:disable=no-name-in-module
+from gevent.libuv import watcher as _watchers  # pylint:disable=no-name-in-module
 
 _events_to_str = _watchers._events_to_str # export
 
@@ -675,15 +675,68 @@ class loop(AbstractLoop):
             # If we watch for too much, we get spurious wakeups and busy loops.
             io_watcher = self._watchers.io(self, fd, 0)
             io_watchers[fd] = io_watcher
-            io_watcher._no_more_watchers = lambda: delitem(io_watchers, fd)
+            watcher_id = id(io_watcher)
+            io_watcher._no_more_watchers = lambda: (
+                # Don't capture the watcher in the lambda vars,
+                # avoid a cycle.
+                io_watchers.pop(fd)
+                if id(io_watchers.get(fd)) == watcher_id
+                else None
+            )
 
         return io_watcher.multiplex(events)
 
     def closing_fd(self, fd): # pylint:disable=unused-argument
-        # XXX: libev feeds an event here. DO THAT
-        if fd in self._io_watchers and self._io_watchers[fd]._multiplex_watchers:
-            return True
-        return False
+        try:
+            watcher = self._io_watchers[fd]
+        except KeyError:
+            return False
+        # It's active if any multiplexed watcher has been started; this corresponds to a
+        # call to ``uv_poll_start``; until the call to ``uv_poll_stop``, it is not safe to
+        # close the file descriptor. Returning true here (``watcher.active``) means that
+        # it can't be closed immediately and must wait until we have a loop iteration.
+        # Non-started watchers (``not watcher.active``) are safe to close immediately,
+        # though if you try to do anything with that file descriptor
+
+
+        must_defer = watcher.active
+        # Destroy the ability to use this watcher to create future sub-watchers;
+        # that way, if we try to use this FD again for a new watcher, and
+        # it is actually invalid, we get the right exception at construction time.
+        # Only do this if we're actually going to be deferring the close; if we close
+        # immediately, open a new socket, and request a watcher, we could get this watcher
+        # object back
+        if must_defer:
+            # At this point, if the watcher is active, libev feeds a
+            # synthetic event to it with ``ev_feed_fd_event``. This doesn't
+            # actually do any IO, it just schedules the object for a callback
+            # on the next loop iteration, so that any greenlets that are blocked
+            # get woken up. We have to implement that ourself.
+            def do_it(watcher):
+                try:
+                    watcher._io_callback(0xFFFFFFFF)
+                    watcher.stop()
+                    watcher.close_all()
+                    # Clean up our patches to disconnect them from this
+                    # loop completely.
+                    if '_check_fd_valid' in vars(watcher):
+                        del watcher._check_fd_valid
+                    if '_no_more_watchers' in vars(watcher):
+                        del watcher._no_more_watchers
+                    assert self._io_watchers.get(fd) is not watcher
+                finally:
+                    check.stop()
+                    check.close()
+
+            check = self.check()
+            check.start(do_it, watcher)
+            def not_valid():
+                raise OSError(
+                    errno.EBADF,
+                    "The file descriptor %s is in the process of being closed." % (fd,))
+            watcher._check_fd_valid = not_valid
+        return must_defer
+
 
     def prepare(self, ref=True, priority=None):
         # We run arbitrary code in python_prepare_callback. That could switch
