@@ -197,33 +197,42 @@ class AbstractCallbacks(object):
         _dbg("Handling error for handle", handle)
         if not handle:
             return
+        # No exceptions should escape this method.
+
         try:
-            watcher = self.from_handle(handle)
-            exc_info = watcher._exc_info
-            del watcher._exc_info
-            # In the past, we passed the ``watcher`` itself as the context,
-            # which typically meant that the Hub would just print
-            # the exception. This is a problem because sometimes we can't
-            # detect signals until late in ``python_callback``; specifically,
-            # test_selectors.py:DefaultSelectorTest.test_select_interrupt_exc
-            # installs a SIGALRM handler that raises an exception. That exception can happen
-            # before we enter ``python_callback`` or at any point within it because of the way
-            # libuv swallows signals. By passing None, we get the exception prapagated into
-            # the main greenlet (which is probably *also* not what we always want, but
-            # I see no way to distinguish the cases).
-            watcher.loop.handle_error(None, *exc_info)
-        finally:
-            # XXX Since we're here on an error condition, and we
-            # made sure that the watcher object was put in loop._keepaliveset,
-            # what about not stopping the watcher? Looks like a possible
-            # memory leak?
-            # XXX: This used to do "if revents & (libev.EV_READ | libev.EV_WRITE)"
-            # before stopping. Why?
+            # Prior to 3.14, you could just ``return`` out of a finally
+            # block to quash any active exception. This was deemed Bad
+            # in PEP765, so now we have to add an extra level
+            # of indentation. Sigh.
             try:
-                watcher.stop()
-            except: # pylint:disable=bare-except
-                watcher.loop.handle_error(watcher, *sys.exc_info())
-            return # pylint:disable=lost-exception,return-in-finally
+                watcher = self.from_handle(handle)
+                exc_info = watcher._exc_info
+                del watcher._exc_info
+                # In the past, we passed the ``watcher`` itself as the context,
+                # which typically meant that the Hub would just print
+                # the exception. This is a problem because sometimes we can't
+                # detect signals until late in ``python_callback``; specifically,
+                # test_selectors.py:DefaultSelectorTest.test_select_interrupt_exc
+                # installs a SIGALRM handler that raises an exception. That exception can happen
+                # before we enter ``python_callback`` or at any point within it because of the way
+                # libuv swallows signals. By passing None, we get the exception prapagated into
+                # the main greenlet (which is probably *also* not what we always want, but
+                # I see no way to distinguish the cases).
+                watcher.loop.handle_error(None, *exc_info)
+            finally:
+                # XXX Since we're here on an error condition, and we
+                # made sure that the watcher object was put in loop._keepaliveset,
+                # what about not stopping the watcher? Looks like a possible
+                # memory leak?
+                # XXX: This used to do "if revents & (libev.EV_READ | libev.EV_WRITE)"
+                # before stopping. Why?
+                try:
+                    watcher.stop()
+                except: # pylint:disable=bare-except
+                    watcher.loop.handle_error(watcher, *sys.exc_info())
+        except: # pylint: disable=bare-except
+            pass
+        return
 
     def unhandled_onerror(self, t, v, tb):
         # This is supposed to be called for signals, etc.

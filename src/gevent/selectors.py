@@ -143,6 +143,23 @@ class GeventSelector(_BaseSelectorImpl):
         return get_hub()
 
     def register(self, fileobj, events, data=None):
+        """
+        Register a file object for selection, monitoring it for I/O events.
+
+        *fileobj* is the file object to monitor. It may either be an integer file descriptor
+        or an object with a ``fileno()`` method. *events* is a bitwise mask of events to
+        monitor. *data* is an opaque object.
+
+        :return: A new `SelectorKey` instance.
+        :raises ValueError: In case of invalid
+            event mask or file descriptor
+        :raises KeyError: if the file object is already registered.
+
+        .. versionchanged:: NEXT
+           More reliably raises a ``ValueError`` if the file descriptor
+           is invalid.
+        """
+        # Handles checking *events* to be valid, and raising the KeyError.
         key = _BaseSelectorImpl.register(self, fileobj, events, data)
 
         if events == _ALL_EVENTS:
@@ -157,7 +174,10 @@ class GeventSelector(_BaseSelectorImpl):
         io = loop.io
         MAXPRI = loop.MAXPRI
 
-        self._inactive_watchers[key.fd] = watcher = io(key.fd, flags)
+        try:
+            self._inactive_watchers[key.fd] = watcher = io(key.fd, flags)
+        except OSError as e:
+            raise ValueError('Invalid file descriptor') from e
         watcher.priority = MAXPRI
         return key
 

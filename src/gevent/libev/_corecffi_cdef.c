@@ -247,3 +247,4 @@ static void gevent_zero_check(struct ev_check* handle);
 static void gevent_zero_timer(struct ev_timer* handle);
 static void gevent_zero_prepare(struct ev_prepare* handle);
 static void gevent_set_ev_alloc();
+static int gevent_check_fd_valid(int fd);

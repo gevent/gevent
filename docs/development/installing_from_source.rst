@@ -140,6 +140,13 @@ yes/no.
 ``CPPFLAGS``
   A standard variable used when building the C extensions. gevent may
   make slight modifications to this variable.
+
+  An important symbol is ``NDEBUG``. Unless this is defined, C-level
+  assertions are enabled. libev and libuv are very aggressive about
+  their assertions, and some of their choices do not fit the way
+  gevent is intended to be used. It's best to make sure this is
+  defined, e.g., ``CPPFLAGS=-DNDEBUG``.
+
 ``CFLAGS``
   A standard variable used when building the C extensions. gevent may
   make slight modifications to this variable.
@@ -148,7 +155,19 @@ yes/no.
   make slight modifications to this variable.
 ``GEVENTSETUP_EV_VERIFY``
   If set, the value is passed through as the value of the
-  ``EV_VERIFY`` C compiler macro when libev is embedded.
+  ``EV_VERIFY`` C compiler macro when libev is embedded. This should
+  be an integer between 0 and 3; values larger than 1 are likely
+  to cause problems with gevent applications. Also if set,
+  this makes sure that the ``NDEBUG`` preprocessor symbol isn't
+  defined so that the C ``assert`` function works (failed assertions
+  crash the process).
+
+  .. important::
+
+     This note is for downstream packagers, such as Linux
+     distributions. Please do not distribute gevent built with this
+     setting enabled, as it is only for development and testing, not
+     production usage.
 
   In general, setting ``CPPFLAGS`` is more general and can contain
   other macros recognized by libev.
@@ -168,6 +187,13 @@ libraries or runtimes.
 
 However, this can be disabled, either for all libraries at once or for
 individual libraries.
+
+.. important::
+
+   This is not a suggested or recommended configuration. It can break
+   gevent in unexpected ways, and usually carries a performance cost.
+   Downstream packagers are strongly encouraged to allow gevent to use
+   its embedded libraries.
 
 When embedding a library is disabled, the library must already be
 installed on the system in a way the compiler can access and link

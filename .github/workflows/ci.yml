@@ -48,6 +48,9 @@ env:
   PYTHONDONTWRITEBYTECODE: 1
   PIP_UPGRADE_STRATEGY: eager
   PIP_NO_WARN_SCRIPT_LOCATION: 1
+  # Higher values like 2 definitely cause test breakage, as we
+  # can't stop a libev watcher if the FD has been closed (which is
+  # a silly design decision)
   GEVENTSETUP_EV_VERIFY: 1
   # Disable some warnings produced by libev especially and also some Cython generated code.
   # These are shared between GCC and clang so it must be a minimal set.
@@ -101,7 +104,10 @@ jobs:
         # XXX: We could probably make this easier on ourself by adding a specific
         # key to the matrix in the version we care about and checking for that matrix key.
         python-version: ["3.14.0-rc.1", "3.12", "pypy-3.10-v7.3.17", '3.9', '3.10.18', '3.11.13', "3.13.5"]
-        os: [macos-latest, ubuntu-latest]
+        # XXX: August 2025: ``macos-latest`` switched from macOS 14 to macOS 15.5;
+        # at that time, we started getting timeouts performing DNS lookups. I can't
+        # replicate those locally on my own macOS 15 machine.
+        os: [macos-14, ubuntu-latest]
         exclude:
           # The bulk of the testing is on Linux and Windows (appveyor).
           # Experience shows that it's sufficient to only test the latest
@@ -110,21 +116,21 @@ jobs:
           #
           # XXX: Automate this part with another job.
           #
-          # - os: macos-latest
+          # - os: macos-14
           #   python-version: 3.8
-          # - os: macos-latest
+          # - os: macos-14
           #   python-version: 3.9
-          # - os: macos-latest
+          # - os: macos-14
           #   python-version: 3.10
-          - os: macos-latest
+          - os: macos-14
             python-version: "pypy-3.10-v7.3.15"
             # On Arm, the only version of 3.9 available is 3.9.13, which is too
             # ancient to run the tests we need.
-          - os: macos-latest
+          - os: macos-14
             python-version: "3.9"
-          - os: macos-latest # Likewise.
+          - os: macos-14 # Likewise.
             python-version: "3.11.13"
-          - os: macos-latest # Same again
+          - os: macos-14 # Same again
             python-version: "3.10.18"
 
     steps:
@@ -505,6 +511,9 @@ jobs:
           # 2014 is EOL as of June 2024. But
           # it is "still widely used" and has extended (for-pay)
           # support hrough 2028...
+          # CAUTION: Some of these strings are coded in the `make-manylinux` script
+          # for test configurations, so
+          # be sure to keep them matching.
           - manylinux2014_aarch64
           - manylinux2014_ppc64le
           - manylinux2014_s390x

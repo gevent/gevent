@@ -95,7 +95,7 @@ static int vfd_open_(vfd_socket_t handle, int pyexc)
 	}
 	if (ioctlsocket(handle, FIONREAD, &arg) != 0) {
 		if (pyexc)
-			PyErr_Format(PyExc_IOError,
+			PyErr_Format(PyExc_OSError,
 #ifdef _WIN64
 				"%lld is not a socket (files are not supported)",
 #else
@@ -130,7 +130,7 @@ static int vfd_open_(vfd_socket_t handle, int pyexc)
 	if (vfd_num >= FD_SETSIZE) {
 		/* libev's select doesn't support more that FD_SETSIZE fds */
 		if (pyexc)
-			PyErr_Format(PyExc_IOError, "cannot watch more than %d sockets", (int)FD_SETSIZE);
+			PyErr_Format(PyExc_OSError, "cannot watch more than %d sockets", (int)FD_SETSIZE);
 		goto done;
 	}
 	/* allocate more space if needed */

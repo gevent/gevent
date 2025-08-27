@@ -1,6 +1,5 @@
 # pylint: disable=too-many-lines, protected-access, redefined-outer-name, not-callable
 # pylint: disable=no-member
-from __future__ import absolute_import, print_function
 
 import functools
 import sys
@@ -15,6 +14,7 @@ libuv = _corecffi.lib
 
 from gevent._ffi import watcher as _base
 from gevent._ffi import _dbg
+from gevent.os import _check_fd_valid
 
 # A set of uv_handle_t* CFFI objects. Kept around
 # to keep the memory alive until libuv is done with them.
@@ -56,6 +56,8 @@ _events = [(libuv.UV_READABLE, "READ"),
 def _events_to_str(events): # export
     return _base.events_to_str(events, _events)
 
+
+
 class UVFuncallError(ValueError):
     pass
 
@@ -79,11 +81,15 @@ class libuv_error_wrapper(object):
                 args = args[1:]
             res = libuv_func(*args, **kwargs)
             if res is not None and res < 0:
-                raise UVFuncallError(
+                kind = UVFuncallError
+                if res == libuv.UV_EBADF:
+                    kind = lambda msg: OSError(abs(res), msg)
+                raise kind(
                     str(ffi.string(libuv.uv_err_name(res)).decode('ascii')
                         + ' '
                         + ffi.string(libuv.uv_strerror(res)).decode('ascii'))
                     + " Args: " + repr(args) + " KWARGS: " + repr(kwargs)
+                    + " UVError: " + str(res)
                 )
             return res
 
@@ -395,7 +401,16 @@ class io(_base.IoMixin, watcher):
         self._set_events(events)
 
 
+    def _check_fd_valid(self):
+        # Replaced by the event loop while we're being closed
+        # to raise an exception.
+        _check_fd_valid(self._fd)
+
     def multiplex(self, events):
+        # libuv validates the FD when a watcher is originally
+        # created, but it may have gone invalid. Re-do the validation
+        # check here so we can raise the proper OSError.
+        self._check_fd_valid()
         watcher = self._multiplexwatcher(events, self)
         self._multiplex_watchers.append(watcher)
         self._calc_and_update_events()
@@ -403,10 +418,33 @@ class io(_base.IoMixin, watcher):
 
     def close(self):
         super(io, self).close()
-        del self._multiplex_watchers
+        # Return to a tuple so that we can't accidentally start
+        # anything new; this is also how we detect closing
+        # of the master before closing the multiplexed watchers.
+        try:
+            del self._multiplex_watchers
+        except AttributeError:
+            # Be idempotent
+            pass
+
+    def close_all(self):
+        for w in list(self._multiplex_watchers):
+            w.stop()
+            w.close()
+        assert not self._multiplex_watchers
+        self.close()
 
     def _multiplex_closed(self, watcher):
-        self._multiplex_watchers.remove(watcher)
+        try:
+            self._multiplex_watchers.remove(watcher)
+        except AttributeError: # pragma: no cover
+            # Oh no, one of the sub-watchers wasn't closed
+            # before the master watcher was. This shouldn't normally
+            # be possible unless you're using the same file descriptor
+            # in multiple socket objects and you close one of them. Then
+            # see ``lopp.closing_fd``
+            return
+
         if not self._multiplex_watchers:
             self.stop() # should already be stopped
             self._no_more_watchers()

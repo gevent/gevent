@@ -82,6 +82,8 @@ cdef extern from "callbacks.h":
 cdef extern from "stathelper.c":
     object _pystat_fromstructstat(void*)
 
+cdef extern from "check_valid_fd.c":
+    int gevent_check_fd_valid(int) except -1
 
 UNDEF = libev.EV_UNDEF
 NONE = libev.EV_NONE
@@ -1082,7 +1084,8 @@ cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
             raise ValueError('fd must be non-negative: %r' % fd)
         if events & ~(libev.EV__IOFDSET | libev.EV_READ | libev.EV_WRITE):
             raise ValueError('illegal event mask: %r' % events)
-        # All the vfd_functions are no-ops on POSIX
+        gevent_check_fd_valid(fd)
+
         cdef int vfd = libev.vfd_open(fd)
         libev.ev_io_init(&self._watcher, <void *>gevent_callback_io, vfd, events)
         self._w_watcher = <libev.ev_watcher*>&self._watcher
