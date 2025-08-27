@@ -57,6 +57,9 @@ if 'GEVENT_MANYLINUX' in os.environ:
 
 def configure_ares(bext, ext):
     print("Embedding c-ares", bext, ext)
+    bdir = os.path.join(bext.build_temp, 'c-ares', 'lib', 'include')
+    ext.include_dirs.insert(0, bdir)
+    print("Inserted ", bdir, "in include dirs", ext.include_dirs)
     bdir = os.path.join(bext.build_temp, 'c-ares', 'include')
     ext.include_dirs.insert(0, bdir)
     print("Inserted ", bdir, "in include dirs", ext.include_dirs)
@@ -91,11 +94,17 @@ ARES = Extension(
     sources=[
         'src/gevent/resolver/cares.pyx'
     ],
-    include_dirs=get_include_dirs(*(
-        [os.path.join(dep_abspath('c-ares'), 'include'),
-         os.path.join(dep_abspath('c-ares'), 'src', 'lib')]
-        if CARES_EMBED
-        else [])),
+    include_dirs=get_include_dirs(
+        *(
+            [
+                os.path.join(dep_abspath('c-ares'), 'include'),
+                os.path.join(dep_abspath('c-ares'), 'src', 'lib'),
+                os.path.join(dep_abspath('c-ares'), 'src', 'lib', 'include'),
+            ]
+            if CARES_EMBED
+            else []
+        )
+    ),
     libraries=list(LIBRARIES),
     define_macros=list(DEFINE_MACROS),
     depends=glob_many(

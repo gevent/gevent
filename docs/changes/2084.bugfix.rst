@@ -1,0 +1,4 @@
+Update c-ares from 1.33.1 to 1.34.5.
+
+This contains `a bug fix <https://github.com/c-ares/c-ares/pull/974>`_
+resolving excess CPU usage for certain platforms.
