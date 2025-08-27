@@ -37,9 +37,13 @@ export CCACHE_DIR="/ccache"
 GEVENT_WARNFLAGS="-Wno-strict-aliasing -Wno-comment -Wno-unused-value -Wno-unused-but-set-variable -Wno-sign-compare -Wno-parentheses -Wno-unused-function -Wno-tautological-compare -Wno-strict-prototypes -Wno-return-type -Wno-misleading-indentation"
 OPTIMIZATION_FLAGS="-O3 -pipe"
 if [ -n "$GITHUB_ACTIONS" ]; then
-    if [ "$DOCKER_IMAGE" == "quay.io/pypa/manylinux2014_aarch64" ] || [ "$DOCKER_IMAGE" == "quay.io/pypa/manylinux2014_ppc64le" ] || [ "$DOCKER_IMAGE" == "quay.io/pypa/manylinux2014_s390x" ] ||  [ "$DOCKER_IMAGE" == "quay.io/pypa/musllinux_1_2_aarch64" ] ; then
+    # Our runners are x86_64, so anything else is emulated and slow.
+    if [[ "$DOCKER_IMAGE" == *x86_64 ]]; then
+        echo "Non-emulated build"
+    else
         # Compiling with -Ofast is a no-go because of the regression it causes (#1864).
         # The default settings have -O3, and adding -Os doesn't help much. So maybe -O1 will.
+        echo "Expecting slow build; lowering optimization and disabling c-ares"
         echo "Compiling with -O1"
         OPTIMIZATION_FLAGS="-pipe -O1"
         SLOW_BUILD=1
@@ -161,12 +165,10 @@ if [ -d /gevent -a -d /opt/python ]; then
 
     # Start echoing commands (doing it earlier is too much)
     set -x
-    for variant in /opt/python/cp{313,312,39,310,311}*; do
+    for variant in /opt/python/cp{314,313,312,39,310,311}*; do
         echo $SEP
-        if [ "$variant" = "/opt/python/cp313-cp313t" ]; then
-            # It appears that Cython 3.0.11 cannot produce code that
-            # works here. Lots of compiler errors.
-            echo "Unable to build without gil"
+        if [[ "$variant" == *t ]]; then
+            echo "Skipping no-gil build. The GIL is required."
             continue
         fi
         export PATH="$variant/bin:$OPATH"

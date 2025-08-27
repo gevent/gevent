@@ -73,13 +73,16 @@ environment:
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
 
+    # 3.9 is security fix only, goes unsupported in October 2025.
+    # Disable tests for that.
     - PYTHON: "C:\\Python39-x64"
       PYTHON_VERSION: "3.9.x"
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
+      GWHEEL_ONLY: true
 
-
-    # 32-bit, wheel only (no testing)
+    # Tests were already disabled here before 3.9 went EOL because
+    # we stopped testing or providing 32-bit builds.
     - PYTHON: "C:\\Python39"
       PYTHON_VERSION: "3.9.x"
       PYTHON_ARCH: "32"
