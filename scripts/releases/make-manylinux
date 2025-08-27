@@ -23,7 +23,8 @@ export PIP_NO_WARN_SCRIPT_LOCATION=1
 export CC="ccache `which gcc`"
 export LDSHARED="$CC -shared"
 export LDCCSHARED="$LDSHARED"
-export LDCXXSHARED="$LDSHARED"
+# greenlet is C++, won't build with this enabled:
+# export LDCXXSHARED="$LDSHARED"
 export CCACHE_NOCPP2=true
 export CCACHE_SLOPPINESS=file_macro,time_macros,include_file_ctime,include_file_mtime
 export CCACHE_NOHASHDIR=true
