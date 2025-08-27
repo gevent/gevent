@@ -280,9 +280,9 @@ class socket(_socketcommon.SocketMixin):
         should_defer = self.hub.loop.closing_fd(sock.fileno())
         # Schedule the actual close to happen after that, but only if needed.
         # (If we always defer, we wind up closing things much later than expected.)
-        # Note that if we're in the middle of running callbacks, this can be
+        # Note that if we're in the middle of running callbacks, simply scheduling
+        # a callback with ``run_callback`` could result in the callback being
         # called IMMEDIATELY, which completely defeats the point.
-
         if should_defer:
             check = self.hub.loop.check()
             def cb(s):

@@ -1,10 +1,6 @@
 """
 libuv loop implementation
 """
-# pylint: disable=no-member
-from __future__ import absolute_import
-from __future__ import print_function
-
 import errno
 import os
 import signal
@@ -704,8 +700,9 @@ class loop(AbstractLoop):
         # that way, if we try to use this FD again for a new watcher, and
         # it is actually invalid, we get the right exception at construction time.
         # Only do this if we're actually going to be deferring the close; if we close
-        # immediately, open a new socket, and request a watcher, we could get this watcher
-        # object back
+        # immediately, open a new socket, and request a watcher for it, we could get this watcher
+        # object back because FDs get reused and the second socket very likely
+        # has the same FD as the original socket.
         if must_defer:
             # At this point, if the watcher is active, libev feeds a
             # synthetic event to it with ``ev_feed_fd_event``. This doesn't

@@ -156,10 +156,11 @@ yes/no.
 ``GEVENTSETUP_EV_VERIFY``
   If set, the value is passed through as the value of the
   ``EV_VERIFY`` C compiler macro when libev is embedded. This should
-  be an integer between 0 and 3; values larger than 2 are likely
+  be an integer between 0 and 3; values larger than 1 are likely
   to cause problems with gevent applications. Also if set,
   this makes sure that the ``NDEBUG`` preprocessor symbol isn't
-  defined so that the C ``assert`` function works.
+  defined so that the C ``assert`` function works (failed assertions
+  crash the process).
 
   .. important::
 
@@ -190,8 +191,9 @@ individual libraries.
 .. important::
 
    This is not a suggested or recommended configuration. It can break
-   gevent in unexpected ways. If you're a downstream packager,
-   please let gevent use its embedded libraries.
+   gevent in unexpected ways, and usually carries a performance cost.
+   Downstream packagers are strongly encouraged to allow gevent to use
+   its embedded libraries.
 
 When embedding a library is disabled, the library must already be
 installed on the system in a way the compiler can access and link

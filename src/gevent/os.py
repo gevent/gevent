@@ -79,12 +79,14 @@ _NO_DEFER_REG_FILE = True
 
 if fcntl:
     def _check_fd_valid(fd):
+        # see libev/check_valid_fd.c. This is what libev does;
+        # libuv is much more sophisticated.
         return fcntl.fcntl(fd, fcntl.F_GETFD)
 else:
     def _check_fd_valid(fd): # pylint: disable=unused-argument
         # Windows. Nothing we can reliably use here across
         # all event loops. We need to write some code and make it part
-        # of the
+        # of the event loop interface.
         pass
 
 if fcntl:
