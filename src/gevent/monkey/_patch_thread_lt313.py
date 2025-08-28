@@ -6,7 +6,7 @@ prior to 3.13.
 Internal use only.
 """
 import sys
-
+from gevent.exceptions import LoopExit
 
 from ._patch_thread_common import BasePatcher
 
@@ -72,7 +72,10 @@ class Patcher(BasePatcher):
             # acquire should be our own (hopefully), and the call to
             # _stop that orig_shutdown makes will discard it.
 
-            orig_shutdown()
+            try:
+                orig_shutdown()
+            except LoopExit: # pragma: no cover
+                pass
             patch_item(threading_mod, '_shutdown', orig_shutdown)
 
         patch_item(threading_mod, '_shutdown', _shutdown)

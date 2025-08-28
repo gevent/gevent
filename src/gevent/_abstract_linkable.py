@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
 # cython: auto_pickle=False,embedsignature=True,always_allow_keywords=False
 """
-Internal module, support for the linkable protocol for "event" like objects.
+Internal use only base class for objects
+that can be waited on and then asked to notify (wake up)
+waiters.  Examples include locks, events, semaphores.
 
+gevent has the generic concept of "linkable" objects, or the "linkable"
+protocol, which is the ``link`` and ``rawlink`` methods. (Actually sending
+the notification is up to the implementation of the individual
+objects.) `gevent.greenlet.Greenlet` implements this protocol but
+does not extend this object (TODO: It probably should.)
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import sys
 from gc import get_objects
 
@@ -330,7 +333,12 @@ class AbstractLinkable(object):
             # We should not have created a new notifier even if callbacks
             # released us because we loop through *all* of our links on the
             # same callback while self._notifier is still true.
-            assert self._notifier is notifier, (self._notifier, notifier)
+            # However, one of our callbacks could have called ``os.fork``,
+            # which invokes ``_at_fork_reinit`` and destroys the notifier and
+            # hub *while this method is running*.
+            assert self._notifier is notifier or (
+                self._notifier is None and self.hub is None
+            ), (self, self._notifier, notifier)
             self._notifier = None
             # TODO: Maybe we should intelligently reset self.hub to
             # free up thread affinity? In case of a pathological situation where

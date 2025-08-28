@@ -1,7 +1,3 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 from gevent import lock
 
 
@@ -28,6 +24,55 @@ class TestRLockMultiThread(test__semaphore.TestSemaphoreMultiThread):
         self.assertIsNone(sem._block.hub)
 
 
+class TestLockReinitAfterFork(greentest.TestCase):
+
+    def test_it(self):
+        # See https://github.com/gevent/gevent/issues/1895
+
+        # Make sure we carefully handle forking while running callbacks
+        # of a lock/_AbstractLinkable object.
+        import sys
+        import subprocess
+        import textwrap
+        import os
+
+        if not hasattr(os, 'fork'):
+            self.skipTest('Requires os.fork')
+
+        script =textwrap.dedent("""\
+        from gevent import monkey
+        monkey.patch_all()
+
+        from gevent import spawn
+
+        import os
+        from logging import Handler
+        from threading import Event
+        handler = Handler()
+        handler.acquire()
+
+        event = Event()
+
+        def forker():
+            event.set()
+            handler.acquire()
+            handler.release()
+            os.fork()
+
+        g = spawn(forker)
+        event.wait()
+        handler.release()
+        g.join()
+        """)
+
+        output = subprocess.check_output(
+            [sys.executable, '-c', script],
+            stderr=subprocess.STDOUT,
+        ).decode('utf-8')
+
+        # We used to print a failing AssertionError to stdout,
+        # that should no longer be the case.
+        self.assertFalse(output)
 
 if __name__ == '__main__':
     greentest.main()
