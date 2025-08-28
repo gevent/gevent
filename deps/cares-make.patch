@@ -1,43 +1,22 @@
-diff --git a/deps/README.rst b/deps/README.rst
-index 8e331699..a0e3712d 100644
---- a/deps/README.rst
-+++ b/deps/README.rst
-@@ -53,7 +53,15 @@ Updating c-ares
-   At this point there might be new files in c-ares that need added to
-   git, evaluate them and add them.
- 
--  Note that the patch may not apply cleanly.
-+  Note that the patch may not apply cleanly. If not, commit the
-+  changes before the patch. Then manually apply them by editing the
-+  three files to remove the references to ``docs`` and ``test``; this
-+  is easiest to do by reading the existing patch file and searching
-+  for the relevant lines in the target files. Once this is working
-+  correctly, create the new patch using ``git diff -p --minimal -w``
-+  (note that you cannot directly redirect the output of this into
-+  ``cares-make.patch``, or you'll get the diff of the patch itself in
-+  the diff!).
- 
- - Follow the same 'config.guess' and 'config.sub' steps as libev.
- 
 diff --git a/deps/c-ares/Makefile.am b/deps/c-ares/Makefile.am
 index eef3d3d1..c3e37f73 100644
 --- a/deps/c-ares/Makefile.am
 +++ b/deps/c-ares/Makefile.am
 @@ -16,7 +16,7 @@ CLEANFILES = $(PDFPAGES) $(HTMLPAGES)
- 
+
  DISTCLEANFILES = include/ares_build.h
- 
+
 -DIST_SUBDIRS = include src test docs
 +DIST_SUBDIRS = include src
- 
+
  SUBDIRS = @BUILD_SUBDIRS@
- 
+
 diff --git a/deps/c-ares/Makefile.in b/deps/c-ares/Makefile.in
 index 3dfa479a..db261682 100644
 --- a/deps/c-ares/Makefile.in
 +++ b/deps/c-ares/Makefile.in
 @@ -413,7 +413,7 @@ EXTRA_DIST = AUTHORS CHANGES README.cares $(man_MANS) RELEASE-NOTES	\
- 
+
  CLEANFILES = $(PDFPAGES) $(HTMLPAGES)
  DISTCLEANFILES = include/ares_build.h
 -DIST_SUBDIRS = include src test docs
@@ -51,25 +30,25 @@ index 2f182e0c..1a6af2cb 100755
 +++ b/deps/c-ares/configure
 @@ -34612,18 +34612,18 @@ fi
  printf "%s\n" "$build_tests" >&6; }
- 
- 
+
+
 -BUILD_SUBDIRS="include src docs"
 +BUILD_SUBDIRS="include src"
  if test "x$build_tests" = "xyes" ; then
- 
- 
+
+
  subdirs="$subdirs test"
- 
+
 -  BUILD_SUBDIRS="${BUILD_SUBDIRS} test"
 +  BUILD_SUBDIRS="${BUILD_SUBDIRS}"
  fi
- 
- 
- 
+
+
+
 -ac_config_files="$ac_config_files Makefile include/Makefile src/Makefile src/lib/Makefile src/tools/Makefile docs/Makefile libcares.pc"
 +ac_config_files="$ac_config_files Makefile include/Makefile src/Makefile src/lib/Makefile src/tools/Makefile libcares.pc"
- 
- 
+
+
  cat >confcache <<\_ACEOF
 @@ -35769,7 +35769,6 @@ do
      "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
@@ -77,7 +56,7 @@ index 2f182e0c..1a6af2cb 100755
      "src/tools/Makefile") CONFIG_FILES="$CONFIG_FILES src/tools/Makefile" ;;
 -    "docs/Makefile") CONFIG_FILES="$CONFIG_FILES docs/Makefile" ;;
      "libcares.pc") CONFIG_FILES="$CONFIG_FILES libcares.pc" ;;
- 
+
    *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
 @@ -37464,6 +37463,3 @@ done
  ## -------------------------------- ##
@@ -92,8 +71,8 @@ index 54e79d6e..3b216010 100644
 +++ b/deps/c-ares/configure.ac
 @@ -954,7 +954,7 @@ fi
  AC_MSG_RESULT([$build_tests])
- 
- 
+
+
 -BUILD_SUBDIRS="include src docs"
 +BUILD_SUBDIRS="include src"
  if test "x$build_tests" = "xyes" ; then
@@ -105,5 +84,5 @@ index 54e79d6e..3b216010 100644
                   src/tools/Makefile \
 -                 docs/Makefile      \
                   libcares.pc ])
- 
+
  AC_OUTPUT

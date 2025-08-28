@@ -180,6 +180,7 @@ test_script:
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -c "import greenlet; print(greenlet, greenlet.__version__)"
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -c "import gevent.core; print(gevent.core.loop)"
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -c "import gevent; print(gevent.config.settings['resolver'].get_options())"
+  - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -c "import gevent.resolver.cares; print(gevent.resolver.cares)"
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -c "from gevent._compat import get_clock_info; print(get_clock_info('perf_counter'))"
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -mgevent.tests.known_failures
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -mgevent.tests --second-chance --config known_failures.py

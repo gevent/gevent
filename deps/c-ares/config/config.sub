@@ -4,7 +4,7 @@
 
 # shellcheck disable=SC2006,SC2268,SC2162 # see below for rationale
 
-timestamp='2024-05-27'
+timestamp='2025-05-09'
 
 # This file is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by
