@@ -7,8 +7,10 @@ Internal use only.
 """
 import sys
 
+from gevent.exceptions import LoopExit
 
 from ._patch_thread_common import BasePatcher
+
 
 class Patcher(BasePatcher):
 
@@ -18,8 +20,8 @@ class Patcher(BasePatcher):
 
         for thread in self.threading_mod._active.values():
             if thread == main_native_thread():
-                from greenlet import getcurrent
                 from gevent.thread import _ThreadHandle
+                from greenlet import getcurrent
                 thread._after_fork = lambda new_ident=None: new_ident
                 handle = _ThreadHandle()
                 handle._set_greenlet(getcurrent())
@@ -36,6 +38,7 @@ class Patcher(BasePatcher):
 
     def patch_threading_shutdown_on_main_thread_not_already_patched(self):
         import greenlet
+
         from .api import patch_item
 
         main_thread = self.main_thread
@@ -56,7 +59,7 @@ class Patcher(BasePatcher):
                 # A greenlet could have .kill() us
                 # or .throw() to us. I'm the main greenlet,
                 # there's no where else for this to go.
-                from gevent  import get_hub
+                from gevent import get_hub
                 get_hub().print_exception(_greenlet, *sys.exc_info())
 
             # Now, this may have resulted in us getting stopped
@@ -93,7 +96,10 @@ class Patcher(BasePatcher):
                         handle._set_done()
                         break
 
-            orig_shutdown()
+            try:
+                orig_shutdown()
+            except LoopExit: # pragma: no cover
+                pass
             patch_item(threading_mod, '_shutdown', self.orig_shutdown)
 
         patch_item(self.threading_mod, '_shutdown', _shutdown)
