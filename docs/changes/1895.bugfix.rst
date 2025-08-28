@@ -1,5 +1,0 @@
-Prevent an ``AssertionError`` (from ``AbstractLinkable``, such as
-locks, events, etc) from being printed after ``os.fork`` under certain
-conditions.
-
-See also :issue:`2058`.

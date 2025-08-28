@@ -111,7 +111,7 @@ if fcntl:
         .. caution::
            This function is not intended for use on Windows.
 
-        .. versionadded:: NEXT
+        .. versionadded:: 25.8.1
         """
         # TODO: Should we limit this method (after the _fstat) to
         # just...sockets, fifo, pipe,...and actually I think the list goes

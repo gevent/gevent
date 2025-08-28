@@ -1,4 +1,0 @@
-Fix some ignored AssertionErrors after forking on older versions of
-Python.
-
-See also :issue:`2111`.

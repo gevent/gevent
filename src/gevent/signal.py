@@ -148,7 +148,7 @@ def set_wakeup_fd(fd, /, *, warn_on_full_buffer=True):
     written as a single byte into the *fd*. This can be used by a library to wakeup a poll
     or select call, allowing the signal to be fully processed.
 
-    .. versionadded:: NEXT
+    .. versionadded:: 25.8.1
     """
     old_fd = _signal.set_wakeup_fd(fd, warn_on_full_buffer=warn_on_full_buffer)
     global _child_wakeup_fd, _child_wakeup_fd_warn_on_full_buffer

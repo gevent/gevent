@@ -155,7 +155,7 @@ class GeventSelector(_BaseSelectorImpl):
             event mask or file descriptor
         :raises KeyError: if the file object is already registered.
 
-        .. versionchanged:: NEXT
+        .. versionchanged:: 25.8.1
            More reliably raises a ``ValueError`` if the file descriptor
            is invalid.
         """

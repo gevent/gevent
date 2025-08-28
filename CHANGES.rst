@@ -6,6 +6,65 @@
 
 .. towncrier release notes start
 
+25.8.1 (2025-08-28)
+===================
+
+
+Features
+--------
+
+- gevent is now tested on the latest available versions of Python:
+  3.14rc1, 3.13.5, 3.12.11, 3.11.13, and 3.10.18.
+
+  We expect to remove support for Python 3.9 soon.
+
+
+
+Bugfixes
+--------
+
+- Prevent an ``AssertionError`` (from ``AbstractLinkable``, such as
+  locks, events, etc) from being printed after ``os.fork`` under certain
+  conditions.
+
+  See also :issue:`2058`.
+  See :issue:`1895`.
+- Avoid a rare ``AttributeError`` that could occur during circular
+  garbage collection.
+  See :issue:`1961`.
+- Update c-ares from 1.33.1 to 1.34.5.
+
+  This contains `a bug fix <https://github.com/c-ares/c-ares/pull/974>`_
+  resolving excess CPU usage for certain platforms.
+  See :issue:`2084`.
+- Fix several possible interpreter crashes when there are race
+  conditions or programmers don't follow the documented rules and close
+  open files while they are still in use by other components.
+
+  For example, :meth:`selectors.BaseSelector.unregister` says "A file
+  object shall be unregistered prior to being closed." Failure to do so
+  is implementation dependent; in gevent, with libev compiled with
+  debugging enabled, this would crash the process, and with libuv,
+  an unexpected, uncatchable exception would be raised. Now, more common
+  failure scenarios are handled gracefully.
+
+  This also means that gevent now monkey-patches :func:`os.close` (on
+  POSIX) to help handle these cases.
+  See :issue:`2100`.
+- Fix some ignored AssertionErrors after forking on older versions of
+  Python.
+
+  See also :issue:`2111`.
+  See :issue:`2111`.
+- Make the classes in ``gevent.queue`` more compatible with classes that
+  expect to subclass the standard library queue classes.
+  See :issue:`2114`.
+- Provide ``gevent.signal.set_wakeup_fd`` (monkey-patched by default) to
+  allow waking up on ``SIGCHLD``. Previously, gevent's internal handling
+  of ``SIGCHLD`` prevented this from working.
+  See :issue:`2126`.
+
+
 25.5.1 (2025-05-12)
 ===================
 
