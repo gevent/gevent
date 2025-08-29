@@ -6,6 +6,20 @@
 
 .. towncrier release notes start
 
+25.8.2 (2025-08-29)
+===================
+
+
+Bugfixes
+--------
+
+- Make the ``queue`` attribute of ``gevent.queue.Queue`` objects
+  writable from Python when the C extension is in use. When
+  monkey-patched, this lets subclasses assign to it from their ``_init``
+  method. (Prior to 25.8.1 the ``_init`` method simply wasn't called.)
+  See :issue:`2136`.
+
+
 25.8.1 (2025-08-28)
 ===================
 
