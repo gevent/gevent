@@ -39,7 +39,7 @@ cdef _safe_remove(deq, item)
 cdef class SimpleQueue:
     cdef __weakref__
     cdef readonly hub
-    cdef readonly queue
+    cdef public queue # Subclasses may write this
     cdef readonly bint is_shutdown
 
     cdef getters
