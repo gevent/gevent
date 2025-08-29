@@ -329,6 +329,18 @@ class TestQueue(SubscriptMixin, UsesOnlyOneItemMixin, TestCase):
         self.assertEqual(e2.get(), 'timed out')
         self.assertEqual(q.get(), 'sent')
 
+    def test_subclass_assign_queue(self):
+        # https://github.com/gevent/gevent/issues/2136
+
+        self.assertTrue(hasattr(self._makeOne(), 'queue'))
+
+        my_queue = []
+        class Q(self._getFUT()):
+            def _init(self, _maxsize): # pylint: disable=arguments-differ
+                self.queue = my_queue
+
+        q = Q()
+        self.assertIs(q.queue, my_queue)
 
 
 class TestChannel(SubscriptMixin, UsesOnlyOneItemMixin, TestCase):
