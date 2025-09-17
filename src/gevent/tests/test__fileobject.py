@@ -66,6 +66,18 @@ class TestFileObjectBlock(CleanupMixin,
 
     WORKS_WITH_REGULAR_FILES = True
 
+    def setUp(self):
+        super().setUp()
+        # Try our best to run any pending __del__ methods. When we run
+        # multiple tests in sequence, because file descriptor numbers get
+        # reused, a test could open new FDs with the same numbers as some
+        # object (FileObjectPosix/GreenFileDescriptorIO) still waiting for
+        # __del__ to get called to close the FD. If GC runs and
+        # __del__ gets called while that second test is running, we
+        # get unexpected errors.
+        # This shows up on PyPy 3.11.
+        gc.collect()
+
     def _getTargetClass(self):
         return fileobject.FileObjectBlock
 
@@ -77,14 +89,14 @@ class TestFileObjectBlock(CleanupMixin,
         self._do_test_del((r, w), **kwargs)
 
     def _do_test_del(self, pipe, **kwargs):
-        r, w = pipe
-        s = self._makeOne(w, 'wb', **kwargs)
-        s.write(b'x')
+        read_fd, write_fd = pipe
+        writer = self._makeOne(write_fd, 'wb', **kwargs)
+        writer.write(b'x')
         try:
-            s.flush()
+            writer.flush()
         except IOError:
             # Sometimes seen on Windows/AppVeyor
-            print("Failed flushing fileobject", repr(s), file=sys.stderr)
+            print("Failed flushing fileobject", repr(writer), file=sys.stderr)
             import traceback
             traceback.print_exc()
 
@@ -92,17 +104,18 @@ class TestFileObjectBlock(CleanupMixin,
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', ResourceWarning)
             # Deliberately getting ResourceWarning with FileObject(Thread) under Py3
-            del s
-            gc.collect() # PyPy
+            del writer
+            # PyPy, run RawIO.__del__ to close FD.
+            gc.collect()
 
         if kwargs.get("close", True):
             with self.assertRaises((OSError, IOError)):
                 # expected, because FileObject already closed it
-                os.close(w)
+                os.close(write_fd)
         else:
-            os.close(w)
+            os.close(write_fd)
 
-        with self._makeOne(r, 'rb') as fobj:
+        with self._makeOne(read_fd, 'rb') as fobj:
             self.assertEqual(fobj.read(), b'x')
 
     def test_del(self):
