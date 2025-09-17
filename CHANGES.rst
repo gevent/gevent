@@ -6,6 +6,30 @@
 
 .. towncrier release notes start
 
+25.9.1 (2025-09-17)
+===================
+
+
+Features
+--------
+
+- gevent is now tested on PyPy 3.11 v7.3.20. Previously it was tested
+  with the now end-of-life PyPy 3.10 v7.3.17.
+
+
+
+Bugfixes
+--------
+
+- Fix a ``TypeError`` in the C extensions when attempting to put items
+  into a full ``SimpleQueue.``
+
+  It is believed this problem started in version 25.4.1. On older
+  versions, using the environment variable ``PURE_PYTHON`` or
+  ``GEVENT_PURE_PYTHON`` works around
+  See :issue:`2139`.
+
+
 25.8.2 (2025-08-29)
 ===================
 

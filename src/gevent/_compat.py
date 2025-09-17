@@ -24,7 +24,7 @@ OSX = MAC = sys.platform == 'darwin'
 
 
 GLOBAL_PURE_PYTHON = bool(PYPY or os.environ.get('PURE_PYTHON'))
-# .. versionchanged:: NEXT
+# .. versionchanged:: 25.9.1
 #
 # GEVENT_PURE_PYTHON previously was treated like PURE_PYTHON,
 # meaning any value at all would disable extensions.
@@ -50,7 +50,7 @@ _GEVENT_PURE_PYTHON = os.environ.get('GEVENT_PURE_PYTHON')
 if _GEVENT_PURE_PYTHON and 'gevent.' not in _GEVENT_PURE_PYTHON:
     GLOBAL_PURE_PYTHON = True
 
-#: ..deprecated:: NEXT
+#: ..deprecated:: 25.9.1
 PURE_PYTHON = GLOBAL_PURE_PYTHON
 
 def pure_python_module(mod_name):
