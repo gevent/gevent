@@ -1,0 +1,6 @@
+Fix a ``TypeError`` in the C extensions when attempting to put items
+into a full ``SimpleQueue.``
+
+It is believed this problem started in version 25.4.1. On older
+versions, using the environment variable ``PURE_PYTHON`` or
+``GEVENT_PURE_PYTHON`` works around

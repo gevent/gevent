@@ -130,8 +130,8 @@ def import_c_accel(globs, cname):
         return
 
 
-    from gevent._compat import PURE_PYTHON
-    if PURE_PYTHON:
+    from gevent._compat import pure_python_module
+    if pure_python_module(name):
         return
 
     import importlib

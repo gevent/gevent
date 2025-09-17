@@ -134,10 +134,10 @@ class SubscriptMixin:
             self.assertIsInstance(kind[int], type(stdlib_kind[int]))
 
 
-class TestQueue(SubscriptMixin, UsesOnlyOneItemMixin, TestCase):
+class TestSimpleQueue(SubscriptMixin, UsesOnlyOneItemMixin, TestCase):
 
     def _getFUT(self):
-        return queue.Queue
+        return queue.SimpleQueue
 
     def test_get_nowait_simple(self):
         result = []
@@ -447,11 +447,11 @@ class TestChannel(SubscriptMixin, UsesOnlyOneItemMixin, TestCase):
         self.assertEqual(r, [])
 
 
-class TestJoinableQueue(TestQueue):
+class TestQueue(TestSimpleQueue):
     queue = queue
 
     def _getFUT(self):
-        return queue.JoinableQueue
+        return queue.Queue
 
     def test_task_done(self):
         channel = self._makeOne()
@@ -534,7 +534,7 @@ class TestGetInterrupt(AbstractTestWeakRefMixin, AbstractGenericGetTestCase):
 
     Timeout = Empty
 
-    kind = queue.Queue
+    kind = queue.SimpleQueue
 
     def wait(self, timeout):
         return self._makeOne().get(timeout=timeout)
@@ -543,7 +543,7 @@ class TestGetInterrupt(AbstractTestWeakRefMixin, AbstractGenericGetTestCase):
         return self.kind()
 
 class TestGetInterruptJoinableQueue(TestGetInterrupt):
-    kind = queue.JoinableQueue
+    kind = queue.Queue
 
 class TestGetInterruptLifoQueue(TestGetInterrupt):
     kind = queue.LifoQueue
@@ -556,7 +556,7 @@ class TestGetInterruptChannel(TestGetInterrupt):
 
 
 class TestPutInterrupt(AbstractGenericGetTestCase):
-    kind = queue.Queue
+    kind = queue.SimpleQueue
     Timeout = Full
 
     def setUp(self):
@@ -573,7 +573,7 @@ class TestPutInterrupt(AbstractGenericGetTestCase):
 
 
 class TestPutInterruptJoinableQueue(TestPutInterrupt):
-    kind = queue.JoinableQueue
+    kind = queue.Queue
 
 class TestPutInterruptLifoQueue(TestPutInterrupt):
     kind = queue.LifoQueue
