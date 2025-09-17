@@ -1,0 +1,2 @@
+gevent is now tested on PyPy 3.11 v7.3.20. Previously it was tested
+with the now end-of-life PyPy 3.10 v7.3.17.
