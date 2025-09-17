@@ -94,7 +94,7 @@ cdef class Queue(SimpleQueue):
 @cython.internal
 cdef class ItemWaiter(Waiter):
     cdef readonly item
-    cdef readonly Queue queue
+    cdef readonly SimpleQueue queue
 
 
 cdef class UnboundQueue(Queue):
