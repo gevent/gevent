@@ -92,7 +92,7 @@ Bugfixes
 - Fix some ignored AssertionErrors after forking on older versions of
   Python.
 
-  See also :issue:`2111`.
+  See also :issue:`2119`.
   See :issue:`2111`.
 - Make the classes in ``gevent.queue`` more compatible with classes that
   expect to subclass the standard library queue classes.
