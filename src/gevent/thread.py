@@ -264,13 +264,16 @@ class LockType(BoundedSemaphore):
 
     _TIMEOUT_MAX = __thread__.TIMEOUT_MAX # pylint:disable=no-member
 
-    def __init__(self):
+    def __init__(self): # pylint: disable=useless-parent-delegation
         """
         .. versionchanged:: 24.10.1
            No longer accepts arguments to pass to the super class. If you
            want a semaphore with a different count, use a semaphore class directly.
            This matches the Lock API of Python 3
         """
+        # Yes, we want to override __init__ (to not take arguments) and yes,
+        # we need to call super's __init__. Pylint is wrong about this
+        # being useless; our use is to change the signature.
         super().__init__()
 
     @classmethod

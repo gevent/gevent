@@ -302,7 +302,9 @@ else:
     fork = monkey.get_original('os', 'fork')
     from gevent.os import fork_and_watch
 
-STDOUT = __subprocess__.STDOUT # static analysis
+# Some explicit imports for static analysis
+STDOUT = __subprocess__.STDOUT
+TimeoutExpired = __subprocess__.TimeoutExpired
 
 
 def call(*popenargs, **kwargs):
@@ -431,45 +433,6 @@ def check_output(*popenargs, **kwargs):
     return output
 
 _PLATFORM_DEFAULT_CLOSE_FDS = object()
-
-if 'TimeoutExpired' not in globals():
-    # Python 2
-
-    # Make TimeoutExpired inherit from _Timeout so it can be caught
-    # the way we used to throw things (except Timeout), but make sure it doesn't
-    # init a timer. Note that we can't have a fake 'SubprocessError' that inherits
-    # from exception, because we need TimeoutExpired to just be a BaseException for
-    # bwc.
-    from gevent.timeout import Timeout as _Timeout
-
-    class TimeoutExpired(_Timeout):
-        """
-        This exception is raised when the timeout expires while waiting for
-        a child process in `communicate`.
-
-        Under Python 2, this is a gevent extension with the same name as the
-        Python 3 class for source-code forward compatibility. However, it extends
-        :class:`gevent.timeout.Timeout` for backwards compatibility (because
-        we used to just raise a plain ``Timeout``); note that ``Timeout`` is a
-        ``BaseException``, *not* an ``Exception``.
-
-        .. versionadded:: 1.2a1
-        """
-
-        def __init__(self, cmd, timeout, output=None):
-            _Timeout.__init__(self, None)
-            self.cmd = cmd
-            self.seconds = timeout
-            self.output = output
-
-        @property
-        def timeout(self):
-            return self.seconds
-
-        def __str__(self):
-            return ("Command '%s' timed out after %s seconds" %
-                    (self.cmd, self.timeout))
-
 
 if hasattr(os, 'set_inheritable'):
     _set_inheritable = os.set_inheritable
