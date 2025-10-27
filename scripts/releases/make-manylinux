@@ -81,6 +81,12 @@ if [ -d /gevent -a -d /opt/python ]; then
     # mounted to be the same as it is outside docker so it
     # can be persisted.
     export XDG_CACHE_HOME="/cache"
+    # 2025-10-21: Sometime after 2025-10-01, the manylinux_ppc64le and muslinux_1_2
+    # environments started shipping a version of Python 3.14 that wants to use
+    # clang++ by default. That's not installed here, and I can't get yum to work
+    # to try to install it, but luckily g++ works just as well --- that's what
+    # everything else uses.
+    export CXX="g++"
     # XXX: This works for macOS, where everything bind-mounted
     # is seen as owned by root in the container. But when the host is Linux
     # the actual UIDs come through to the container, triggering
