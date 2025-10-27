@@ -19,14 +19,14 @@
 Supported Platforms
 ===================
 
-This version of gevent runs on Python 3.9 and up, (for exact details
+This version of gevent runs on Python 3.9 and up (for exact details
 of tested versions, see the classifiers on the PyPI page or in
 ``setup.py``). gevent requires the `greenlet
 <https://greenlet.readthedocs.io>`_ library and will install the
 `cffi`_ library by default on Windows. The cffi library will become
 the default on all platforms in a future release of gevent.
 
-This version of gevent is also tested on on PyPy 3.10 (7.3.12); it
+This version of gevent is also tested on PyPy 3.10 (7.3.12); it
 should run on PyPy 3.9 and above. On PyPy, there are no external
 dependencies.
 
@@ -40,7 +40,7 @@ other Unix-like operating systems (e.g., FreeBSD, Solaris, etc.)
    particular, PyPy3 on Windows may have issues, especially with
    subprocesses.
 
-   On Windows using the deprecated libev backend, gevent is
+   On Windows, using the deprecated libev backend, gevent is
    limited to a maximum of 1024 open sockets due to
    `limitations in libev`_. This limitation should not exist
    with the default libuv backend.
@@ -57,7 +57,7 @@ other Unix-like operating systems (e.g., FreeBSD, Solaris, etc.)
    The underlying greenlet library `also has this limitation
    <https://greenlet.readthedocs.io/en/latest/caveats.html#free-threading-is-not-supported>`_.
 
-   In addition, other limitations in greenlet maen that attempting to
+   In addition, other limitations in greenlet mean that attempting to
    use gevent in a free-threaded interpreter is not recommended at
    this time. It is likely to work, but may have resource leaks.
 
@@ -124,7 +124,7 @@ distributed as binary `wheels`_.
 
 .. tip::
 
-   You need Pip 8.0 or later, or buildout 2.10.0 to install the binary
+   You need Pip 8.0 or later, or buildout 2.10.0, to install the binary
    wheels on Windows or macOS. On Linux, you'll need `pip 19
    <https://github.com/pypa/pip/pull/5008>`_ to install the
    manylinux2010 wheels.
@@ -142,7 +142,7 @@ distributed as binary `wheels`_.
    on PyPI for aarch64 manylinux2014 compatible systems. Installing these
    needs a very recent version of ``pip``. These wheels *do not*
    contain the c-ares resolver, are not tested, and are built with
-   very low levels of optimizations. Serious production users of
+   very low levels of optimization. Serious production users of
    gevent on 64-bit ARM systems are encouraged to build their own
    binary wheels.
 
@@ -194,7 +194,7 @@ dnspython
 
 monitor
     Enhancements to gevent's self-monitoring capabilities. This
-    includes the `psutil <https://pypi.org/project/psutil>`_ library
+    includes the `psutil <https://pypi.org/project/psutil>`_ library,
     which is needed to monitor memory usage. (Note that this may not
     build on all platforms.)
 
