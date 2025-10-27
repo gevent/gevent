@@ -172,7 +172,7 @@ if [ -d /gevent -a -d /opt/python ]; then
 
     # Start echoing commands (doing it earlier is too much)
     set -x
-    for variant in /opt/python/cp{314,313,312,39,310,311}*; do
+    for variant in /opt/python/cp{314,313,312,310,311}*; do
         echo $SEP
         if [[ "$variant" == *t ]]; then
             echo "Skipping no-gil build. The GIL is required."
