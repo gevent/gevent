@@ -91,9 +91,9 @@ Bugfixes
   See :issue:`2100`.
 - Fix some ignored AssertionErrors after forking on older versions of
   Python.
-
-  See also :issue:`2111`.
   See :issue:`2111`.
+- Fix ``AttributeError`` for ``_handle`` on v3.13.5+.
+  See :issue:`2119`.
 - Make the classes in ``gevent.queue`` more compatible with classes that
   expect to subclass the standard library queue classes.
   See :issue:`2114`.
