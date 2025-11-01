@@ -263,7 +263,7 @@ jobs:
           path: ~/.ccache/**
           key: ${{ runner.os }}-ccache2-${{ matrix.python-version }}
       - name: Upload gevent wheel
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: gevent-${{ runner.os }}-${{ matrix.python-version }}.whl
           path: dist/*whl
@@ -546,7 +546,7 @@ jobs:
           skip_existing: true
           packages_dir: wheelhouse/
       - name: Upload gevent wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           path: wheelhouse/*whl
           name: ${{ matrix.image }}_wheels.zip
