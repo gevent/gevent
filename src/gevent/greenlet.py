@@ -1060,6 +1060,12 @@ def joinall(greenlets, timeout=None, raise_error=False, count=None):
 
     :param greenlets: A sequence (supporting :func:`len`) of greenlets to wait for.
     :keyword float timeout: If given, the maximum number of seconds to wait.
+    :keyword bool raise_error: If True, immediately raise the first exception
+        encountered in any greenlet. If False (default), exceptions are
+        stored in the greenlet and not raised.
+    :keyword int count: If not `None`, then a number specifying the maximum number
+        of greenlets to wait for. If ``None`` (the default), all greenlets
+        are waited for.
     :return: A sequence of the greenlets that finished before the timeout (if any)
         expired.
     """
