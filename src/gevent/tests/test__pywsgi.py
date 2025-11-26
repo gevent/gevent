@@ -28,13 +28,12 @@ import os
 import sys
 from io import BytesIO as StringIO
 
-import weakref
 import unittest
 from wsgiref.validate import validator
 
 import gevent.testing as greentest
 import gevent
-from gevent.testing import PY3, PYPY
+
 from gevent.testing.exception import ExpectedException
 from gevent import socket
 from gevent import pywsgi
@@ -137,7 +136,7 @@ class Response(object):
             'Unexpected header %r: %r (expected %r)\n%s' % (header, real_value, value, self)
 
     def assertBody(self, body):
-        if isinstance(body, str) and PY3:
+        if isinstance(body, str):
             body = body.encode("ascii")
         assert self.body == body, 'Unexpected body: %r (expected %r)\n%s' % (self.body, body, self)
 
@@ -229,22 +228,6 @@ class TestCase(greentest.TestCase):
         assert self.port
         greentest.TestCase.setUp(self)
 
-    if greentest.CPYTHON and greentest.PY2:
-        # Keeping raw sockets alive keeps SSL sockets
-        # from being closed too, at least on CPython2, so we
-        # need to use weakrefs.
-
-        # In contrast, on PyPy, *only* having a weakref lets the
-        # original socket die and leak
-
-        def _close_on_teardown(self, resource):
-            self.close_on_teardown.append(weakref.ref(resource))
-            return resource
-
-        def _tearDownCloseOnTearDown(self):
-            self.close_on_teardown = [r() for r in self.close_on_teardown if r() is not None]
-            super(TestCase, self)._tearDownCloseOnTearDown()
-
     def tearDown(self):
         greentest.TestCase.tearDown(self)
         if self.server is not None:
@@ -261,36 +244,36 @@ class TestCase(greentest.TestCase):
     def connect(self):
         conn = socket.create_connection((self.connect_addr, self.port))
         result = conn
-        if PY3:
-            conn_makefile = conn.makefile
 
-            def makefile(*args, **kwargs):
-                if 'bufsize' in kwargs:
-                    kwargs['buffering'] = kwargs.pop('bufsize')
+        conn_makefile = conn.makefile
 
-                if 'mode' in kwargs:
-                    return conn_makefile(*args, **kwargs)
+        def makefile(*args, **kwargs):
+            if 'bufsize' in kwargs:
+                kwargs['buffering'] = kwargs.pop('bufsize')
 
-                # Under Python3, you can't read and write to the same
-                # makefile() opened in (default) r, and r+ is not allowed
-                kwargs['mode'] = 'rwb'
-                rconn = conn_makefile(*args, **kwargs)
-                _rconn_write = rconn.write
+            if 'mode' in kwargs:
+                return conn_makefile(*args, **kwargs)
 
-                def write(data):
-                    if isinstance(data, str):
-                        data = data.encode('ascii')
-                    return _rconn_write(data)
-                rconn.write = write
-                self._close_on_teardown(rconn)
-                return rconn
+            # Under Python3, you can't read and write to the same
+            # makefile() opened in (default) r, and r+ is not allowed
+            kwargs['mode'] = 'rwb'
+            rconn = conn_makefile(*args, **kwargs)
+            _rconn_write = rconn.write
 
-            class proxy(object):
-                def __getattribute__(self, name):
-                    if name == 'makefile':
-                        return makefile
-                    return getattr(conn, name)
-            result = proxy()
+            def write(data):
+                if isinstance(data, str):
+                    data = data.encode('ascii')
+                return _rconn_write(data)
+            rconn.write = write
+            self._close_on_teardown(rconn)
+            return rconn
+
+        class proxy(object):
+            def __getattribute__(self, name):
+                if name == 'makefile':
+                    return makefile
+                return getattr(conn, name)
+        result = proxy()
         try:
             yield result
         finally:
@@ -568,8 +551,7 @@ class TestGetArg(TestCase):
     @staticmethod
     def application(env, start_response):
         body = env['wsgi.input'].read(3)
-        if PY3:
-            body = body.decode('ascii')
+        body = body.decode('ascii')
         a = parse_qs(body).get('a', [1])[0]
         start_response('200 OK', [('Content-Type', 'text/plain')])
         return [('a is %s, body is %s' % (a, body)).encode('ascii')]
@@ -1091,9 +1073,8 @@ class TestInternational(TestCase):
 
     def application(self, environ, start_response):
         path_bytes = b'/\xd0\xbf\xd1\x80\xd0\xb8\xd0\xb2\xd0\xb5\xd1\x82'
-        if PY3:
-            # Under PY3, the escapes were decoded as latin-1
-            path_bytes = path_bytes.decode('latin-1')
+        # Under PY3, the escapes were decoded as latin-1
+        path_bytes = path_bytes.decode('latin-1')
 
         self.assertEqual(environ['PATH_INFO'], path_bytes)
         self.assertEqual(environ['QUERY_STRING'], '%D0%B2%D0%BE%D0%BF%D1%80%D0%BE%D1%81=%D0%BE%D1%82%D0%B2%D0%B5%D1%82')
@@ -1117,7 +1098,7 @@ class TestNonLatin1HeaderFromApplication(TestCase):
 
     validator = None # Don't validate the application, it's deliberately bad
     header = b'\xe1\xbd\x8a3' # bomb in utf-8 bytes
-    should_error = PY3 # non-native string under Py3
+    should_error = True # non-native string under Py3
 
     def setUp(self):
         super(TestNonLatin1HeaderFromApplication, self).setUp()
@@ -1176,10 +1157,10 @@ class TestInputReadline(TestCase):
             line = input.readline()
             if not line:
                 break
-            line = line.decode('ascii') if PY3 else line
+            line = line.decode('ascii')
             lines.append(repr(line) + ' ')
         start_response('200 hello', [])
-        return [l.encode('ascii') for l in lines] if PY3 else lines
+        return [l.encode('ascii') for l in lines]
 
     def test(self):
         with self.makefile() as fd:
@@ -1198,20 +1179,20 @@ class TestInputIter(TestInputReadline):
         for line in input:
             if not line:
                 break
-            line = line.decode('ascii') if PY3 else line
+            line = line.decode('ascii')
             lines.append(repr(line) + ' ')
         start_response('200 hello', [])
-        return [l.encode('ascii') for l in lines] if PY3 else lines
+        return [l.encode('ascii') for l in lines]
 
 
 class TestInputReadlines(TestInputReadline):
 
     def application(self, environ, start_response):
         input = environ['wsgi.input']
-        lines = [l.decode('ascii') if PY3 else l for l in input.readlines()]
+        lines = [l.decode('ascii') for l in input.readlines()]
         lines = [repr(line) + ' ' for line in lines]
         start_response('200 hello', [])
-        return [l.encode('ascii') for l in lines] if PY3 else lines
+        return [l.encode('ascii') for l in lines]
 
 
 class TestInputN(TestCase):
@@ -1813,15 +1794,14 @@ class TestInputRaw(greentest.BaseTestCase):
         if isinstance(data, list):
             data = chunk_encode(data)
             chunked_input = True
-        elif isinstance(data, str) and PY3:
+        elif isinstance(data, str):
             data = data.encode("ascii")
         return Input(StringIO(data), content_length=content_length, chunked_input=chunked_input)
 
-    if PY3:
-        def assertEqual(self, first, second, msg=None):
-            if isinstance(second, str):
-                second = second.encode('ascii')
-            super(TestInputRaw, self).assertEqual(first, second, msg)
+    def assertEqual(self, first, second, msg=None):
+        if isinstance(second, str):
+            second = second.encode('ascii')
+        super(TestInputRaw, self).assertEqual(first, second, msg)
 
     def test_short_post(self):
         i = self.make_input("1", content_length=2)
@@ -1890,9 +1870,6 @@ class TestInputRaw(greentest.BaseTestCase):
         n = 25 * 1000000000
         if hasattr(n, 'bit_length'):
             self.assertEqual(n.bit_length(), 35)
-        if not PY3 and not PYPY:
-            # Make sure we have the impl we think we do
-            self.assertRaises(OverflowError, StringIO(data).readline, n)
 
         i = self.make_input(data, content_length=n)
         # No size hint, but we have too large a content_length to fit

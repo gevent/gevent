@@ -18,7 +18,7 @@ from gevent._compat import reraise
 
 import gevent.testing as greentest
 
-from gevent.testing import six
+
 from gevent.testing import LARGE_TIMEOUT
 from gevent.testing import support
 from gevent.testing import params
@@ -236,10 +236,6 @@ class TestTCP(greentest.TestCase):
 
     def test_sendall_str(self):
         self._test_sendall(self.long_data)
-
-    if six.PY2:
-        def test_sendall_unicode(self):
-            self._test_sendall(six.text_type(self.long_data))
 
     @skipOnMacOnCI("Sometimes fails for no apparent reason (buffering?)")
     def test_sendall_array(self):

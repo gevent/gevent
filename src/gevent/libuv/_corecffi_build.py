@@ -27,7 +27,6 @@ __all__ = []
 
 WIN = sys.platform.startswith('win32')
 LIBUV_EMBED = _setuputils.should_embed('libuv')
-PY2 = sys.version_info[0] == 2
 
 
 ffi = FFI()

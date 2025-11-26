@@ -1,0 +1,3 @@
+Support for Python 3.9 has been removed.
+
+Manylinux wheels are built with version 2_28, up from 2014.

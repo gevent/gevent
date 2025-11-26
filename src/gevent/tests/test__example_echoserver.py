@@ -10,11 +10,7 @@ class Test(util.TestServer):
 
     def _run_all_tests(self):
         def test_client(message):
-            if greentest.PY3:
-                kwargs = {'buffering': 1}
-            else:
-                kwargs = {'bufsize': 1}
-            kwargs['mode'] = 'rb'
+            kwargs = {'buffering': 1, 'mode': 'rb'}
             conn = create_connection((params.DEFAULT_LOCAL_HOST_ADDR, 16000))
             conn.settimeout(greentest.DEFAULT_XPC_SOCKET_TIMEOUT)
             rfile = conn.makefile(**kwargs)

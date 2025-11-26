@@ -6,7 +6,6 @@ import os
 
 
 import gevent.testing as greentest
-from gevent.testing import PY3
 from gevent.testing import sysinfo
 from gevent.testing import DEFAULT_SOCKET_TIMEOUT as _DEFAULT_SOCKET_TIMEOUT
 from gevent.testing.timing import SMALLEST_RELIABLE_DELAY
@@ -128,12 +127,9 @@ class TestCase(greentest.TestCase):
     @contextmanager
     def makefile(self, timeout=_DEFAULT_SOCKET_TIMEOUT, bufsize=1, include_raw_socket=False):
         server_host, server_port, family = self.get_server_host_port_family()
-        bufarg = 'buffering' if PY3 else 'bufsize'
-        makefile_kwargs = {bufarg: bufsize}
-        if PY3:
-            # Under Python3, you can't read and write to the same
-            # makefile() opened in r, and r+ is not allowed
-            makefile_kwargs['mode'] = 'rwb'
+        # Under Python3, you can't read and write to the same
+        # makefile() opened in r, and r+ is not allowed
+        makefile_kwargs = {'buffering': bufsize, 'mode': 'rwb'}
 
         with socket.socket(family=family) as sock:
             rconn = None

@@ -472,8 +472,9 @@ class TestCase(
         except AssertionError:
             flaky.reraiseFlakyTestRaceCondition()
 
-    def assertStartsWith(self, it, has_prefix):
-        self.assertTrue(it.startswith(has_prefix), (it, has_prefix))
+    if not hasattr(BaseTestCase, 'assertStartsWith'): # Added 3.14
+        def assertStartsWith(self, s, prefix, msg=None):
+            self.assertTrue(s.startswith(prefix), msg or (s, prefix))
 
     def assertNotMonkeyPatched(self):
         from gevent import monkey

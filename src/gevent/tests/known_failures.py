@@ -79,7 +79,7 @@ class _AttrCondition(ConstantCondition):
 PYPY = _AttrCondition('PYPY')
 PYPY3 = _AttrCondition('PYPY3')
 PY3 = _AttrCondition('PY3')
-PY2 = _AttrCondition('PY2')
+
 OSX = _AttrCondition('OSX')
 LIBUV = _AttrCondition('LIBUV')
 WIN = _AttrCondition('WIN')

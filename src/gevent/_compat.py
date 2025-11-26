@@ -12,7 +12,6 @@ import sys
 import os
 
 
-PY39 = sys.version_info[:2] >= (3, 9)
 PY311 = sys.version_info[:2] >= (3, 11)
 PY312 = sys.version_info[:2] >= (3, 12)
 PY313 = sys.version_info[:2] >= (3, 13)

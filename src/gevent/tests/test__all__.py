@@ -30,7 +30,7 @@ NOT_IMPLEMENTED = {
     'select': ANY,
     'os': ANY,
     'threading': ANY,
-    '__builtin__' if six.PY2 else 'builtins': ANY,
+    'builtins': ANY,
     'signal': ANY,
 }
 

@@ -1,7 +1,7 @@
 import gevent.testing as greentest
 import gevent
 from gevent.hub import get_hub
-import sys
+
 
 SHOULD_EXPIRE = 0.01
 if not greentest.RUNNING_ON_CI:
@@ -74,7 +74,7 @@ class Test(greentest.TestCase):
         timeout.start()
         try:
             get_hub().switch()
-            self.fail("Most raise TypeError")
+            self.fail("Must raise TypeError")
         except TypeError as ex:
             self.assert_type_err(ex)
         timeout.close()
@@ -87,12 +87,7 @@ class Test(greentest.TestCase):
             get_hub().switch()
             self.fail("Must raise OldStyle")
         except TypeError as ex:
-            self.assertTrue(greentest.PY3, "Py3 raises a TypeError for non-BaseExceptions")
             self.assert_type_err(ex)
-        except: # pylint:disable=bare-except
-            self.assertTrue(greentest.PY2, "Old style classes can only be raised on Py2")
-            t = sys.exc_info()[0]
-            self.assertEqual(t, OldStyle)
         timeout.close()
 
         timeout = gevent.Timeout(SHOULD_EXPIRE, OldStyle()) # instance
@@ -101,12 +96,8 @@ class Test(greentest.TestCase):
             get_hub().switch()
             self.fail("Must raise OldStyle")
         except TypeError as ex:
-            self.assertTrue(greentest.PY3, "Py3 raises a TypeError for non-BaseExceptions")
             self.assert_type_err(ex)
-        except: # pylint:disable=bare-except
-            self.assertTrue(greentest.PY2, "Old style classes can only be raised on Py2")
-            t = sys.exc_info()[0]
-            self.assertEqual(t, OldStyle)
+
         timeout.close()
 
     def _check_context_manager_expires(self, timeout, raises=True):

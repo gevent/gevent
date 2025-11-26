@@ -265,7 +265,7 @@ class TestFileObjectBlock(CleanupMixin,
         nf = os.fdopen(fileno)
         # On Python 2, os.fdopen() produces a name of <fdopen>;
         # we follow the Python 3 semantics everywhere.
-        nf_name = '<fdopen>' if greentest.PY2 else fileno
+        nf_name = fileno
         self.assertEqual(f.name, fileno)
         self.assertEqual(nf.name, nf_name)
 

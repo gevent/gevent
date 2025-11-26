@@ -9,26 +9,6 @@
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 ###
 
-###
-# Important notes on GitHub actions:
-#
-# - We only get 2,000 free minutes a month
-# - We only get 500MB of artifact storage
-# - Cache storage is limited to 7 days and 5GB.
-# - macOS minutes are 10x as expensive as Linux minutes
-# - windows minutes are twice as expensive.
-#
-# So keep those workflows light.
-#
-# In December 2020, github only supports x86/64. If we wanted to test
-# gevent on other architectures, we might be able to use docker
-# emulation, but there's no native support.
-#
-# Another major downside: You can't just re-run the job for one part
-# of the matrix. So if there's a transient test failure that hit, say, 3.8,
-# to get a clean run every version of Python runs again. That's bad.
-# https://github.community/t/ability-to-rerun-just-a-single-job-in-a-workflow/17234/65
-
 name: gevent testing
 
 
@@ -96,7 +76,13 @@ jobs:
         # for example to force a specific patch release, don't forget to change conditions!
         # XXX: We could probably make this easier on ourself by adding a specific
         # key to the matrix in the version we care about and checking for that matrix key.
-        python-version: ["3.14.0-rc.1", "3.12", "pypy-3.11-v7.3.20", '3.9', '3.10.18', '3.11.13', "3.13.5"]
+        python-version:
+          - "3.14.0"
+          - "3.12"
+          - "pypy-3.11-v7.3.20"
+          - '3.10.18'
+          - '3.11.13'
+          - "3.13.5"
         # XXX: August 2025: ``macos-latest`` switched from macOS 14 to macOS 15.5;
         # at that time, we started getting timeouts performing DNS lookups. I can't
         # replicate those locally on my own macOS 15 machine.
@@ -117,10 +103,8 @@ jobs:
           #   python-version: 3.10
           - os: macos-14
             python-version: "pypy-3.11-v7.3.20"
-            # On Arm, the only version of 3.9 available is 3.9.13, which is too
+            # On Arm, the only version of 3.11 available is too
             # ancient to run the tests we need.
-          - os: macos-14
-            python-version: "3.9"
           - os: macos-14 # Likewise.
             python-version: "3.11.13"
           - os: macos-14 # Same again
@@ -207,7 +191,7 @@ jobs:
           pip install -U pip
           pip install -U -q setuptools wheel twine
           pip install -q -U 'cffi;platform_python_implementation=="CPython"'
-          pip install -q -U 'cython>=3.0.2'
+          pip install -q -U 'cython>=3.2.1'
           # Use a debug version of greenlet to help catch any errors earlier.
           CFLAGS="$CFLAGS -Og -g -UNDEBUG" pip install -v --no-binary :all: 'greenlet>=3.2.0;platform_python_implementation=="CPython" '
 
@@ -320,14 +304,14 @@ jobs:
           GEVENT_RESOLVER: ares
         run: |
           python -mgevent.tests --second-chance $G_USE_COV --ignore tests_that_dont_use_resolver.txt
-      - name: "Tests: dnspython resolver"
-        # This has known issues on Pypy-3.6. dnspython resolver not
-        # supported under anything newer than 3.10, so far.
-        if: (matrix.python-version == '3.9') && startsWith(runner.os, 'Linux')
-        env:
-          GEVENT_RESOLVER: dnspython
-        run: |
-          python -mgevent.tests --second-chance $G_USE_COV --ignore tests_that_dont_use_resolver.txt
+      # - name: "Tests: dnspython resolver"
+      #   # This has known issues on Pypy-3.6. dnspython resolver not
+      #   # supported under anything newer than 3.10, so far.
+      #   if: (matrix.python-version == '3.9') && startsWith(runner.os, 'Linux')
+      #   env:
+      #     GEVENT_RESOLVER: dnspython
+      #   run: |
+      #     python -mgevent.tests --second-chance $G_USE_COV --ignore tests_that_dont_use_resolver.txt
       - name: "Tests: leakchecks"
         # Run the leaktests;
         # This is incredibly important and we MUST have an environment that successfully passes
@@ -401,7 +385,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: ['3.11']
+        python-version:
+          - '3.14'
         os: [ubuntu-latest]
     steps:
       - name: checkout
@@ -447,8 +432,8 @@ jobs:
           pip install -U pip
           pip install -U -q setuptools wheel twine
           pip install -q -U 'cffi;platform_python_implementation=="CPython"'
-          pip install -q -U 'cython>=3.0'
-          pip install 'greenlet>=2.0.0; platform_python_implementation=="CPython"'
+          pip install -q -U 'cython>=3.2'
+          pip install 'greenlet>=3.2; platform_python_implementation=="CPython"'
 
       - name: build libs and gevent
         env:
@@ -499,7 +484,8 @@ jobs:
     needs: test
     strategy:
       matrix:
-        python-version: [3.9]
+        python-version:
+          - 3.14
         image:
           # 2014 is EOL as of June 2024. But
           # it is "still widely used" and has extended (for-pay)
@@ -507,10 +493,10 @@ jobs:
           # CAUTION: Some of these strings are coded in the `make-manylinux` script
           # for test configurations, so
           # be sure to keep them matching.
-          - manylinux2014_aarch64
-          - manylinux2014_ppc64le
-          - manylinux2014_s390x
-          - manylinux2014_x86_64
+          - manylinux_2_28_aarch64
+          - manylinux_2_28_ppc64le
+          - manylinux_2_28_s390x
+          - manylinux_2_28_x86_64
           - musllinux_1_2_x86_64
           - musllinux_1_2_aarch64
     name: ${{ matrix.image }}

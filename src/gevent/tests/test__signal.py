@@ -76,11 +76,7 @@ class TestSignal(greentest.TestCase):
         import gevent.signal # make sure it's in sys.modules pylint:disable=redefined-outer-name
         assert gevent.signal
         import site
-        if greentest.PY3:
-            from importlib import reload as reload_module
-        else:
-            # builtin on py2
-            reload_module = reload # pylint:disable=undefined-variable
+        from importlib import reload as reload_module
 
         try:
             reload_module(site)
@@ -94,7 +90,6 @@ class TestSignal(greentest.TestCase):
             # install their own site.py, different from the one that ships with
             # Python 3.6., and at least the version I have doesn't mess with
             # __cached__
-            assert greentest.PY36
             import sys
             for m in set(sys.modules.values()):
                 try:

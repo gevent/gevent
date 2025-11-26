@@ -21,11 +21,9 @@ from .resources import setup_resources
 from .resources import unparse_resources
 from .sysinfo import RUNNING_ON_CI
 from .sysinfo import PYPY
-from .sysinfo import PY2
 from .sysinfo import RESOLVER_ARES
 from .sysinfo import RUN_LEAKCHECKS
 from .sysinfo import OSX
-from . import six
 from . import travis
 
 # Import this while we're probably single-threaded/single-processed
@@ -738,14 +736,11 @@ def _setup_environ(debug=False):
         # - action is one of : ignore, default, all, module, once, error
 
         # Enable default warnings such as ResourceWarning.
-        # ResourceWarning doesn't exist on Py2, so don't put it
-        # in there to avoid a warnnig.
         defaults = [
             'default',
             'default::DeprecationWarning',
+            'default::ResourceWarning'
         ]
-        if not PY2:
-            defaults.append('default::ResourceWarning')
 
         os.environ['PYTHONWARNINGS'] = ','.join(defaults + [
             # action:message:category:module:line
@@ -940,7 +935,7 @@ def main():
         options.config = _package_relative_filename(options.config, options.package)
         with open(options.config) as f: # pylint:disable=unspecified-encoding
             config_data = f.read()
-        six.exec_(config_data, config)
+        exec(config_data, config)
         FAILING_TESTS = config['FAILING_TESTS']
         IGNORED_TESTS = config['IGNORED_TESTS']
         RUN_ALONE = config['RUN_ALONE']

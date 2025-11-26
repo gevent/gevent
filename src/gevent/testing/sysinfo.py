@@ -59,15 +59,7 @@ PLATFORM_SPECIFIC_SUFFIXES = ('2', '279', '3')
 if WIN:
     PLATFORM_SPECIFIC_SUFFIXES += ('posix',)
 
-PY2 = False # Never again
-PY3 = True
-PY35 = None
-PY36 = None
-PY37 = None
-PY38 = None
-PY39 = None
-PY39_EXACTLY = None
-PY310 = None
+
 PY310_EXACTLY = None
 PY311 = None
 PY312 = None
@@ -78,22 +70,8 @@ NON_APPLICABLE_SUFFIXES = ()
 if sys.version_info[0] == 3:
     # Python 3
     NON_APPLICABLE_SUFFIXES += ('2', '279')
-    PY2 = False
     PY3 = True
-    if sys.version_info[1] >= 5:
-        PY35 = True
-    if sys.version_info[1] >= 6:
-        PY36 = True
-    if sys.version_info[1] >= 7:
-        PY37 = True
-    if sys.version_info[1] >= 8:
-        PY38 = True
-    if sys.version_info[1] >= 9:
-        PY39 = True
-        if sys.version_info[:2] == (3, 9):
-            PY39_EXACTLY = True
     if sys.version_info[1] >= 10:
-        PY310 = True
         if sys.version_info[:2] == (3, 10):
             PY310_EXACTLY = True
     if sys.version_info[1] >= 11:

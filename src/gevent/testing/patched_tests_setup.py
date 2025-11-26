@@ -26,10 +26,6 @@ from .sysinfo import RUN_COVERAGE
 from .sysinfo import PYPY
 from .sysinfo import PYPY3
 
-from .sysinfo import PY38
-from .sysinfo import PY39
-from .sysinfo import PY39_EXACTLY
-from .sysinfo import PY310
 from .sysinfo import PY310_EXACTLY
 from .sysinfo import PY311
 from .sysinfo import PY312
@@ -1171,7 +1167,7 @@ if OSX:
         'test_ftp.TestTLS_FTPClassMixin.test_retrbinary_rest',
     ]
 
-    if RESOLVER_ARES and PY38 and not RUNNING_ON_CI:
+    if RESOLVER_ARES and not RUNNING_ON_CI:
         disabled_tests += [
             # When updating to 1.16.0 this was seen locally, but not on CI.
             # Tuples differ: ('ff02::1de:c0:face:8d', 1234, 0, 0)
@@ -1179,60 +1175,45 @@ if OSX:
             'test_socket.GeneralModuleTests.test_getaddrinfo_ipv6_scopeid_symbolic',
         ]
 
-if PY39:
 
+
+disabled_tests += [
+    # Depends on exact details of the repr. Eww.
+    'test_subprocess.ProcessTestCase.test_repr',
+    # Tries to wait for the process without using Popen APIs, and expects the
+    # ``returncode`` attribute to stay None. But we have already hooked SIGCHLD, so
+    # we see and set the ``returncode``; there is no way to wait that doesn't do that.
+    'test_subprocess.POSIXProcessTestTest.test_send_signal_race',
+]
+
+
+
+disabled_tests += [
+    # They arbitrarily made some types so that they can't be created;
+    # that's an implementation detail we're not going to follow (
+    # it would require them to be factory functions).
+    'test_select.SelectTestCase.test_disallow_instantiation',
+    'test_threading.ThreadTests.test_disallow_instantiation',
+    # This wants two true threads to work, but a CPU bound loop
+    # in a greenlet can't be interrupted.
+    'test_threading.InterruptMainTests.test_can_interrupt_tight_loops',
+    # We don't currently implement pipesize.
+    'test_subprocess.ProcessTestCase.test_pipesize_default',
+    'test_subprocess.ProcessTestCase.test_pipesizes',
+    # Unknown
+    'test_signal.SiginterruptTest.test_siginterrupt_off',
+]
+
+if TRAVIS:
     disabled_tests += [
-        # Depends on exact details of the repr. Eww.
-        'test_subprocess.ProcessTestCase.test_repr',
-        # Tries to wait for the process without using Popen APIs, and expects the
-        # ``returncode`` attribute to stay None. But we have already hooked SIGCHLD, so
-        # we see and set the ``returncode``; there is no way to wait that doesn't do that.
-        'test_subprocess.POSIXProcessTestTest.test_send_signal_race',
+        # The mixing of subinterpreters (with threads) and gevent apparently
+        # leads to a segfault on Ubuntu/GitHubActions/3.10rc1. Not clear why.
+        # But that's not a great use case for gevent.
+        'test_threading.SubinterpThreadingTests.test_threads_join',
+        'test_threading.SubinterpThreadingTests.test_threads_join_2',
     ]
 
-    if sys.version_info[:3] < (3, 9, 5):
-        disabled_tests += [
-            # These were added for fixes sometime between 3.9.1 and 3.9.5
-            'test_ftplib.TestFTPClass.test_makepasv_issue43285_security_disabled',
-            'test_ftplib.TestFTPClass.test_makepasv_issue43285_security_enabled_default',
-            'test_httplib.BasicTest.test_dir_with_added_behavior_on_status',
-            'test_httplib.TunnelTests.test_tunnel_connect_single_send_connection_setup',
-            'test_ssl.TestSSLDebug.test_msg_callback_deadlock_bpo43577',
-            # This one fails with the updated certs
-            'test_ssl.ContextTests.test_load_verify_cadata',
-            # These time out on 3.9.1 on Appveyor
-            'test_ftplib.TestTLS_FTPClassMixin.test_retrbinary_rest',
-            'test_ftplib.TestTLS_FTPClassMixin.test_retrlines_too_long',
-        ]
-
-
-if PY310:
-    disabled_tests += [
-        # They arbitrarily made some types so that they can't be created;
-        # that's an implementation detail we're not going to follow (
-        # it would require them to be factory functions).
-        'test_select.SelectTestCase.test_disallow_instantiation',
-        'test_threading.ThreadTests.test_disallow_instantiation',
-        # This wants two true threads to work, but a CPU bound loop
-        # in a greenlet can't be interrupted.
-        'test_threading.InterruptMainTests.test_can_interrupt_tight_loops',
-        # We don't currently implement pipesize.
-        'test_subprocess.ProcessTestCase.test_pipesize_default',
-        'test_subprocess.ProcessTestCase.test_pipesizes',
-        # Unknown
-        'test_signal.SiginterruptTest.test_siginterrupt_off',
-    ]
-
-    if TRAVIS:
-        disabled_tests += [
-            # The mixing of subinterpreters (with threads) and gevent apparently
-            # leads to a segfault on Ubuntu/GitHubActions/3.10rc1. Not clear why.
-            # But that's not a great use case for gevent.
-            'test_threading.SubinterpThreadingTests.test_threads_join',
-            'test_threading.SubinterpThreadingTests.test_threads_join_2',
-        ]
-
-if (PY310_EXACTLY or PY39_EXACTLY) and APPVEYOR:
+if PY310_EXACTLY and APPVEYOR:
     disabled_tests += [
         # On 3.9.13, this has been seen to cause
         #

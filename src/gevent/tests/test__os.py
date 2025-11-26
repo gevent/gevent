@@ -1,6 +1,4 @@
-from __future__ import print_function, absolute_import, division
 
-import sys
 from os import pipe
 
 
@@ -56,15 +54,8 @@ class TestOS_tp(greentest.TestCase):
         self.assertEqual(bytesread[0], nbytes)
         self.assertEqual(bytesread[0], byteswritten[0])
 
-    if sys.version_info[0] < 3:
-
-        def test_if_pipe_blocks_buffer(self):
-            self._test_if_pipe_blocks(six.builtins.buffer)
-
-    if sys.version_info[:2] >= (2, 7):
-
-        def test_if_pipe_blocks_memoryview(self):
-            self._test_if_pipe_blocks(six.builtins.memoryview)
+    def test_if_pipe_blocks_memoryview(self):
+        self._test_if_pipe_blocks(six.builtins.memoryview)
 
 
 @greentest.skipUnless(hasattr(os, 'make_nonblocking'),

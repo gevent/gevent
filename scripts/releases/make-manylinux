@@ -3,6 +3,8 @@
 # This needs to be run from the root of the project.
 # To update: docker pull quay.io/pypa/manylinux2010_x86_64
 set -e
+export PYTHONDEVMODE=1
+export PYTHONFAULTHANDLER=1
 export PYTHONUNBUFFERED=1
 export PYTHONDONTWRITEBYTECODE=1
 # Use a fixed hash seed for reproducability
@@ -73,7 +75,9 @@ export LDFLAGS="$LIBS"
 # a fallback loop.
 export GEVENT_LOOP="libev-cext"
 
-SEP="~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
+# Escape codes to turn on red and turn it back off
+SEP="\e[31m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\e[0m"
 
 if [ -d /gevent -a -d /opt/python ]; then
     # Running inside docker
@@ -93,7 +97,7 @@ if [ -d /gevent -a -d /opt/python ]; then
     # pip to disable the cache when it detects that the owner doesn't match.
     # The below is an attempt to fix that, taken frob bcrypt. It seems to work on
     # Github Actions.
-    echo $SEP
+    echo -e "$SEP"
     if [ -n "$GITHUB_ACTIONS" ]; then
         echo Adjusting pip cache permissions: $(whoami)
         mkdir -p $XDG_CACHE_HOME/pip
@@ -101,12 +105,12 @@ if [ -d /gevent -a -d /opt/python ]; then
     fi
     ls -ld /cache
     ls -ld /cache/pip
-    echo $SEP
+    echo -e "$SEP"
 
     # Ahh, overprotective security. Disable it.
     echo "Fixing git's paranoia"
     git config --global --add safe.directory /gevent/.git
-    echo $SEP
+    echo -e "$SEP"
 
     echo "Installing Build Deps"
     if [ -e /usr/bin/yum ]; then
@@ -127,12 +131,12 @@ if [ -d /gevent -a -d /opt/python ]; then
         # the muslinux image
         apk add --no-cache build-base libffi-dev ccache
     fi
-    echo $SEP
+    echo -e "$SEP"
 
     echo  Current environment
-    echo $SEP
+    echo -e "$SEP"
     env | sort
-    echo $SEP
+    echo -e "$SEP"
 
     mkdir /tmp/build
     cd /tmp/build
@@ -144,7 +148,7 @@ if [ -d /gevent -a -d /opt/python ]; then
     else
         echo Not configuring c-ares because it is disabled
     fi
-    echo $SEP
+    echo -e "$SEP"
     rm -rf /gevent/wheelhouse
     mkdir /gevent/wheelhouse
     OPATH="$PATH"
@@ -173,14 +177,14 @@ if [ -d /gevent -a -d /opt/python ]; then
     # Start echoing commands (doing it earlier is too much)
     set -x
     for variant in /opt/python/cp{314,313,312,310,311}*; do
-        echo $SEP
+        echo -e "$SEP"
         if [[ "$variant" == *t ]]; then
             echo "Skipping no-gil build. The GIL is required."
             continue
         fi
         export PATH="$variant/bin:$OPATH"
         if [ -n "$SLOW_BUILD" ]; then
-            is_security_fix_only=$(python -c 'import sys; print(sys.version_info[:2] < (3, 10))')
+            is_security_fix_only=$(python -c 'import sys; print(sys.version_info[:2] <= (3, 10))')
             if [ "$is_security_fix_only" == "True" ]; then
                 echo "Skipping build of $variant"
                 continue
@@ -193,8 +197,8 @@ if [ -d /gevent -a -d /opt/python ]; then
         # The downside is that we must install dependencies manually.
         # NOTE: We can't upgrade ``wheel`` because ``auditwheel`` depends on
         # it, and auditwheel is installed in one of these environments.
-        time python -m pip install  -U 'cython>=3.0'
-        time python -mpip install -U cffi 'greenlet >= 2.0.0; python_version < "3.12"' 'greenlet >= 3.0a1; python_version >= "3.12"' setuptools
+        time python -m pip install  -U 'cython >= 3.2'
+        time python -mpip install -U cffi 'greenlet >= 3.2' setuptools
         echo "$variant: Building wheel"
         time (python setup.py bdist_wheel)
         PATH="$OPATH" auditwheel repair dist/gevent*.whl
@@ -236,7 +240,7 @@ fi
 # Mount the current directory as /gevent
 # Mount the pip cache directory as /cache
 # `pip cache` requires pip 20.1
-echo $SEP
+echo -e "$SEP"
 echo Setting up caching
 python --version
 python -mpip --version
@@ -246,7 +250,7 @@ echo Sharing ccache dir at $HOME/.ccache
 if [ ! -d "$HOME/.ccache" ]; then
     mkdir "$HOME/.ccache"
 fi
-echo $SEP
+echo -e "$SEP"
 # Travis CI and locally we want `-ti`, but github actions doesn't have a TTY, so one
 # or the other of the arguments causes this to fail with 'input device is not a TTY'
 # Pas through whether we're running on github or not to help with caching.

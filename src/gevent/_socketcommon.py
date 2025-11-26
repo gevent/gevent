@@ -63,6 +63,8 @@ __imports__ = [
     'sethostname',
     'create_server',
     'has_dualstack_ipv6',
+    'recv_fds',
+    'send_fds',
 ]
 
 
@@ -70,7 +72,6 @@ import time
 
 from gevent._hub_local import get_hub_noargs as get_hub
 from gevent._compat import string_types, integer_types
-from gevent._compat import PY39
 from gevent._compat import WIN as is_windows
 from gevent._compat import OSX as is_macos
 from gevent._compat import exc_clear
@@ -80,12 +81,6 @@ from gevent._hub_primitives import wait_on_socket as _wait_on_socket
 
 from gevent.timeout import Timeout
 
-
-if PY39:
-    __imports__.extend([
-        'recv_fds',
-        'send_fds',
-    ])
 
 # pylint:disable=no-name-in-module,unused-import
 if is_windows:

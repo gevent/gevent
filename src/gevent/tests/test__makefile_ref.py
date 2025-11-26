@@ -5,7 +5,6 @@ import socket
 import ssl
 import threading
 import errno
-import weakref
 
 
 import gevent.testing as greentest
@@ -17,10 +16,8 @@ dirname = os.path.dirname(os.path.abspath(__file__))
 CERTFILE = os.path.join(dirname, '2_7_keycert.pem')
 pid = os.getpid()
 
-PY3 = greentest.PY3
 PYPY = greentest.PYPY
 CPYTHON = not PYPY
-PY2 = not PY3
 fd_types = int
 
 WIN = greentest.WIN
@@ -111,10 +108,7 @@ class Test(greentest.TestCase):
         else:
             # Under Python3, the socket module returns -1 for a fileno
             # of a closed socket; under Py2 it raises
-            if PY3:
-                self.assertEqual(sock.fileno(), -1)
-            else:
-                self.assert_raises_EBADF(sock.fileno)
+            self.assertEqual(sock.fileno(), -1)
             self.assert_raises_EBADF(sock.getsockname)
             self.assert_raises_EBADF(sock.accept)
         if rest:
@@ -156,11 +150,8 @@ class TestSocket(Test):
             # Under python 2, this closes socket wrapper object but not the file descriptor;
             # under python 3, both stay open
             s.close()
-            if PY3:
-                self.assert_open(s, fileno)
-            else:
-                self.assert_closed(s)
-                self.assert_open(fileno)
+            self.assert_open(s, fileno)
+
             f.close()
             self.assert_closed(s)
             self.assert_closed(fileno)
@@ -217,11 +208,8 @@ class TestSocket(Test):
             client_socket.close()
             # Under python 2, this closes socket wrapper object but not the file descriptor;
             # under python 3, both stay open
-            if PY3:
-                self.assert_open(client_socket, fileno)
-            else:
-                self.assert_closed(client_socket)
-                self.assert_open(fileno)
+            self.assert_open(client_socket, fileno)
+
             f.close()
             self.assert_closed(client_socket, fileno)
 
@@ -481,23 +469,13 @@ class Closing(object):
             return o[0]
         return self
 
-    if PY2 and CPYTHON:
-        # This implementation depends or refcounting
-        # for things to close. Eww.
-        def closing(self, o):
-            self._objects.append(weakref.ref(o))
-            return o
-        def objects(self):
-            return [r() for r in self._objects if r() is not None]
+    def objects(self):
+        # PyPy returns an object without __len__...
+        return list(reversed(self._objects))
 
-    else:
-        def objects(self):
-            # PyPy returns an object without __len__...
-            return list(reversed(self._objects))
-
-        def closing(self, o):
-            self._objects.append(o)
-            return o
+    def closing(self, o):
+        self._objects.append(o)
+        return o
 
     __call__ = closing
 
