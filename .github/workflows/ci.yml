@@ -78,7 +78,16 @@ jobs:
         # key to the matrix in the version we care about and checking for that matrix key.
         python-version:
           - "3.14.0"
-          - "3.14t" # NOT FULLY SUPPORTED
+          # As of 2025-12-04, with greenlet 3.3 that nominally
+          # supports free-threading, we can't pass our test suite on a
+          # free-threaded build (even though our Cython modules enable
+          # the GIL). We get `` Fatal Python error: PyMutex_Unlock:
+          # unlocking mutex that is not locked`` and also, of course,
+          # segfaults. Not sure how much of this is Cython, how much
+          # is greenlet, how much might be other extension modules,
+          # and how much is us. Probably a lot of greenlet.
+          # https://github.com/gevent/gevent/actions/runs/19936104137/job/57161263886
+          # - "3.14t"
           - "3.12"
           - "pypy-3.11-v7.3.20"
           - '3.10.18'
