@@ -662,6 +662,6 @@ for _x in __version_specific__:
     if hasattr(__socket__, _x):
         vars()[_x] = getattr(__socket__, _x)
         if _x not in _all_set:
-            _all_set.add(_x)
             __all__.append(_x)
+            _all_set.add(_x)
 del _x
