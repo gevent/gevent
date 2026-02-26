@@ -236,7 +236,7 @@ class watcher(metaclass=AbstractWatcherType):
 
         try:
             self._watcher_ffi_init(args)
-        except:
+        except Exception:
             # Let these be GC'd immediately.
             # If we keep them around to when *we* are gc'd,
             # they're probably invalid, meaning any native calls

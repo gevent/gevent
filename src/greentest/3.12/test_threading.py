@@ -731,7 +731,7 @@ class ThreadTests(BaseTestCase):
                     try:
                         threading._shutdown()
                         os._exit(0)
-                    except:
+                    except Exception:
                         traceback.print_exc()
                         sys.stderr.flush()
                         os._exit(1)

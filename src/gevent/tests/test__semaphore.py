@@ -97,7 +97,7 @@ class TestSemaphoreMultiThread(greentest.TestCase):
                 acquired.append(
                     sem.acquire(**thread_acquire_kwargs)
                 )
-            except:
+            except Exception:
                 exc_info[:] = sys.exc_info()
                 raise # Print
             finally:

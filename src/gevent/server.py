@@ -127,7 +127,7 @@ class StreamServer(BaseServer):
                 if hasattr(self, 'socket'):
                     raise TypeError('backlog must be None when a socket instance is passed')
                 self.backlog = backlog
-        except:
+        except Exception:
             self.close()
             raise
 

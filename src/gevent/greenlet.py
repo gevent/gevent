@@ -808,7 +808,7 @@ class Greenlet(greenlet):
                     raise InvalidSwitchError('Invalid switch into Greenlet.get(): %r' % (result, ))
             finally:
                 t.cancel()
-        except:
+        except Exception:
             # unlinking in 'except' instead of finally is an optimization:
             # if switch occurred normally then link was already removed in _notify_links
             # and there's no need to touch the links set.
@@ -846,7 +846,7 @@ class Greenlet(greenlet):
             self.unlink(switch)
             if ex is not t:
                 raise
-        except:
+        except Exception:
             self.unlink(switch)
             raise
 

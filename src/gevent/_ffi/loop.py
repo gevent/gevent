@@ -168,7 +168,7 @@ class AbstractCallbacks(object):
                         orig_loop.handle_error(the_watcher, *exc_info)
                     else:
                         self.unhandled_onerror(*exc_info)
-                except:
+                except Exception:
                     print("WARNING: gevent: Error when handling error",
                           file=sys.stderr)
                     traceback.print_exc()

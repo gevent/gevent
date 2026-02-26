@@ -58,7 +58,7 @@ class GreenFileDescriptorIO(RawIOBase):
 
             if writable:
                 self._write_watcher = io_watcher(fileno, 2)
-        except:
+        except Exception:
             # If anything goes wrong, it's important to go ahead and
             # close these watchers *now*, especially under libuv, so
             # that they don't get eventually reclaimed by the garbage

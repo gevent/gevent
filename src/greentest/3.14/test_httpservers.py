@@ -492,7 +492,7 @@ class SimpleHTTPServerTestCase(BaseTestCase):
             os.chdir(self.cwd)
             try:
                 shutil.rmtree(self.tempdir)
-            except:
+            except Exception:
                 pass
         finally:
             super().tearDown()

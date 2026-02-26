@@ -588,7 +588,7 @@ def _fallback_socketpair(family=AF_INET, type=SOCK_STREAM, proto=0):
                 pass
             csock.setblocking(True)
             ssock, _ = lsock.accept()
-        except:
+        except Exception:
             csock.close()
             raise
     finally:
@@ -603,7 +603,7 @@ def _fallback_socketpair(family=AF_INET, type=SOCK_STREAM, proto=0):
             or csock.getsockname() != ssock.getpeername()
         ):
             raise ConnectionError("Unexpected peer connection")
-    except:
+    except Exception:
         # getsockname() and getpeername() can fail
         # if either socket isn't connected.
         ssock.close()

@@ -55,7 +55,7 @@ class AbstractDatabaseConnectionPool(object):
         self.size += 1
         try:
             new_item = self.create_connection()
-        except:
+        except Exception:
             self.size -= 1
             raise
         return new_item
@@ -81,7 +81,7 @@ class AbstractDatabaseConnectionPool(object):
                 else:
                     conn.set_isolation_level(isolation_level)
             yield conn
-        except:
+        except Exception:
             if conn.closed:
                 conn = None
                 self.closeall()
@@ -109,7 +109,7 @@ class AbstractDatabaseConnectionPool(object):
     def _rollback(self, conn):
         try:
             conn.rollback()
-        except:
+        except Exception:
             gevent.get_hub().handle_error(conn, *sys.exc_info())
             return
         return conn

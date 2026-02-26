@@ -132,7 +132,7 @@ class BaseServer(object):
             self.loop = get_hub().loop
             if self.max_accept < 1:
                 raise ValueError('max_accept must be positive int: %r' % (self.max_accept, ))
-        except:
+        except Exception:
             self.close()
             raise
 
@@ -209,7 +209,7 @@ class BaseServer(object):
                 _handle_and_close_when_done(handle, close, args)
             else:
                 spawn(_handle_and_close_when_done, handle, close, args)
-        except:
+        except Exception:
             close(*args)
             raise
 
@@ -231,7 +231,7 @@ class BaseServer(object):
                 self.delay = self.min_delay
                 if not args:
                     return
-            except:
+            except Exception:
                 self.loop.handle_error(self, *sys.exc_info())
                 ex = sys.exc_info()[1]
                 if self.is_fatal_error(ex):
@@ -247,7 +247,7 @@ class BaseServer(object):
             else:
                 try:
                     self.do_handle(*args)
-                except:
+                except Exception:
                     self.loop.handle_error((args[1:], self), *sys.exc_info())
                     if self.delay >= 0:
                         self.stop_accepting()
@@ -340,7 +340,7 @@ class BaseServer(object):
         self._stop_event.clear()
         try:
             self.start_accepting()
-        except:
+        except Exception:
             self.close()
             raise
 

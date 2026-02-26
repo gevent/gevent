@@ -43,7 +43,7 @@ except ImportError:
 
 try:
     import fcntl
-except:
+except Exception:
     fcntl = None
 
 if support.PGO:

@@ -53,7 +53,7 @@ def simple_subprocess(testcase):
         os._exit(72)
     try:
         yield None
-    except:
+    except Exception:
         raise
     finally:
         test.support.wait_process(pid, exitcode=72)

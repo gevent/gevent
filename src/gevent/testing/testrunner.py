@@ -219,7 +219,7 @@ class Runner(object):
             self._report(util.perf_counter() - start, exit=False)
             util.log('(partial results)\n')
             raise
-        except:
+        except Exception:
             traceback.print_exc()
             raise
 
@@ -253,7 +253,7 @@ class Runner(object):
             except KeyboardInterrupt:
                 pool.terminate()
                 raise
-        except:
+        except Exception:
             pool.terminate()
             raise
 

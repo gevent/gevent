@@ -1692,7 +1692,7 @@ class Readliner:
             data.append(read[:idx])
             self.remainder = read[idx:]
             return b"".join(data)
-        except:
+        except Exception:
             self.remainder = b"".join(data)
             raise
 

@@ -507,7 +507,7 @@ class _SimulatedWithAsyncMixin(object):
         self._async = loop.async_()
         try:
             super(_SimulatedWithAsyncMixin, self).__init__(loop, *args, **kwargs)
-        except:
+        except Exception:
             self._async.close()
             raise
 

@@ -104,7 +104,7 @@ class _WorkerGreenlet(RawGreenlet):
         threadpool._register_worker(self)
         try:
             start_new_thread(self._begin, ())
-        except:
+        except Exception:
             self._unregister_worker(self)
             raise
 
@@ -204,7 +204,7 @@ class _WorkerGreenlet(RawGreenlet):
                         return
 
                     run_task(*task)
-                except:
+                except Exception:
                     task = repr(task)
                     raise
                 finally:
@@ -544,7 +544,7 @@ class ThreadPool(GroupMappingMixin):
             thread_result = ThreadResult(result, self.hub, semaphore.release)
             task_queue.put((func, args, kwargs, thread_result))
             self.adjust()
-        except:
+        except Exception:
             if thread_result is not None:
                 thread_result.destroy_in_main_thread()
             semaphore.release()

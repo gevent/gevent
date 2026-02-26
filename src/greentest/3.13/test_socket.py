@@ -427,7 +427,7 @@ class ThreadableTest:
 
         try:
             self.__setUp()
-        except:
+        except Exception:
             self.server_crashed = True
             raise
         finally:
@@ -5869,7 +5869,7 @@ class TCPTimeoutTest(SocketTCPTest):
             self.fail("caught timeout instead of error (TCP)")
         except OSError:
             ok = True
-        except:
+        except Exception:
             self.fail("caught unexpected exception (TCP)")
         if not ok:
             self.fail("accept() returned success when we did not expect it")
@@ -5926,7 +5926,7 @@ class UDPTimeoutTest(SocketUDPTest):
             self.fail("caught timeout instead of error (UDP)")
         except OSError:
             ok = True
-        except:
+        except Exception:
             self.fail("caught unexpected exception (UDP)")
         if not ok:
             self.fail("recv() returned success when we did not expect it")
@@ -5951,7 +5951,7 @@ class UDPLITETimeoutTest(SocketUDPLITETest):
             self.fail("caught timeout instead of error (UDPLITE)")
         except OSError:
             ok = True
-        except:
+        except Exception:
             self.fail("caught unexpected exception (UDPLITE)")
         if not ok:
             self.fail("recv() returned success when we did not expect it")

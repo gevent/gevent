@@ -449,7 +449,7 @@ def _syserr_cb(msg):
     try:
         msg = ffi.string(msg)
         SYSERR_CALLBACK(msg, ffi.errno)
-    except:
+    except Exception:
         set_syserr_cb(None)
         raise  # let cffi print the traceback
 

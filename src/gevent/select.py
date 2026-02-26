@@ -303,7 +303,7 @@ class poll(object):
                 watchers.append(watcher)
                 watcher.priority = MAXPRI
                 watcher.start(watcher_cb, fd, pass_events=True)
-        except:
+        except Exception:
             for awatcher in watchers:
                 awatcher.stop()
                 awatcher.close()

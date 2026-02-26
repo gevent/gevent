@@ -759,7 +759,7 @@ class Channel:
             result = waiter.get()
             if result is not waiter:
                 raise InvalidSwitchError("Invalid switch into Channel.put: %r" % (result, ))
-        except:
+        except Exception:
             _safe_remove(self.putters, item)
             raise
         finally:
@@ -785,7 +785,7 @@ class Channel:
             if self.putters:
                 self._schedule_unlock()
             return waiter.get()
-        except:
+        except Exception:
             self.getters.remove(waiter)
             raise
         finally:

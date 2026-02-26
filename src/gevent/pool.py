@@ -641,7 +641,7 @@ class Pool(Group):
 
         try:
             Group.add(self, greenlet)
-        except:
+        except Exception:
             self._semaphore.release()
             raise
 

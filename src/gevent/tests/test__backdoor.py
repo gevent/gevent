@@ -80,7 +80,7 @@ class Test(greentest.TestCase):
         try:
             conn.connect(*self._connection_arguments(server)) # pylint:disable=not-callable
             banner = self._wait_for_prompt(conn)
-        except:
+        except Exception:
             conn.close()
             raise
 

@@ -229,7 +229,7 @@ class HelperFunctionTests(unittest.TestCase):
     def test_compact_traceback(self):
         try:
             raise Exception("I don't like spam!")
-        except:
+        except Exception:
             real_t, real_v, real_tb = sys.exc_info()
             r = asyncore.compact_traceback()
         else:

@@ -806,7 +806,7 @@ class SSLSocket(socket):
                 server_side=True
             )
             return newsock, addr
-        except:
+        except Exception:
             newsock.close()
             raise
 

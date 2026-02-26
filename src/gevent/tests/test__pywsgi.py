@@ -69,7 +69,7 @@ def read_headers(fd):
         line = line.decode('latin-1')
         try:
             key, value = line.split(': ', 1)
-        except:
+        except Exception:
             print('Failed to split: %r' % (line, ))
             raise
         assert key.lower() not in {x.lower() for x in headers}, 'Header %r:%r sent more than once: %r' % (key, value, headers)
@@ -1114,7 +1114,7 @@ class TestNonLatin1HeaderFromApplication(TestCase):
             start_response("200 PASSED",
                            [('Content-Type', 'text/plain'),
                             ('Custom-Header', self.header)])
-        except:
+        except Exception:
             self.errors.append(sys.exc_info()[:2])
             raise
         return []

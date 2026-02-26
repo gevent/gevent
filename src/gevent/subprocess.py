@@ -166,7 +166,7 @@ __implements__.append('CompletedProcess')
 __extra__.remove('MAXFD')
 try:
     MAXFD = os.sysconf("SC_OPEN_MAX")
-except:
+except Exception:
     MAXFD = 256
 
 
@@ -327,7 +327,7 @@ def call(*popenargs, **kwargs):
     with Popen(*popenargs, **kwargs) as p:
         try:
             return p.wait(timeout=timeout, _raise_exc=True)
-        except:
+        except Exception:
             p.kill()
             p.wait()
             raise
@@ -422,7 +422,7 @@ def check_output(*popenargs, **kwargs):
             process.kill()
             output, unused_err = process.communicate()
             raise TimeoutExpired(process.args, timeout, output=output)
-        except:
+        except Exception:
             process.kill()
             process.wait()
             raise
@@ -795,7 +795,7 @@ class Popen(object):
                                 restore_signals,
                                 gid, gids, uid, umask,
                                 start_new_session, process_group)
-        except:
+        except Exception:
             # Cleanup if the child failed starting.
             # (gevent: New in python3, but reported as gevent bug in #347.
             # Note that under Py2, any error raised below will replace the
@@ -1517,7 +1517,7 @@ class Popen(object):
                         continue
                     try:
                         os_close(fd)
-                    except:
+                    except Exception:
                         pass
 
         @classmethod
@@ -1547,7 +1547,7 @@ class Popen(object):
 
                 try:
                     os_close(i)
-                except:
+                except Exception:
                     pass
         # pylint:disable-next=too-many-positional-arguments
         def _execute_child(self, args, executable, preexec_fn, close_fds,
@@ -1604,7 +1604,7 @@ class Popen(object):
                     gc.disable()
                     try:
                         self.pid = fork_and_watch(self._on_child, self._loop, True, fork)
-                    except:
+                    except Exception:
                         if gc_was_enabled:
                             gc.enable()
                         raise
@@ -1749,7 +1749,7 @@ class Popen(object):
                             except OSError as e:
                                 e._failed_exec = True
                                 raise
-                        except:
+                        except Exception:
                             exc_type, exc_value, tb = sys.exc_info()
                             # Save the traceback and attach it to the exception object
                             exc_lines = traceback.format_exception(exc_type,
@@ -1986,7 +1986,7 @@ def run(*popenargs, **kwargs):
             process.kill()
             stdout, stderr = process.communicate()
             raise _with_stdout_stderr(TimeoutExpired(process.args, timeout, output=stdout), stderr)
-        except:
+        except Exception:
             process.kill()
             process.wait()
             raise

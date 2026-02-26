@@ -123,7 +123,7 @@ class Test(greentest.TestCase):
                 # we call listen (linux with lsof accepts either)
                 s.listen(1)
             self.assert_open(s, s.fileno())
-        except:
+        except Exception:
             s.close()
             s = None
             raise

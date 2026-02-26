@@ -81,7 +81,7 @@ class Server(object):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             self.server_port = support.bind_port(self.socket, params.DEFAULT_BIND_ADDR)
-        except:
+        except Exception:
             self.close()
             raise
 

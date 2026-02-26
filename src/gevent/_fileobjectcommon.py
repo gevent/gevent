@@ -272,7 +272,7 @@ class OpenDescriptor(object): # pylint:disable=too-many-instance-attributes
             raw = self.opened_raw()
             try:
                 self._opened = self.__wrapped(raw)
-            except:
+            except Exception:
                 # XXX: This might be a bug? Could we wind up closing
                 # something we shouldn't close?
                 raw.close()

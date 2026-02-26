@@ -888,7 +888,7 @@ class RunFailedTests(TestBase):
                 err = _interpreters.run_string(self.id, script)
                 self.assertIs(err, None)
                 return None
-        except:
+        except Exception:
             raise  # re-raise
         else:
             msg = os.read(r, 100)

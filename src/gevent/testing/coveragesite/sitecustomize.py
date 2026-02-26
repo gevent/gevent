@@ -56,7 +56,7 @@ except (coverage.CoverageException,
         import traceback
         traceback.print_exc()
         raise
-except:
+except Exception:
     import traceback
     traceback.print_exc()
     raise

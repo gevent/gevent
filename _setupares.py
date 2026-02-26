@@ -81,7 +81,7 @@ def configure_ares(bext, ext):
             return
         try:
             system(ares_configure_command)
-        except:
+        except Exception:
             with open('configure-output.txt', 'r') as t:
                 print(t.read(), file=sys.stderr)
             raise

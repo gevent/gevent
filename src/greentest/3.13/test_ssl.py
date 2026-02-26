@@ -2679,7 +2679,7 @@ class AsyncoreEchoServer(threading.Thread):
         while self.active:
             try:
                 asyncore.loop(1)
-            except:
+            except Exception:
                 pass
 
     def stop(self):

@@ -180,7 +180,7 @@ class _WaitIterator(object):
                 self._cleanup()
                 raise StopIteration()
             return item
-        except:
+        except Exception:
             self._cleanup()
             raise
 
