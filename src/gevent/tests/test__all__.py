@@ -1,9 +1,5 @@
 # Check __all__, __implements__, __extensions__, __imports__ of the modules
 
-from __future__ import print_function
-from __future__ import absolute_import
-
-
 import functools
 import sys
 import unittest
@@ -11,14 +7,13 @@ import types
 import importlib
 import warnings
 
-from gevent.testing import six
 from gevent.testing import modules
 from gevent.testing.sysinfo import PLATFORM_SPECIFIC_SUFFIXES
 from gevent.testing.util import debug
 
 from gevent._patcher import MAPPING
 
-class ANY(object):
+class ANY:
     def __contains__(self, item):
         return True
 
@@ -90,7 +85,7 @@ def skip_if_no_stdlib_counterpart(f):
 
     return m
 
-class AbstractTestMixin(object):
+class AbstractTestMixin:
     modname = None
     stdlib_has_all = False
     stdlib_all = None
@@ -152,7 +147,7 @@ class AbstractTestMixin(object):
         # imported from it.
         self.skipIfNoAll()
         names = {}
-        six.exec_("from %s import *" % self.modname, names)
+        exec("from %s import *" % self.modname, names)
         names.pop('__builtins__', None)
         self.maxDiff = None
 
