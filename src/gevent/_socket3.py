@@ -645,8 +645,11 @@ else: # pragma: no cover
 
 
 __all__ = __implements__ + __extensions__ + __imports__
-if _fallback_socketpair.__name__ in __all__:
+_all_set = set(__all__)
+
+if _fallback_socketpair.__name__ in _all_set:
     __all__.remove(_fallback_socketpair.__name__)
+    _all_set.remove(_fallback_socketpair.__name__)
 
 __version_specific__ = (
     # Python 3.7b1+
@@ -658,6 +661,7 @@ __version_specific__ = (
 for _x in __version_specific__:
     if hasattr(__socket__, _x):
         vars()[_x] = getattr(__socket__, _x)
-        if _x not in __all__:
+        if _x not in _all_set:
             __all__.append(_x)
+            _all_set.add(_x)
 del _x
