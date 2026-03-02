@@ -1024,6 +1024,50 @@ class TestPure(greentest.TestCase):
                          'gevent.greenlet')
 
 
+class TestDeadPropertyDuringSwitch(greentest.TestCase):
+    """Regression test: Greenlet.dead must not return True for an active greenlet.
+
+    During the bootstrap phase of a freshly started greenlet, the event loop
+    consumes the start callback (setting _start_event.pending to False) before
+    run() sets _start_event = _start_completed_event.  In that window,
+    __started_but_aborted() would incorrectly return True, making the ``dead``
+    property report the greenlet as dead while it is actually running.
+
+    This matters because ``dead`` returning True makes ``ready()`` return True,
+    which causes ``rawlink()`` to immediately schedule ``_notify_links`` --
+    dispatching all registered link callbacks prematurely.
+    """
+
+    def test_dead_is_false_for_current_greenlet_during_switch(self):
+        from greenlet import settrace
+
+        dead_values = []
+
+        def tracer(event, args):
+            if event == 'switch':
+                _origin, target = args
+                # The target is the greenlet being switched into.
+                # It must NOT appear dead.
+                dead_values.append(target.dead)
+
+        old_trace = settrace(tracer)
+        try:
+            g = gevent.spawn(lambda: 42)
+            g.join()
+        finally:
+            settrace(old_trace)
+
+        # There should be at least one switch event where target was our
+        # greenlet.  None of the dead observations should be True for a
+        # greenlet that is actively running.
+        self.assertTrue(len(dead_values) > 0, "tracer was never called")
+        for i, val in enumerate(dead_values):
+            self.assertFalse(
+                val,
+                "dead returned True during switch event #%d" % i,
+            )
+
+
 X = object()
 
 del AbstractGenericGetTestCase
