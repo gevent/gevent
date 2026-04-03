@@ -34,6 +34,19 @@
   #endif
 #endif
 
+/*
+ * Guard against calling PyGILState_Ensure during interpreter finalization.
+ * After _PyGILState_Fini runs, gilstate.main_interp is NULL, so calling
+ * new_threadstate inside PyGILState_Ensure dereferences NULL, causing a SEGV.
+ * Py_IsFinalizing became public in 3.13; use the private spelling on older
+ * versions (available since 3.0 and stable in practice).
+ */
+#if PY_VERSION_HEX >= 0x030d0000
+#  define GEVENT_PY_IS_FINALIZING() Py_IsFinalizing()
+#else
+#  define GEVENT_PY_IS_FINALIZING() _Py_IsFinalizing()
+#endif
+
 #define GGIL_DECLARE  PyGILState_STATE ___save
 #define GGIL_ENSURE  ___save = PyGILState_Ensure();
 #define GGIL_RELEASE  PyGILState_Release(___save);
@@ -80,6 +93,7 @@ static void gevent_stop(PyObject* watcher, struct PyGeventLoopObject* loop)
 
 static void gevent_callback(struct PyGeventLoopObject* loop, PyObject* callback, PyObject* args, PyObject* watcher, void *c_watcher, int revents)
 {
+    if (GEVENT_PY_IS_FINALIZING()) return;
     GGIL_DECLARE;
     PyObject *result, *py_events;
     long length;
@@ -217,6 +231,7 @@ DEFINE_CALLBACKS
 void gevent_run_callbacks(struct ev_loop *_loop, void *watcher, int revents) {
     struct PyGeventLoopObject* loop;
     PyObject *result;
+    if (GEVENT_PY_IS_FINALIZING()) return;
     GGIL_DECLARE;
     GGIL_ENSURE;
     loop = GET_OBJECT(PyGeventLoopObject, watcher, _prepare);
@@ -245,6 +260,7 @@ void gevent_run_callbacks(struct ev_loop *_loop, void *watcher, int revents) {
 /* This is only used on Win32 */
 
 void gevent_periodic_signal_check(struct ev_loop *_loop, void *watcher, int revents) {
+    if (GEVENT_PY_IS_FINALIZING()) return;
     GGIL_DECLARE;
     GGIL_ENSURE;
     gevent_check_signals(GET_OBJECT(PyGeventLoopObject, watcher, _periodic_signal_checker));

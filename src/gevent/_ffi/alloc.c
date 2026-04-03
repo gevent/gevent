@@ -10,6 +10,15 @@
 #define GPyObject_Realloc realloc
 #else
 #include "Python.h"
+/*
+ * Guard for PyGILState_Ensure during interpreter finalization; see
+ * callbacks.c for the full explanation.
+ */
+#if PY_VERSION_HEX >= 0x030d0000
+#  define GEVENT_PY_IS_FINALIZING() Py_IsFinalizing()
+#else
+#  define GEVENT_PY_IS_FINALIZING() _Py_IsFinalizing()
+#endif
 #define GGIL_DECLARE  PyGILState_STATE ___save
 #define GGIL_ENSURE  ___save = PyGILState_Ensure();
 #define GGIL_RELEASE  PyGILState_Release(___save);
@@ -30,6 +39,22 @@ void* gevent_realloc(void* ptr, size_t size)
         // why. No need to acquire the GIL or do anything in that case.
         return NULL;
     }
+
+#ifndef PYPY_VERSION_NUM
+    /*
+     * During finalization PyGILState_Ensure is unsafe (gilstate.main_interp
+     * may already be NULL). Fall back to the system allocator; libev's
+     * internal structures were allocated via this same function so mixing is
+     * safe within libev's own pool.
+     */
+    if (GEVENT_PY_IS_FINALIZING()) {
+        if (!size) {
+            free(ptr);
+            return NULL;
+        }
+        return realloc(ptr, size);
+    }
+#endif
 
     // Using PyObject_* APIs to get access to pymalloc allocator on
     // all versions of CPython; in Python 3, PyMem_* and PyObject_* use
