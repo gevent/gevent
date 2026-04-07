@@ -93,10 +93,13 @@ static void gevent_stop(PyObject* watcher, struct PyGeventLoopObject* loop)
 
 static void gevent_callback(struct PyGeventLoopObject* loop, PyObject* callback, PyObject* args, PyObject* watcher, void *c_watcher, int revents)
 {
-    if (GEVENT_PY_IS_FINALIZING()) return;
     GGIL_DECLARE;
     PyObject *result, *py_events;
     long length;
+
+    if (GEVENT_PY_IS_FINALIZING()) {
+        return;
+    }
     py_events = 0;
     GGIL_ENSURE;
     Py_INCREF(loop);
@@ -231,8 +234,10 @@ DEFINE_CALLBACKS
 void gevent_run_callbacks(struct ev_loop *_loop, void *watcher, int revents) {
     struct PyGeventLoopObject* loop;
     PyObject *result;
-    if (GEVENT_PY_IS_FINALIZING()) return;
     GGIL_DECLARE;
+    if (GEVENT_PY_IS_FINALIZING()) {
+        return;
+    }
     GGIL_ENSURE;
     loop = GET_OBJECT(PyGeventLoopObject, watcher, _prepare);
     Py_INCREF(loop);
@@ -260,8 +265,10 @@ void gevent_run_callbacks(struct ev_loop *_loop, void *watcher, int revents) {
 /* This is only used on Win32 */
 
 void gevent_periodic_signal_check(struct ev_loop *_loop, void *watcher, int revents) {
-    if (GEVENT_PY_IS_FINALIZING()) return;
     GGIL_DECLARE;
+    if (GEVENT_PY_IS_FINALIZING()) {
+        return;
+    }
     GGIL_ENSURE;
     gevent_check_signals(GET_OBJECT(PyGeventLoopObject, watcher, _periodic_signal_checker));
     GGIL_RELEASE;
