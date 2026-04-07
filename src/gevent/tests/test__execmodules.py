@@ -4,7 +4,6 @@ import warnings
 from gevent.testing import modules
 from gevent.testing import main
 from gevent.testing.sysinfo import NON_APPLICABLE_SUFFIXES
-from gevent.testing import six
 
 import pathlib
 
@@ -24,7 +23,7 @@ def make_exec_test(path, module):
             elif '.' in module:
                 globs['__package__'] = module.rsplit('.', 1)[0]
             try:
-                six.exec_(src, globs)
+                exec(src, globs)
             except ImportError:
                 if module in modules.OPTIONAL_MODULES:
                     raise unittest.SkipTest("Unable to import optional module %s" % module)
