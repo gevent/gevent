@@ -216,9 +216,11 @@ class Definitions(metaclass=DefinitionsMeta):
         If we have extra greenlets hanging around due to changes in GC, we won't
         match the expected output.
 
-        So far, this is only seen on one version, in CI environment.
+        This arises on CI 3.14.3 when combined with test__threadpool;
+        it was previously seen with some specific 3.12 releases.
+        For safety, always run alone.
         """,
-        when=(CI & (PY312B3_EXACTLY | PY312B4_EXACTLY))
+        when=(CI)
     )
 
     test__issue6 = Flaky(
