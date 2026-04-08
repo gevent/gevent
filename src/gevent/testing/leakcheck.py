@@ -222,7 +222,6 @@ def wrap_refcount(method):
 
     if objgraph is None or getattr(method, 'ignore_leakcheck', False):
         if objgraph is None:
-            import warnings
             warnings.warn("objgraph not available, leakchecks disabled")
         @wraps(method)
         def _method_skipped_during_leakcheck(self, *_args, **_kwargs):
