@@ -310,7 +310,7 @@ EXTRA_PSUTIL_DEPS = [
     # https://github.com/giampaolo/psutil/issues/1659
     # PyPy on Windows can't build psutil, it fails to link with the missing symbol
     # PyErr_SetFromWindowsErr.
-    'psutil >= 5.7.0; sys_platform != "win32" or platform_python_implementation == "CPython"',
+    'psutil >= 6.0.0; sys_platform != "win32" or platform_python_implementation == "CPython"',
 ]
 
 EXTRA_MONITOR = [

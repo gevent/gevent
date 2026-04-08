@@ -174,7 +174,7 @@ else:
                     fd_files = []
                 process = psutil.Process()
                 results['data'] = process.open_files()
-                results['data'] += process.connections('all')
+                results['data'] += process.net_connections('all')
                 break
             except OSError:
                 pass
