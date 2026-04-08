@@ -246,7 +246,10 @@ class TestSSL(Test):
         try:
             # Note: We get ResourceWarning about 'x'
             # on Python 3 if we don't join the spawned thread
-            x = ssl.SSLContext().wrap_socket(connector)
+            ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+            x = ctx.wrap_socket(connector)
             # Wait to be fully accepted. We could otherwise raise ahead
             # of the server and close ourself before it's ready to read.
             accepted_event.wait()
@@ -271,7 +274,10 @@ class TestSSL(Test):
         with Closing() as closer:
             s = closer(self.make_open_socket())
             fileno = s.fileno()
-            s = closer(ssl.SSLContext().wrap_socket(s))
+            ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+            s = closer(ctx.wrap_socket(s))
             fileno = s.fileno()
             self.assert_open(s, fileno)
             s.close()
@@ -280,7 +286,7 @@ class TestSSL(Test):
     def test_makefile1(self):
         with Closing() as closer:
             raw_s = closer(self.make_open_socket())
-            s = closer(ssl.SSLContext().wrap_socket(raw_s))
+            s = closer(ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER).wrap_socket(raw_s))
 
             fileno = s.fileno()
             self.assert_open(s, fileno)
@@ -297,7 +303,7 @@ class TestSSL(Test):
             s = closer(self.make_open_socket())
             fileno = s.fileno()
 
-            s = closer(ssl.SSLContext().wrap_socket(s))
+            s = closer(ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER).wrap_socket(s))
             fileno = s.fileno()
             self.assert_open(s, fileno)
             f = closer(s.makefile())
@@ -309,7 +315,13 @@ class TestSSL(Test):
             self.assert_closed(s, fileno)
 
     def _wrap_socket(self, sock, *, keyfile, certfile, server_side=False):
-        context = ssl.SSLContext()
+        context = ssl.SSLContext(
+            ssl.PROTOCOL_TLS_SERVER
+            if server_side
+            else ssl.PROTOCOL_TLS_CLIENT
+        )
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
         context.load_cert_chain(certfile=certfile, keyfile=keyfile)
         return context.wrap_socket(sock, server_side=server_side)
 
@@ -386,7 +398,8 @@ class TestSSL(Test):
         raw_listener = tcp_listener(backlog=1)
         fileno = raw_listener.fileno()
         port = raw_listener.getsockname()[1]
-        listener = self._wrap_socket(raw_listener, keyfile=CERTFILE, certfile=CERTFILE)
+        listener = self._wrap_socket(raw_listener, keyfile=CERTFILE, certfile=CERTFILE,
+                                     server_side=True)
 
         connector = socket.socket()
         t = self._make_ssl_connect_task(connector, port)
@@ -406,14 +419,18 @@ class TestSSL(Test):
     def test_serverssl_makefile2(self):
         raw_listener = tcp_listener(backlog=1)
         port = raw_listener.getsockname()[1]
-        listener = self._wrap_socket(raw_listener, keyfile=CERTFILE, certfile=CERTFILE)
+        listener = self._wrap_socket(raw_listener, keyfile=CERTFILE, certfile=CERTFILE,
+                                     server_side=True)
 
         accepted_event = threading.Event()
         read_event = threading.Event()
         def connect(connector=socket.socket()):
             try:
                 connector.connect((DEFAULT_CONNECT, port))
-                s = ssl.SSLContext().wrap_socket(connector)
+                ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+                ctx.check_hostname = False
+                ctx.verify_mode = ssl.CERT_NONE
+                s = ctx.wrap_socket(connector)
                 accepted_event.wait()
                 s.sendall(b'test_serverssl_makefile2')
                 s.shutdown(socket.SHUT_RDWR)
