@@ -6,7 +6,36 @@
 
 .. towncrier release notes start
 
-25.9.1 (2025-09-17)
+26.4.0 (2026-04-08)
+===================
+
+
+Bugfixes
+--------
+
+- Make ``gevent.ssl`` stop reusing exception instances, as this could
+  appear to cause a memory leak if there are many short reads or writes.
+  Reported by 사재혁.
+  See :issue:`2159`.
+- Fix ``Greenlet.dead`` returning true for an active greenlet during
+  early bootstrap. Thanks to Taegyun Kim.
+  See :issue:`2166`.
+- Fix some potential GIL-related crashes during interpreter shutdown by
+  avoiding acquiring the GIL in libev callbacks when the interpreter is
+  finalizing. Thanks to Thomas Kowalski.
+  See :issue:`2170`.
+
+
+Deprecations and Removals
+-------------------------
+
+- Support for Python 3.9 has been removed.
+
+  Manylinux wheels are built with version 2_28, up from 2014.
+  
+
+
+----25.9.1 (2025-09-17)
 ===================
 
 

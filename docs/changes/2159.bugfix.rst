@@ -1,3 +1,0 @@
-Make ``gevent.ssl`` stop reusing exception instances, as this could
-appear to cause a memory leak if there are many short reads or writes.
-Reported by 사재혁.

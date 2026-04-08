@@ -1,2 +1,0 @@
-Fix ``Greenlet.dead`` returning true for an active greenlet during
-early bootstrap. Thanks to Taegyun Kim.

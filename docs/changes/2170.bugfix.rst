@@ -1,3 +1,0 @@
-Fix some potential GIL-related crashes during interpreter shutdown by
-avoiding acquiring the GIL in libev callbacks when the interpreter is
-finalizing. Thanks to Thomas Kowalski.
