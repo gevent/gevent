@@ -40,7 +40,7 @@ environment:
     # Fully supported 64-bit versions, with testing. This should be
     # all the current (non EOL) versions.
     - PYTHON: "C:\\Python314-x64"
-      PYTHON_VERSION: "3.14.0rc1"
+      PYTHON_VERSION: "3.14.3"
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
 
@@ -72,23 +72,6 @@ environment:
       PYTHON_VERSION: "3.10.0"
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
-
-    # 3.9 is security fix only, goes unsupported in October 2025.
-    # Disable tests for that.
-    - PYTHON: "C:\\Python39-x64"
-      PYTHON_VERSION: "3.9.x"
-      PYTHON_ARCH: "64"
-      PYTHON_EXE: python
-      GWHEEL_ONLY: true
-
-    # Tests were already disabled here before 3.9 went EOL because
-    # we stopped testing or providing 32-bit builds.
-    - PYTHON: "C:\\Python39"
-      PYTHON_VERSION: "3.9.x"
-      PYTHON_ARCH: "32"
-      PYTHON_EXE: python
-      GWHEEL_ONLY: true
-
 
     # Also test a Python version not pre-installed
     # See: https://github.com/ogrisel/python-appveyor-demo/issues/10
@@ -183,7 +166,7 @@ test_script:
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -c "import gevent.resolver.cares; print(gevent.resolver.cares)"
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -c "from gevent._compat import get_clock_info; print(get_clock_info('perf_counter'))"
   - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -mgevent.tests.known_failures
-  - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -mgevent.tests --second-chance --config known_failures.py
+  - if not "%GWHEEL_ONLY%"=="true" %PYEXE% -mgevent.tests  -j 1 --second-chance --config known_failures.py
 
 after_test:
   # pycparser can't be built correctly in an isolated environment.

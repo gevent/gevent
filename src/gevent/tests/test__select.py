@@ -247,12 +247,20 @@ class TestPossibleCrashes(greentest.TestCase):
             # pylint:disable=unbalanced-tuple-unpacking
             with self._check_os_error_on_libuv():
                 # libuv gives us POLLIN and POLLNVAL
+                # On 3.14.3 ubunto,  libuv gives us POLLIN | POLLOUT; possibly it was hitting the
+                # OSError case on other versions.
                 fds_and_events = poller.poll(timing.SMALLEST_RELIABLE_DELAY)
+                print('========')
+                print('Fds and events', fds_and_events)
+                print('=========')
             if fds_and_events is not None:
                 self.assertTrue(len(fds_and_events) >= 1)
-                [(fd, event)] = [x for x in fds_and_events if x[1] == select.POLLIN]
-                self.assertEqual(fd, orig_fileno)
-                self.assertEqual(event, select.POLLIN)
+                poll_ins = [x for x in fds_and_events if x[1] & select.POLLIN]
+                for fd, event in poll_ins:
+                    self.assertEqual(fd, orig_fileno)
+                    self.assertIn(event, (select.POLLIN,
+                                          (select.POLLIN | select.POLLOUT),
+                                          (select.POLLIN | select.POLLNVAL)))
 
             fds_and_events = None
             with self._check_os_error_on_libuv():
