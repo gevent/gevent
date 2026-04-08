@@ -21,10 +21,12 @@ def ssl_listener(private_key, certificate):
 
 def wrap_socket(sock, *, keyfile=None, certfile=None, server_side=False):
     context = ssl.SSLContext(
-        protocol=ssl.PROTOCOL_TLS
+        protocol=(ssl.PROTOCOL_TLS_SERVER
+                  if server_side
+                  else ssl.PROTOCOL_TLS_CLIENT)
     )
-    context.verify_mode = ssl.CERT_NONE
     context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
     context.load_default_certs()
     if keyfile is not None or certfile is not None:
         context.load_cert_chain(certfile=certfile, keyfile=keyfile)
