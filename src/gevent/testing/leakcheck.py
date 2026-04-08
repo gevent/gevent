@@ -17,12 +17,12 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-from __future__ import print_function
 
 import sys
 import gc
 from functools import wraps
 import unittest
+import warnings
 
 try:
     import objgraph
@@ -80,17 +80,25 @@ class _RefCountChecker(object):
             # (I'm looking at you, Python 3.10 importlib.metadata._text!
             # ``__eq__(self, other): return self.lower() == other.lower()``)
             # raise AttributeError which propagates here, and must be caught.
-            # Similarly, we can get a TypeError
-            if (
-                obj in self.__dict__.values()
-                or obj == self._ignore_object_p # pylint:disable=comparison-with-callable
-            ):
-                return False
-        except (AttributeError, TypeError):
+            # Similarly, we can get a TypeError. And abc.SignalDict can raise ValueError.
+            #
+            # 3.14 started emitting internal deprecation warnings that we
+            # can't do anything about: DeprecationWarning:
+            # '_UnionGenericAlias' is deprecated and slated for removal in
+            # Python 3.17
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore', DeprecationWarning)
+                if (
+                    obj in self.__dict__.values()
+                    or obj == self._ignore_object_p # pylint:disable=comparison-with-callable
+                ):
+                    return False
+        except (AttributeError, TypeError, ValueError):
             # `obj` is things like that _text class. Also have seen
             # - psycopg2._psycopg.type
             # - relstorage.adapters.drivers._ClassDriverFactory
             return True
+
 
         kind = type(obj)
         if kind in self.IGNORED_TYPES:
