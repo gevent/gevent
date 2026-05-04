@@ -392,6 +392,83 @@ jobs:
         with:
           parallel-finished: true
 
+  test_win_arm64:
+    runs-on: windows-11-arm
+    name: test(${{ matrix.python-version }}, windows-11-arm)
+    env:
+      # Reuse APPVEYOR flag to share the same known_failures logic
+      # originally written for AppVeyor Windows builds.
+      APPVEYOR: "1"
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+          cache-dependency-path: setup.py
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          python -m pip install -U pip setuptools wheel twine
+          python -m pip install -q -U 'cffi;platform_python_implementation=="CPython"'
+          python -m pip install -q -U 'cython>=3.2.1'
+          python -m pip install -U 'greenlet>=3.2.0;platform_python_implementation=="CPython"'
+
+      - name: Build gevent
+        shell: pwsh
+        run: |
+          python setup.py build_ext -i
+          python setup.py bdist_wheel
+
+      - name: Check gevent build
+        shell: pwsh
+        run: |
+          Get-ChildItem dist
+          twine check dist/*whl
+
+      - name: Upload gevent wheel
+        uses: actions/upload-artifact@v6
+        with:
+          name: gevent-windows-arm64-${{ matrix.python-version }}.whl
+          path: dist/*whl
+
+      - name: Install gevent
+        shell: pwsh
+        run: |
+          $whl = (Get-ChildItem dist\*.whl | Select-Object -First 1).FullName
+          python -m pip install -U "$whl[test]"
+
+      - name: Report environment details
+        shell: pwsh
+        run: |
+          python --version
+          python -c "import greenlet; print(greenlet, greenlet.__version__)"
+          python -c "import gevent.core; print(gevent.core.loop)"
+          python -c "import gevent.resolver.cares; print(gevent.resolver.cares)"
+          python -c "from gevent._compat import get_clock_info; print(get_clock_info('perf_counter'))"
+
+      - name: "Tests: Basic"
+        shell: pwsh
+        env:
+          GEVENTTEST_USE_RESOURCES: "-network"
+        run: |
+          python -m gevent.tests --second-chance --config known_failures.py
+
+      - name: Publish package to PyPI
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+        shell: pwsh
+        env:
+          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
+        run: |
+          twine upload --skip-existing dist/*
 
   test_no_embed:
     runs-on: ${{ matrix.os }}
