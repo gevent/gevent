@@ -6,6 +6,24 @@
 
 .. towncrier release notes start
 
+26.5.0 (2026-05-20)
+===================
+
+
+Features
+--------
+
+- Build and publish Windows 11 ARM wheels.
+  See :issue:`2172`.
+- Add preliminary support for Python 3.15b1 and distribute binary wheels
+  for it.
+
+Deprecations and Removals
+-------------------------
+
+Support for Python 3.10 will be ending soon. Support for PyPy will be
+ending soon.
+
 26.4.0 (2026-04-08)
 ===================
 

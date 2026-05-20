@@ -1,2 +1,0 @@
-Add preliminary support for Python 3.15b1 and distribute binary wheels
-for it.
