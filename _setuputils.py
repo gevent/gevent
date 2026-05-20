@@ -255,6 +255,10 @@ def cythonize1(ext):
                 'always_allow_keywords': False,
                 'infer_types': True,
                 'nonecheck': False,
+                # Mostly we're compatible with free-threading, but
+                # some of our cross-thread locking primitives still
+                # depend on the gil.
+                # 'freethreading_compatible': True,
             },
             # XXX: Cython developers say: "Please use C macros instead
             # of Pyrex defines. Taking this kind of decision based on

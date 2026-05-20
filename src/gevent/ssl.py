@@ -850,6 +850,26 @@ class SSLSocket(socket):
 
             return [cert.public_bytes(_ssl.ENCODING_DER) for cert in chain]
 
+    if hasattr(__ssl__.SSLSocket, 'group'):
+        # Added in 3.15
+        def group(self):
+            self._checkClosed()
+            if self._sslobj is None:
+                return None
+            return self._sslobj.group()
+
+        def client_sigalg(self):
+            self._checkClosed()
+            if self._sslobj is None:
+                return None
+            return self._sslobj.client_sigalg()
+
+        def server_sigalg(self):
+            self._checkClosed()
+            if self._sslobj is None:
+                return None
+            return self._sslobj.server_sigalg()
+
 # Python does not support forward declaration of types
 SSLContext.sslsocket_class = SSLSocket
 

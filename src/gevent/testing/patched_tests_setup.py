@@ -31,6 +31,7 @@ from .sysinfo import PY311
 from .sysinfo import PY312
 from .sysinfo import PY313
 from .sysinfo import PY314
+from .sysinfo import PY315
 
 from .sysinfo import WIN
 from .sysinfo import OSX
@@ -1437,6 +1438,27 @@ if PY314:
             # (I *think*)
             'test_urllib2.HandlerTests.test_file',
         ]
+
+if PY315:
+    disabled_tests += [
+        # These want to check filenames, but we move the file out
+        # of the directory it's expecting to be in when we write our patches.
+        'test_httpservers.TestModule.test_deprecated__version__',
+        'test_socketserver.TestModule.test_deprecated__version__',
+        'test_wsgiref.TestModule.test_deprecated__version__',
+        # These rely on select.kqueue, or the private implementation detail
+        # subprocess.Popen._wait_kqueue, which we don't provide
+        'test_subprocess.FastWaitTestCase.test_kqueue_control_error',
+        'test_subprocess.FastWaitTestCase.test_kqueue_notification_without_immediate_reap',
+        'test_subprocess.FastWaitTestCase.test_kqueue_race',
+        'test_subprocess.FastWaitTestCase.test_wait_kqueue_error',
+        # This produces an ssl.SSLWantReadError, I think before it's even supposed to.
+        # It looks like the server shutdown is also failing with 'Socket not connected'
+        # so the shutdown isn't propagating as expected. This tends to happen when
+        # the stdlib tests rely on specific threading behaviour.
+        # This is specifically testing for OpenSSL 4.
+        'test_ssl.ThreadedTests.test_got_eof',
+    ]
 
 if TRAVIS:
     disabled_tests += [

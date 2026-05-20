@@ -100,6 +100,7 @@ jobs:
           - "3.12"
           - "3.13.12"
           - "3.14.5"
+          - "3.15-dev"
         # XXX: August 2025: ``macos-latest`` switched from macOS 14 to macOS 15.5;
         # at that time, we started getting timeouts performing DNS lookups. I can't
         # replicate those locally on my own macOS 15 machine.
@@ -418,6 +419,7 @@ jobs:
           - "3.12"
           - "3.13"
           - "3.14.5"
+          - "3.15-dev"
     steps:
       - name: checkout
         uses: actions/checkout@v6

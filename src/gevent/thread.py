@@ -358,6 +358,15 @@ if hasattr(__thread__, 'stack_size'):
             return _original_stack_size()
         if size > _original_stack_size():
             return _original_stack_size(size)
+        if size == 0:
+            # Meant to be the default. Not going to
+            # change anything.
+            return 0
+        if size < 32_768:
+            # Documented as the minimum. The
+            # stdlib tests pass a small number (123)
+            # and also a negative number.
+            raise ValueError(size)
         # not going to decrease stack_size, because otherwise other
         # greenlets in this thread will suffer
 else:
