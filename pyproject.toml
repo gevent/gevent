@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 requires = [
      "setuptools >= 40.8.0",
 
-     "Cython >= 3.2.1",
+     "Cython >= 3.2.4",
      # See version requirements in setup.py
      "cffi >= 1.17.1 ; platform_python_implementation == 'CPython'",
      # Python 3.7 requires at least 0.4.14, which is ABI incompatible with earlier

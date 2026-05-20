@@ -203,7 +203,7 @@ jobs:
           pip install -U pip
           pip install -U -q setuptools wheel twine
           pip install -q -U 'cffi;platform_python_implementation=="CPython"'
-          pip install -q -U 'cython>=3.2.1'
+          pip install -q -U 'cython>=3.2.4'
           # Use a debug version of greenlet to help catch any errors earlier.
           CFLAGS="$CFLAGS -Og -g -UNDEBUG" pip install -v --no-binary :all: 'greenlet>=3.2.0;platform_python_implementation=="CPython" '
 
@@ -402,7 +402,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12", "3.13", "3.14"]
+        python-version:
+          - "3.11"
+          - "3.12"
+          - "3.13"
+          - "3.14"
     steps:
       - name: checkout
         uses: actions/checkout@v6
@@ -419,7 +423,7 @@ jobs:
         run: |
           python -m pip install -U pip setuptools wheel twine
           python -m pip install -q -U 'cffi;platform_python_implementation=="CPython"'
-          python -m pip install -q -U 'cython>=3.2.1'
+          python -m pip install -q -U 'cython>=3.2.4'
           python -m pip install -U 'greenlet>=3.2.0;platform_python_implementation=="CPython"'
 
       - name: Build gevent
