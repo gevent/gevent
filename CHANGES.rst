@@ -32,10 +32,10 @@ Deprecations and Removals
 - Support for Python 3.9 has been removed.
 
   Manylinux wheels are built with version 2_28, up from 2014.
-  
 
 
-----25.9.1 (2025-09-17)
+
+25.9.1 (2025-09-17)
 ===================
 
 
