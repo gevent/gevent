@@ -1446,12 +1446,16 @@ if PY315:
         'test_httpservers.TestModule.test_deprecated__version__',
         'test_socketserver.TestModule.test_deprecated__version__',
         'test_wsgiref.TestModule.test_deprecated__version__',
-        # These rely on select.kqueue, or the private implementation detail
+        # macOS: These rely on select.kqueue, or the private implementation detail
         # subprocess.Popen._wait_kqueue, which we don't provide
         'test_subprocess.FastWaitTestCase.test_kqueue_control_error',
         'test_subprocess.FastWaitTestCase.test_kqueue_notification_without_immediate_reap',
         'test_subprocess.FastWaitTestCase.test_kqueue_race',
         'test_subprocess.FastWaitTestCase.test_wait_kqueue_error',
+        # Linux: rely on pidfd (_wait_pidfd), which we don't have/use.
+        'test_subprocess.FastWaitTestCase.test_pidfd_open_notification_without_immediate_reap',
+        'test_subprocess.FastWaitTestCase.test_pidfd_open_race',
+        'test_subprocess.FastWaitTestCase.test_wait_pidfd_open_error',
         # This produces an ssl.SSLWantReadError, I think before it's even supposed to.
         # It looks like the server shutdown is also failing with 'Socket not connected'
         # so the shutdown isn't propagating as expected. This tends to happen when
