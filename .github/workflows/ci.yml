@@ -155,9 +155,9 @@ jobs:
       - name: Set coverage status
         # coverage is too slow on PyPy. We can't submit it from macOS (see that action),
         # so don't bother taking the speed hit there either.
-        # 3.14b1 doesn't yet have the binary tracer that's needed to trace greenlets.
+        # 3.15b1 doesn't yet have the binary tracer that's needed to trace greenlets.
         # Remember this condition needs to be synced with the coveralls/report step.
-        if: ${{ !startsWith(matrix.python-version, 'pypy') && startsWith(runner.os, 'Linux') }}
+        if: ${{ !startsWith(matrix.python-version, 'pypy') && !endsWith(matrix.python-version, '-dev') && startsWith(runner.os, 'Linux') }}
         run: |
           echo G_USE_COV=--coverage >> $GITHUB_ENV
 
@@ -376,7 +376,7 @@ jobs:
         # It then runs ``coveralls report``. But that is producing
         # a usage error from ``coveralls`` (report is not recognized) Presumably the
         # brew and action versions are out of sync?
-        if: ${{ !startsWith(matrix.python-version, 'pypy') && startsWith(runner.os, 'Linux') }}
+        if: ${{ !startsWith(matrix.python-version, 'pypy') && !endsWith(matrix.python-version, '-dev') && startsWith(runner.os, 'Linux') }}
         with:
           flag-name: run-${{ join(matrix.*, '-') }}
           parallel: true
