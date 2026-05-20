@@ -78,7 +78,22 @@ if hasattr(__thread__, 'set_name'):
 
 def get_ident(gr=None):
     if gr is None:
-        gr = getcurrent()
+        try:
+            gr = getcurrent()
+        except RuntimeError:
+            # greenlet is being finalized, being called very late during
+            # interpreter shutdown. Some earlier versions returned
+            # potentially broken objects at that phase, then it switched to
+            # returning None (but the C API we use from Cython code raised
+            # an exception), then this API also started raising an
+            # exception. We have one test failure,
+            # test__lock:TestLockReinitAfterFork.test_it which complains
+            # because the RuntimeError gets printed to stderr when we're
+            # not expecting it. In that case, this API is used to determine
+            # if threading.Lock objects are owned by the current "thread"
+            # (greenlet), so there's not a good value to return here. Reverting to the
+            # previous behaviour of returning id(None) fixes that test.
+            gr = None
     return id(gr)
 
 

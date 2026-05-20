@@ -65,6 +65,7 @@ PY311 = None
 PY312 = None
 PY313 = None
 PY314 = None
+PY315 = None
 
 NON_APPLICABLE_SUFFIXES = ()
 if sys.version_info[0] == 3:
@@ -82,6 +83,8 @@ if sys.version_info[0] == 3:
         PY313 = True
     if sys.version_info[1] >= 14:
         PY314 = True
+    if sys.version_info[1] >= 15:
+        PY315 = True
 
 else: # pragma: no cover
     # Python 4?
@@ -102,6 +105,7 @@ RUNNING_ON_GITHUB_ACTIONS = os.environ.get('GITHUB_ACTIONS')
 RUNNING_ON_TRAVIS = os.environ.get('TRAVIS') or RUNNING_ON_GITHUB_ACTIONS
 RUNNING_ON_APPVEYOR = os.environ.get('APPVEYOR')
 RUNNING_ON_CI = RUNNING_ON_TRAVIS or RUNNING_ON_APPVEYOR
+RUNNING_ON_GITHUB_ACTIONS_WINDOWS = RUNNING_ON_GITHUB_ACTIONS and WIN
 RUNNING_ON_MANYLINUX = os.environ.get('GEVENT_MANYLINUX')
 # I'm not sure how to reliably auto-detect this, without
 # importing platform, something we don't want to do.
