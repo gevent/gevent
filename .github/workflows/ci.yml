@@ -393,8 +393,8 @@ jobs:
           parallel-finished: true
 
   test_win_arm64:
-    runs-on: windows-11-arm
-    name: test(${{ matrix.python-version }}, windows-11-arm)
+    runs-on:  ${{ matrix.os }}
+    name: test(${{ matrix.python-version }}, ${{ matrix.os }})
     env:
       # Reuse APPVEYOR flag to share the same known_failures logic
       # originally written for AppVeyor Windows builds.
@@ -402,6 +402,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        os:
+          - windows-11-arm
+          - windows-11-x64
         python-version:
           - "3.11"
           - "3.12"
@@ -441,7 +444,7 @@ jobs:
       - name: Upload gevent wheel
         uses: actions/upload-artifact@v6
         with:
-          name: gevent-windows-arm64-${{ matrix.python-version }}.whl
+          name: gevent-${{ matrix.os }}-${{ matrix.python-version }}.whl
           path: dist/*whl
 
       - name: Install gevent
