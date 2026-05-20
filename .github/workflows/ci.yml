@@ -103,7 +103,10 @@ jobs:
           - "3.15-dev"
         # XXX: August 2025: ``macos-latest`` switched from macOS 14 to macOS 15.5;
         # at that time, we started getting timeouts performing DNS lookups. I can't
-        # replicate those locally on my own macOS 15 machine.
+        # replicate those locally on my own macOS 15/26 machine.
+        # # Probably due to local network access issues imposed by Apple; no known
+        # workaround except possibly running everything as root with sudo. Also impacts macos-26.
+        # https://github.com/actions/runner-images/issues/10924
         os: [macos-14, ubuntu-latest]
         exclude:
           # The bulk of the testing is on Linux and Windows (appveyor).
@@ -309,7 +312,7 @@ jobs:
       # and oldest version. Spread the other tests out across versions to keep
       # runtime of individual jobs reasonable.
       - name: "Tests: subproccess and FileObjectThread"
-        if: startsWith(runner.os, 'Linux') || (startsWith(runner.os, 'Mac') && startsWith(matrix.python-version, '3.10'))
+        if: startsWith(runner.os, 'Linux') && startsWith(matrix.python-version, '3.10')
         # Now, the non-default threaded file object.
         # In the past, we included all test files that had a reference to 'subprocess'' somewhere in their
         # text. The monkey-patched stdlib tests were specifically included here.
