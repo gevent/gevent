@@ -71,13 +71,19 @@ jobs:
         # with it. That means for the bulk of our testing we need to
         # stick to 3.9.
 
+        # We'd like to always pin to specific minor versions of Python,
+        # so we can make sure the test suite we include is in synce with
+        # what we test against, but not all versions of Python are available
+        # for all tested operating systems. So pin when possible, let float
+        # when required. See this URL for available versions:
+        # https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json
+
         # CAREFUL: Some of the tests are only run on specific versions of Python,
         # as dictated by the conditions found below. So when you change a version,
         # for example to force a specific patch release, don't forget to change conditions!
         # XXX: We could probably make this easier on ourself by adding a specific
         # key to the matrix in the version we care about and checking for that matrix key.
         python-version:
-          - "3.14.3"
           # As of 2025-12-04, with greenlet 3.3 that nominally
           # supports free-threading, we can't pass our test suite on a
           # free-threaded build (even though our Cython modules enable
@@ -88,11 +94,12 @@ jobs:
           # and how much is us. Probably a lot of greenlet.
           # https://github.com/gevent/gevent/actions/runs/19936104137/job/57161263886
           # - "3.14t"
-          - "3.12"
           - "pypy-3.11-v7.3.21"
           - '3.10.20'
           - '3.11.15'
+          - "3.12"
           - "3.13.12"
+          - "3.14.5"
         # XXX: August 2025: ``macos-latest`` switched from macOS 14 to macOS 15.5;
         # at that time, we started getting timeouts performing DNS lookups. I can't
         # replicate those locally on my own macOS 15 machine.
@@ -404,12 +411,12 @@ jobs:
       matrix:
         os:
           - windows-11-arm
-          - windows-11-x64
+          - windows-latest
         python-version:
           - "3.11"
           - "3.12"
           - "3.13"
-          - "3.14"
+          - "3.14.5"
     steps:
       - name: checkout
         uses: actions/checkout@v6
