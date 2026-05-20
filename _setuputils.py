@@ -472,13 +472,13 @@ class GeventClean(clean):
         if self.dry_run:
             def remove_file(f):
                 if os.path.isdir(f):
-                    remove_tree(f, dry_run=self.dry_run)
+                    log.info("Would remove directory '%s'", f)
                 elif os.path.exists(f):
                     log.info("Would remove '%s'", f)
         else:
             def remove_file(f):
                 if os.path.isdir(f):
-                    remove_tree(f, dry_run=self.dry_run)
+                    remove_tree(f)
                 elif os.path.exists(f):
                     log.info("Removing '%s'", f)
                     os.remove(f)
