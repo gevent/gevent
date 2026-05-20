@@ -256,6 +256,8 @@ jobs:
           # Force the wheel tag.
           _PYTHON_HOST_PLATFORM: "macosx-11.0-universal2"
       - name: Check gevent build
+        # 3.15b1 has a problem with readme renderer, ModuleNotFoundError: No module named 'nh3.nh3'
+        if: ${{ !startsWith(runner.os, 'Windows') && !endsWith(matrix.python-version, '-dev')}}
         run: |
           ls -l dist
           twine check dist/*whl
@@ -303,9 +305,10 @@ jobs:
       # For the CPython interpreters, unless we have reason to expect
       # different behaviour across the versions (e.g., as measured by coverage)
       # it's sufficient to run the full suite on the current version
-      # and oldest version.
+      # and oldest version. Spread the other tests out across versions to keep
+      # runtime of individual jobs reasonable.
       - name: "Tests: subproccess and FileObjectThread"
-        if: startsWith(runner.os, 'Linux') || (startsWith(runner.os, 'Mac') && startsWith(matrix.python-version, '3.14'))
+        if: startsWith(runner.os, 'Linux') || (startsWith(runner.os, 'Mac') && startsWith(matrix.python-version, '3.10'))
         # Now, the non-default threaded file object.
         # In the past, we included all test files that had a reference to 'subprocess'' somewhere in their
         # text. The monkey-patched stdlib tests were specifically included here.
@@ -335,7 +338,7 @@ jobs:
         # Run the leaktests;
         # This is incredibly important and we MUST have an environment that successfully passes
         # these tests.
-        if: (startsWith(matrix.python-version, '3.14')) && startsWith(runner.os, 'Linux')
+        if: (startsWith(matrix.python-version, '3.11')) && startsWith(runner.os, 'Linux')
         env:
           GEVENTTEST_LEAKCHECK: 1
         run: |
@@ -343,13 +346,13 @@ jobs:
       - name: "Tests: PURE_PYTHON"
         # No compiled cython modules on CPython, using the default backend. Get coverage here.
         # We should only need to run this for a single version.
-        if: startsWith(matrix.python-version, '3.14') && startsWith(runner.os, 'Linux')
+        if: startsWith(matrix.python-version, '3.12') && startsWith(runner.os, 'Linux')
         env:
           PURE_PYTHON: 1
         run: |
           python -mgevent.tests --second-chance --coverage
       - name: "Tests: libuv"
-        if: (startsWith(matrix.python-version, '3.14'))
+        if: (startsWith(matrix.python-version, '3.13'))
         env:
           GEVENT_LOOP: libuv
         run: |
@@ -383,8 +386,6 @@ jobs:
         if: startsWith(matrix.python-version, '3.14') && startsWith(runner.os, 'Linux')
         # We only need to do this on one version.
         # We do this here rather than a separate job to avoid the compilation overhead.
-        # 20230707: Python 3.11 crashes inside pylint/astroid on _ssl3.py;
-        # reverting to Python 3.10 solved that.
         # TODO: Revisit this when we have caching of that part.
         run: |
           pip install -U pylint
@@ -399,7 +400,7 @@ jobs:
         with:
           parallel-finished: true
 
-  test_win_arm64:
+  test_win:
     runs-on:  ${{ matrix.os }}
     name: test(${{ matrix.python-version }}, ${{ matrix.os }})
     env:

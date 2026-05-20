@@ -6,11 +6,11 @@ Release Cadence and Versions
 ============================
 
 After :doc:`gevent 1.5 <../whatsnew_1_5>`, gevent releases switched to
-`CalVer <https://calver.org>`_, using the scheme ``YY.0M.Micro``
-(two-digit year, zero-padded month, micro/patch number). Thus the
-first release in April of 2020 would be version ``20.04.0``. A second
-release would be ``20.04.1``, etc. The first release in May
-would be ``20.05.0``, and so on.
+`CalVer <https://calver.org>`_, using the scheme ``YY.MM.Micro``
+(two-digit year, month, micro/patch number). Thus the
+first release in April of 2020 would be version ``20.4.0``. A second
+release would be ``20.4.1``, etc. The first release in May
+would be ``20.5.0``, and so on.
 
 If there have been changes to master, gevent should produce a release
 at least once a month.
@@ -48,15 +48,17 @@ Releasing gevent
 
 gevent is released using `zest.releaser
 <https://pypi.org/project/zest.releaser/>`_. Binary wheels are
-published automatically by Github Actions CI (macOS and manylinux) and
-Appveyor (Windows) when a tag is uploaded.
+published automatically by Github Actions CI.
 
 
 1. Push all relevant changes to master.
 2. From the gevent working copy, run ``fullrelease``. Fix any issues it
    brings up. Let it bump the version number (or enter the correct
    one), commit, create the tag, create the sdist, upload the sdist
-   and push the tag to GitHub.
+   and push the tag to GitHub. Note that you might want to upload the
+   sdist only after all the CI processes complete and binary wheels
+   are in place. This prevents complaints from users who were
+   expecting to find a binary wheel but got a sdist instead.
 3. Monitor the build process on the CI systems. If particular builds
    fail due to test instability, re-run them to allow the binary wheel
    to be uploaded.
