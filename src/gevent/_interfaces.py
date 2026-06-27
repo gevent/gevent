@@ -53,10 +53,6 @@ class ILoop(Interface):
     """
     The common interface expected for all event loops.
 
-    .. caution::
-       This is an internal, low-level interface. It may change
-       between minor versions of gevent.
-
     .. rubric:: Watchers
 
     The methods that create event loop watchers are `io`, `timer`,
