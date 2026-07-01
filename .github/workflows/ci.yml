@@ -135,7 +135,7 @@ jobs:
 
     steps:
       - name: checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v6
         with:
@@ -171,7 +171,7 @@ jobs:
       # the cache.
       ###
       - name: Cache ~/.ccache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         # This is repeated in an explicit save always step below
         # because normally it won't save anything if there's a cache hit!
         # Which is silly, because things in the cache might have (will have)
@@ -183,7 +183,7 @@ jobs:
       - name: Cache config.cache
         # Store the configure caches. Having a cache can speed up c-ares
         # configure from 2-3 minutes to 20 seconds.
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: deps/*/config.cache
           # XXX: This should probably include a hash of each configure
@@ -266,7 +266,7 @@ jobs:
           ls -l dist
           twine check dist/*whl
       - name: Cache ~/.ccache
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v6
         if: always()
         with:
           path: ~/.ccache/**
@@ -425,7 +425,7 @@ jobs:
           - "3.15-dev"
     steps:
       - name: checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v6
@@ -499,7 +499,7 @@ jobs:
         os: [ubuntu-latest]
     steps:
       - name: checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v6
         with:
@@ -515,7 +515,7 @@ jobs:
           mkdir -p $HOME/.ccache
 
       - name: Cache ~/.ccache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.ccache/**
           key: ${{ runner.os }}-ccache_embed-${{ matrix.python-version }}
@@ -523,7 +523,7 @@ jobs:
       - name: Cache config.cache
         # Store the configure caches. Having a cache can speed up c-ares
         # configure from 2-3 minutes to 20 seconds.
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: deps/*/config.cache
           # XXX: This should probably include a hash of each configure
@@ -608,13 +608,13 @@ jobs:
     name: ${{ matrix.image }}
     steps:
       - name: checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Cache ~/.ccache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.ccache/**
           key: ${{ runner.os }}-ccache_${{ matrix.config[2] }}-${{ matrix.config[0] }}
