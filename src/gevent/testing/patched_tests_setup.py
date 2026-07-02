@@ -1484,7 +1484,7 @@ if RUNNING_ON_MUSLLINUX:
         'test_threading.ThreadingExceptionTests.test_recursion_limit',
     ]
 
-    if sys.version_info[:3] == (3, 11, 15): # PY311 (for grep)
+    if sys.version_info[:3] in {(3, 11, 15), (3, 10, 20)}: # PY311 PY310 (for grep)
         disabled_tests += [
             # Between June 3, 2026 and July 2, 2026, these tests broke in
             # the musllinux_1_2_x86_64 image. It's not clear why (Python
