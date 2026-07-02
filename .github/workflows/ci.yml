@@ -418,11 +418,15 @@ jobs:
           - windows-11-arm
           - windows-latest
         python-version:
+          - "3.10"
           - "3.11"
           - "3.12"
           - "3.13"
           - "3.14.5"
           - "3.15-dev"
+        exclude:
+          - os: windows-11-arm
+            python-version: "3.10"
     steps:
       - name: checkout
         uses: actions/checkout@v7
