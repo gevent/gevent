@@ -1484,6 +1484,24 @@ if RUNNING_ON_MUSLLINUX:
         'test_threading.ThreadingExceptionTests.test_recursion_limit',
     ]
 
+    if sys.version_info[:3] == (3, 11, 15): # PY311 (for grep)
+        disabled_tests += [
+            # Between June 3, 2026 and July 2, 2026, these tests broke in
+            # the musllinux_1_2_x86_64 image. It's not clear why (Python
+            # version is the same, test version is the same), but I suspect
+            # some update to the SSL library. I'm scoping this as tightly
+            # as I can, but I'm not limiting it to just x86_64, aarch64
+            # may or may not have the problem. I haven't tested.
+            # They're both failing the same:
+            #
+            #      ctx.load_verify_locations(cadata=cacert_der)
+            #   ssl.SSLError: [ASN1: NOT_ENOUGH_DATA] not enough data (_ssl.c:4057)
+            #
+            # So it's incredibly unlikely this has anything to do with gevent.
+            'test_ssl.ContextTests.test_load_verify_cadata',
+            'test_ssl.SimpleBackgroundTests.test_connect_cadata',
+        ]
+
 
 # Now build up the data structure we'll use to actually find disabled tests
 # to avoid a linear scan for every file (it seems the list could get quite large)
