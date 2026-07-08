@@ -3,6 +3,8 @@ from __future__ import absolute_import, print_function
 import gevent
 import unittest
 
+from gevent.hub import Hub
+
 class TestDestroyHub(unittest.TestCase):
 
     def test_destroy_hub(self):
@@ -47,6 +49,26 @@ class TestDestroyHub(unittest.TestCase):
         self.assertTrue(hub.loop.default)
 
         hub.destroy()
+
+
+class TestDestroyedHubRepr(unittest.TestCase):
+
+    def test_repr_after_destroy(self):
+        # Uses Hub directly: the test suite installs QuietHub, whose
+        # class-level _resolver/_threadpool defaults hide this bug.
+        hub = Hub(default=False)
+        # destroy() only clears the attributes that were created.
+        self.assertIsNotNone(hub.threadpool)
+        self.assertIsNotNone(hub.resolver)
+
+        hub.destroy(destroy_loop=True)
+
+        # destroy() sets these to None instead of deleting them, so
+        # __repr__, which reads both, still works.
+        self.assertIsNone(hub._threadpool)
+        self.assertIsNone(hub._resolver)
+        self.assertIn('destroyed', repr(hub))
+
 
 if __name__ == '__main__':
     unittest.main() # pragma: testrunner-no-combine

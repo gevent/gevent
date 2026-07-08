@@ -789,10 +789,10 @@ class Hub(WaitOperationsGreenlet):
             self.periodic_monitoring_thread = None
         if self._resolver is not None:
             self._resolver.close()
-            del self._resolver
+            self._resolver = None
         if self._threadpool is not None:
             self._threadpool.kill()
-            del self._threadpool
+            self._threadpool = None
 
         # Let the frame be cleaned up by causing the run() function to
         # exit. This is the only way to guarantee that the hub itself
