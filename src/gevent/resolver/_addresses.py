@@ -60,7 +60,7 @@ def _ipv4_inet_aton(text):
     try:
         ints = [int(part) for part in parts]
         return struct.pack('BBBB', *ints)
-    except:
+    except struct.error:
         raise AddressSyntaxError(text)
 
 
