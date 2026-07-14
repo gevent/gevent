@@ -82,6 +82,15 @@ class Patcher(BasePatcher):
             # acquire should be our own (hopefully), and the call to
             # _stop that orig_shutdown makes will discard it.
 
+            # Native _shutdown runs these before joining, and a non-daemon
+            # thread may be waiting on one: concurrent.futures' _python_exit
+            # is the only thing that stops a ThreadPoolExecutor's workers.
+            # orig_shutdown runs the loop again, hence the clear.
+            threading_mod._SHUTTING_DOWN = True
+            for atexit_call in reversed(threading_mod._threading_atexits):
+                atexit_call()
+            del threading_mod._threading_atexits[:]
+
             # XXX: What if more get spawned?
             for t in list(threading_mod.enumerate()):
                 if t.daemon or t is main_thread:
