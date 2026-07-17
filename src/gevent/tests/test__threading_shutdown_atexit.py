@@ -18,6 +18,7 @@ executor = None
 
 class Test(greentest.TestCase):
 
+    @greentest.ignores_leakcheck # the thread and the hook only go away at exit
     def test_thread_waiting_on_hook(self):
         done = threading.Event()
         threading._register_atexit(done.set)
