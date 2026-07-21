@@ -1158,11 +1158,17 @@ if sys.version_info[:3] < (3, 8, 10):
         'test_httplib.BasicTest.test_dir_with_added_behavior_on_status',
         'test_httplib.TunnelTests.test_tunnel_connect_single_send_connection_setup',
         'test_ssl.TestSSLDebug.test_msg_callback_deadlock_bpo43577',
-        # This one fails with the updated certs
-        'test_ssl.ContextTests.test_load_verify_cadata',
         # This one times out on 3.7.1 on Appveyor
         'test_ftplib.TestTLS_FTPClassMixin.test_retrbinary_rest',
     ]
+
+disabled_tests += [
+    # These are flaky and depend on the exact version of the tests,
+    # the exact version of CA data, the exact version of the stdlib
+    # ssl module, etc. They sometimes break only on musl.
+    'test_ssl.ContextTests.test_load_verify_cadata',
+    'test_ssl.SimpleBackgroundTests.test_connect_cadata',
+]
 
 if RESOLVER_DNSPYTHON:
     disabled_tests += [
