@@ -98,7 +98,7 @@ PY313LT5 = ConstantCondition(
     sys.version_info[:2] == (3, 13)
     and sys.version_info[2] < 5
 )
-PY315B4_EXACTLY = ConstantCondition(sys.version_info == (3, 15, 0, 'beta', 4))
+
 
 class _Definition(object):
     __slots__ = (
@@ -314,11 +314,8 @@ class Definitions(metaclass=DefinitionsMeta):
         """
         This fails to run a single test. It looks like just importing the module
         can hang. All I see is the output from patch_all().
-
-        Currently crashing on Python 3.15b4 on windows. I'm suspicious
-        of problems with old CFFI wheels.
         """,
-        when=(APPVEYOR & PYPY3) | (APPVEYOR & PY315B4_EXACTLY)
+        when=(APPVEYOR & PYPY3)
     )
 
     test__monkey_sigchld_2 = Ignored(
