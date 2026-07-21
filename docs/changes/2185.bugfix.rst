@@ -1,0 +1,5 @@
+Fix ``repr()`` of a destroyed hub raising :exc:`AttributeError`.
+``Hub.destroy()`` deleted the ``_resolver`` and ``_threadpool`` attributes
+that ``Hub.__repr__`` reads; it now sets them to ``None``. This also fixes
+``gevent.util.format_run_info()``, which renders any destroyed hub that is
+still reachable.
