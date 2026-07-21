@@ -145,13 +145,14 @@ jobs:
       - name: Install ccache (ubuntu)
         if: startsWith(runner.os, 'Linux')
         run: |
-          sudo apt-get install -y ccache sed gcc
+          sudo apt-get install -y ccache sed gcc libffi-dev
           echo CCACHE_DIR=$HOME/.ccache >>$GITHUB_ENV
           mkdir -p $HOME/.ccache
       - name: Install ccache (macos)
         if: startsWith(runner.os, 'macOS')
         run: |
           brew install ccache
+          brew install libffi
           echo CFLAGS=$CFLAGS -Wno-parentheses-equality >>$GITHUB_ENV
           echo CCACHE_DIR=$HOME/.ccache >>$GITHUB_ENV
           mkdir -p $HOME/.ccache
@@ -213,7 +214,10 @@ jobs:
         run: |
           pip install -U pip
           pip install -U -q setuptools wheel twine
-          pip install -q -U 'cffi;platform_python_implementation=="CPython"'
+          # The --no-binary are because these projects have uploaded
+          # 3.15 wheels that don't work right on 3.15b4, so we need to disable
+          # them.
+          pip install -q -U --no-binary=:all: 'cffi;platform_python_implementation=="CPython"'
           pip install -q -U --no-binary=:all: 'cython>=3.2.4'
           # Use a debug version of greenlet to help catch any errors earlier.
           CFLAGS="$CFLAGS -Og -g -UNDEBUG" pip install -v --no-binary :all: 'greenlet>=3.2.0;platform_python_implementation=="CPython" '
@@ -443,7 +447,7 @@ jobs:
         run: |
           python -m pip install -U pip setuptools wheel twine
           python -m pip install -q -U 'cffi;platform_python_implementation=="CPython"'
-          python -m pip install -q -U --no-binary=:all: 'cython>=3.2.4'
+          python -m pip install -q -U 'cython>=3.2.4'
           python -m pip install -U --no-binary=:all: 'greenlet>=3.2.0;platform_python_implementation=="CPython"'
 
       - name: Build gevent

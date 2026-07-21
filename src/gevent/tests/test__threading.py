@@ -3,7 +3,7 @@ Tests specifically for the monkey-patched threading module.
 """
 from gevent import monkey; monkey.patch_all() # pragma: testrunner-no-monkey-combine
 import gevent.hub
-import sys
+
 # check that the locks initialized by 'threading' did not init the hub.
 
 # Beginning in Python 3.15, on Linux kernels new enough, importing
