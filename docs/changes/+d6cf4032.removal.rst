@@ -1,0 +1,4 @@
+In a future version (early 2027), ``gevent.monkey.patch_all`` will ONLY accept
+keyword arguments. Currently, you could be calling it with positional
+arguments, although that has never been the intent or documented way
+to call it.

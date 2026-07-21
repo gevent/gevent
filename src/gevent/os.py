@@ -47,6 +47,7 @@ import os
 from stat import S_ISREG
 
 from gevent.hub import _get_hub_noargs as get_hub
+from gevent.hub import _get_hub
 from gevent.hub import reinit
 from gevent.event import Event
 from gevent._config import config
@@ -133,7 +134,12 @@ if fcntl:
         if S_ISREG(stats.st_mode) and _NO_DEFER_REG_FILE:
             return _close(fd)
 
-        hub = get_hub()
+        # Don't init the hub if not already in use. If not
+        # in use, we can just close regularly, there's no
+        # chance the FD was being used for IO.
+        hub = _get_hub()
+        if hub is None:
+            return _close(fd)
         loop = hub.loop
 
         if fd in _closing_fd_to_event:

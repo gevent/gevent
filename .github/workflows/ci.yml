@@ -214,7 +214,7 @@ jobs:
           pip install -U pip
           pip install -U -q setuptools wheel twine
           pip install -q -U 'cffi;platform_python_implementation=="CPython"'
-          pip install -q -U 'cython>=3.2.4'
+          pip install -q -U --no-binary=:all: 'cython>=3.2.4'
           # Use a debug version of greenlet to help catch any errors earlier.
           CFLAGS="$CFLAGS -Og -g -UNDEBUG" pip install -v --no-binary :all: 'greenlet>=3.2.0;platform_python_implementation=="CPython" '
 
@@ -406,7 +406,7 @@ jobs:
 
   test_win:
     runs-on:  ${{ matrix.os }}
-    name: test(${{ matrix.python-version }}, ${{ matrix.os }})
+    name: test (${{ matrix.python-version }}, ${{ matrix.os }})
     env:
       # Reuse APPVEYOR flag to share the same known_failures logic
       # originally written for AppVeyor Windows builds.
@@ -443,8 +443,8 @@ jobs:
         run: |
           python -m pip install -U pip setuptools wheel twine
           python -m pip install -q -U 'cffi;platform_python_implementation=="CPython"'
-          python -m pip install -q -U 'cython>=3.2.4'
-          python -m pip install -U 'greenlet>=3.2.0;platform_python_implementation=="CPython"'
+          python -m pip install -q -U --no-binary=:all: 'cython>=3.2.4'
+          python -m pip install -U --no-binary=:all: 'greenlet>=3.2.0;platform_python_implementation=="CPython"'
 
       - name: Build gevent
         shell: pwsh
