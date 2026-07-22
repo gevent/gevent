@@ -99,6 +99,7 @@ PY313LT5 = ConstantCondition(
     and sys.version_info[2] < 5
 )
 
+
 class _Definition(object):
     __slots__ = (
         '__name__',
@@ -312,9 +313,9 @@ class Definitions(metaclass=DefinitionsMeta):
     ).ignored(
         """
         This fails to run a single test. It looks like just importing the module
-        can hang. All I see is the output from patch_all()
+        can hang. All I see is the output from patch_all().
         """,
-        when=APPVEYOR & PYPY3
+        when=(APPVEYOR & PYPY3)
     )
 
     test__monkey_sigchld_2 = Ignored(

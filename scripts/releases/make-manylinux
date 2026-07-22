@@ -197,8 +197,10 @@ if [ -d /gevent -a -d /opt/python ]; then
         # The downside is that we must install dependencies manually.
         # NOTE: We can't upgrade ``wheel`` because ``auditwheel`` depends on
         # it, and auditwheel is installed in one of these environments.
-        time python -m pip install  -U 'cython >= 3.2'
-        time python -mpip install -U cffi 'greenlet >= 3.2' setuptools
+        time python -m pip install  -U --no-binary :all: 'cython >= 3.2'
+        # see ci.yml about --no-binary :all:: Incompatible wheels built for
+        # 3.15b3 break on 3.15b4.
+        time python -mpip install -U --no-binary :all: cffi 'greenlet >= 3.2' setuptools
         echo "$variant: Building wheel"
         time (python setup.py bdist_wheel)
         PATH="$OPATH" auditwheel repair dist/gevent*.whl

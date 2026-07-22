@@ -115,11 +115,13 @@ class LibevTestMixin(WatcherTestMixin):
 class TestLibevCext(LibevTestMixin, unittest.TestCase):
     kind = available_loops['libev-cext']
 
-@unittest.skipIf(not_available('libev-cffi'), "Needs libev-cffi")
+@unittest.skipIf(not_available('libev-cffi') or sys.version_info == (3, 15, 0, 'beta', 4),
+                 "Needs libev-cffi")
 class TestLibevCffi(LibevTestMixin, unittest.TestCase):
     kind = available_loops['libev-cffi']
 
-@unittest.skipIf(not_available('libuv-cffi'), "Needs libuv-cffi")
+@unittest.skipIf(not_available('libuv-cffi') or sys.version_info == (3, 15, 0, 'beta', 4),
+                 "Needs libuv-cffi")
 class TestLibuvCffi(WatcherTestMixin, unittest.TestCase):
     kind = available_loops['libuv-cffi']
 

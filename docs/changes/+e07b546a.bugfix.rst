@@ -1,0 +1,2 @@
+Make ``gevent.os.close`` not initialize a hub if one wasn't already present.
+In that case, it can just directly close the file descriptor.
