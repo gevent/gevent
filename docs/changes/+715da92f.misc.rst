@@ -1,0 +1,4 @@
+Binary wheels for Python 3.15 are now built with 3.15b4. They may not
+be compatible with older or newer versions of Python. Likewise, binary
+wheels built by previous gevent releases may not be compatible with
+3.15b4 or newer.
