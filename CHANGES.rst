@@ -6,6 +6,50 @@
 
 .. towncrier release notes start
 
+26.7.0 (2026-07-22)
+===================
+
+
+Bugfixes
+--------
+
+- Fix ``repr()`` of a destroyed hub raising :exc:`AttributeError`.
+  ``Hub.destroy()`` deleted the ``_resolver`` and ``_threadpool`` attributes
+  that ``Hub.__repr__`` reads; it now sets them to ``None``. This also fixes
+  ``gevent.util.format_run_info()``, which renders any destroyed hub that is
+  still reachable.
+  See :issue:`2185`.
+- Fix a hang at interpreter exit, on Python 3.13 and above, when a non-daemon
+  thread is waiting on a ``threading._register_atexit`` hook. The patched
+  ``threading._shutdown`` joined those threads before running the hooks, the
+  reverse of the native order. This hung any program holding a live
+  :class:`concurrent.futures.ThreadPoolExecutor`, whose non-daemon workers stop
+  only when its ``_python_exit`` hook runs.
+  See :issue:`2188`.
+- Make ``gevent.os.close`` not initialize a hub if one wasn't already present.
+  In that case, it can just directly close the file descriptor.
+
+
+
+Deprecations and Removals
+-------------------------
+
+- In a future version (early 2027), ``gevent.monkey.patch_all`` will ONLY accept
+  keyword arguments. Currently, you could be calling it with positional
+  arguments, although that has never been the intent or documented way
+  to call it.
+
+
+
+Misc
+----
+
+- Binary wheels for Python 3.15 are now built with 3.15b4. They may
+  not be compatible with older or newer versions of Python. Likewise,
+  binary wheels built by previous gevent releases may not be
+  compatible with 3.15b4 or newer.
+
+
 26.5.0 (2026-05-20)
 ===================
 
