@@ -60,8 +60,14 @@ def _ipv4_inet_aton(text):
     try:
         ints = [int(part) for part in parts]
         return struct.pack('BBBB', *ints)
-    except:
-        raise AddressSyntaxError(text)
+    except Exception as ex:
+        # Used to catch `BaseException`.
+        # We expect struct.error or ValueError,
+        # but historically we've caught everything, so
+        # we're mostly leaving that for BWC (e.g, what if it raises
+        # MemoryError), just no longer
+        # catching BaseException.
+        raise AddressSyntaxError(text) from ex
 
 
 def _ipv6_inet_aton(text,
