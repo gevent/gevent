@@ -352,6 +352,9 @@ def patch_thread(threading=True, _threading_local=True, Event=True, logging=True
         best-effort attempt and, on certain implementations, may not detect all
         locks. It is important to monkey-patch extremely early in the startup process.
         Setting this to False is not recommended, especially on Python 2.
+        This also replaces the lock :mod:`concurrent.futures.thread` registers
+        with :func:`os.register_at_fork`, which deadlocks or switches greenlets
+        mid-fork.
 
     .. caution::
         Monkey-patching :mod:`thread` and using
@@ -367,6 +370,9 @@ def patch_thread(threading=True, _threading_local=True, Event=True, logging=True
         Add *logging* and *existing_locks* params.
     .. versionchanged:: 1.3a2
         ``Event`` defaults to True.
+    .. versionchanged:: 26.7.1
+        *existing_locks* imports :mod:`concurrent.futures.thread` and replaces
+        its ``_global_shutdown_lock``.
     """
     if sys.version_info[:2] < (3, 13):
         from ._patch_thread_lt313 import Patcher
