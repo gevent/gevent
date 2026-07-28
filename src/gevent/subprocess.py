@@ -75,7 +75,7 @@ from gevent._compat import PathLike
 from gevent._util import _NONE
 from gevent._util import copy_globals
 
-from gevent.greenlet import Greenlet, joinall
+from gevent.greenlet import Greenlet, joinall, killall
 spawn = Greenlet.spawn
 import subprocess as __subprocess__
 # We need our sockets (at least those involved in launching children)
@@ -1001,10 +1001,35 @@ class Popen(object):
         return self
 
     def __exit__(self, t, v, tb):
-        if self.stdout:
-            self.stdout.close()
-        if self.stderr:
-            self.stderr.close()
+        # gevent: If we're leaving the block early, because an exception is
+        # propagating or because the greenlet running it was killed, the
+        # greenlets ``communicate`` spawned can still be parked in the pipes.
+        # Closing one out from under a parked greenlet raises ``RuntimeError:
+        # reentrant call``: it shares our thread, so the buffered object's
+        # lock is held by the thread doing the close. Stop them first, and
+        # each one closes its own pipe as it unwinds. ``communicate`` avoids
+        # the same hazard by waiting for them to finish.
+        if self._communicating_greenlets is not None:
+            still_running = [
+                glet for glet in self._communicating_greenlets
+                if not glet.dead
+            ]
+            if still_running:
+                killall(still_running)
+
+        # Some other greenlet, reading ``popen.stdout`` directly, can be
+        # parked in there too, and we have no handle on that one. Its
+        # ``RuntimeError`` must not replace the exception already unwinding
+        # this block, nor skip the ``self.wait()`` below that reaps the child.
+        # The pipe closes once that reader finishes and drops its last
+        # reference to it.
+        for pipe in (self.stdout, self.stderr):
+            if pipe:
+                try:
+                    pipe.close()
+                except RuntimeError:
+                    pass
+
         try:  # Flushing a BufferedWriter may raise an error
             if self.stdin:
                 self.stdin.close()

@@ -311,6 +311,59 @@ class TestPopen(greentest.TestCase):
         # https://github.com/gevent/gevent/pull/939
         self.__test_no_output({}, bytes)
 
+    def __popen_never_exits(self):
+        # A child that neither writes nor exits, so a greenlet reading it
+        # stays parked in the pipe until we do something about it.
+        return subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(3600)'],
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
+
+    @greentest.skipOnWindows("Windows uses FileObjectThread, with different close semantics")
+    def test_exit_stops_communicating_greenlets_before_closing(self):
+        # Leaving the block while the greenlets communicate() spawned are
+        # still parked in the pipes must not raise ``RuntimeError: reentrant
+        # call``. They share our thread, so they hold the buffered object's
+        # lock while we close it.
+        with self.__popen_never_exits() as popen:
+            communicator = gevent.spawn(popen.communicate)
+            gevent.sleep(0.1) # let the readers park inside the pipes
+            readers = list(popen._communicating_greenlets)
+            self.assertEqual(len(readers), 2)
+            for reader in readers:
+                self.assertFalse(reader.dead)
+
+            communicator.kill() # abandon the read, as a cancelled task would
+            for reader in readers:
+                self.assertFalse(reader.dead)
+            popen.kill() # so that __exit__'s wait() has a child to reap
+
+        # __exit__ ran, without raising.
+        for reader in readers:
+            self.assertTrue(reader.dead)
+        self.assertTrue(popen.stdout.closed)
+        self.assertTrue(popen.stderr.closed)
+        self.assertIsNotNone(popen.poll())
+
+    @greentest.skipOnWindows("Windows uses FileObjectThread, with different close semantics")
+    def test_exit_ignores_reentrant_call_from_foreign_greenlet(self):
+        # The same hazard, but the greenlet parked in the pipe is not one of
+        # ours, so __exit__ has no handle on it. The RuntimeError still must
+        # not escape, and the child still has to be reaped.
+        popen = self.__popen_never_exits()
+        reader = gevent.spawn(popen.stdout.read)
+        gevent.sleep(0.1)
+        self.assertFalse(reader.dead)
+        self.assertIsNone(popen._communicating_greenlets)
+
+        popen.kill()
+        try:
+            popen.__exit__(None, None, None)
+        finally:
+            reader.kill()
+
+        self.assertTrue(popen.stdout.closed)
+        self.assertIsNotNone(popen.poll())
+
 @greentest.skipOnWindows("Testing POSIX fd closing")
 class TestFDs(unittest.TestCase):
 
