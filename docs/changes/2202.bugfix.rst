@@ -1,0 +1,11 @@
+Stop a forked child from running copies of the parent's greenlets.
+
+``_ForkHooks`` already made the copies appear stopped to :mod:`threading`, but
+every entry on the loop's callback queue was still a pending switch into one of
+them, and ``os.register_at_fork(after_in_child=)`` handlers yield under
+monkey-patching from inside ``fork()`` itself. A child that did nothing but
+``os._exit()`` ran four of the parent's greenlets on every one of 20 forks.
+
+Those switches are now cancelled. A greenlet parked on a timer or an ``io``
+watcher is resumed by the loop rather than by that queue, and this change does
+not reach it.
