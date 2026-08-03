@@ -137,7 +137,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v7
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
@@ -442,7 +442,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
@@ -515,7 +515,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v7
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
@@ -624,7 +624,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v7
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
       - name: Cache ~/.ccache
@@ -644,7 +644,7 @@ jobs:
 
         run: scripts/releases/make-manylinux
       - name: Publish package to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.14.0
+        uses: pypa/gh-action-pypi-publish@v1.14.2
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
         with:
           user: __token__
