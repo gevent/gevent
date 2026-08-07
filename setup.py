@@ -224,7 +224,7 @@ greenlet_requires = [
 # The exception is on Windows, where we want the libuv backend we distribute
 # to be the default, and that requires cffi; but don't try to install it
 # on PyPy or it messes up the build
-CFFI_DEP = "cffi >= 1.17.1 ; platform_python_implementation == 'CPython'"
+CFFI_DEP = "cffi >= 2.1.1 ; platform_python_implementation == 'CPython'"
 CFFI_REQUIRES = [
     CFFI_DEP + " and sys_platform == 'win32'"
 ]
@@ -435,7 +435,6 @@ def run_setup(ext_modules):
         zip_safe=False,
         classifiers=[
             "Programming Language :: Python :: 3 :: Only",
-            "Programming Language :: Python :: 3.9",
             "Programming Language :: Python :: 3.10",
             "Programming Language :: Python :: 3.11",
             "Programming Language :: Python :: 3.12",
@@ -450,7 +449,7 @@ def run_setup(ext_modules):
             "Intended Audience :: Developers",
             "Development Status :: 4 - Beta"
         ],
-        python_requires=">=3.9",
+        python_requires=">=3.10",
         entry_points={
             'gevent.plugins.monkey.will_patch_all': [
                 "signal_os_incompat = gevent.monkey:_subscribe_signal_os",
