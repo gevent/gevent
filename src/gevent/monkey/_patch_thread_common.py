@@ -15,9 +15,29 @@ from ._util import _patch_module
 from ._util import _queue_warning
 
 
+def _patch_global_shutdown_lock(threading):
+    # ``concurrent.futures.thread`` registers its ``_global_shutdown_lock`` with
+    # ``os.register_at_fork(before=acquire, after_in_parent=release)``, and
+    # ``Executor.submit`` holds it across ``Thread.start()``. So a worker
+    # greenlet that forks runs those handlers while another greenlet holds the
+    # lock: a native one blocks the only OS thread forever, one of ours parks
+    # the greenlet inside ``os.fork()``. See :issue:`1865`.
+    #
+    # We can't unregister, so we hand the handlers a lock nobody else holds;
+    # uncontended, it neither blocks nor switches. Its users re-read the global.
+    # We import the module since applications import it after patching.
+    import concurrent.futures.thread as cf_thread
+    if not hasattr(cf_thread, '_global_shutdown_lock'): # pragma: no cover
+        # Private; it may go away.
+        return
+
+    cf_thread._global_shutdown_lock = threading._allocate_lock()
+
+
 def _patch_existing_locks(threading):
     if len(list(threading.enumerate())) != 1:
         return
+    _patch_global_shutdown_lock(threading)
     # This is used to protect internal data structures for enumerate.
     # It's acquired when threads are started and when they're stopped.
     # Stopping a thread checks a Condition, which on Python 2 wants to test
