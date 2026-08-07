@@ -220,11 +220,20 @@ class AbstractLinkable(object):
             try:
                 hub = self._capture_hub(False) # Must create, we need it.
             except InvalidThreadUseError:
-                # The current hub doesn't match self.hub. That's OK,
-                # we still want to start the notifier in the thread running
-                # self.hub (because the links probably contains greenlet.switch
-                # calls valid only in that hub)
-                pass
+                # Links are normally greenlet.switch methods and must be
+                # notified by their owning hub. Wake that hub without first
+                # attempting an unsafe switch from this native thread.
+                hub = self.hub
+                loop = hub.loop
+                if loop is None:
+                    # The owner was destroyed while this thread was using the
+                    # linkable. Its callbacks cannot safely run anywhere else.
+                    raise
+                self._notifier = loop.run_callback_threadsafe(
+                    self._notify_links,
+                    []
+                )
+                return
             if hub is not None:
                 self._notifier = hub.loop.run_callback(self._notify_links, [])
             else:
