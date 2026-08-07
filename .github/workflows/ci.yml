@@ -68,8 +68,7 @@ jobs:
       fail-fast: false
       matrix:
         # 3.10+ needs more work: dnspython for example doesn't work
-        # with it. That means for the bulk of our testing we need to
-        # stick to 3.9.
+        # with it.
 
         # We'd like to always pin to specific minor versions of Python,
         # so we can make sure the test suite we include is in synce with
@@ -214,11 +213,8 @@ jobs:
         run: |
           pip install -U pip
           pip install -U -q setuptools wheel twine
-          # The --no-binary are because these projects have uploaded
-          # 3.15 wheels that don't work right on 3.15b4, so we need to disable
-          # them.
-          pip install -q -U --no-binary=:all: 'cffi;platform_python_implementation=="CPython"'
-          pip install -q -U --no-binary=:all: 'cython>=3.2.4'
+          pip install -q -U  'cffi;platform_python_implementation=="CPython"'
+          pip install -q -U  'cython>=3.2.4'
           # Use a debug version of greenlet to help catch any errors earlier.
           CFLAGS="$CFLAGS -Og -g -UNDEBUG" pip install -v --no-binary :all: 'greenlet>=3.2.0;platform_python_implementation=="CPython" '
 
@@ -427,13 +423,7 @@ jobs:
           - "3.12"
           - "3.13"
           - "3.14.5"
-          # 3.15b4 seems completely incompatible with the
-          # binary wheels for CFFI, which at this writing, are
-          # from the first of July, long before B4. Most tests fail
-          # with segfaults immediately on x86 and arm both. So disabling for now
-          # (I don't know how we'd go about building our own wheel; building our own
-          # cython wheel failed with several different errors)
-          # - "3.15-dev"
+          - "3.15-dev"
         exclude:
           - os: windows-11-arm
             python-version: "3.10"
@@ -454,7 +444,7 @@ jobs:
           python -m pip install -U pip setuptools wheel twine
           python -m pip install -q -U 'cffi;platform_python_implementation=="CPython"'
           python -m pip install -q -U 'cython>=3.2.4'
-          python -m pip install -U --no-binary=:all: 'greenlet>=3.2.0;platform_python_implementation=="CPython"'
+          python -m pip install -U 'greenlet>=3.2.0;platform_python_implementation=="CPython"'
 
       - name: Build gevent
         shell: pwsh
