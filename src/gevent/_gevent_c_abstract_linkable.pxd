@@ -58,7 +58,7 @@ cdef class AbstractLinkable(object):
    cpdef unlink(self, callback)
 
    cdef _check_and_notify(self)
-   cpdef _notify_links_from_threadsafe(self, notifier)
+   cdef _notify_links_from_threadsafe(self, notifier)
    cdef SwitchOutGreenletWithLoop _capture_hub(self, bint create)
    cdef __wait_to_be_notified(self, bint rawlink)
 

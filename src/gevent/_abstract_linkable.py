@@ -243,6 +243,14 @@ class AbstractLinkable(object):
                     # The owner was destroyed while this thread was using the
                     # linkable. Its callbacks cannot safely run anywhere else.
                     raise
+                # The check on self._notifier above and this assignment are
+                # not atomic: another thread could install its own notifier
+                # in between, and one of the two would be lost. That's safe
+                # per the class comment above (2a/2b) when this is compiled
+                # with Cython (the GIL is held for the whole method) or the
+                # subclass holds a native lock (only Semaphore does). In
+                # pure-Python mode without such a lock (Event, AsyncResult),
+                # this is a real, currently-unclosed race.
                 notifier = _FakeNotifier()
                 self._notifier = notifier
                 try:
