@@ -275,6 +275,15 @@ class AbstractLinkable(object):
                     self._notifier = None
 
     def _notify_links_from_threadsafe(self, notifier):
+        # notifier.args[0] starts out empty, but it is not necessarily
+        # still empty by the time this runs: if a greenlet calls wait()
+        # (see _wait() below) while we're already ready() and this
+        # notifier is still pending, instead of registering a normal
+        # rawlink it appends its resume callback directly to
+        # notifier.args[0] (see __wait_to_be_notified()), so that it gets
+        # woken up along with everyone else once this callback finally
+        # runs.
+        #
         # The callback may be stale after cancellation, fork, or a newer
         # notification. Only the notifier that requested this wakeup may run.
         if self._notifier is notifier:
