@@ -36,7 +36,8 @@ cdef void _init()
 cdef dict get_roots_and_hubs()
 
 cdef class _FakeNotifier(object):
-    cdef bint pending
+    cdef public object args
+    cdef public bint pending
 
 cdef class AbstractLinkable(object):
    # We declare the __weakref__ here in the base (even though
@@ -57,6 +58,7 @@ cdef class AbstractLinkable(object):
    cpdef unlink(self, callback)
 
    cdef _check_and_notify(self)
+   cdef _notify_links_from_threadsafe(self, notifier)
    cdef SwitchOutGreenletWithLoop _capture_hub(self, bint create)
    cdef __wait_to_be_notified(self, bint rawlink)
 

@@ -1,0 +1,2 @@
+Fixed a semaphore acquired and released by a hubless native thread failing to
+wake greenlets waiting on the semaphore's owning hub.

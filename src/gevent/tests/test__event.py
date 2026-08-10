@@ -279,6 +279,81 @@ class TestAsyncResultCrossThread(greentest.TestCase):
         # Do it again to make sure it works multiple times.
         self.test_cross_thread_use_set_in_bg()
 
+    @greentest.ignores_leakcheck
+    def test_cross_thread_callback_can_run_before_scheduling_returns(self):
+        hub = gevent.get_hub()
+        real_loop = hub.loop
+
+        from threading import Thread as NativeThread
+        from threading import Event as NativeEvent
+
+        result = self._makeOne()
+        result.wait(0) # Capture the owner hub.
+        result.rawlink(lambda _: None)
+
+        scheduling = NativeEvent()
+        allow_enqueue = NativeEvent()
+        enqueued = NativeEvent()
+        link_started = NativeEvent()
+        producer_done = NativeEvent()
+
+        class LoopProxy(object):
+            # We can't always wrap methods directly on ``real_loop``:
+            # depending on the backend, it may be a Cython-compiled
+            # extension type with no instance ``__dict__`` (so we
+            # can't add attributes to it) and its class is immutable
+            # (so we can't patch the class either). Instead, we swap
+            # out ``hub.loop`` itself for a plain Python object that
+            # forwards everything to the real loop except the one
+            # method we need to intercept.
+            def __getattr__(self, name):
+                return getattr(real_loop, name)
+
+            def run_callback_threadsafe(self, callback, *args):
+                scheduling.set()
+                if not allow_enqueue.wait(DELAY * 15):
+                    raise AssertionError("The owner did not allow the callback")
+                scheduled = real_loop.run_callback_threadsafe(callback, *args)
+                enqueued.set()
+                if not link_started.wait(DELAY * 15):
+                    raise AssertionError("The owner did not start notification")
+                return scheduled
+
+        def set_result():
+            try:
+                self._setOne(result)
+            except BaseException as ex: # pylint:disable=broad-exception-caught
+                thread.error = ex
+            finally:
+                producer_done.set()
+
+        def link(_):
+            link_started.set()
+            self.assertTrue(producer_done.wait(DELAY * 15))
+
+        thread = NativeThread(target=set_result)
+        thread.error = None
+        hub.loop = LoopProxy()
+        try:
+            thread.start()
+            self.assertTrue(scheduling.wait(DELAY * 15))
+            result.rawlink(link)
+            allow_enqueue.set()
+            self.assertTrue(enqueued.wait(DELAY * 15))
+            with gevent.Timeout(DELAY * 15):
+                while not producer_done.is_set():
+                    gevent.sleep(0)
+            thread.join(DELAY * 15)
+            self.assertFalse(thread.is_alive())
+            if thread.error is not None:
+                raise thread.error
+        finally:
+            allow_enqueue.set()
+            link_started.set()
+            producer_done.set()
+            thread.join(DELAY * 15)
+            hub.loop = real_loop
+
 class TestEventCrossThread(TestAsyncResultCrossThread):
 
     def _makeOne(self):

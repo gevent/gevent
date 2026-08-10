@@ -37,13 +37,24 @@ __all__ = [
 _get_thread_ident = __import__(thread_mod_name).get_ident
 _allocate_thread_lock = __import__(thread_mod_name).allocate_lock
 
+# Reserve _notifier before a foreign thread wakes the owner loop. It mirrors
+# the callback attributes used by the wait and unlink paths.
 class _FakeNotifier(object):
     __slots__ = (
+        'args',
         'pending',
     )
 
     def __init__(self):
+        self.args = ([],)
+        self.pending = True
+
+    def stop(self):
+        self.args = None
         self.pending = False
+
+    def __bool__(self):
+        return self.args is not None
 
 def get_roots_and_hubs():
     from gevent.hub import Hub # delay import
@@ -220,11 +231,38 @@ class AbstractLinkable(object):
             try:
                 hub = self._capture_hub(False) # Must create, we need it.
             except InvalidThreadUseError:
-                # The current hub doesn't match self.hub. That's OK,
-                # we still want to start the notifier in the thread running
-                # self.hub (because the links probably contains greenlet.switch
-                # calls valid only in that hub)
-                pass
+                # Links are normally greenlet.switch methods and must be
+                # notified by their owning hub. First publish a notifier that
+                # coalesces foreign-thread wakeups, then wake that hub. The
+                # callback returned by run_callback_threadsafe cannot itself
+                # be used as _notifier: the hub may run it before this thread
+                # has received and stored it.
+                hub = self.hub
+                loop = hub.loop
+                if loop is None:
+                    # The owner was destroyed while this thread was using the
+                    # linkable. Its callbacks cannot safely run anywhere else.
+                    raise
+                # The check on self._notifier above and this assignment are
+                # not atomic: another thread could install its own notifier
+                # in between, and one of the two would be lost. That's safe
+                # per the class comment above (2a/2b) when this is compiled
+                # with Cython (the GIL is held for the whole method) or the
+                # subclass holds a native lock (only Semaphore does). In
+                # pure-Python mode without such a lock (Event, AsyncResult),
+                # this is a real, currently-unclosed race.
+                notifier = _FakeNotifier()
+                self._notifier = notifier
+                try:
+                    loop.run_callback_threadsafe(
+                        self._notify_links_from_threadsafe,
+                        notifier
+                    )
+                except:
+                    if self._notifier is notifier:
+                        self._notifier = None
+                    raise
+                return
             if hub is not None:
                 self._notifier = hub.loop.run_callback(self._notify_links, [])
             else:
@@ -235,6 +273,25 @@ class AbstractLinkable(object):
                     self._notify_links([])
                 finally:
                     self._notifier = None
+
+    def _notify_links_from_threadsafe(self, notifier):
+        # notifier.args[0] starts out empty, but it is not necessarily
+        # still empty by the time this runs: if a greenlet calls wait()
+        # (see _wait() below) while we're already ready() and this
+        # notifier is still pending, instead of registering a normal
+        # rawlink it appends its resume callback directly to
+        # notifier.args[0] (see __wait_to_be_notified()), so that it gets
+        # woken up along with everyone else once this callback finally
+        # runs.
+        #
+        # The callback may be stale after cancellation, fork, or a newer
+        # notification. Only the notifier that requested this wakeup may run.
+        if self._notifier is notifier:
+            if notifier:
+                notifier.pending = False
+                self._notify_links(notifier.args[0])
+            else:
+                self._notifier = None
 
     def _notify_link_list(self, links):
         # The core of the _notify_links method to notify
