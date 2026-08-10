@@ -1,9 +1,0 @@
-Replace ``concurrent.futures.thread._global_shutdown_lock`` when patching
-threads, importing that module if needed. ``Executor.submit`` holds it across
-``Thread.start()``, so a worker greenlet that forks runs the
-:func:`os.register_at_fork` handlers it is registered with while another
-greenlet holds it: a native lock deadlocked, a cooperative one parked the
-greenlet inside ``os.fork()`` (which ``filelock`` 3.30 rejects).
-
-Like the rest of ``patch_thread(existing_locks=True)``, this needs the process
-to be single threaded when patching.

@@ -6,6 +6,45 @@
 
 .. towncrier release notes start
 
+26.8.0 (2026-08-10)
+===================
+
+
+Features
+--------
+
+- Binary wheels for 3.15 are now built with 3.15rc1. This should be a
+  stable ABI.
+
+
+
+Bugfixes
+--------
+
+- Replace ``concurrent.futures.thread._global_shutdown_lock`` when patching
+  threads, importing that module if needed. ``Executor.submit`` holds it across
+  ``Thread.start()``, so a worker greenlet that forks runs the
+  :func:`os.register_at_fork` handlers it is registered with while another
+  greenlet holds it: a native lock deadlocked, a cooperative one parked the
+  greenlet inside ``os.fork()`` (which ``filelock`` 3.30 rejects).
+
+  Like the rest of ``patch_thread(existing_locks=True)``, this needs the process
+  to be single threaded when patching.
+  See :issue:`1865`.
+- Fixed a semaphore acquired and released by a hubless native thread failing to
+  wake greenlets waiting on the semaphore's owning hub.
+  See :issue:`2013`.
+- Stop the greenlets that ``communicate()`` spawned before
+  ``gevent.subprocess.Popen.__exit__`` closes the child's pipes. Leaving the
+  ``with`` block while one of them was still parked in a pipe, because an
+  exception was propagating or because the greenlet running the block was
+  killed, raised ``RuntimeError: reentrant call`` out of ``__exit__``. That
+  replaced the exception that was really unwinding, and skipped the ``wait()``
+  that reaps the child. A pipe some other greenlet is reading is now left alone
+  rather than raising, which is what ``communicate()`` already did.
+  See :issue:`2194`.
+
+
 26.7.0 (2026-07-22)
 ===================
 

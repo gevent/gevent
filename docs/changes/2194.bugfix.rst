@@ -1,8 +1,0 @@
-Stop the greenlets that ``communicate()`` spawned before
-``gevent.subprocess.Popen.__exit__`` closes the child's pipes. Leaving the
-``with`` block while one of them was still parked in a pipe, because an
-exception was propagating or because the greenlet running the block was
-killed, raised ``RuntimeError: reentrant call`` out of ``__exit__``. That
-replaced the exception that was really unwinding, and skipped the ``wait()``
-that reaps the child. A pipe some other greenlet is reading is now left alone
-rather than raising, which is what ``communicate()`` already did.

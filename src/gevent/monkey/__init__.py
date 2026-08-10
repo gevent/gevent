@@ -370,7 +370,7 @@ def patch_thread(threading=True, _threading_local=True, Event=True, logging=True
         Add *logging* and *existing_locks* params.
     .. versionchanged:: 1.3a2
         ``Event`` defaults to True.
-    .. versionchanged:: NEXT
+    .. versionchanged:: 26.8.0
         *existing_locks* imports :mod:`concurrent.futures.thread` and replaces
         its ``_global_shutdown_lock``.
     """
