@@ -281,9 +281,8 @@ class TestAsyncResultCrossThread(greentest.TestCase):
 
     @greentest.ignores_leakcheck
     def test_cross_thread_callback_can_run_before_scheduling_returns(self):
-        loop = gevent.get_hub().loop
-        if not hasattr(loop, '__dict__'):
-            self.skipTest("The loop's methods cannot be wrapped")
+        hub = gevent.get_hub()
+        real_loop = hub.loop
 
         from threading import Thread as NativeThread
         from threading import Event as NativeEvent
@@ -298,17 +297,27 @@ class TestAsyncResultCrossThread(greentest.TestCase):
         link_started = NativeEvent()
         producer_done = NativeEvent()
 
-        run_callback_threadsafe = loop.run_callback_threadsafe
+        class LoopProxy(object):
+            # We can't always wrap methods directly on ``real_loop``:
+            # depending on the backend, it may be a Cython-compiled
+            # extension type with no instance ``__dict__`` (so we
+            # can't add attributes to it) and its class is immutable
+            # (so we can't patch the class either). Instead, we swap
+            # out ``hub.loop`` itself for a plain Python object that
+            # forwards everything to the real loop except the one
+            # method we need to intercept.
+            def __getattr__(self, name):
+                return getattr(real_loop, name)
 
-        def run_before_return(callback, *args):
-            scheduling.set()
-            if not allow_enqueue.wait(DELAY * 15):
-                raise AssertionError("The owner did not allow the callback")
-            scheduled = run_callback_threadsafe(callback, *args)
-            enqueued.set()
-            if not link_started.wait(DELAY * 15):
-                raise AssertionError("The owner did not start notification")
-            return scheduled
+            def run_callback_threadsafe(self, callback, *args):
+                scheduling.set()
+                if not allow_enqueue.wait(DELAY * 15):
+                    raise AssertionError("The owner did not allow the callback")
+                scheduled = real_loop.run_callback_threadsafe(callback, *args)
+                enqueued.set()
+                if not link_started.wait(DELAY * 15):
+                    raise AssertionError("The owner did not start notification")
+                return scheduled
 
         def set_result():
             try:
@@ -324,7 +333,7 @@ class TestAsyncResultCrossThread(greentest.TestCase):
 
         thread = NativeThread(target=set_result)
         thread.error = None
-        loop.run_callback_threadsafe = run_before_return
+        hub.loop = LoopProxy()
         try:
             thread.start()
             self.assertTrue(scheduling.wait(DELAY * 15))
@@ -343,7 +352,7 @@ class TestAsyncResultCrossThread(greentest.TestCase):
             link_started.set()
             producer_done.set()
             thread.join(DELAY * 15)
-            del loop.run_callback_threadsafe
+            hub.loop = real_loop
 
 class TestEventCrossThread(TestAsyncResultCrossThread):
 
