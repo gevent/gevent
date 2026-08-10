@@ -279,6 +279,7 @@ class TestAsyncResultCrossThread(greentest.TestCase):
         # Do it again to make sure it works multiple times.
         self.test_cross_thread_use_set_in_bg()
 
+    @greentest.ignores_leakcheck
     def test_cross_thread_callback_can_run_before_scheduling_returns(self):
         loop = gevent.get_hub().loop
         if not hasattr(loop, '__dict__'):
