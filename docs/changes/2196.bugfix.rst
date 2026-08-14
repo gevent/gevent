@@ -1,0 +1,29 @@
+Give the child of :mod:`gevent.subprocess` a hub of its own, so that it runs
+none of the parent's greenlets before it ``exec``s.
+
+The POSIX ``_execute_child`` forks and execs in Python, so for that window the
+child is a whole interpreter holding a copy of the parent's greenlets, open
+file descriptors and in-memory TLS sessions. gevent's own child branch never
+switches, but ``os.register_at_fork(after_in_child=)`` handlers run inside
+``fork()`` before it begins; applications register them (OpenTelemetry, Sentry,
+``filelock``, ``coverage``), and under monkey-patching the ordinary contents of
+such a handler yield. The child's copy of the hub then resumed the copies,
+which carried on doing the application's work in a process that only existed to
+``exec``: writing on a pooled TLS connection until the peer answered
+``bad_record_mac``, or taking bytes off a pipe the parent was capturing, which
+has no MAC to notice it and so showed up only as a short or empty capture.
+
+The child now gets a fresh hub, which puts the parent's watchers, its queued
+callbacks and its hub greenlet out of reach. A fork handler that yields still
+works. One that waits for something only the parent could provide no longer
+runs application greenlets while it waits; it fails with
+:exc:`~gevent.exceptions.LoopExit` instead, unless it left work on the new loop
+first, in which case the child stays, with the parent blocked reading its error
+pipe inside ``Popen.__init__``.
+
+This also fixes the reproducer in :issue:`2023`, where a fork handler that used
+``gevent.get_hub().threadpool`` deadlocked the spawn.
+
+It applies only to the child of :mod:`gevent.subprocess`, which exists to
+``exec`` and nothing else. A child of a plain ``os.fork()`` may legitimately
+keep using the gevent objects it inherited, so it keeps the hub it was given.
