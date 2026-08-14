@@ -1,0 +1,15 @@
+Stop a forked child from resuming greenlets that were blocked at the fork.
+
+The companion to cancelling the queued switches: that queue only holds
+greenlets that were runnable, while a blocked one is parked on a watcher and
+the loop resumes it from there. In the child both are copies, and one resumed
+on an inherited TLS session writes a record under a sequence number the parent
+will use again, drawing ``bad_record_mac`` from the server.
+
+A watcher whose callback is a ``Waiter.switch`` is one a greenlet is blocked
+on; the ``active`` and ``pending`` flags cannot answer this, because libuv
+stops an expired timer before dispatching it. Only other greenlets' waits are
+cancelled, and only the callback, never the object, so a child of a plain
+``os.fork()`` can carry on using what it inherited, as :mod:`gevent.os`
+documents. Finding the watchers costs one ``gc.get_objects()`` walk per fork,
+about 2ms against a 690,000 object heap.

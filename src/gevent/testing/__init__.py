@@ -142,6 +142,8 @@ from .sockets import tcp_listener
 from .openfiles import get_number_open_files
 from .openfiles import get_open_files
 
+from .children import wait_for_child
+
 from .testcase import TestCase
 
 from .modules import walk_modules
