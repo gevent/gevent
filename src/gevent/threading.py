@@ -67,6 +67,7 @@ from gevent.thread import _make_thread_handle
 from gevent.thread import allocate_lock as _allocate_lock
 from gevent.thread import get_ident as _get_ident
 from gevent.hub import sleep as _sleep, getcurrent
+from gevent.hub import _get_hub as _get_hub_if_exists
 from gevent.lock import RLock
 
 
@@ -434,6 +435,29 @@ class _ForkHooks:
                 # over what gets to run.
                 handle._set_done(enter_hub=False)
 
+    @staticmethod
+    def _cancel_pending_switches_in_child():
+        # ``_stop_running_greenlets_in_child`` above only makes the copies
+        # look stopped. Every entry on the loop's callback queue is still a
+        # pending switch into one of them. Nothing in that queue can belong to
+        # the greenlet that forked: that one is running, not waiting to be
+        # switched to.
+        #
+        # Stop each callback rather than discarding the queue. A callback holds
+        # a reference the loop took in run_callback and hands back in
+        # _run_callbacks, so dropping the queue leaks one per entry and the
+        # child's loop never becomes unreferenced, so it hangs instead of
+        # exiting. A stopped callback is still popped and unref'd, just not run.
+        #
+        # See issue #2202.
+        hub = _get_hub_if_exists()
+        loop = getattr(hub, 'loop', None)
+        queue = getattr(loop, '_callbacks', None)
+        if queue is None:
+            return
+        # list(): we are mutating the entries as we go.
+        for cb in list(queue):
+            cb.stop()
 
     def after_fork_in_child(self):
         # We've already imported threading, which installed its "after" hook,
@@ -445,6 +469,7 @@ class _ForkHooks:
         assert get_ident() == self._before_fork_ident
 
         self._stop_running_greenlets_in_child()
+        self._cancel_pending_switches_in_child()
 
         main = __threading__._MainThread()
         main._ident = get_ident() # 3.13: reset to the greenlet version.
