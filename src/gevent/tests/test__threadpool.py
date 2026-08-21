@@ -819,6 +819,83 @@ class TestWorkerProfileAndTrace(TestCase):
     def test_trace_called_in_task(self):
         self._test_func_called_in_task('trace')
 
+    def _make_recording_pool(self):
+        class RecordingSys(object):
+            def __init__(self):
+                self.profile = None
+                self.trace = None
+                self.setter_calls = []
+
+            def getprofile(self):
+                return self.profile
+
+            def gettrace(self):
+                return self.trace
+
+            def setprofile(self, value):
+                self.setter_calls.append(('setprofile', value))
+                self.profile = value
+
+            def settrace(self, value):
+                self.setter_calls.append(('settrace', value))
+                self.trace = value
+
+        recording_sys = RecordingSys()
+
+        def no_hook():
+            return None
+
+        class Pool(ThreadPool):
+            class _WorkerGreenlet(ThreadPool._WorkerGreenlet):
+                # pylint:disable=signature-differs
+                def _before_run_task(self, *args):
+                    ThreadPool._WorkerGreenlet._before_run_task(
+                        self, *args,
+                        _sys=recording_sys,
+                        _get_thread_profile=no_hook,
+                        _get_thread_trace=no_hook)
+
+                def _after_run_task(self, *args):
+                    ThreadPool._WorkerGreenlet._after_run_task(
+                        self, *args, _sys=recording_sys)
+
+        self.ClassUnderTest = Pool
+
+        pool = self._makeOne(1, create_all_worker_threads=True)
+        return pool, recording_sys
+
+    def test_setters_not_called_without_hooks(self):
+        # The setters emit audit events even when passed None.
+        # https://github.com/gevent/gevent/issues/2206
+        pool, recording_sys = self._make_recording_pool()
+        res = pool.apply(lambda: 1701)
+        pool.kill()
+
+        self.assertEqual(res, 1701)
+        self.assertEqual(recording_sys.setter_calls, [])
+
+    def test_hooks_set_by_task_are_cleared(self):
+        pool, recording_sys = self._make_recording_pool()
+        profile = object()
+        trace = object()
+
+        def task():
+            recording_sys.setprofile(profile)
+            recording_sys.settrace(trace)
+
+        pool.apply(task)
+        # The clearing calls happen on the worker thread after apply()
+        # has returned; kill() is what makes them visible here (see the
+        # memory-consistency note in _test_func_called_in_task).
+        pool.kill()
+
+        self.assertEqual(recording_sys.setter_calls, [
+            ('setprofile', profile),
+            ('settrace', trace),
+            ('setprofile', None),
+            ('settrace', None),
+        ])
+
 
 
 if __name__ == '__main__':
