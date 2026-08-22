@@ -721,6 +721,96 @@ class TestThreadResult(greentest.TestCase):
         self.assertIsNotNone(tr.receiver)
 
 
+_setup_failure_script = r"""
+import sys
+import threading
+
+# Configure a profile hook: without one, workers may not call
+# sys.setprofile() at all (issue 2206).
+threading.setprofile(lambda *args: None)
+
+from gevent.threadpool import ThreadPool
+
+# Install the audit hook only after importing gevent; it slows down
+# every audited event for the rest of the process.
+def audit(event, args):
+    if event == 'sys.setprofile':
+        raise RuntimeError('setprofile rejected by audit hook')
+sys.addaudithook(audit)
+
+try:
+    sys.setprofile(None)
+except RuntimeError:
+    pass
+else:
+    sys.exit(4)
+
+pool = ThreadPool(2)
+try:
+    pool.apply(len, ('x',))
+except RuntimeError:
+    sys.exit(0)
+sys.exit(3)
+"""
+
+
+class TestBeforeRunTaskFailure(TestCase):
+    # An exception in _before_run_task must still resolve the
+    # ThreadResult: the caller gets the exception instead of blocking
+    # forever, and the pool slot spawn() acquired is released.
+    # https://github.com/gevent/gevent/issues/2207
+
+    error_fatal = False
+
+    # Whether _before_run_task raises for the next task.
+    fail_setup = True
+
+    def _make_failing_pool(self):
+        import io
+        test = self
+
+        class Pool(ThreadPool):
+            class _WorkerGreenlet(ThreadPool._WorkerGreenlet):
+                def __init__(self, threadpool):
+                    ThreadPool._WorkerGreenlet.__init__(self, threadpool)
+                    # Each failure prints "Failed to run worker thread";
+                    # keep that out of the test output.
+                    self._stderr = io.StringIO()
+
+                def _before_run_task(self, *args):
+                    if test.fail_setup:
+                        raise ExpectedException
+                    ThreadPool._WorkerGreenlet._before_run_task(self, *args)
+
+        self.ClassUnderTest = Pool
+        return self._makeOne(2)
+
+    def test_caller_gets_exception_and_slot_is_released(self):
+        # Each stranded task used to leak a pool slot; after
+        # maxsize + 1 failures every spawn() blocked forever.
+        pool = self._make_failing_pool()
+        for _ in range(pool.maxsize + 1):
+            with self.assertRaises(ExpectedException):
+                pool.apply(lambda: 1701)
+
+        self.fail_setup = False
+        self.assertEqual(pool.apply(lambda: 1701), 1701)
+
+    def test_audit_hook_rejection_does_not_hang(self):
+        # Audit hooks cannot be removed, so this runs in a subprocess.
+        import subprocess
+        import sys
+        try:
+            rc = subprocess.call([sys.executable, '-u', '-c', _setup_failure_script],
+                                 timeout=30)
+        except subprocess.TimeoutExpired:
+            self.fail('pool.apply() blocked')
+        if rc == 4:
+            self.skipTest('audit events not enforced on this interpreter')
+        self.assertNotEqual(rc, 3, 'pool.apply() did not raise')
+        self.assertEqual(rc, 0)
+
+
 class TestWorkerProfileAndTrace(TestCase):
     # Worker threads should execute the test and trace functions.
     # (When running the user code.)
