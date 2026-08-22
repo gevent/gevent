@@ -178,7 +178,15 @@ class _WorkerGreenlet(RawGreenlet):
             _sys.settrace(None)
 
     def __run_task(self, func, args, kwargs, thread_result):
-        self._before_run_task(func, args, kwargs, thread_result)
+        try:
+            self._before_run_task(func, args, kwargs, thread_result)
+        except: # pylint:disable=bare-except
+            # Pass the error back to the caller so it doesn't wait forever
+            # and the pool can release the slot reserved by spawn(). Don't
+            # try to clean up a partially installed hook; let the worker exit
+            # so its replacement starts with a clean slate.
+            thread_result.handle_error((self, func), self._exc_info())
+            raise
         try:
             thread_result.set(func(*args, **kwargs))
         except: # pylint:disable=bare-except
