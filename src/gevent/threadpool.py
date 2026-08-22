@@ -168,7 +168,15 @@ class _WorkerGreenlet(RawGreenlet):
         _sys.settrace(None)
 
     def __run_task(self, func, args, kwargs, thread_result):
-        self._before_run_task(func, args, kwargs, thread_result)
+        try:
+            self._before_run_task(func, args, kwargs, thread_result)
+        except: # pylint:disable=bare-except
+            # Resolve the result, or the caller blocks forever and the
+            # pool slot spawn() acquired is never released. The re-raise
+            # kills the worker; _after_run_task does not run, and the
+            # replacement starts with clean hooks.
+            thread_result.handle_error((self, func), self._exc_info())
+            raise
         try:
             thread_result.set(func(*args, **kwargs))
         except: # pylint:disable=bare-except
