@@ -84,7 +84,7 @@ from abc import ABC # pylint:disable=unused-import
 ## Exceptions
 
 def reraise(t, value, tb=None): # pylint:disable=unused-argument
-    if value.__traceback__ is not tb and tb is not None:
+    if value.__traceback__ is not tb:
         raise value.with_traceback(tb)
     raise value
 def exc_clear():
