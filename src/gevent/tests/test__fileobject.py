@@ -469,6 +469,19 @@ class TestFileObjectPosix(ConcurrentFileObjectMixin, # pylint:disable=too-many-a
     def _getTargetClass(self):
         return fileobject.FileObjectPosix
 
+    def test_mode_includes_binary_suffix(self):
+        # https://github.com/gevent/gevent/issues/2039
+        # Constructing with an explicit 'wb'/'rb' mode should report
+        # that full mode back, matching what io.FileIO does, instead of
+        # silently dropping the 'b' and reporting just 'w'/'r'.
+        r, w = self._pipe()
+
+        writer = self._makeOne(w, 'wb', close=False)
+        self.assertEqual(writer.mode, 'wb')
+
+        reader = self._makeOne(r, 'rb', close=False)
+        self.assertEqual(reader.mode, 'rb')
+
     def test_seek_raises_ioerror(self):
         # https://github.com/gevent/gevent/issues/1323
 
