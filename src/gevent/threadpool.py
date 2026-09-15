@@ -159,13 +159,23 @@ class _WorkerGreenlet(RawGreenlet):
                          _get_thread_profile=_get_thread_profile,
                          _get_thread_trace=_get_thread_trace):
         # pylint:disable=unused-argument
-        _sys.setprofile(_get_thread_profile())
-        _sys.settrace(_get_thread_trace())
+        # Hooks can change during a worker's lifetime, so read them for
+        # each task. Like threading.Thread, skip setters for missing hooks.
+        profile = _get_thread_profile()
+        if profile is not None:
+            _sys.setprofile(profile)
+        trace = _get_thread_trace()
+        if trace is not None:
+            _sys.settrace(trace)
 
     def _after_run_task(self, func, args, kwargs, thread_result, _sys=sys):
         # pylint:disable=unused-argument
-        _sys.setprofile(None)
-        _sys.settrace(None)
+        # Clear hooks installed here or by the task. A failed clear kills
+        # the worker, whose replacement starts with clean hooks.
+        if _sys.getprofile() is not None:
+            _sys.setprofile(None)
+        if _sys.gettrace() is not None:
+            _sys.settrace(None)
 
     def __run_task(self, func, args, kwargs, thread_result):
         self._before_run_task(func, args, kwargs, thread_result)

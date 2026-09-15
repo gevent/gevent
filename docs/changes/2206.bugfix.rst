@@ -1,0 +1,3 @@
+ThreadPool workers no longer call the profile and trace setters when no
+hooks are configured. This matches ``threading.Thread`` and avoids
+unnecessary PEP 578 audit events and thread coordination.
