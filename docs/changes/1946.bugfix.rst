@@ -1,0 +1,5 @@
+Fix :class:`gevent.event.AsyncResult` re-raising an exception with a
+traceback that kept growing by the frames of every previous
+:meth:`~gevent.event.AsyncResult.get` call, instead of starting fresh
+from the traceback captured when :meth:`~gevent.event.AsyncResult.set_exception`
+was called.

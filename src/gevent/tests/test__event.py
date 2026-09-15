@@ -1,3 +1,4 @@
+import traceback
 import weakref
 
 import gevent
@@ -105,6 +106,28 @@ class TestAsyncResult(greentest.TestCase):
         e.set_exception(obj)
         gevent.sleep(0)
         self.assertEqual(log, [('caught', obj)])
+
+    def test_get_repeated_does_not_accumulate_traceback(self):
+        # https://github.com/gevent/gevent/issues/1946
+        # Getting an AsyncResult that holds an exception, repeatedly,
+        # used to keep extending the exception's traceback with the
+        # frames of every previous ``get()`` call instead of starting
+        # fresh from the traceback captured at ``set_exception`` time.
+        ar = AsyncResult()
+        ar.set_exception(MyException())
+
+        tb_lengths = []
+        for _ in range(3):
+            try:
+                ar.get()
+            except MyException as exc:
+                # Read the traceback length here, inside the ``except``
+                # clause: ``self.assertRaises`` strips ``__traceback__``
+                # from the exception it stores to avoid a reference
+                # cycle, which would hide this regression.
+                tb_lengths.append(len(traceback.extract_tb(exc.__traceback__)))
+
+        self.assertEqual(tb_lengths, [tb_lengths[0]] * len(tb_lengths))
 
     def test_set(self):
         event1 = AsyncResult()
