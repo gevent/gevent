@@ -797,6 +797,16 @@ class TestBeforeRunTaskFailure(TestCase):
         self.fail_setup = False
         self.assertEqual(pool.apply(lambda: 1701), 1701)
 
+    def test_queued_task_runs_after_all_workers_fail(self):
+        # Queued tasks should not need another spawn() call to replace the
+        # failed workers.
+        pool = self._make_failing_pool()
+        results = [pool.spawn(lambda: 1701) for _ in range(pool.maxsize + 1)]
+        for result in results:
+            with self.assertRaises(ExpectedException):
+                result.get()
+        pool.join()
+
     @greentest.ignores_leakcheck
     def test_audit_hook_rejection_does_not_hang(self):
         # Audit hooks cannot be removed, so keep this one in a subprocess.

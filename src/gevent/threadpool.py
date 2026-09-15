@@ -99,6 +99,7 @@ class _WorkerGreenlet(RawGreenlet):
         self._task_queue = threadpool.task_queue # type:gevent._threading.Queue
         self._task_queue_cookie = self._task_queue.allocate_cookie()
         self._unregister_worker = threadpool._unregister_worker
+        self._on_worker_exit = threadpool._on_worker_exit
         self._idle_task_timeout = threadpool._idle_task_timeout
 
         threadpool._register_worker(self)
@@ -205,6 +206,8 @@ class _WorkerGreenlet(RawGreenlet):
         run_task = self.__run_task
         task_queue_done = self._task_queue.task_done
         idle_task_timeout = self._idle_task_timeout
+        on_worker_exit = self._on_worker_exit
+        stop_requested = False
         try: # pylint:disable=too-many-nested-blocks
             while 1: # tiny bit faster than True on Py2
                 fixup_hub_before_block()
@@ -219,6 +222,9 @@ class _WorkerGreenlet(RawGreenlet):
                     return
                 try:
                     if task is None:
+                        # The pool expects this worker to exit, so it does
+                        # not need a replacement.
+                        stop_requested = True
                         return
 
                     run_task(*task)
@@ -239,6 +245,8 @@ class _WorkerGreenlet(RawGreenlet):
             # Re-check for the hub in case the task created it but then
             # failed.
             self.cleanup(self._get_hub_if_exists())
+            if not stop_requested:
+                on_worker_exit()
 
     def cleanup(self, hub_of_worker):
         if self._hub is not None:
@@ -367,6 +375,12 @@ class ThreadPool(GroupMappingMixin):
 
     def _unregister_worker(self, worker):
         self._worker_greenlets.discard(worker)
+
+    def _on_worker_exit(self):
+        # If tasks are still waiting, ask the hub to replace this worker;
+        # adjust() is not safe to call from the worker thread.
+        if self.task_queue.unfinished_tasks:
+            self.hub.loop.run_callback_threadsafe(self.adjust)
 
     def _set_maxsize(self, maxsize):
         if not isinstance(maxsize, integer_types):
