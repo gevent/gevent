@@ -302,6 +302,103 @@ else:
     fork = monkey.get_original('os', 'fork')
     from gevent.os import fork_and_watch
 
+    from gevent.hub import Hub
+    from gevent.hub import set_hub
+    from gevent.hub import set_loop
+    from gevent.hub import _get_hub as _get_hub_if_exists
+
+    #: The pid of the process currently between ``fork()`` and ``exec()``, or
+    #: `None`. The child inherits the *parent's* pid here, which is how it
+    #: recognizes itself: its own ``getpid()`` no longer matches.
+    _forking_for_exec_in = None
+
+    def _in_pre_exec_child():
+        """
+        Are we a child of :meth:`Popen._execute_child` that has not
+        ``exec``'d yet?
+        """
+        return (_forking_for_exec_in is not None
+                and _forking_for_exec_in != os.getpid())
+
+    def _fork_marking_the_pre_exec_window():
+        """
+        ``fork()``, recording that the child it produces has not ``exec``'d
+        yet.
+
+        A module global rather than greenlet state, because a copy left
+        runnable in the child is a different greenlet and has to be able to ask
+        the same question. Keyed on pid rather than a bare flag, so that a
+        greenlet parked inside ``fork()`` in the *parent* (:issue:`1865`) does
+        not mark the parent too.
+
+        .. versionadded:: NEXT
+        """
+        global _forking_for_exec_in
+        _forking_for_exec_in = os.getpid()
+        pid = -1
+        try:
+            # Deliberately a global lookup: instrumentation replaces this.
+            pid = fork()
+        finally:
+            if pid != 0:
+                # Parent, or the fork failed. The child keeps the inherited
+                # value until exec() or os._exit() disposes of it.
+                _forking_for_exec_in = None
+        return pid
+
+    def _detach_inherited_hub_in_pre_exec_child():
+        """
+        Give a child between ``fork()`` and ``exec()`` a hub of its own, so
+        that it cannot run the parent's greenlets.
+
+        The child holds a copy of every greenlet the parent had, each stopped
+        wherever it happened to be; only the one that forked may continue. Our
+        own child branch below never switches, but handlers registered with
+        ``os.register_at_fork(after_in_child=)`` run inside ``fork()`` before
+        it returns to us, applications register them (OpenTelemetry, Sentry,
+        ``filelock``, ``coverage``), and under monkey-patching the ordinary
+        contents of such a handler yield. That yield reaches the child's copy
+        of the hub, and the copies run: writing on the parent's TLS sessions
+        until the peer answers ``bad_record_mac``, reading bytes off the pipes
+        it was capturing.
+
+        Cancelling the queued switches does not reach them, because a copy
+        parked on a timer or an ``io`` watcher is resumed by the loop itself.
+        Taking the loop away puts the parent's watchers, callbacks and hub
+        greenlet out of reach in one go, and a handler that yields still works
+        on the new empty loop.
+
+        A handler that instead waits for something only the parent could
+        provide gets :exc:`~gevent.exceptions.LoopExit` at once, reported as
+        unraisable, and the child gets on with ``exec``. If it left work on
+        the new loop first the loop does not raise, and the child stays ---
+        with the parent blocked reading its error pipe inside
+        ``Popen.__init__``, before any ``timeout=`` has begun counting.
+        Bounding that is a separate change.
+
+        Short of that, the child is discarded microseconds later by ``exec``
+        or ``_exit``, so this hub never has to be tidied up.
+
+        .. versionadded:: NEXT
+        """
+        if not _in_pre_exec_child():
+            return
+        if _get_hub_if_exists() is None:
+            # Nothing was ever scheduled in this thread, so there are no
+            # copies to run.
+            return
+        # ``default=False`` matters: libev's default loop is a process-wide
+        # singleton, so asking for the default again would hand back the
+        # parent's loop, watchers and all.
+        set_loop(None)
+        set_hub(Hub(default=False))
+
+    if hasattr(os, 'register_at_fork'):
+        # Handlers run in registration order, so this must be registered
+        # before any of the application's --- which it is, because importing
+        # this module is part of ``monkey.patch_all()``.
+        os.register_at_fork(after_in_child=_detach_inherited_hub_in_pre_exec_child)
+
 # Some explicit imports for static analysis
 STDOUT = __subprocess__.STDOUT
 TimeoutExpired = __subprocess__.TimeoutExpired
@@ -1628,7 +1725,8 @@ class Popen(object):
                     # write to stderr -> hang.  http://bugs.python.org/issue1336
                     gc.disable()
                     try:
-                        self.pid = fork_and_watch(self._on_child, self._loop, True, fork)
+                        self.pid = fork_and_watch(self._on_child, self._loop, True,
+                                                  _fork_marking_the_pre_exec_window)
                     except:
                         if gc_was_enabled:
                             gc.enable()
