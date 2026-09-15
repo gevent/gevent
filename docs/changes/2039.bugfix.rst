@@ -1,0 +1,2 @@
+Make gevent's file objects properly report the full mode string.
+Previously a 'b' or 't' suffix could be missing.
