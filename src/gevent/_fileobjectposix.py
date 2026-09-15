@@ -45,7 +45,11 @@ class GreenFileDescriptorIO(RawIOBase):
         self._closefd = closefd
         self._fileno = fileno
         self.name = fileno
-        self.mode = open_descriptor.fileio_mode
+        # Use the full mode (including the 't'/'b' suffix), matching what
+        # io.FileIO itself reports; open_descriptor.fileio_mode is the
+        # stripped-down string meant only for constructing the raw FileIO,
+        # not for user-facing introspection.
+        self.mode = open_descriptor.mode
         make_nonblocking(fileno)
         readable = open_descriptor.can_read
         writable = open_descriptor.can_write
