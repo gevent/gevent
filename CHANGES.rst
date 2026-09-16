@@ -6,6 +6,34 @@
 
 .. towncrier release notes start
 
+26.9.0 (2026-09-16)
+===================
+
+
+Bugfixes
+--------
+
+- Fix :class:`gevent.event.AsyncResult` re-raising an exception with a
+  traceback that kept growing by the frames of every previous
+  :meth:`~gevent.event.AsyncResult.get` call, instead of starting fresh
+  from the traceback captured when :meth:`~gevent.event.AsyncResult.set_exception`
+  was called.
+  See :issue:`1946`.
+- Make gevent's file objects properly report the full mode string.
+  Previously a 'b' or 't' suffix could be missing.
+  See :issue:`2039`.
+- ThreadPool workers no longer call the profile and trace setters when no
+  hooks are configured. This matches ``threading.Thread`` and avoids
+  unnecessary PEP 578 audit events and thread coordination.
+  See :issue:`2206`.
+- An exception while preparing a ThreadPool worker to run a task, such as
+  an audit hook rejecting ``sys.setprofile()``, no longer leaves the caller
+  blocked or leaks a pool slot. The exception is raised in the greenlet
+  waiting on ``apply()`` or ``spawn()``, and the failed worker is replaced
+  if other tasks are waiting.
+  See :issue:`2207`.
+
+
 26.8.0 (2026-08-10)
 ===================
 
