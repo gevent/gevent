@@ -721,6 +721,103 @@ class TestThreadResult(greentest.TestCase):
         self.assertIsNotNone(tr.receiver)
 
 
+_setup_failure_script = r"""
+import sys
+import threading
+
+# Workers only call sys.setprofile() when a profile hook is configured
+# (see issue 2206).
+threading.setprofile(lambda *args: None)
+
+from gevent.threadpool import ThreadPool
+
+# Wait until gevent has been imported to install the audit hook, since
+# it runs for every audited event for the rest of the process.
+def audit(event, args):
+    if event == 'sys.setprofile':
+        raise RuntimeError('setprofile rejected by audit hook')
+sys.addaudithook(audit)
+
+try:
+    sys.setprofile(None)
+except RuntimeError:
+    pass
+else:
+    sys.exit(4)
+
+pool = ThreadPool(2)
+try:
+    pool.apply(len, ('x',))
+except RuntimeError:
+    sys.exit(0)
+raise AssertionError('pool.apply() did not raise')
+"""
+
+
+class TestBeforeRunTaskFailure(TestCase):
+    # If _before_run_task raises, the caller should get the exception and
+    # the pool should release the slot reserved by spawn().
+    # https://github.com/gevent/gevent/issues/2207
+
+    error_fatal = False
+
+    def setUp(self):
+        super().setUp()
+        # Make task setup fail until the test opts out.
+        self.fail_setup = True
+
+    def _make_failing_pool(self):
+        import io
+        test = self
+
+        class Pool(ThreadPool):
+            class _WorkerGreenlet(ThreadPool._WorkerGreenlet):
+                def __init__(self, threadpool):
+                    ThreadPool._WorkerGreenlet.__init__(self, threadpool)
+                    # Suppress the expected "Failed to run worker thread"
+                    # message when setup fails.
+                    self._stderr = io.StringIO()
+
+                def _before_run_task(self, *args):
+                    if test.fail_setup:
+                        raise ExpectedException
+                    ThreadPool._WorkerGreenlet._before_run_task(self, *args)
+
+        self.ClassUnderTest = Pool
+        return self._makeOne(2)
+
+    def test_caller_gets_exception_and_slot_is_released(self):
+        # Before the fix, each failed task leaked a pool slot. Once every
+        # slot was gone, the next spawn() blocked forever.
+        pool = self._make_failing_pool()
+        for _ in range(pool.maxsize + 1):
+            with self.assertRaises(ExpectedException):
+                pool.apply(lambda: 1701)
+
+        self.fail_setup = False
+        self.assertEqual(pool.apply(lambda: 1701), 1701)
+
+    def test_queued_task_runs_after_all_workers_fail(self):
+        # Queued tasks should not need another spawn() call to replace the
+        # failed workers.
+        pool = self._make_failing_pool()
+        results = [pool.spawn(lambda: 1701) for _ in range(pool.maxsize + 1)]
+        for result in results:
+            with self.assertRaises(ExpectedException):
+                result.get()
+        pool.join()
+
+    @greentest.ignores_leakcheck
+    def test_audit_hook_rejection_does_not_hang(self):
+        # Audit hooks cannot be removed, so keep this one in a subprocess.
+        import subprocess
+        import sys
+        rc = subprocess.call([sys.executable, '-c', _setup_failure_script], timeout=30)
+        if rc == 4:
+            self.skipTest('audit events not enforced on this interpreter')
+        self.assertEqual(rc, 0)
+
+
 class TestWorkerProfileAndTrace(TestCase):
     # Worker threads should execute the test and trace functions.
     # (When running the user code.)

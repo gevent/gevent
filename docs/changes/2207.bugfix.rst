@@ -1,0 +1,5 @@
+An exception while preparing a ThreadPool worker to run a task, such as
+an audit hook rejecting ``sys.setprofile()``, no longer leaves the caller
+blocked or leaks a pool slot. The exception is raised in the greenlet
+waiting on ``apply()`` or ``spawn()``, and the failed worker is replaced
+if other tasks are waiting.
