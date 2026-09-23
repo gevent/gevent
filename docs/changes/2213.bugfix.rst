@@ -1,0 +1,1 @@
+A monkey-patched executor worker no longer looks like the OS thread running the asyncio loop, so ``run_in_executor`` results wake the selector on CPython 3.13.12 and 3.14.3.
