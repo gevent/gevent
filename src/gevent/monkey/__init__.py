@@ -381,6 +381,11 @@ def patch_thread(threading=True, _threading_local=True, Event=True, logging=True
     patch = Patcher(threading=threading, _threading_local=_threading_local, Event=Event,
                     logging=logging, existing_locks=existing_locks, _warnings=_warnings)
     patch()
+    # Executor workers are greenlets on the loop's OS thread. They must not
+    # look like the thread that is running the asyncio loop.
+    if threading:
+        from ._asyncio_running_loop import patch_asyncio_running_loop
+        patch_asyncio_running_loop()
 
 
 @_ignores_DoNotPatch
