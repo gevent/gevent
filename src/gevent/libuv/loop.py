@@ -10,6 +10,7 @@ from collections import namedtuple
 from zope.interface import implementer
 
 from gevent import getcurrent
+from gevent._ffi.callback import callback
 from gevent._ffi.loop import AbstractCallbacks
 from gevent._ffi.loop import AbstractLoop
 from gevent._ffi.loop import assign_standard_callbacks
@@ -115,6 +116,27 @@ class loop(AbstractLoop):
         # pylint:disable-next=superfluous-parens
         self._default = (self._ptr == libuv.uv_default_loop())
         self._queued_callbacks = []
+        # The base loop starts this watcher with a no-op. Run the arming
+        # function on the hub thread instead: uv_async_send is the only
+        # libuv call a foreign thread may make.
+        self._threadsafe_async.callback = self._arm_threadsafe_callback
+
+    def _arm_threadsafe_callback(self):
+        # Invoked on the hub thread, from the async watcher queue.
+        # Starting ``_timer0`` here keeps the loop alive until the
+        # callbacks queued by ``run_callback_threadsafe`` have run.
+        # Doing the same from the calling thread races ``uv__check_invoke``
+        # on Windows and can self-link the check watcher.
+        if self._callbacks:
+            self._setup_for_run_callback()
+
+    def run_callback_threadsafe(self, func, *args):
+        # ``run_callback`` arms ``_timer0`` on the caller. That is safe
+        # for the hub thread and not safe for any other thread.
+        cb = callback(func, args)
+        self._callbacks.append(cb) # Relying on the GIL for this to be threadsafe
+        self._threadsafe_async.send()
+        return cb
 
     def _queue_callback(self, watcher_ptr, revents):
         self._queued_callbacks.append((watcher_ptr, revents))
@@ -563,6 +585,15 @@ class loop(AbstractLoop):
                     # If we didn't run any callbacks, then we couldn't schedule
                     # anything to switch in the future, so there's no point
                     # running again.
+                    #
+                    # A foreign ``run_callback_threadsafe`` may have appended
+                    # to ``_callbacks`` after this iteration's poll. The async
+                    # wake is then pending for the next poll, and ``_timer0``
+                    # is not active yet, so libuv reports the loop as idle.
+                    # Arm the timer on this thread and continue.
+                    if self._callbacks:
+                        self._setup_for_run_callback()
+                        continue
                     return ran_status
             return 0 # Somebody closed the loop
 
