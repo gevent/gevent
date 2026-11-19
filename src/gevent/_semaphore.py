@@ -502,7 +502,13 @@ class BoundedSemaphore(Semaphore):
         # When we are absolutely certain that no one holds this semaphore,
         # release our hub and go back to floating. This assists in cross-thread
         # uses.
-        if counter == self._initial_value:
+        #
+        # Greenlets still waiting belong to that hub, though, and have
+        # only been scheduled to be notified. If a thread without a
+        # hub gets the semaphore before they do, its release can only
+        # find them through our hub, so keep it until they are gone.
+        # See https://github.com/gevent/gevent/issues/2221
+        if counter == self._initial_value and not self._links:
             self.hub = None # pylint:disable=attribute-defined-outside-init
         return counter
 

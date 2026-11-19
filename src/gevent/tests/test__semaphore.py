@@ -238,6 +238,9 @@ class TestSemaphoreMultiThread(greentest.TestCase):
     def assertOneHasNoHub(self, sem):
         self.assertIsNone(sem.hub, sem)
 
+    def _linkcount(self, sem):
+        return sem.linkcount()
+
     @greentest.skipOnPyPyOnWindows("Flaky there; can't reproduce elsewhere")
     def test_dueling_threads(self, acquire_args=(), create_hub=None):
         # pylint:disable=too-many-locals,too-many-statements
@@ -318,6 +321,99 @@ class TestSemaphoreMultiThread(greentest.TestCase):
 
     def test_dueling_threads_with_hub(self):
         self.test_dueling_threads(create_hub=True)
+
+    def _spin_until(self, condition):
+        for _ in range(2000):
+            if condition():
+                return
+            gevent.sleep(timing.SMALLEST_RELIABLE_DELAY)
+        self.fail("Condition never became true")
+
+    def test_hubless_thread_served_ahead_of_greenlet(self):
+        # A thread without a hub and then a greenlet wait for the
+        # semaphore we hold. Our release hands it to the thread; the
+        # thread's release must wake the greenlet.
+        # See https://github.com/gevent/gevent/issues/2221
+        from gevent import monkey
+        self.assertFalse(monkey.is_module_patched('threading'))
+
+        import threading
+        from gevent._hub_local import get_hub_if_exists
+
+        sem = self._makeOne()
+        sem.acquire()
+
+        thread_acquired = []
+        thread_may_release = threading.Event()
+        thread_hub = []
+
+        def thread_main():
+            sem.acquire()
+            thread_acquired.append(True)
+            thread_may_release.wait(10)
+            sem.release()
+            thread_hub.append(get_hub_if_exists())
+
+        t = threading.Thread(target=thread_main)
+        t.daemon = True
+        t.start()
+        # The thread waits through a greenlet in this hub.
+        self._spin_until(lambda: self._linkcount(sem) == 1)
+        waiter = gevent.spawn(sem.acquire, timeout=timing.LARGE_TICK * 5)
+        self._spin_until(lambda: self._linkcount(sem) == 2)
+
+        sem.release()
+        # Seeing this from a greenlet means the hub has finished
+        # running the notifier.
+        self._spin_until(lambda: thread_acquired)
+        thread_may_release.set()
+
+        self.assertTrue(waiter.get())
+        self._spin_until(lambda: thread_hub)
+        self.assertEqual(thread_hub, [None])
+
+    def test_hubless_thread_reacquires_before_greenlet_notified(self):
+        # A thread without a hub releases the semaphore a greenlet is
+        # waiting for, and takes it again before the greenlet's hub
+        # has run the notifier. Its second release must wake the
+        # greenlet.
+        # See https://github.com/gevent/gevent/issues/2221
+        from gevent import monkey
+        self.assertFalse(monkey.is_module_patched('threading'))
+
+        import threading
+        import time
+        from gevent._hub_local import get_hub_if_exists
+
+        sem = self._makeOne()
+        gevent.get_hub()
+
+        thread_holding = threading.Event()
+        thread_hub = []
+
+        def thread_main():
+            sem.acquire()
+            thread_holding.set()
+            while not self._linkcount(sem):
+                time.sleep(timing.SMALLEST_RELIABLE_DELAY)
+            sem.release()
+            sem.acquire()
+            # Let the hub run the notifier and find the semaphore taken.
+            time.sleep(timing.LARGE_TICK)
+            sem.release()
+            thread_hub.append(get_hub_if_exists())
+
+        t = threading.Thread(target=thread_main)
+        t.daemon = True
+        t.start()
+        thread_holding.wait(10)
+
+        self.assertTrue(sem.acquire(timeout=timing.LARGE_TICK * 5))
+        # If we won the race for the semaphore, the thread is waiting
+        # for it now.
+        sem.release()
+        self._spin_until(lambda: thread_hub)
+        self.assertEqual(thread_hub, [None])
 
 
     # XXX: Need a test with multiple greenlets in a non-primary

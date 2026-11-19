@@ -1,0 +1,3 @@
+Fixed a greenlet waiting on a ``BoundedSemaphore`` (including a
+monkey-patched ``threading.Lock``) never being woken when the last
+holder before it was a native thread without a hub.
