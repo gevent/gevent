@@ -23,6 +23,9 @@ class TestRLockMultiThread(test__semaphore.TestSemaphoreMultiThread):
     def assertOneHasNoHub(self, sem):
         self.assertIsNone(sem._block.hub)
 
+    def _linkcount(self, sem):
+        return sem._block.linkcount()
+
 
 class TestLockReinitAfterFork(greentest.TestCase):
 
